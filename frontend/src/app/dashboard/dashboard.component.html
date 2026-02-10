@@ -1,0 +1,191 @@
+<div class="dashboard">
+  <h2>GRC Dashboard</h2>
+  <p>Cliquez sur un domaine pour dérouler ses sous-domaines.</p>
+
+  <div class="controls">
+    <button (click)="checkBackend()">Vérifier le backend</button>
+    <button class="btn-secondary" (click)="openUserModal()">Gestion Utilisateurs</button>
+    <button class="btn-danger" (click)="logout()">Déconnexion</button>
+    <span class="status" *ngIf="status">{{ status }}</span>
+  </div>
+
+  <div class="grid" [ngSwitch]="currentUserRole" style="margin-top: 20px;">
+    <app-risk-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
+      (openModule)="openSubmoduleModal($event.m, $event.s)">
+    </app-risk-dashboard>
+
+    <app-risk-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
+      (openModule)="openSubmoduleModal($event.m, $event.s)">
+    </app-risk-dashboard>
+
+    <app-audit-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
+      (openModule)="openSubmoduleModal($event.m, $event.s)">
+    </app-audit-dashboard>
+
+    <app-audit-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
+      (openModule)="openSubmoduleModal($event.m, $event.s)">
+    </app-audit-dashboard>
+
+    <app-admin-si-dashboard *ngSwitchCase="UserRole.ADMIN_SI" [filteredModules]="filteredModules"
+      (openModule)="openSubmoduleModal($event.m, $event.s)" (manageUsers)="openUserModal()">
+    </app-admin-si-dashboard>
+
+    <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"
+      (openModule)="openSubmoduleModal($event.m, $event.s)">
+    </app-top-management-dashboard>
+
+    <!-- Default view if no role or error (optional) -->
+    <div *ngSwitchDefault>
+      <p>Chargement de votre espace personnalisé...</p>
+    </div>
+  </div>
+</div>
+
+<app-modal *ngIf="modalVisible && !creating" [title]="modalTitle" (close)="closeModal()">
+  <div modal-body [innerHTML]="modalBody"></div>
+  <div modal-footer>
+    <button (click)="startCreate()">Créer</button>
+  </div>
+  <!-- mark projected content for modal detection -->
+  <div #projected style="display:none"></div>
+</app-modal>
+
+<app-modal *ngIf="modalVisible && creating" [title]="modalTitle" (close)="closeModal()">
+  <div modal-body>
+    <h4>Créer une configuration — {{ currentSubmoduleTitle }}</h4>
+    <div class="form-row">
+      <label>Nom</label>
+      <input [(ngModel)]="form.name" />
+    </div>
+    <div class="form-row">
+      <label>Description</label>
+      <textarea rows="3" [(ngModel)]="form.description"></textarea>
+    </div>
+    <div class="form-row">
+      <label>Configuration (JSON)</label>
+      <textarea rows="8" [(ngModel)]="form.config"></textarea>
+    </div>
+  </div>
+  <div modal-footer>
+    <button (click)="submitForm()">Créer</button>
+    <button (click)="closeModal()">Annuler</button>
+  </div>
+  <div #projected style="display:none"></div>
+</app-modal>
+
+<!-- AI Assistant -->
+<app-ai-assistant></app-ai-assistant>
+
+<!-- User Management Modal -->
+<app-modal *ngIf="userModalVisible" [title]="editingUser ? 'Modifier Utilisateur' : 'Gestion Utilisateurs'"
+  (close)="closeUserModal()">
+  <div modal-body>
+    <div class="search-user">
+      <label><i class="fas fa-search"></i> Rechercher un utilisateur (nom/prénom)</label>
+      <div class="search-input-wrapper">
+        <input type="text" [(ngModel)]="userSearchTerm" placeholder="Taper le nom ou le prénom..." />
+        <i class="fas fa-users-viewfinder search-icon"></i>
+      </div>
+      <ul class="search-results" *ngIf="userSearchTerm && filteredUsers.length > 0">
+        <li *ngFor="let u of filteredUsers" (click)="selectUser(u)" [class.active]="editingUser?.id === u.id">
+          <div class="user-avatar-mini">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info-mini">
+            <span class="full-name">{{ u.prenom }} {{ u.nom }}</span>
+            <span class="user-role">{{ u.role }}</span>
+          </div>
+          <i class="fas fa-chevron-right arrow"></i>
+        </li>
+      </ul>
+      <p class="small no-result" *ngIf="userSearchTerm && filteredUsers.length === 0">
+        <i class="fas fa-exclamation-circle"></i> Aucun utilisateur trouvé.
+      </p>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">
+        <i class="fas fa-id-card"></i>
+        <span>Informations Personnelles</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label><i class="fas fa-user"></i> Nom</label>
+          <input [(ngModel)]="userForm.nom" [class.input-error]="validationErrors.nom" placeholder="Ex: chakouch" />
+          <span class="error" *ngIf="validationErrors.nom">{{ validationErrors.nom }}</span>
+        </div>
+        <div class="form-row">
+          <label><i class="fas fa-user"></i> Prénom</label>
+          <input [(ngModel)]="userForm.prenom" [class.input-error]="validationErrors.prenom"
+            placeholder="Ex: elmahdi" />
+          <span class="error" *ngIf="validationErrors.prenom">{{ validationErrors.prenom }}</span>
+        </div>
+        <div class="form-row">
+          <label><i class="fas fa-envelope"></i> Email Professionnel</label>
+          <input type="email" [(ngModel)]="userForm.mail" [class.input-error]="validationErrors.mail"
+            placeholder="mahdi@sgrc.com" />
+          <span class="error" *ngIf="validationErrors.mail">{{ validationErrors.mail }}</span>
+        </div>
+        <div class="form-row">
+          <label><i class="fas fa-phone"></i> Téléphone</label>
+          <input [(ngModel)]="userForm.telephone" [class.input-error]="validationErrors.telephone"
+            placeholder="+212 6... " />
+          <span class="error" *ngIf="validationErrors.telephone">{{ validationErrors.telephone }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">
+        <i class="fas fa-key"></i>
+        <span>Sécurité</span>
+      </div>
+      <div class="form-row">
+        <label><i class="fas fa-lock"></i> Mot de passe {{ editingUser ? '(Optionnel - laisser vide pour ne pas
+          changer)' : '' }}</label>
+        <input type="password" [(ngModel)]="userForm.password" [class.input-error]="validationErrors.password"
+          placeholder="******" />
+        <span class="error" *ngIf="validationErrors.password">{{ validationErrors.password }}</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">
+        <i class="fas fa-briefcase"></i>
+        <span>Informations Professionnelles</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label><i class="fas fa-user-tie"></i> Poste / Fonction</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="userForm.role" [class.input-error]="validationErrors.role">
+              <option value="">Sélectionner une fonction...</option>
+              <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
+            </select>
+          </div>
+          <span class="error" *ngIf="validationErrors.role">{{ validationErrors.role }}</span>
+        </div>
+        <div class="form-row">
+          <label><i class="fas fa-sitemap"></i> Département</label>
+          <div class="select-wrapper">
+            <select [(ngModel)]="userForm.departementId" [class.input-error]="validationErrors.departementId">
+              <option value="0">Sélectionner un département...</option>
+              <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
+            </select>
+          </div>
+          <span class="error" *ngIf="validationErrors.departementId">{{ validationErrors.departementId }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div modal-footer>
+    <button class="btn-primary" (click)="saveUser()">
+      <i class="fas" [ngClass]="editingUser ? 'fa-save' : 'fa-plus-circle'"></i>
+      {{ editingUser ? 'Enregistrer les modifications' : 'Créer l\'utilisateur' }}
+    </button>
+    <button class="btn-outline" (click)="closeUserModal()">
+      <i class="fas fa-times"></i> Annuler
+    </button>
+  </div>
+  <div #projected style="display:none"></div>
+</app-modal>

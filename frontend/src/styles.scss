@@ -1,0 +1,38 @@
+:root {
+  --micepp-blue: #004a99;
+  --micepp-blue-dark: #003366;
+  --micepp-gold: #c5a059;
+  --micepp-gold-light: #e0c58e;
+  --micepp-gray-light: #f4f7f6;
+  --micepp-text: #333333;
+  --micepp-text-muted: #666666;
+  --micepp-border: #dcdcdc;
+  --white: #ffffff;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Open Sans', sans-serif;
+  color: var(--micepp-text);
+  background-color: var(--micepp-gray-light);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  color: var(--micepp-blue-dark);
+}
+
+/* Default button styles */
+button {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+}

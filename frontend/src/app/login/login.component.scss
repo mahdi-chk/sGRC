@@ -1,0 +1,139 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f4f8;
+  background-image: radial-gradient(circle at 10% 20%, rgba(0, 74, 153, 0.05) 0%, rgba(197, 160, 89, 0.05) 90%);
+  font-family: 'Open Sans', sans-serif;
+}
+
+.login-card {
+  background: var(--white);
+  padding: 3rem;
+  border-radius: 8px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  border-top: 5px solid var(--micepp-blue);
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 2.5rem;
+
+  h1 {
+    margin: 0;
+    color: var(--micepp-blue-dark);
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  p {
+    margin: 8px 0 0;
+    color: var(--micepp-gold);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+form {
+  h2 {
+    margin: 0 0 8px;
+    color: var(--micepp-blue-dark);
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    margin: 0 0 2rem;
+    color: var(--micepp-text-muted);
+    font-size: 0.9rem;
+  }
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.6rem;
+    color: var(--micepp-blue-dark);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+  }
+
+  input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--micepp-border);
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: all 0.3s;
+    background: #fafafa;
+
+    &:focus {
+      outline: none;
+      border-color: var(--micepp-blue);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.1);
+    }
+  }
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background: var(--micepp-blue);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-top: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+
+  &:hover:not(:disabled) {
+    background: var(--micepp-blue-dark);
+  }
+
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+}
+
+.error-message {
+  background: #fff5f5;
+  color: #d32f2f;
+  padding: 12px;
+  border-left: 4px solid #d32f2f;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+}
+
+.footer-links {
+  text-align: center;
+  margin-top: 2rem;
+
+  a {
+    color: var(--micepp-blue);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+      color: var(--micepp-blue-dark);
+    }
+  }
+}

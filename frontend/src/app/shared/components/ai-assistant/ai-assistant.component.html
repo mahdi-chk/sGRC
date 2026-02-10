@@ -1,0 +1,29 @@
+<div class="ai-assistant" [class.open]="isOpen">
+    <div class="chat-header" (click)="toggleChat()">
+        <i class="fas" [ngClass]="isOpen ? 'fa-chevron-down' : 'fa-robot'"></i>
+        <span>Assistant GRC (Ollama)</span>
+    </div>
+
+    <div class="chat-body" *ngIf="isOpen">
+        <div class="messages">
+            <div *ngFor="let msg of messages" class="message" [ngClass]="msg.role">
+                <div class="bubble">
+                    {{ msg.content }}
+                </div>
+            </div>
+            <div class="message ai" *ngIf="isLoading">
+                <div class="bubble loading">
+                    <i class="fas fa-spinner fa-spin"></i> En train de réfléchir...
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input scroll-wrapper">
+            <textarea [(ngModel)]="prompt" (keyup.enter)="sendMessage()"
+                placeholder="Posez votre question sur la GRC..." rows="2"></textarea>
+            <button (click)="sendMessage()" [disabled]="isLoading">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>

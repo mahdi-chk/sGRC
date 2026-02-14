@@ -7,13 +7,10 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 export class AdminSiDashboardComponent {
     @Input() filteredModules: any[] = [];
     @Output() openModule = new EventEmitter<any>();
-    @Output() manageUsers = new EventEmitter<void>();
+
+    showUserManagement = false;
 
     onOpenModule(m: any, s: any) {
         this.openModule.emit({ m, s });
-    }
-
-    onManageUsers() {
-        this.manageUsers.emit();
     }
 }

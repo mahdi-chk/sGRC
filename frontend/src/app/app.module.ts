@@ -15,6 +15,7 @@ import { AdminSiDashboardComponent } from './dashboard/roles/admin-si-dashboard.
 import { TopManagementDashboardComponent } from './dashboard/roles/top-management-dashboard.component';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { AiAssistantComponent } from './shared/components/ai-assistant/ai-assistant.component';
+import { UserManagementComponent } from './shared/components/user-management/user-management.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -33,7 +34,8 @@ const routes: Routes = [
     AuditDashboardComponent,
     AdminSiDashboardComponent,
     TopManagementDashboardComponent,
-    AiAssistantComponent
+    AiAssistantComponent,
+    UserManagementComponent
   ],
   imports: [
     BrowserModule,

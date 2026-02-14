@@ -9,18 +9,6 @@ interface Submodule {
   desc?: string;
 }
 
-export interface User {
-  id?: number;
-  nom: string;
-  prenom: string;
-  mail: string;
-  telephone: string;
-  role: UserRole;
-  departementId: number;
-  password?: string;
-  poste?: string; // Temporaire pour compatibilité base de données
-}
-
 interface ModuleItem {
   key: string;
   title: string;
@@ -123,7 +111,7 @@ export class DashboardComponent {
         { title: 'Notifications' },
         { title: 'Indicateurs' }
       ],
-      roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+      roles: [UserRole.AUDIT_SENIOR]
     },
     {
       key: 'reporting',
@@ -148,7 +136,7 @@ export class DashboardComponent {
         { title: 'Assistance Experte' },
         { title: 'Supervision Continue' }
       ],
-      roles: [UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI]
+      roles: [UserRole.TOP_MANAGEMENT]
     }
   ];
 
@@ -172,174 +160,16 @@ export class DashboardComponent {
 
   form: any = { name: '', description: '', config: '{}' };
 
-  // User management state
-  userModalVisible = false;
-  userSearchTerm = '';
-  editingUser: User | null = null;
-  userForm: User = this.emptyUser();
-  users: User[] = [];
-  validationErrors: any = {};
-
-  postes: string[] = [];
-  departements: any[] = [];
-
   constructor(private http: HttpClient, private authService: AuthService) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUserRole = user?.role;
-      if (this.currentUserRole === UserRole.ADMIN_SI) {
-        this.loadUsers();
-        this.loadDepartments();
-        this.loadRoles();
-      }
     });
-  }
-
-  private emptyUser(): User {
-    return {
-      nom: '',
-      prenom: '',
-      mail: '',
-      telephone: '',
-      role: UserRole.RISK_AGENT,
-      departementId: 0,
-      password: ''
-    };
-  }
-
-  loadUsers() {
-    this.http.get<User[]>('http://localhost:3000/api/users').subscribe(
-      (data: User[]) => this.users = data,
-      (err: any) => this.status = 'Error loading users: ' + (err.status || err.message)
-    );
-  }
-
-  loadDepartments() {
-    this.http.get<any[]>('http://localhost:3000/api/departments').subscribe(
-      (data: any[]) => this.departements = data,
-      (err: any) => this.status = 'Error loading departments: ' + (err.status || err.message)
-    );
-  }
-
-  loadRoles() {
-    this.http.get<string[]>('http://localhost:3000/api/users/roles').subscribe(
-      (data: string[]) => this.postes = data,
-      (err: any) => this.status = 'Error loading roles: ' + (err.status || err.message)
-    );
-  }
-
-  openUserModal(user?: User) {
-    this.userModalVisible = true;
-    if (user) {
-      this.editingUser = user;
-      this.userForm = { ...user };
-    } else {
-      this.editingUser = null;
-      this.userForm = this.emptyUser();
-    }
-  }
-
-  closeUserModal() {
-    this.userModalVisible = false;
-    this.userSearchTerm = '';
-    this.validationErrors = {};
-  }
-
-  validateUser(): boolean {
-    this.validationErrors = {};
-    let isValid = true;
-
-    if (!this.userForm.nom) { this.validationErrors.nom = 'Le nom est obligatoire'; isValid = false; }
-    if (!this.userForm.prenom) { this.validationErrors.prenom = 'Le prénom est obligatoire'; isValid = false; }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!this.userForm.mail) {
-      this.validationErrors.mail = 'L\'email est obligatoire';
-      isValid = false;
-    } else if (!emailRegex.test(this.userForm.mail)) {
-      this.validationErrors.mail = 'Format d\'email invalide';
-      isValid = false;
-    }
-
-    const phoneRegex = /^[0-9+\s-]{8,}$/;
-    if (!this.userForm.telephone) {
-      this.validationErrors.telephone = 'Le téléphone est obligatoire';
-      isValid = false;
-    } else if (!phoneRegex.test(this.userForm.telephone)) {
-      this.validationErrors.telephone = 'Format de téléphone invalide (min 8 chiffres)';
-      isValid = false;
-    }
-
-    // Password validation: mandatory for creation, optional for edit
-    if (!this.editingUser && !this.userForm.password) {
-      this.validationErrors.password = 'Le mot de passe est obligatoire pour un nouvel utilisateur';
-      isValid = false;
-    } else if (this.userForm.password && this.userForm.password.length < 6) {
-      this.validationErrors.password = 'Le mot de passe doit faire au moins 6 caractères';
-      isValid = false;
-    }
-
-    if (!this.userForm.role) { this.validationErrors.role = 'Le rôle est obligatoire'; isValid = false; }
-    if (!this.userForm.departementId || this.userForm.departementId === 0) {
-      this.validationErrors.departementId = 'Le département est obligatoire';
-      isValid = false;
-    }
-
-    return isValid;
-  }
-
-  saveUser() {
-    if (!this.validateUser()) return;
-
-    // Préparation du payload
-    const payload = { ...this.userForm };
-
-    // Assurer que 'poste' est envoyé car requis par le modèle Sequelize
-    if (!payload.poste) {
-      payload.poste = payload.role;
-    }
-
-    // Retirer le mot de passe s'il est vide (cas d'une mise à jour sans changement de MDP)
-    if (!payload.password) {
-      delete payload.password;
-    }
-
-    if (this.editingUser) {
-      this.http.put(`http://localhost:3000/api/users/${this.editingUser.id}`, payload).subscribe(
-        () => {
-          this.status = 'Utilisateur modifié';
-          this.loadUsers();
-          this.closeUserModal();
-        },
-        (err: any) => this.status = 'Error updating user: ' + (err.status || err.message)
-      );
-    } else {
-      this.http.post('http://localhost:3000/api/users', payload).subscribe(
-        () => {
-          this.status = 'Utilisateur créé';
-          this.loadUsers();
-          this.closeUserModal();
-        },
-        (err: any) => this.status = 'Error creating user: ' + (err.status || err.message)
-      );
-    }
   }
 
   logout() {
     this.authService.logout();
   }
 
-  get filteredUsers() {
-    if (!this.userSearchTerm) return [];
-    return this.users.filter(u =>
-      `${u.nom} ${u.prenom}`.toLowerCase().includes(this.userSearchTerm.toLowerCase())
-    );
-  }
-
-  selectUser(user: User) {
-    this.editingUser = user;
-    this.userForm = { ...user };
-    this.userSearchTerm = ''; // Masquer la liste des résultats après sélection
-  }
 
   toggleModule(key: string) {
     if (this.expanded.has(key)) this.expanded.delete(key);

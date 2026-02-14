@@ -6,6 +6,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 })
 export class RiskDashboardComponent {
     @Input() filteredModules: any[] = [];
+    @Input() title: string = 'Dashboard Risk';
     @Output() openModule = new EventEmitter<any>();
 
     onOpenModule(m: any, s: any) {

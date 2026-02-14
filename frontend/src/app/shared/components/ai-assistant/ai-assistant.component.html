@@ -1,7 +1,7 @@
 <div class="ai-assistant" [class.open]="isOpen">
     <div class="chat-header" (click)="toggleChat()">
         <i class="fas" [ngClass]="isOpen ? 'fa-chevron-down' : 'fa-robot'"></i>
-        <span>Assistant GRC (Ollama)</span>
+        <span>Assistant GRC</span>
     </div>
 
     <div class="chat-body" *ngIf="isOpen">

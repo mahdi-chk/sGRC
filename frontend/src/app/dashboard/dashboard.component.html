@@ -1,77 +1,129 @@
-<div class="dashboard">
-  <h2>GRC Dashboard</h2>
-  <p>Cliquez sur un domaine pour dérouler ses sous-domaines.</p>
-
-  <div class="controls">
-    <button (click)="checkBackend()">Vérifier le backend</button>
-
-    <button class="btn-danger" (click)="logout()">Déconnexion</button>
-    <span class="status" *ngIf="status">{{ status }}</span>
-  </div>
-
-  <div class="grid" [ngSwitch]="currentUserRole" style="margin-top: 20px;">
-    <app-risk-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
-      title="Dashboard Risk Manager" (openModule)="openSubmoduleModal($event.m, $event.s)">
-    </app-risk-dashboard>
-
-    <app-risk-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
-      title="Dashboard Risk Agent" (openModule)="openSubmoduleModal($event.m, $event.s)">
-    </app-risk-dashboard>
-
-    <app-audit-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
-      title="Dashboard Audit Senior" (openModule)="openSubmoduleModal($event.m, $event.s)">
-    </app-audit-dashboard>
-
-    <app-audit-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
-      title="Dashboard Auditeur" (openModule)="openSubmoduleModal($event.m, $event.s)">
-    </app-audit-dashboard>
-
-    <app-admin-si-dashboard *ngSwitchCase="UserRole.ADMIN_SI" [filteredModules]="filteredModules"
-      (openModule)="openSubmoduleModal($event.m, $event.s)">
-    </app-admin-si-dashboard>
-
-    <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"
-      (openModule)="openSubmoduleModal($event.m, $event.s)">
-    </app-top-management-dashboard>
-
-    <!-- Default view if no role or error (optional) -->
-    <div *ngSwitchDefault>
-      <p>Chargement de votre espace personnalisé...</p>
+<div class="dashboard-wrapper">
+  <!-- Top Header -->
+  <header class="main-header">
+    <div class="header-left">
+      <div class="logo-container">
+        <img src="assets/logo.jpeg" alt="Logo" class="logo-img">
+        <div class="logo">CANADA CONSEIL GROUPE</div>
+      </div>
+      <div class="divider"></div>
+      <button class="icon-btn" title="Planning">
+        <i class="fas fa-calendar-alt"></i>
+      </button>
+      <button class="icon-btn" (click)="resetToHome()" title="Home">
+        <i class="fas fa-home"></i>
+      </button>
     </div>
-  </div>
+
+    <div class="header-right">
+      <div class="search-box">
+        <select>
+          <option>Organisations</option>
+          <option>Ressources</option>
+          <option>Risques</option>
+          <option>Incidents</option>
+          <option>Contrôles</option>
+          <option>Actions</option>
+        </select>
+        <input type="text" placeholder="Saisir un texte">
+        <i class="fas fa-search"></i>
+      </div>
+      <div class="user-info">
+        <i class="fas fa-user-circle"></i>
+        <span>{{ currentUserName }}</span>
+      </div>
+      <button class="logout-btn" (click)="logout()" title="Déconnexion">
+        <i class="fas fa-power-off"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sub Navigation -->
+  <nav class="sub-nav">
+    <a href="javascript:void(0)">Organisation</a>
+    <a href="javascript:void(0)">Ressource</a>
+    <a href="javascript:void(0)">Risque</a>
+    <a href="javascript:void(0)">Incident</a>
+    <a href="javascript:void(0)">Contrôle</a>
+    <a href="javascript:void(0)">Action</a>
+  </nav>
+
+  <!-- Content Area -->
+  <main class="content-area">
+
+    <div class="dashboard-content">
+      <!-- Default Grid View -->
+      <div class="grid" *ngIf="currentView === 'default'" [ngSwitch]="currentUserRole" style="margin-top: 20px;">
+        <app-risk-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
+          title="Dashboard Risk Manager" (openModule)="openSubmoduleModal($event.m, $event.s)">
+        </app-risk-dashboard>
+
+        <app-risk-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
+          title="Dashboard Risk Agent" (openModule)="openSubmoduleModal($event.m, $event.s)">
+        </app-risk-dashboard>
+
+        <app-audit-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
+          title="Dashboard Audit Senior" (openModule)="openSubmoduleModal($event.m, $event.s)">
+        </app-audit-dashboard>
+
+        <app-audit-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
+          title="Dashboard Auditeur" (openModule)="openSubmoduleModal($event.m, $event.s)">
+        </app-audit-dashboard>
+
+        <app-admin-si-dashboard *ngSwitchCase="UserRole.ADMIN_SI" [filteredModules]="filteredModules"
+          (openModule)="openSubmoduleModal($event.m, $event.s)" (openUserManagement)="showUserManagementView()">
+        </app-admin-si-dashboard>
+
+        <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"
+          (openModule)="openSubmoduleModal($event.m, $event.s)">
+        </app-top-management-dashboard>
+
+        <!-- Default view if no role or error (optional) -->
+        <div *ngSwitchDefault>
+          <p>Chargement de votre espace personnalisé...</p>
+        </div>
+      </div>
+
+      <!-- User Management View -->
+      <div class="user-management-view" *ngIf="currentView === 'user-management'">
+        <app-user-management></app-user-management>
+      </div>
+    </div>
+
+    <app-modal *ngIf="modalVisible && !creating" [title]="modalTitle" (close)="closeModal()">
+      <div modal-body [innerHTML]="modalBody"></div>
+      <div modal-footer>
+        <button (click)="startCreate()">Créer</button>
+      </div>
+      <!-- mark projected content for modal detection -->
+      <div #projected style="display:none"></div>
+    </app-modal>
+
+    <app-modal *ngIf="modalVisible && creating" [title]="modalTitle" (close)="closeModal()">
+      <div modal-body>
+        <h4>Créer une configuration — {{ currentSubmoduleTitle }}</h4>
+        <div class="form-row">
+          <label>Nom</label>
+          <input [(ngModel)]="form.name" />
+        </div>
+        <div class="form-row">
+          <label>Description</label>
+          <textarea rows="3" [(ngModel)]="form.description"></textarea>
+        </div>
+        <div class="form-row">
+          <label>Configuration (JSON)</label>
+          <textarea rows="8" [(ngModel)]="form.config"></textarea>
+        </div>
+      </div>
+      <div modal-footer>
+        <button (click)="submitForm()">Créer</button>
+        <button (click)="closeModal()">Annuler</button>
+      </div>
+      <div #projected style="display:none"></div>
+    </app-modal>
+
+  </main>
 </div>
-
-<app-modal *ngIf="modalVisible && !creating" [title]="modalTitle" (close)="closeModal()">
-  <div modal-body [innerHTML]="modalBody"></div>
-  <div modal-footer>
-    <button (click)="startCreate()">Créer</button>
-  </div>
-  <!-- mark projected content for modal detection -->
-  <div #projected style="display:none"></div>
-</app-modal>
-
-<app-modal *ngIf="modalVisible && creating" [title]="modalTitle" (close)="closeModal()">
-  <div modal-body>
-    <h4>Créer une configuration — {{ currentSubmoduleTitle }}</h4>
-    <div class="form-row">
-      <label>Nom</label>
-      <input [(ngModel)]="form.name" />
-    </div>
-    <div class="form-row">
-      <label>Description</label>
-      <textarea rows="3" [(ngModel)]="form.description"></textarea>
-    </div>
-    <div class="form-row">
-      <label>Configuration (JSON)</label>
-      <textarea rows="8" [(ngModel)]="form.config"></textarea>
-    </div>
-  </div>
-  <div modal-footer>
-    <button (click)="submitForm()">Créer</button>
-    <button (click)="closeModal()">Annuler</button>
-  </div>
-  <div #projected style="display:none"></div>
-</app-modal>
 
 <!-- AI Assistant -->
 <app-ai-assistant></app-ai-assistant>

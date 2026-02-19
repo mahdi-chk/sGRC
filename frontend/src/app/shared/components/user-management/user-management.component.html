@@ -1,5 +1,5 @@
 <div class="user-management-container">
-  
+
   <div class="header-actions">
     <h2>Gestion des Utilisateurs</h2>
     <div class="actions">
@@ -30,9 +30,14 @@
           <span><i class="fas fa-phone"></i> {{ u.telephone }}</span>
         </div>
       </div>
-      <button class="btn-icon edit-btn" (click)="$event.stopPropagation(); selectUser(u)">
-        <i class="fas fa-pen"></i>
-      </button>
+      <div class="user-actions">
+        <button class="btn-icon edit-btn" (click)="$event.stopPropagation(); selectUser(u)" title="Modifier">
+          <i class="fas fa-pen"></i>
+        </button>
+        <button class="btn-icon delete-btn" (click)="deleteUser($event, u)" title="Supprimer">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
     </div>
 
     <div class="no-users" *ngIf="filteredUsers.length === 0">
@@ -43,7 +48,8 @@
 </div>
 
 <!-- Modal for Create/Edit -->
-<app-modal *ngIf="modalVisible" [title]="editingUser ? 'Modifier Utilisateur' : 'Nouvel Utilisateur'" (close)="closeUserModal()">
+<app-modal *ngIf="modalVisible" [title]="editingUser ? 'Modifier Utilisateur' : 'Nouvel Utilisateur'"
+  (close)="closeUserModal()">
   <div modal-body>
     <div class="form-section">
       <div class="section-title">
@@ -63,12 +69,14 @@
         </div>
         <div class="form-row">
           <label>Email Professionnel <span class="required">*</span></label>
-          <input type="email" [(ngModel)]="userForm.mail" [class.input-error]="validationErrors.mail" placeholder="email@sgrc.com" />
+          <input type="email" [(ngModel)]="userForm.mail" [class.input-error]="validationErrors.mail"
+            placeholder="email@sgrc.com" />
           <span class="error" *ngIf="validationErrors.mail">{{ validationErrors.mail }}</span>
         </div>
         <div class="form-row">
           <label>Téléphone <span class="required">*</span></label>
-          <input [(ngModel)]="userForm.telephone" [class.input-error]="validationErrors.telephone" placeholder="+212 6..." />
+          <input [(ngModel)]="userForm.telephone" [class.input-error]="validationErrors.telephone"
+            placeholder="+212 6..." />
           <span class="error" *ngIf="validationErrors.telephone">{{ validationErrors.telephone }}</span>
         </div>
       </div>
@@ -108,17 +116,36 @@
         <i class="fas fa-lock"></i>
         <span>Sécurité</span>
       </div>
-      <div class="form-row password-row">
-        <label>Mot de passe {{ editingUser ? '(Laisser vide pour conserver l\'actuel)' : '*' }}</label>
-        <div class="input-with-hint">
-          <input type="password" [(ngModel)]="userForm.password" [class.input-error]="validationErrors.password" placeholder="******" />
-          <small class="hint" *ngIf="editingUser">Remplir uniquement pour réinitialiser le mot de passe.</small>
+      <div class="form-grid">
+        <div class="form-row password-row">
+          <label>Mot de passe {{ editingUser ? '(Laisser vide pour conserver l\'actuel)' : '*' }}</label>
+          <div class="input-with-hint">
+            <div class="password-toggle-wrapper">
+              <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password"
+                [class.input-error]="validationErrors.password" placeholder="******" />
+              <button type="button" class="btn-toggle" (click)="togglePasswordVisibility()">
+                <i class="fas" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+            <small class="hint" *ngIf="editingUser">Remplir uniquement pour réinitialiser le mot de passe.</small>
+          </div>
+          <span class="error" *ngIf="validationErrors.password">{{ validationErrors.password }}</span>
         </div>
-        <span class="error" *ngIf="validationErrors.password">{{ validationErrors.password }}</span>
+        <div class="form-row password-row">
+          <label>Confirmer le mot de passe <span class="required" *ngIf="!editingUser">*</span></label>
+          <div class="password-toggle-wrapper">
+            <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="userForm.confirmPassword"
+              [class.input-error]="validationErrors.confirmPassword" placeholder="******" />
+            <button type="button" class="btn-toggle" (click)="toggleConfirmPasswordVisibility()">
+              <i class="fas" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+            </button>
+          </div>
+          <span class="error" *ngIf="validationErrors.confirmPassword">{{ validationErrors.confirmPassword }}</span>
+        </div>
       </div>
     </div>
   </div>
-  
+
   <div modal-footer>
     <button class="btn-outline" (click)="closeUserModal()">Annuler</button>
     <button class="btn-primary" (click)="saveUser()">

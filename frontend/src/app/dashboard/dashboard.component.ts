@@ -140,9 +140,6 @@ export class DashboardComponent {
     }
   ];
 
-  currentUserRole: UserRole | null = null;
-  UserRole = UserRole; // Make enum available to template
-
   get filteredModules() {
     return this.modules.filter(m => this.currentUserRole && m.roles.includes(this.currentUserRole));
   }
@@ -157,19 +154,69 @@ export class DashboardComponent {
   creating = false;
   currentModuleKey = '';
   currentSubmoduleTitle = '';
+  currentUserRole: UserRole | null = null;
+  currentUserName: string = '';
+  dashboardTitle: string = '';
+  dashboardDesc: string = '';
+  UserRole = UserRole; // Make enum available to template
+
+  currentView: 'default' | 'user-management' = 'default';
 
   form: any = { name: '', description: '', config: '{}' };
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUserRole = user?.role;
+      this.currentUserName = user?.prenom && user?.nom ? `${user.prenom} ${user.nom}` : 'Utilisateur';
+      this.setDashboardInfo();
     });
+  }
+
+  setDashboardInfo() {
+    switch (this.currentUserRole) {
+      case UserRole.ADMIN_SI:
+        this.dashboardTitle = 'Dashboard Admin SI';
+        this.dashboardDesc = 'Gérez les accès, supervisez la plateforme et assistez les utilisateurs.';
+        break;
+      case UserRole.RISK_MANAGER:
+        this.dashboardTitle = 'Dashboard Risk Manager';
+        this.dashboardDesc = 'Gérez les risques, évaluez les impacts et suivez les plans de traitement.';
+        break;
+      case UserRole.RISK_AGENT:
+        this.dashboardTitle = 'Dashboard Risk Agent';
+        this.dashboardDesc = 'Gérez les risques, évaluez les impacts et suivez les plans de traitement.';
+        break;
+      case UserRole.AUDIT_SENIOR:
+        this.dashboardTitle = 'Dashboard Audit Senior';
+        this.dashboardDesc = 'Planifiez les missions, supervisez les audits et validez les recommandations.';
+        break;
+      case UserRole.AUDITEUR:
+        this.dashboardTitle = 'Dashboard Auditeur';
+        this.dashboardDesc = 'Planifiez les missions, supervisez les audits et validez les recommandations.';
+        break;
+      case UserRole.TOP_MANAGEMENT:
+        this.dashboardTitle = 'Dashboard Top Management';
+        this.dashboardDesc = 'Vision stratégique, indicateurs clés et aide à la décision.';
+        break;
+      default:
+        this.dashboardTitle = 'Dashboard';
+        this.dashboardDesc = 'Bienvenue sur votre plateforme GRC.';
+    }
   }
 
   logout() {
     this.authService.logout();
   }
 
+  resetToHome(): void {
+    this.modalVisible = false;
+    this.creating = false;
+    this.currentView = 'default';
+  }
+
+  showUserManagementView() {
+    this.currentView = 'user-management';
+  }
 
   toggleModule(key: string) {
     if (this.expanded.has(key)) this.expanded.delete(key);

@@ -15,26 +15,19 @@
 
       <div class="form-group">
         <label for="email">Email</label>
-        <input 
-          type="email" 
-          id="email" 
-          name="email" 
-          [(ngModel)]="credentials.mail" 
-          required 
-          placeholder="admin@sgrc.com"
-        />
+        <input type="email" id="email" name="email" [(ngModel)]="credentials.mail" required
+          placeholder="mail@gmail.com" />
       </div>
 
       <div class="form-group">
         <label for="password">Mot de passe</label>
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          [(ngModel)]="credentials.password" 
-          required 
-          placeholder="••••••••"
-        />
+        <div class="password-toggle-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
+            [(ngModel)]="credentials.password" required placeholder="••••••••" />
+          <button type="button" class="btn-toggle" (click)="togglePasswordVisibility()">
+            <i class="fas" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+          </button>
+        </div>
       </div>
 
       <button type="submit" [disabled]="!loginForm.form.valid || loading">

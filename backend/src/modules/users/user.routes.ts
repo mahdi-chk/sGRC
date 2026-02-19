@@ -3,6 +3,7 @@ import { User } from './user.model';
 import { hashPassword } from '../../utils/security';
 import { authenticateToken, authorizeRoles } from '../../middleware/auth.middleware';
 import { UserRole } from './user.roles';
+import { emailService } from '../../utils/email.service';
 
 const router = Router();
 
@@ -37,6 +38,16 @@ router.post('/', async (req, res) => {
             delete userData.password;
         }
         const user = await User.create(userData);
+
+        // Send welcome email asynchronously
+        try {
+            const { mail, nom, prenom } = user;
+            await emailService.sendWelcomeEmail({ mail, nom, prenom });
+        } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // We don't block the response even if email fails
+        }
+
         res.status(201).json(user);
     } catch (error) {
         res.status(400).json({ message: 'Error creating user', error });
@@ -63,6 +74,21 @@ router.put('/:id', async (req, res) => {
         }
     } catch (error) {
         res.status(400).json({ message: 'Error updating user', error });
+    }
+});
+
+// Delete user
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await User.destroy({ where: { id } });
+        if (deleted) {
+            res.json({ message: 'User deleted successfully' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(400).json({ message: 'Error deleting user', error });
     }
 });
 

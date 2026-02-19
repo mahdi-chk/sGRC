@@ -11,9 +11,11 @@ export class LoginComponent {
     credentials = { mail: '', password: '' };
     error = '';
     loading = false;
+    showPassword = false;
 
     constructor(private authService: AuthService, private router: Router) {
         if (this.authService.isLoggedIn()) {
+            console.log('User already logged in, redirecting to dashboard');
             this.router.navigate(['/dashboard']);
         }
     }
@@ -31,5 +33,9 @@ export class LoginComponent {
                 this.loading = false;
             }
         });
+    }
+
+    togglePasswordVisibility() {
+        this.showPassword = !this.showPassword;
     }
 }

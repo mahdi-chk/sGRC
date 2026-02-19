@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AIService } from '../../../core/services/ai.service';
 
 @Component({
@@ -6,16 +6,47 @@ import { AIService } from '../../../core/services/ai.service';
   templateUrl: './ai-assistant.component.html',
   styleUrls: ['./ai-assistant.component.css']
 })
-export class AiAssistantComponent {
+export class AiAssistantComponent implements OnInit {
   isOpen = false;
   prompt = '';
   messages: { role: 'user' | 'ai', content: string }[] = [];
   isLoading = false;
+  isIndexed = false;
+  isIndexing = false;
 
   constructor(private aiService: AIService) { }
 
+  ngOnInit() {
+    this.checkIndexStatus();
+  }
+
+  checkIndexStatus() {
+    this.aiService.getStatus().subscribe({
+      next: (res) => this.isIndexed = res.isInitialized,
+      error: (err) => console.error('Error checking index status:', err)
+    });
+  }
+
   toggleChat() {
     this.isOpen = !this.isOpen;
+  }
+
+  startIndexing() {
+    this.isIndexing = true;
+    this.aiService.indexNormes().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.isIndexed = true;
+          this.messages.push({ role: 'ai', content: `Indexation terminée ! ${res.count} fragments de documents ont été indexés.` });
+        }
+        this.isIndexing = false;
+      },
+      error: (err) => {
+        console.error('Indexing error:', err);
+        this.messages.push({ role: 'ai', content: 'Erreur lors de l\'indexation des documents.' });
+        this.isIndexing = false;
+      }
+    });
   }
 
   sendMessage() {

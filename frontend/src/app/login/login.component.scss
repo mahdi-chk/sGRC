@@ -9,13 +9,13 @@
 }
 
 .login-card {
-  background: var(--white);
+  background: white;
   padding: 3rem;
   border-radius: 8px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 450px;
-  border-top: 5px solid var(--micepp-blue);
+  border-top: 5px solid var(--micepp-blue, #004a99);
 }
 
 .logo {
@@ -24,7 +24,7 @@
 
   h1 {
     margin: 0;
-    color: var(--micepp-blue-dark);
+    color: var(--micepp-blue-dark, #003366);
     font-size: 2.8rem;
     font-weight: 700;
     letter-spacing: 1px;
@@ -33,7 +33,7 @@
 
   p {
     margin: 8px 0 0;
-    color: var(--micepp-gold);
+    color: var(--micepp-gold, #c5a059);
     font-size: 0.95rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -44,13 +44,13 @@
 form {
   h2 {
     margin: 0 0 8px;
-    color: var(--micepp-blue-dark);
+    color: var(--micepp-blue-dark, #003366);
     font-size: 1.5rem;
   }
 
   .subtitle {
     margin: 0 0 2rem;
-    color: var(--micepp-text-muted);
+    color: #666;
     font-size: 0.9rem;
   }
 }
@@ -61,7 +61,7 @@ form {
   label {
     display: block;
     margin-bottom: 0.6rem;
-    color: var(--micepp-blue-dark);
+    color: var(--micepp-blue-dark, #003366);
     font-weight: 600;
     font-size: 0.85rem;
     text-transform: uppercase;
@@ -70,7 +70,7 @@ form {
   input {
     width: 100%;
     padding: 14px;
-    border: 1px solid var(--micepp-border);
+    border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 1rem;
     box-sizing: border-box;
@@ -79,17 +79,17 @@ form {
 
     &:focus {
       outline: none;
-      border-color: var(--micepp-blue);
-      background: var(--white);
+      border-color: var(--micepp-blue, #004a99);
+      background: white;
       box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.1);
     }
   }
 }
 
-button {
+button[type="submit"] {
   width: 100%;
   padding: 14px;
-  background: var(--micepp-blue);
+  background: var(--micepp-blue, #004a99);
   color: white;
   border: none;
   border-radius: 4px;
@@ -102,7 +102,7 @@ button {
   letter-spacing: 1px;
 
   &:hover:not(:disabled) {
-    background: var(--micepp-blue-dark);
+    background: var(--micepp-blue-dark, #003366);
   }
 
   &:disabled {
@@ -126,14 +126,55 @@ button {
   margin-top: 2rem;
 
   a {
-    color: var(--micepp-blue);
+    color: var(--micepp-blue, #004a99);
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 600;
 
     &:hover {
       text-decoration: underline;
-      color: var(--micepp-blue-dark);
+      color: var(--micepp-blue-dark, #003366);
+    }
+  }
+}
+
+.password-toggle-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  input {
+    width: 100% !important;
+    padding-right: 45px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .btn-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none !important;
+    border: none !important;
+    color: #888 !important;
+    cursor: pointer;
+    padding: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+
+    &:hover {
+      color: var(--micepp-blue, #004a99) !important;
+    }
+
+    i {
+      font-size: 1.1rem;
     }
   }
 }

@@ -5,6 +5,15 @@
     </div>
 
     <div class="chat-body" *ngIf="isOpen">
+        <!-- RAG Status Warning -->
+        <div class="rag-warning" *ngIf="!isIndexed && messages.length === 0">
+            <p><i class="fas fa-exclamation-triangle"></i> Base vectorielle non initialisée.</p>
+            <button (click)="startIndexing()" [disabled]="isIndexing" class="index-btn">
+                <i class="fas" [ngClass]="isIndexing ? 'fa-spinner fa-spin' : 'fa-database'"></i>
+                {{ isIndexing ? 'Indexation...' : 'Indexer les normes' }}
+            </button>
+        </div>
+
         <div class="messages">
             <div *ngFor="let msg of messages" class="message" [ngClass]="msg.role">
                 <div class="bubble">
@@ -21,7 +30,7 @@
         <div class="chat-input scroll-wrapper">
             <textarea [(ngModel)]="prompt" (keyup.enter)="sendMessage()"
                 placeholder="Posez votre question sur la GRC..." rows="2"></textarea>
-            <button (click)="sendMessage()" [disabled]="isLoading">
+            <button (click)="sendMessage()" [disabled]="isLoading || (messages.length === 0 && !isIndexed)">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>

@@ -7,11 +7,19 @@ import { environment } from '../../../environments/environment';
     providedIn: 'root'
 })
 export class AIService {
-    private apiUrl = `${environment.apiUrl}/ai/chat`;
+    private apiUrl = `${environment.apiUrl}/ai`;
 
     constructor(private http: HttpClient) { }
 
     chat(prompt: string): Observable<{ response: string }> {
-        return this.http.post<{ response: string }>(this.apiUrl, { prompt });
+        return this.http.post<{ response: string }>(`${this.apiUrl}/generate`, { prompt });
+    }
+
+    getStatus(): Observable<{ isInitialized: boolean }> {
+        return this.http.get<{ isInitialized: boolean }>(`${this.apiUrl}/status`);
+    }
+
+    indexNormes(): Observable<{ success: boolean, count: number }> {
+        return this.http.post<{ success: boolean, count: number }>(`${this.apiUrl}/index`, {});
     }
 }

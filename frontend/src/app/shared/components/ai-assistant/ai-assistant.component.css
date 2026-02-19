@@ -135,3 +135,42 @@
     background: #ccc;
     cursor: not-allowed;
 }
+
+.rag-warning {
+    padding: 15px;
+    background: #fff3cd;
+    border-bottom: 1px solid #ffeeba;
+    text-align: center;
+}
+
+.rag-warning p {
+    margin: 0 0 10px 0;
+    color: #856404;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.index-btn {
+    background: #856404;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto;
+    transition: all 0.2s;
+}
+
+.index-btn:hover:not(:disabled) {
+    background: #6d5203;
+}
+
+.index-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}

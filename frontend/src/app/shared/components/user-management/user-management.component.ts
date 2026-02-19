@@ -11,6 +11,7 @@ export interface User {
     role: UserRole;
     departementId: number;
     password?: string;
+    confirmPassword?: string;
     poste?: string;
 }
 
@@ -28,6 +29,9 @@ export class UserManagementComponent implements OnInit {
     users: User[] = [];
     validationErrors: any = {};
     status: string | null = null;
+
+    showPassword = false;
+    showConfirmPassword = false;
 
     postes: string[] = [];
     departements: any[] = [];
@@ -49,7 +53,8 @@ export class UserManagementComponent implements OnInit {
             telephone: '',
             role: UserRole.RISK_AGENT,
             departementId: 0,
-            password: ''
+            password: '',
+            confirmPassword: ''
         };
     }
 
@@ -83,6 +88,8 @@ export class UserManagementComponent implements OnInit {
             this.editingUser = null;
             this.userForm = this.emptyUser();
         }
+        this.showPassword = false;
+        this.showConfirmPassword = false;
     }
 
     closeUserModal() {
@@ -125,6 +132,11 @@ export class UserManagementComponent implements OnInit {
             isValid = false;
         }
 
+        if (this.userForm.password !== this.userForm.confirmPassword) {
+            this.validationErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+            isValid = false;
+        }
+
         if (!this.userForm.role) { this.validationErrors.role = 'Le rôle est obligatoire'; isValid = false; }
         if (!this.userForm.departementId || this.userForm.departementId === 0) {
             this.validationErrors.departementId = 'Le département est obligatoire';
@@ -149,6 +161,7 @@ export class UserManagementComponent implements OnInit {
         if (!payload.password) {
             delete payload.password;
         }
+        delete payload.confirmPassword;
 
         if (this.editingUser) {
             this.http.put(`http://localhost:3000/api/users/${this.editingUser.id}`, payload).subscribe(
@@ -177,6 +190,19 @@ export class UserManagementComponent implements OnInit {
         this.status = "Pour réinitialiser le mot de passe, modifiez l'utilisateur et entrez un nouveau mot de passe.";
     }
 
+    deleteUser(event: Event, user: User) {
+        event.stopPropagation();
+        if (confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${user.prenom} ${user.nom} ?`)) {
+            this.http.delete(`http://localhost:3000/api/users/${user.id}`).subscribe(
+                () => {
+                    this.status = 'Utilisateur supprimé';
+                    this.loadUsers();
+                },
+                (err: any) => this.status = 'Error deleting user: ' + (err.status || err.message)
+            );
+        }
+    }
+
     get filteredUsers() {
         if (!this.userSearchTerm) return this.users; // Return all users by default for better UX
         return this.users.filter(u =>
@@ -186,5 +212,13 @@ export class UserManagementComponent implements OnInit {
 
     selectUser(user: User) {
         this.openUserModal(user);
+    }
+
+    togglePasswordVisibility() {
+        this.showPassword = !this.showPassword;
+    }
+
+    toggleConfirmPasswordVisibility() {
+        this.showConfirmPassword = !this.showConfirmPassword;
     }
 }

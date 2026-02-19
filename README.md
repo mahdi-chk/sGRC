@@ -1,84 +1,71 @@
-# GRC Platform
+# GRC Platform - Governance, Risk, and Compliance
 
 ## Overview
-The Governance, Risk, and Compliance (GRC) Platform is a comprehensive solution designed to help organizations manage their governance, risk management, internal controls, regulatory compliance, auditing, incident management, action plans, reporting, and supervision processes effectively.
+The Governance, Risk, and Compliance (GRC) Platform is a comprehensive solution designed to help organizations manage their governance frameworks, risk assessments, and regulatory compliance requirements. It integrates an intelligent AI assistant to provide data-driven insights and automated workflows.
 
-## Project Structure
-The project is divided into three main parts:
-- **Frontend**: An Angular application that provides a user interface for interacting with the GRC solution.
-- **Backend**: A Node.js application that handles business logic, data processing, and API endpoints.
-- **Shared**: A library containing shared utilities and types used across both frontend and backend.
+## 🚀 Key Features
 
-## Features
-- **Governance Module**: Manage governance frameworks and policies.
-- **Risk Management Module**: Identify, assess, and mitigate risks.
-- **Internal Controls Module**: Implement and monitor internal controls.
-- **Regulatory Compliance Module**: Ensure compliance with relevant regulations.
-- **Auditing Module**: Conduct audits and manage audit findings.
-- **Incident Management Module**: Track and manage incidents.
-- **Action Plans Module**: Create and monitor action plans for remediation.
-- **Reporting Module**: Generate reports for various GRC activities.
-- **Supervision Module**: Oversee and manage GRC processes.
+### 🏢 Governance & Risk
+- **Risk Management**: Identify, assess, and mitigate organizational risks.
+- **Internal Controls**: Monitoring and implementation of internal control systems.
+- **Incident Tracking**: Full lifecycle management of incidents and action plans.
+- **Auditing Module**: Comprehensive audit trails and management of findings.
 
-## Functional Requirements
-Refer to the `docs/functional-requirements.md` file for detailed functional requirements of the GRC solution.
+### 🤖 Intelligent AI Assistant
+- **RAG Engine**: Advanced Retrieval-Augmented Generation capabilities to query internal documents and data.
+- **Context-Aware Insights**: AI assistant integrated directly into the dashboard for real-time support.
+- **Automated Analysis**: PDF and document processing for risk evaluation.
 
-## Security Specifications
-Refer to the `docs/security-specifications.md` file for detailed security specifications of the GRC solution.
+### 📩 Automation & Notifications
+- **Email Service**: Automated notifications for critical alerts and updates via Nodemailer.
+- **Interactive Dashboards**: Role-based dashboards (Admin, Top Management, etc.) with real-time analytics.
 
-## Getting Started
+## 🛠 Tech Stack
+
+- **Frontend**: Angular 12, SCSS, RxJS.
+- **Backend**: Node.js, Express, TypeScript.
+- **Database**: SQL Server (MSSQL) with Sequelize ORM.
+- **Authentication**: JWT (JSON Web Tokens) with bcryptjs encryption.
+- **Integrations**: Nodemailer (Email), AI RAG Engine.
+
+## 📁 Project Structure
+The project is structured as a monorepo containing:
+- **`backend/`**: Express API, AI logic, and database management.
+- **`frontend/`**: Angular SPA with role-based access control.
+- **`shared/`**: Common types and utilities.
+
+## ⚙️ Getting Started
 
 ### Prerequisites
-- Node.js (version 14 or higher)
-- Angular CLI (version 12 or higher)
-- Docker (for containerization)
+- Node.js (v14+)
+- SQL Server instance
+- Angular CLI
 
 ### Installation
-1. Clone the repository:
-   ```
-   git clone <repository-url>
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/mahdi-chk/sGRC.git
    cd grc-platform
    ```
 
-2. Install frontend dependencies:
-   ```
-   cd frontend
+2. **Backend Setup**:
+   ```bash
+   cd backend
    npm install
+   # Configure your .env file
+   npm start
    ```
 
-3. Install backend dependencies:
-   ```
-   cd ../backend
+3. **Frontend Setup**:
+   ```bash
+   cd ../frontend
    npm install
+   ng serve
    ```
 
-4. Install shared library dependencies:
-   ```
-   cd ../shared
-   npm install
-   ```
+## 📜 License
+This project is licensed under the MIT License.
 
-### Running the Application
-- To run the frontend:
-  ```
-  cd frontend
-  ng serve
-  ```
-
-- To run the backend:
-  ```
-  cd backend
-  npm start
-  ```
-
-### Docker Setup
-To run the application using Docker, navigate to the `infra` directory and use the following command:
-```
-docker-compose up
-```
-
-## Contributing
-Contributions are welcome! Please submit a pull request or open an issue for any enhancements or bug fixes.
-
-## License
-This project is licensed under the MIT License. See the LICENSE file for more details.
+---
+*Created and maintained by [mahdi-chk](https://github.com/mahdi-chk)*

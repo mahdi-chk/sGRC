@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 @Component({
-    selector: 'app-top-management-dashboard',
-    templateUrl: './top-management-dashboard.component.html'
+    selector: 'app-auditeur-dashboard',
+    templateUrl: './auditeur-dashboard.component.html'
 })
-export class TopManagementDashboardComponent {
+export class AuditeurDashboardComponent {
     @Input() filteredModules: any[] = [];
+    @Input() title: string = 'Dashboard Auditeur';
     @Output() openModule = new EventEmitter<any>();
 
     onOpenModule(m: any, s: any) {

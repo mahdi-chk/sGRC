@@ -1,30 +1,30 @@
 <div class="grid" [ngSwitch]="currentUserRole" style="margin-top: 20px;">
-    <app-risk-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
+    <app-risk-manager-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
         title="Dashboard Risk Manager" (openModule)="onOpenModule($event)">
-    </app-risk-dashboard>
+    </app-risk-manager-dashboard>
 
-    <app-risk-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
+    <app-risk-agent-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
         title="Dashboard Risk Agent" (openModule)="onOpenModule($event)">
-    </app-risk-dashboard>
+    </app-risk-agent-dashboard>
 
-    <app-audit-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
+    <app-audit-senior-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
         title="Dashboard Audit Senior" (openModule)="onOpenModule($event)">
-    </app-audit-dashboard>
+    </app-audit-senior-dashboard>
 
-    <app-audit-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
+    <app-auditeur-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
         title="Dashboard Auditeur" (openModule)="onOpenModule($event)">
-    </app-audit-dashboard>
+    </app-auditeur-dashboard>
 
     <app-admin-si-dashboard *ngSwitchCase="UserRole.ADMIN_SI" [filteredModules]="filteredModules"
         description="Gérez les accès, supervisez la plateforme et assistez les utilisateurs."
         (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()">
     </app-admin-si-dashboard>
 
-    <app-admin-si-dashboard *ngSwitchCase="UserRole.SUPER_ADMIN" [filteredModules]="filteredModules"
+    <app-super-admin-dashboard *ngSwitchCase="UserRole.SUPER_ADMIN" [filteredModules]="filteredModules"
         title="Dashboard Super Admin"
         description="Accès complet à toutes les fonctionnalités et modules de la plateforme."
         (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()">
-    </app-admin-si-dashboard>
+    </app-super-admin-dashboard>
 
     <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"
         (openModule)="onOpenModule($event)">

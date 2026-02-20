@@ -9,10 +9,13 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { LoginComponent } from './login/login.component';
 import { ModalComponent } from './shared/modal/modal.component';
 import { AuthGuard } from './core/guards/auth.guard';
-import { RiskDashboardComponent } from './dashboard/roles/risk-dashboard.component';
-import { AuditDashboardComponent } from './dashboard/roles/audit-dashboard.component';
-import { AdminSiDashboardComponent } from './dashboard/roles/admin-si-dashboard.component';
-import { TopManagementDashboardComponent } from './dashboard/roles/top-management-dashboard.component';
+import { RiskManagerDashboardComponent } from './dashboard/roles/risk-manager/risk-manager-dashboard.component';
+import { RiskAgentDashboardComponent } from './dashboard/roles/risk-agent/risk-agent-dashboard.component';
+import { AuditSeniorDashboardComponent } from './dashboard/roles/audit-senior/audit-senior-dashboard.component';
+import { AuditeurDashboardComponent } from './dashboard/roles/auditeur/auditeur-dashboard.component';
+import { AdminSiDashboardComponent } from './dashboard/roles/admin-si/admin-si-dashboard.component';
+import { SuperAdminDashboardComponent } from './dashboard/roles/super-admin/super-admin-dashboard.component';
+import { TopManagementDashboardComponent } from './dashboard/roles/top-management/top-management-dashboard.component';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { AiAssistantComponent } from './shared/components/ai-assistant/ai-assistant.component';
 import { UserManagementComponent } from './shared/components/user-management/user-management.component';
@@ -39,9 +42,12 @@ const routes: Routes = [
     DashboardComponent,
     LoginComponent,
     ModalComponent,
-    RiskDashboardComponent,
-    AuditDashboardComponent,
+    RiskManagerDashboardComponent,
+    RiskAgentDashboardComponent,
+    AuditSeniorDashboardComponent,
+    AuditeurDashboardComponent,
     AdminSiDashboardComponent,
+    SuperAdminDashboardComponent,
     TopManagementDashboardComponent,
     AiAssistantComponent,
     UserManagementComponent,

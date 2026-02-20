@@ -10,7 +10,7 @@
       <button class="icon-btn" title="Planning">
         <i class="fas fa-calendar-alt"></i>
       </button>
-      <button class="icon-btn" (click)="resetToHome()" title="Home">
+      <button class="icon-btn" routerLink="/dashboard" title="Home">
         <i class="fas fa-home"></i>
       </button>
     </div>
@@ -52,42 +52,7 @@
   <main class="content-area">
 
     <div class="dashboard-content">
-      <!-- Default Grid View -->
-      <div class="grid" *ngIf="currentView === 'default'" [ngSwitch]="currentUserRole" style="margin-top: 20px;">
-        <app-risk-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
-          title="Dashboard Risk Manager" (openModule)="openSubmoduleModal($event.m, $event.s)">
-        </app-risk-dashboard>
-
-        <app-risk-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
-          title="Dashboard Risk Agent" (openModule)="openSubmoduleModal($event.m, $event.s)">
-        </app-risk-dashboard>
-
-        <app-audit-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
-          title="Dashboard Audit Senior" (openModule)="openSubmoduleModal($event.m, $event.s)">
-        </app-audit-dashboard>
-
-        <app-audit-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
-          title="Dashboard Auditeur" (openModule)="openSubmoduleModal($event.m, $event.s)">
-        </app-audit-dashboard>
-
-        <app-admin-si-dashboard *ngSwitchCase="UserRole.ADMIN_SI" [filteredModules]="filteredModules"
-          (openModule)="openSubmoduleModal($event.m, $event.s)" (openUserManagement)="showUserManagementView()">
-        </app-admin-si-dashboard>
-
-        <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"
-          (openModule)="openSubmoduleModal($event.m, $event.s)">
-        </app-top-management-dashboard>
-
-        <!-- Default view if no role or error (optional) -->
-        <div *ngSwitchDefault>
-          <p>Chargement de votre espace personnalisé...</p>
-        </div>
-      </div>
-
-      <!-- User Management View -->
-      <div class="user-management-view" *ngIf="currentView === 'user-management'">
-        <app-user-management></app-user-management>
-      </div>
+      <router-outlet></router-outlet>
     </div>
 
     <app-modal *ngIf="modalVisible && !creating" [title]="modalTitle" (close)="closeModal()">

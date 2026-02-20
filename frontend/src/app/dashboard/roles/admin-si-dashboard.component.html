@@ -1,34 +1,42 @@
 <div class="role-dashboard admin-si">
     <div class="welcome-banner">
-        <h2><i class="fas fa-user-shield"></i> Dashboard Admin SI</h2>
-        <p>Gérez les accès, supervisez la plateforme et assistez les utilisateurs.</p>
+        <h2><i class="fas fa-user-shield"></i> {{ title }}</h2>
+        <p>{{ description }}</p>
     </div>
 
-    <div class="dashboard-grid">
-        <!-- User Management Card - Primary for Admin SI -->
-        <div class="module-card premium special-admin" (click)="onOpenUserManagement()">
-            <div class="card-icon"><i class="fas fa-users-cog"></i></div>
-            <h3>Gestion des Utilisateurs</h3>
-            <p class="desc">Gérer les comptes, initialiser et réinitialiser les mots de passe.</p>
-            <div class="card-footer">
-                <button class="btn-primary">Accéder</button>
+    <div class="admin-tools-section">
+        <h3 class="section-subtitle"><i class="fas fa-tools"></i> Administration</h3>
+        <div class="dashboard-grid single-card">
+            <!-- User Management Card - Primary for Admin SI -->
+            <div class="module-card premium special-admin" (click)="onOpenUserManagement()">
+                <div class="card-icon"><i class="fas fa-users-cog"></i></div>
+                <h3>Gestion des Utilisateurs</h3>
+                <p class="desc">Gérer les comptes, initialiser et réinitialiser les mots de passe.</p>
+                <div class="card-footer">
+                    <button class="btn-primary">Accéder </button>
+                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Other Modules assigned to Admin SI -->
-        <div *ngFor="let m of filteredModules" class="module-card premium">
-            <div class="card-icon"><i class="fas fa-cog"></i></div>
-            <h3>{{ m.title }}</h3>
-            <p class="desc">{{ m.desc }}</p>
+    <div class="functional-modules-section" *ngIf="filteredModules.length > 0">
+        <h3 class="section-subtitle"><i class="fas fa-layer-group"></i> Modules Fonctionnels</h3>
+        <div class="dashboard-grid">
+            <!-- Other Modules assigned to Admin SI -->
+            <div *ngFor="let m of filteredModules" class="module-card premium">
+                <div class="card-icon"><i class="fas fa-cog"></i></div>
+                <h3>{{ m.title }}</h3>
+                <p class="desc">{{ m.desc }}</p>
 
-            <ul class="submodules-list">
-                <li *ngFor="let s of m.submodules" (click)="onOpenModule(m, s)">
-                    <i class="fas fa-chevron-right"></i> {{ s.title }}
-                </li>
-            </ul>
+                <ul class="submodules-list">
+                    <li *ngFor="let s of m.submodules" (click)="onOpenModule(m, s)">
+                        <i class="fas fa-chevron-right"></i> {{ s.title }}
+                    </li>
+                </ul>
 
-            <div class="card-footer">
-                <button class="btn-secondary" (click)="onOpenModule(m, m.submodules[0])">Paramètres</button>
+                <div class="card-footer">
+                    <button class="btn-secondary" (click)="onOpenModule(m, m.submodules[0])">Paramètres</button>
+                </div>
             </div>
         </div>
     </div>

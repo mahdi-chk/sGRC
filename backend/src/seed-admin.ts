@@ -81,6 +81,16 @@ async function seed() {
                 departement: 'Informatique',
                 role: UserRole.ADMIN_SI,
                 password: 'password123'
+            },
+            {
+                nom: 'Admin',
+                prenom: 'Super',
+                mail: 'super.admin@sgrc.com',
+                telephone: '07070707',
+                poste: 'Super Administrateur',
+                departement: 'Direction',
+                role: UserRole.SUPER_ADMIN,
+                password: 'password123'
             }
         ];
 

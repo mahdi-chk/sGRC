@@ -16,10 +16,19 @@ import { TopManagementDashboardComponent } from './dashboard/roles/top-managemen
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { AiAssistantComponent } from './shared/components/ai-assistant/ai-assistant.component';
 import { UserManagementComponent } from './shared/components/user-management/user-management.component';
+import { DashboardHomeComponent } from './dashboard/dashboard-home.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
-  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+    canActivate: [AuthGuard],
+    children: [
+      { path: '', component: DashboardHomeComponent },
+      { path: 'users', component: UserManagementComponent }
+    ]
+  },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: '/dashboard' }
 ];
@@ -35,7 +44,8 @@ const routes: Routes = [
     AdminSiDashboardComponent,
     TopManagementDashboardComponent,
     AiAssistantComponent,
-    UserManagementComponent
+    UserManagementComponent,
+    DashboardHomeComponent
   ],
   imports: [
     BrowserModule,

@@ -5,4 +5,5 @@ export enum UserRole {
     AUDITEUR = 'Auditeur',
     TOP_MANAGEMENT = 'Top Management',
     ADMIN_SI = 'Administrateur SI',
+    SUPER_ADMIN = 'Super Admin',
 }

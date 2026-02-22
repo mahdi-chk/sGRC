@@ -20,6 +20,9 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { AiAssistantComponent } from './shared/components/ai-assistant/ai-assistant.component';
 import { UserManagementComponent } from './shared/components/user-management/user-management.component';
 import { DashboardHomeComponent } from './dashboard/dashboard-home.component';
+import { RiskManagementComponent } from './risks/risk-management.component';
+import { AssignedRisksComponent } from './dashboard/roles/risk-agent/assigned-risks/assigned-risks.component';
+import { PlanningComponent } from './modules/planning/planning.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -29,7 +32,10 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: '', component: DashboardHomeComponent },
-      { path: 'users', component: UserManagementComponent }
+      { path: 'users', component: UserManagementComponent },
+      { path: 'risks', component: RiskManagementComponent },
+      { path: 'assigned-risks', component: AssignedRisksComponent },
+      { path: 'planning', component: PlanningComponent }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -51,7 +57,10 @@ const routes: Routes = [
     TopManagementDashboardComponent,
     AiAssistantComponent,
     UserManagementComponent,
-    DashboardHomeComponent
+    DashboardHomeComponent,
+    RiskManagementComponent,
+    AssignedRisksComponent,
+    PlanningComponent
   ],
   imports: [
     BrowserModule,

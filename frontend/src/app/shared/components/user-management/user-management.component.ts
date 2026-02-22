@@ -152,6 +152,9 @@ export class UserManagementComponent implements OnInit {
         // Préparation du payload
         const payload = { ...this.userForm };
 
+        // Assurer que departementId est un nombre (important pour MSSQL)
+        payload.departementId = Number(payload.departementId);
+
         // Assurer que 'poste' est envoyé car requis par le modèle Sequelize
         if (!payload.poste) {
             payload.poste = payload.role;
@@ -203,11 +206,26 @@ export class UserManagementComponent implements OnInit {
         }
     }
 
+    selectedRoleFilter = '';
+    selectedDeptFilter = 0;
+
     get filteredUsers() {
-        if (!this.userSearchTerm) return this.users; // Return all users by default for better UX
-        return this.users.filter(u =>
-            `${u.nom} ${u.prenom}`.toLowerCase().includes(this.userSearchTerm.toLowerCase())
-        );
+        return this.users.filter(u => {
+            const matchesSearch = !this.userSearchTerm ||
+                `${u.nom} ${u.prenom} ${u.mail}`.toLowerCase().includes(this.userSearchTerm.toLowerCase());
+
+            const matchesRole = !this.selectedRoleFilter || u.role === this.selectedRoleFilter;
+
+            const matchesDept = !this.selectedDeptFilter || u.departementId === Number(this.selectedDeptFilter);
+
+            return matchesSearch && matchesRole && matchesDept;
+        });
+    }
+
+    resetFilters() {
+        this.userSearchTerm = '';
+        this.selectedRoleFilter = '';
+        this.selectedDeptFilter = 0;
     }
 
     selectUser(user: User) {

@@ -6,9 +6,16 @@ import { Subject } from 'rxjs';
 })
 export class DashboardService {
     private openModalSource = new Subject<{ m: any, s: any }>();
+    private toggleAiAssistantSource = new Subject<void>();
+
     openModal$ = this.openModalSource.asObservable();
+    toggleAiAssistant$ = this.toggleAiAssistantSource.asObservable();
 
     openSubmoduleModal(m: any, s: any) {
         this.openModalSource.next({ m, s });
+    }
+
+    toggleAiAssistant() {
+        this.toggleAiAssistantSource.next();
     }
 }

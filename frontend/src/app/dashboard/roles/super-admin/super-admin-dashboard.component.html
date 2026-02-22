@@ -12,15 +12,7 @@
                 <h3>Gestion des Utilisateurs</h3>
                 <p class="desc">Contrôle complet de tous les comptes utilisateurs.</p>
                 <div class="card-footer">
-                    <button class="btn-primary" routerLink="/dashboard/users">Accéder</button>
-                </div>
-            </div>
-            <div class="module-card premium">
-                <div class="card-icon"><i class="fas fa-database"></i></div>
-                <h3>Configuration Système</h3>
-                <p class="desc">Paramètres globaux et maintenance.</p>
-                <div class="card-footer">
-                    <button class="btn-secondary">Gérer</button>
+                    <button class="btn-primary" (click)="onOpenUserManagement()">Accéder</button>
                 </div>
             </div>
         </div>

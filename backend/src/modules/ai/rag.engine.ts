@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
+import { SystemSetting } from '../settings/setting.model';
 
-const NORMES_PATH = 'G:\\T\u00E9l\u00E9chargement\\sGRC\\normes';
+const DEFAULT_NORMES_PATH = 'G:\\T\u00E9l\u00E9chargement\\sGRC\\normes';
 const OLLAMA_EMBED_URL = process.env.OLLAMA_EMBED_URL || 'http://localhost:11434/api/embeddings';
 const EMBED_MODEL = 'nomic-embed-text';
 const STORAGE_DIR = path.join(__dirname, '../../storage');
@@ -49,12 +50,21 @@ export class RAGEngine {
         return this.db.length > 0;
     }
 
+    static async getNormesPath(): Promise<string> {
+        console.log('Fetching DOCS_PATH from database...');
+        const setting = await SystemSetting.findOne({ where: { key: 'DOCS_PATH' } });
+        const path = setting ? setting.value : DEFAULT_NORMES_PATH;
+        console.log('DOCS_PATH used:', path);
+        return path;
+    }
+
     static async indexDocuments(): Promise<{ success: boolean; count: number }> {
         this.db = []; // Reset DB for fresh indexing
         let totalChunks = 0;
 
-        const files = this.getAllPdfFiles(NORMES_PATH);
-        console.log(`Found ${files.length} PDF files to index.`);
+        const docsPath = await this.getNormesPath();
+        const files = this.getAllPdfFiles(docsPath);
+        console.log(`Found ${files.length} PDF files to index at ${docsPath}.`);
 
         for (const file of files) {
             try {

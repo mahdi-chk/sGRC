@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AIService } from '../../../core/services/ai.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
 
 @Component({
   selector: 'app-ai-assistant',
@@ -14,10 +15,13 @@ export class AiAssistantComponent implements OnInit {
   isIndexed = false;
   isIndexing = false;
 
-  constructor(private aiService: AIService) { }
+  constructor(private aiService: AIService, private dashboardService: DashboardService) { }
 
   ngOnInit() {
     this.checkIndexStatus();
+    this.dashboardService.toggleAiAssistant$.subscribe(() => {
+      this.isOpen = true; // Auto open when triggered
+    });
   }
 
   checkIndexStatus() {

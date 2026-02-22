@@ -7,4 +7,4 @@ import { RiskComponent } from './risk.component';
   imports: [CommonModule],
   exports: [RiskComponent]
 })
-export class RiskModule {}
+export class RiskModule { }

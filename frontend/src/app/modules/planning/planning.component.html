@@ -1,0 +1,53 @@
+<div class="planning-wrapper">
+    <div class="calendar-section">
+        <div class="calendar-header">
+            <div class="calendar-nav">
+                <button (click)="prevMonth()" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
+                <span class="current-period">{{ currentMonthName }} {{ currentYear }}</span>
+                <button (click)="nextMonth()" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <div class="calendar-grid">
+            <div class="day-name" *ngFor="let name of dayNames">{{ name }}</div>
+
+            <div *ngFor="let day of days" class="calendar-day" [class.today]="day.isToday"
+                [class.not-current]="!day.isCurrentMonth" [class.has-risks]="day.risks.length > 0"
+                [class.selected]="selectedDay === day" (click)="selectDay(day)">
+
+                <span class="day-number" *ngIf="day.date">{{ day.date | date:'d' }}</span>
+                <div class="risk-indicator-dot" *ngIf="day.risks.length > 0"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="details-section">
+        <div class="details-header" *ngIf="selectedDay">
+            <h3>{{ selectedDay.date | date:'longDate' }}</h3>
+            <span class="risk-count" *ngIf="selectedDay.risks.length > 0">
+                {{ selectedDay.risks.length }} risque(s) prévu(s)
+            </span>
+        </div>
+
+        <div class="details-content" *ngIf="selectedDay && selectedDay.risks.length > 0">
+            <div class="risk-card" *ngFor="let risk of selectedDay.risks">
+                <div class="risk-card-header">
+                    <span class="risk-title">{{ risk.titre }}</span>
+                    <span class="risk-badge" [class]="'level-' + risk.niveauRisque.toLowerCase()">{{ risk.niveauRisque
+                        }}</span>
+                </div>
+                <div class="risk-detail">{{ risk.explication }}</div>
+                <div class="risk-meta">
+                    <span class="status-indicator"
+                        [class]="'status-' + risk.statut.toLowerCase().replace(' ', '-')"></span>
+                    {{ risk.statut }}
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-details" *ngIf="!selectedDay || selectedDay.risks.length === 0">
+            <i class="fas fa-calendar-day"></i>
+            <p>{{ !selectedDay ? 'Sélectionnez un jour' : 'Aucun risque pour ce jour' }}</p>
+        </div>
+    </div>
+</div>

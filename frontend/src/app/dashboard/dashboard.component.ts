@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../core/services/auth.service';
 import { DashboardService } from '../core/services/dashboard.service';
+import { NotificationService } from '../core/services/notification.service';
+import { Notification } from '../core/models/notification.model';
 import { UserRole } from '../core/models/user-role.enum';
 import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
 
@@ -43,7 +45,16 @@ export class DashboardComponent {
 
   form: any = { name: '', description: '', config: '{}' };
 
-  constructor(private http: HttpClient, private authService: AuthService, private dashboardService: DashboardService) {
+  notifications: Notification[] = [];
+  unreadCount = 0;
+  showNotifDropdown = false;
+
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    private dashboardService: DashboardService,
+    private notificationService: NotificationService
+  ) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUserRole = user?.role;
       this.currentUserName = user?.prenom && user?.nom ? `${user.prenom} ${user.nom}` : 'Utilisateur';
@@ -53,6 +64,28 @@ export class DashboardComponent {
     this.dashboardService.openModal$.subscribe(data => {
       this.openSubmoduleModal(data.m, data.s);
     });
+
+    this.notificationService.notifications$.subscribe(notifs => {
+      this.notifications = notifs;
+    });
+
+    this.notificationService.unreadCount$.subscribe(count => {
+      this.unreadCount = count;
+    });
+  }
+
+  toggleNotifDropdown() {
+    this.showNotifDropdown = !this.showNotifDropdown;
+  }
+
+  markAsRead(n: Notification) {
+    if (!n.isRead) {
+      this.notificationService.markAsRead(n.id).subscribe();
+    }
+  }
+
+  markAllAsRead() {
+    this.notificationService.markAllAsRead().subscribe();
   }
 
   setDashboardInfo() {

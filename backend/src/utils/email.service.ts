@@ -56,6 +56,88 @@ class EmailService {
             return null;
         }
     }
+
+    async sendRiskAssignedEmail(agent: { mail: string; nom: string; prenom: string }, risk: { titre: string; id: number }) {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: agent.mail,
+            subject: `Nouveau risque assigné : ${risk.titre}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${agent.prenom},</h2>
+                    <p>Un nouveau risque vous a été assigné sur la plateforme GRC.</p>
+                    <p><strong>Risque :</strong> ${risk.titre} (ID: ${risk.id})</p>
+                    <p>Veuillez vous connecter pour consulter les détails et commencer le traitement.</p>
+                    <br>
+                    <p>Cordialement,<br>L'équipe GRC</p>
+                </div>
+            `,
+        };
+
+        try {
+            return await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Error sending risk assigned email:', error);
+            return null;
+        }
+    }
+
+    async sendRiskStatusUpdateEmail(manager: { mail: string; nom: string; prenom: string }, risk: { titre: string; statut: string }) {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: manager.mail,
+            subject: `Mise à jour du statut : ${risk.titre}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${manager.prenom},</h2>
+                    <p>Le statut du risque suivant a été mis à jour :</p>
+                    <p><strong>Risque :</strong> ${risk.titre}</p>
+                    <p><strong>Nouveau statut :</strong> ${risk.statut}</p>
+                    <br>
+                    <p>Cordialement,<br>L'équipe GRC</p>
+                </div>
+            `,
+        };
+
+        try {
+            return await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Error sending risk status update email:', error);
+            return null;
+        }
+    }
+
+    async sendRiskClosedEmail(agent: { mail: string; nom: string; prenom: string }, risk: { titre: string }) {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: agent.mail,
+            subject: `Risque clôturé : ${risk.titre}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${agent.prenom},</h2>
+                    <p>Le risque suivant sur lequel vous avez travaillé a été clôturé par le Risk Manager :</p>
+                    <p><strong>Risque :</strong> ${risk.titre}</p>
+                    <br>
+                    <p>Félicitations pour le traitement !</p>
+                    <p>Cordialement,<br>L'équipe GRC</p>
+                </div>
+            `,
+        };
+
+        try {
+            return await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Error sending risk closed email:', error);
+            return null;
+        }
+    }
 }
 
 export const emailService = new EmailService();
+

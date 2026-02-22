@@ -1,0 +1,152 @@
+<div class="risk-list-container">
+    <!-- Header with Back Button -->
+    <div class="list-header">
+        <button class="btn-back" (click)="goBack()">
+            <i class="fas fa-arrow-left"></i> Retour au Dashboard
+        </button>
+        <h1>Gestion des Risques</h1>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label>Rechercher</label>
+            <input type="text" 
+                placeholder="Titre ou description..." 
+                [(ngModel)]="filterSearch"
+                (ngModelChange)="onSearchChange($event)"
+                class="filter-input">
+        </div>
+
+        <div class="filter-group">
+            <label>Niveau de Risque</label>
+            <select [(ngModel)]="filterLevel" (ngModelChange)="onFilterChange()" class="filter-select">
+                <option value="">Tous</option>
+                <option *ngFor="let level of levels" [value]="level">{{ level }}</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Statut</label>
+            <select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()" class="filter-select">
+                <option value="">Tous</option>
+                <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Domaine</label>
+            <select [(ngModel)]="filterDomain" (ngModelChange)="onFilterChange()" class="filter-select">
+                <option value="">Tous</option>
+                <option *ngFor="let domain of domains" [value]="domain">{{ domain }}</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button class="btn-clear" (click)="clearFilters()">
+                <i class="fas fa-redo"></i> Réinitialiser
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Count -->
+    <div class="results-info">
+        <p>{{ filteredRisks.length }} risque(s) trouvé(s)</p>
+    </div>
+
+    <!-- Risks Table -->
+    <div class="table-wrapper">
+        <table class="risks-table">
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Domaine</th>
+                    <th>Niveau</th>
+                    <th>Statut</th>
+                    <th>Date Échéance</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let risk of getPaginatedRisks()" class="risk-row" (click)="viewRiskDetails(risk)">
+                    <td class="cell-title">{{ risk.titre }}</td>
+                    <td class="cell-domain">{{ risk.domaine }}</td>
+                    <td class="cell-level">
+                        <span [class]="'badge level-' + risk.niveauRisque">
+                            {{ risk.niveauRisque }}
+                        </span>
+                    </td>
+                    <td class="cell-status">
+                        <span [class]="'badge status-' + risk.statut">
+                            {{ risk.statut }}
+                        </span>
+                    </td>
+                    <td class="cell-date">{{ risk.dateEcheance | date:'dd/MM/yyyy' }}</td>
+                    <td class="cell-actions" (click)="$event.stopPropagation()">
+                        <button class="btn-treat" (click)="treatRisk(risk)">
+                            <i class="fas fa-edit"></i> Traiter
+                        </button>
+                    </td>
+                </tr>
+                <tr *ngIf="filteredRisks.length === 0" class="empty-row">
+                    <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>Aucun risque ne correspond aux critères de recherche.</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-section" *ngIf="filteredRisks.length > 0">
+        <button class="btn-pagination" (click)="previousPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i> Précédent
+        </button>
+        <span class="page-info">Page {{ currentPage }} sur {{ totalPages }}</span>
+        <button class="btn-pagination" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            Suivant <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Risk Detail Modal -->
+<app-modal *ngIf="showDetailModal" 
+    [title]="'Détails du Risque: ' + selectedRisk?.titre"
+    (close)="closeDetailModal()">
+    <div class="modal-detail">
+        <div class="detail-section">
+            <h4>Description</h4>
+            <p>{{ selectedRisk?.explication }}</p>
+        </div>
+
+        <div class="detail-section">
+            <h4>Informations</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Domaine</label>
+                    <p>{{ selectedRisk?.domaine }}</p>
+                </div>
+                <div class="info-item">
+                    <label>Niveau de Risque</label>
+                    <p><span [class]="'badge level-' + selectedRisk?.niveauRisque">{{ selectedRisk?.niveauRisque }}</span></p>
+                </div>
+                <div class="info-item">
+                    <label>Statut</label>
+                    <p><span [class]="'badge status-' + selectedRisk?.statut">{{ selectedRisk?.statut }}</span></p>
+                </div>
+                <div class="info-item">
+                    <label>Date Échéance</label>
+                    <p>{{ selectedRisk?.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-treat" (click)="treatRisk(selectedRisk!)">
+                <i class="fas fa-check-circle"></i> Traiter ce risque
+            </button>
+            <button class="btn-close" (click)="closeDetailModal()">Fermer</button>
+        </div>
+    </div>
+</app-modal>

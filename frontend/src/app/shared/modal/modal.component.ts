@@ -5,12 +5,12 @@ import { AfterContentInit, Component, ContentChild, ElementRef, EventEmitter, In
   templateUrl: './modal.component.html',
   styleUrls: ['./modal.component.scss']
 })
-export class ModalComponent {
+export class ModalComponent implements AfterContentInit {
   @Input() title = '';
   @Input() body = '';
   @Output() close = new EventEmitter<void>();
 
-  @ContentChild('projected', { read: ElementRef }) projectedContent!: ElementRef | null;
+  @ContentChild('projected', { read: ElementRef }) projectedContent: ElementRef | null = null;
   hasProjectedContent = false;
   hasProjectedFooter = false;
 

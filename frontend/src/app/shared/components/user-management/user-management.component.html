@@ -5,11 +5,36 @@
     <div class="actions">
       <div class="search-input-wrapper">
         <i class="fas fa-search search-icon"></i>
-        <input type="text" [(ngModel)]="userSearchTerm" placeholder="Rechercher un utilisateur..." />
+        <input type="text" [(ngModel)]="userSearchTerm" placeholder="Rechercher par nom, mail..." />
       </div>
       <button class="btn-primary" (click)="openUserModal()">
         <i class="fas fa-user-plus"></i> Nouvel Utilisateur
       </button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="filter-group">
+      <label><i class="fas fa-filter"></i> Filtrer par :</label>
+      <div class="select-filter-wrapper">
+        <select [(ngModel)]="selectedRoleFilter">
+          <option value="">Tous les rôles</option>
+          <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div class="select-filter-wrapper">
+        <select [(ngModel)]="selectedDeptFilter">
+          <option value="0">Tous les départements</option>
+          <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
+        </select>
+      </div>
+      <button class="btn-text-link" (click)="resetFilters()"
+        *ngIf="userSearchTerm || selectedRoleFilter || selectedDeptFilter !== 0">
+        <i class="fas fa-times"></i> Réinitialiser
+      </button>
+    </div>
+    <div class="user-count">
+      <strong>{{ filteredUsers.length }}</strong> utilisateur(s) trouvé(s)
     </div>
   </div>
 

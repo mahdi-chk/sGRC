@@ -165,4 +165,12 @@ export class DashboardHomeComponent implements OnInit {
     showUserManagementView() {
         this.router.navigate(['/dashboard/users']);
     }
+
+    showRiskManagementView() {
+        this.router.navigate(['/dashboard/risks']);
+    }
+
+    onToggleAiAssistant() {
+        this.dashboardService.toggleAiAssistant();
+    }
 }

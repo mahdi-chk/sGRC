@@ -1,6 +1,7 @@
 <div class="grid" [ngSwitch]="currentUserRole" style="margin-top: 20px;">
     <app-risk-manager-dashboard *ngSwitchCase="UserRole.RISK_MANAGER" [filteredModules]="filteredModules"
-        title="Dashboard Risk Manager" (openModule)="onOpenModule($event)">
+        title="Dashboard Risk Manager" (openModule)="onOpenModule($event)"
+        (openRiskManagement)="showRiskManagementView()">
     </app-risk-manager-dashboard>
 
     <app-risk-agent-dashboard *ngSwitchCase="UserRole.RISK_AGENT" [filteredModules]="filteredModules"
@@ -23,7 +24,8 @@
     <app-super-admin-dashboard *ngSwitchCase="UserRole.SUPER_ADMIN" [filteredModules]="filteredModules"
         title="Dashboard Super Admin"
         description="Accès complet à toutes les fonctionnalités et modules de la plateforme."
-        (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()">
+        (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()"
+        (toggleAssistant)="onToggleAiAssistant()">
     </app-super-admin-dashboard>
 
     <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"

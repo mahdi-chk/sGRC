@@ -1,0 +1,972 @@
+<div class="risk-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-exclamation-triangle"></i> Gestion des Risques</h1>
+                <p>Créez, suivez et traitez tous les risques identifiés.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-export" (click)="downloadReport()" title="Télécharger le rapport">
+                <i class="fas fa-file-download"></i> Exporter rapport
+            </button>
+            <button class="btn-create" (click)="openCreateModal()">
+                <i class="fas fa-plus"></i> Nouveau Risque
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+        <div class="kpi-card kpi-total">
+            <span class="kpi-value">{{ risks.length }}</span>
+            <span class="kpi-label">Total Risques</span>
+        </div>
+        <div class="kpi-card kpi-closed">
+            <span class="kpi-value">{{ getStatusCount('Clôturé') }}</span>
+            <span class="kpi-label">Clôturés</span>
+        </div>
+        <div class="kpi-card kpi-progress">
+            <span class="kpi-value">{{ getStatusCount('En cours') }}</span>
+            <span class="kpi-label">En cours</span>
+        </div>
+        <div class="kpi-card kpi-critical">
+            <span class="kpi-value">{{ getLevelCount('Critique') }}</span>
+            <span class="kpi-label">Critiques</span>
+        </div>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="filters-bar">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" [(ngModel)]="searchText" placeholder="Rechercher par titre ou domaine...">
+        </div>
+        <select [(ngModel)]="filterStatut" class="filter-select">
+            <option value="">Tous les statuts</option>
+            <option *ngFor="let s of riskStatuses" [value]="s">{{ s }}</option>
+        </select>
+        <select [(ngModel)]="filterNiveau" class="filter-select">
+            <option value="">Tous les niveaux</option>
+            <option *ngFor="let n of riskLevels" [value]="n">{{ n }}</option>
+        </select>
+        <button class="btn-clear" (click)="filterStatut=''; filterNiveau=''; searchText=''">
+            <i class="fas fa-times"></i> Réinitialiser
+        </button>
+    </div>
+
+    <!-- Risks Table -->
+    <div class="risks-card">
+        <table class="risks-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Titre</th>
+                    <th>Domaine</th>
+                    <th>Niveau</th>
+                    <th>Statut</th>
+                    <th>Responsable</th>
+                    <th>Agent</th>
+                    <th>Échéance</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let risk of filteredRisks; let i = index">
+                    <td class="td-id">{{ i + 1 }}</td>
+                    <td class="td-title"><strong>{{ risk.titre }}</strong></td>
+                    <td><span class="domain-tag">{{ risk.domaine }}</span></td>
+                    <td><span [class]="'badge level-' + risk.niveauRisque">{{ risk.niveauRisque }}</span></td>
+                    <td><span [class]="'badge status-' + risk.statut">{{ risk.statut }}</span></td>
+                    <td>{{ risk.responsableTraitement?.prenom }} {{ risk.responsableTraitement?.nom }}</td>
+                    <td>
+                        <span *ngIf="risk.riskAgent; else noAgent">
+                            {{ risk.riskAgent.prenom }} {{ risk.riskAgent.nom }}
+                        </span>
+                        <ng-template #noAgent><em class="text-muted">Non assigné</em></ng-template>
+                    </td>
+                    <td>{{ risk.dateEcheance | date:'dd/MM/yyyy' }}</td>
+                    <td class="actions-cell">
+                        <button class="action-btn btn-view" (click)="onViewDetails(risk)" title="Voir détails">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="action-btn btn-edit" (click)="onEditRisk(risk)" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button *ngIf="risk.statut === 'Ouvert'" class="action-btn btn-assign"
+                            (click)="openAssign(risk)" title="Assigner">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                        <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-close"
+                            (click)="closeRisk(risk.id)" title="Clôturer">
+                            <i class="fas fa-check-double"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr *ngIf="filteredRisks.length === 0">
+                    <td colspan="9" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>Aucun risque trouvé.</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ====================== Create/Edit Modal ====================== -->
+    <app-modal *ngIf="showCreateModal" [title]="isEditing ? 'Modifier le Risque' : 'Créer un Nouveau Risque'"
+        (close)="showCreateModal = false">
+        <div #projected modal-body class="modal-form">
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Titre du Risque <span class="req">*</span></label>
+                    <input type="text" [(ngModel)]="newRisk.titre" placeholder="Ex: Fuite de données clients"
+                        class="finput">
+                </div>
+                <div class="form-group full">
+                    <label>Explication Détaillée <span class="req">*</span></label>
+                    <textarea [(ngModel)]="newRisk.explication" rows="3" placeholder="Description du risque..."
+                        class="finput"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Domaine <span class="req">*</span></label>
+                    <input type="text" [(ngModel)]="newRisk.domaine" placeholder="Ex: Cybersécurité" class="finput">
+                </div>
+                <div class="form-group">
+                    <label>Département <span class="req">*</span></label>
+                    <select [(ngModel)]="newRisk.departementId" (change)="onDepartmentChange()" class="finput">
+                        <option value="">Sélectionner</option>
+                        <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.nom }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Responsable de traitement <span class="req">*</span></label>
+                    <select [(ngModel)]="newRisk.responsableTraitementId" [disabled]="!newRisk.departementId"
+                        class="finput">
+                        <option value="">Sélectionner un responsable</option>
+                        <option *ngFor="let u of filteredAgents" [value]="u.id">{{ u.prenom }} {{ u.nom }} ({{ u.role
+                            }})</option>
+                    </select>
+                    <small *ngIf="!newRisk.departementId" class="hint">Sélectionnez d'abord un département</small>
+                    <small *ngIf="newRisk.departementId && filteredAgents.length === 0" class="hint error">Aucun
+                        utilisateur dans ce département</small>
+                </div>
+                <div class="form-group">
+                    <label>Niveau de Risque <span class="req">*</span></label>
+                    <select [(ngModel)]="newRisk.niveauRisque" class="finput">
+                        <option *ngFor="let lv of riskLevels" [value]="lv">{{ lv }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date d'échéance <span class="req">*</span></label>
+                    <input type="date" [(ngModel)]="newRisk.dateEcheance" [min]="today" class="finput">
+                    <small *ngIf="newRisk.dateEcheance && newRisk.dateEcheance < today" class="hint error">La date doit
+                        être aujourd'hui ou dans le futur</small>
+                </div>
+                <div class="form-group full">
+                    <label>Pièce Justificative (PDF/Image)</label>
+                    <div class="file-zone" [class.has-file]="selectedFile">
+                        <input type="file" (change)="onFileSelected($event)"
+                            style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>{{ selectedFile ? selectedFile.name : 'Cliquez ou glissez un fichier ici' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showCreateModal = false">Annuler</button>
+                <button class="btn-save" (click)="saveRisk()" [disabled]="!isFormValid()">
+                    <i class="fas fa-save"></i> {{ isEditing ? 'Enregistrer' : 'Créer le Risque' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- ====================== Assign Modal ====================== -->
+    <app-modal *ngIf="showAssignModal" title="Assigner le Risque" (close)="showAssignModal = false">
+        <div #projected modal-body class="modal-form">
+            <p style="color:#475569; margin-bottom:20px;">Choisissez un <strong>Agent de Risque</strong> pour traiter le
+                risque :
+                <br><strong>{{ selectedRisk?.titre }}</strong>
+            </p>
+            <div class="form-group">
+                <label>Agent de Risque</label>
+                <select #agentSelect class="finput">
+                    <option value="">Sélectionner</option>
+                    <option *ngFor="let u of filteredAgents" [value]="u.id">{{ u.prenom }} {{ u.nom }} ({{ u.role }})
+                    </option>
+                </select>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showAssignModal = false">Annuler</button>
+                <button class="btn-save" (click)="assignRisk(agentSelect.value)"
+                    [disabled]="!agentSelect.value">Assigner</button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- ====================== Details Modal ====================== -->
+    <app-modal *ngIf="showDetailsModal" title="Détails du Risque" (close)="showDetailsModal = false">
+        <div #projected modal-body *ngIf="selectedRisk">
+            <div class="details-grid">
+                <div class="detail-block full">
+                    <span class="detail-label">Titre</span>
+                    <p class="detail-value title">{{ selectedRisk.titre }}</p>
+                </div>
+                <div class="detail-block full">
+                    <span class="detail-label">Explication</span>
+                    <p class="detail-value">{{ selectedRisk.explication }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Domaine</span>
+                    <p class="detail-value">{{ selectedRisk.domaine }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Niveau</span>
+                    <span [class]="'badge level-' + selectedRisk.niveauRisque">{{ selectedRisk.niveauRisque }}</span>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Statut</span>
+                    <span [class]="'badge status-' + selectedRisk.statut">{{ selectedRisk.statut }}</span>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Département</span>
+                    <p class="detail-value">{{ selectedRisk.departement?.nom }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Responsable</span>
+                    <p class="detail-value">{{ selectedRisk.responsableTraitement?.prenom }} {{
+                        selectedRisk.responsableTraitement?.nom }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Agent assigné</span>
+                    <p class="detail-value">{{ selectedRisk.riskAgent ? selectedRisk.riskAgent.prenom + ' ' +
+                        selectedRisk.riskAgent.nom : '—' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Date d'échéance</span>
+                    <p class="detail-value">{{ selectedRisk.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Date de création</span>
+                    <p class="detail-value">{{ selectedRisk.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+                </div>
+                <div class="detail-block" *ngIf="selectedRisk.pieceJustificative">
+                    <span class="detail-label">Justificatif</span>
+                    <a [href]="'http://localhost:3000/' + selectedRisk.pieceJustificative" target="_blank"
+                        class="doc-link">
+                        <i class="fas fa-file-pdf"></i> Voir le document
+                    </a>
+                </div>
+            </div>
+
+            <!-- Historique du traitement (Comments) -->
+            <div class="treatment-history" style="margin-top: 30px; border-top: 2px solid #edf2f7; padding-top: 20px;">
+                <h4
+                    style="color: #1e293b; margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-history" style="color: #64748b;"></i> Historique du traitement
+                </h4>
+
+                <div class="comments-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;">
+                    <div *ngFor="let comment of comments" class="comment-item"
+                        style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+                        <div
+                            style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem;">
+                            <span style="font-weight: 700; color: #334155;">{{ comment.user?.prenom }} {{
+                                comment.user?.nom
+                                }}</span>
+                            <span style="color: #94a3b8;">{{ comment.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                        </div>
+                        <p style="margin: 0; color: #475569; font-size: 0.92rem; line-height: 1.5;">{{ comment.content
+                            }}
+                        </p>
+                        <div *ngIf="comment.pieceJointe"
+                            style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1;">
+                            <a [href]="'http://localhost:3000/' + comment.pieceJointe" target="_blank"
+                                style="color: #004a99; font-size: 0.85rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-paperclip"></i> Voir la preuve
+                            </a>
+                        </div>
+                    </div>
+                    <div *ngIf="comments.length === 0"
+                        style="text-align: center; padding: 20px; color: #94a3b8; font-style: italic;">
+                        Aucun commentaire pour le moment.
+                    </div>
+                </div>
+
+                <!-- Add Comment Form for Risk Manager -->
+                <div class="add-comment-form"
+                    style="margin-top: 25px; background: #f1f5f9; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <h5 style="margin: 0 0 12px 0; font-size: 0.95rem; color: #1e293b;">Ajouter un commentaire / Preuve
+                    </h5>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <textarea [(ngModel)]="treatmentContent" rows="3" class="finput"
+                            placeholder="Ajouter une observation ou instruction..."></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                        <div style="position: relative; flex: 1;">
+                            <input type="file" (change)="onFileSelected($event)"
+                                style="opacity:0; position:absolute; width:100%; height:100%; cursor:pointer;">
+                            <div
+                                style="border: 1.5px dashed #cbd5e1; padding: 8px; border-radius: 8px; font-size: 0.82rem; text-align: center; color: #64748b; background: white;">
+                                <i class="fas fa-upload"></i> {{ selectedFile ? selectedFile.name : 'Joindre un fichier'
+                                }}
+                            </div>
+                        </div>
+                        <button class="btn-save" style="padding: 10px 20px; border-radius: 8px;" (click)="addComment()"
+                            [disabled]="!treatmentContent">
+                            Envoyer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button class="btn-save" (click)="showDetailsModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+
+</div>
+
+<style>
+    .risk-page {
+        padding: 30px;
+        background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+        min-height: 100vh;
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Header */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border-radius: 18px;
+        padding: 20px 28px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .header-left h1 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+    }
+
+    .header-left p {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin: 4px 0 0;
+    }
+
+    .back-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #475569;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .back-btn:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .btn-create {
+        background: linear-gradient(135deg, #004a99, #0066cc);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0, 74, 153, 0.3);
+        transition: all 0.3s;
+    }
+
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 74, 153, 0.4);
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .btn-export {
+        background: white;
+        color: #004a99;
+        border: 2px solid #004a99;
+        padding: 12px 22px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.93rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-export:hover {
+        background: #004a99;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 74, 153, 0.25);
+    }
+
+    /* KPI */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        border-left: 4px solid transparent;
+        transition: transform 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-3px);
+    }
+
+    .kpi-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .kpi-label {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .kpi-total {
+        border-color: #6366f1;
+    }
+
+    .kpi-total .kpi-value {
+        color: #6366f1;
+    }
+
+    .kpi-open {
+        border-color: #10b981;
+    }
+
+    .kpi-open .kpi-value {
+        color: #10b981;
+    }
+
+    .kpi-progress {
+        border-color: #f59e0b;
+    }
+
+    .kpi-progress .kpi-value {
+        color: #f59e0b;
+    }
+
+    .kpi-critical {
+        border-color: #ef4444;
+    }
+
+    .kpi-critical .kpi-value {
+        color: #ef4444;
+    }
+
+    .kpi-closed {
+        border-color: #94a3b8;
+    }
+
+    .kpi-closed .kpi-value {
+        color: #64748b;
+    }
+
+    /* Filters */
+    .filters-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: white;
+        padding: 14px 20px;
+        border-radius: 14px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    .search-box {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 8px 14px;
+        border: 1.5px solid #e2e8f0;
+    }
+
+    .search-box i {
+        color: #94a3b8;
+    }
+
+    .search-box input {
+        border: none;
+        outline: none;
+        background: transparent;
+        width: 100%;
+        font-size: 0.9rem;
+        color: #1e293b;
+    }
+
+    .filter-select {
+        padding: 9px 14px;
+        border-radius: 10px;
+        border: 1.5px solid #e2e8f0;
+        background: #f8fafc;
+        font-size: 0.9rem;
+        color: #475569;
+        cursor: pointer;
+    }
+
+    .btn-clear {
+        padding: 9px 14px;
+        border-radius: 10px;
+        border: 1.5px solid #fee2e2;
+        background: #fff5f5;
+        color: #dc2626;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+        background: #fee2e2;
+    }
+
+    /* Table */
+    .risks-card {
+        background: white;
+        border-radius: 18px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .risks-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .risks-table thead tr {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .risks-table th {
+        padding: 14px 16px;
+        text-align: left;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .risks-table tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s;
+    }
+
+    .risks-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .risks-table td {
+        padding: 14px 16px;
+        font-size: 0.88rem;
+        color: #334155;
+        vertical-align: middle;
+    }
+
+    .td-id {
+        color: #94a3b8;
+        font-weight: 600;
+        width: 40px;
+    }
+
+    .td-title strong {
+        color: #1e293b;
+    }
+
+    .domain-tag {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #94a3b8;
+        font-style: italic;
+        font-size: 0.82rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    /* Badges */
+    .badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.73rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .level-Faible {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .level-Moyen {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .level-Élevé {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .level-Critique {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-Ouvert {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .status-En\ cours {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .status-Traité {
+        background: #f5f3ff;
+        color: #5b21b6;
+    }
+
+    .status-Clôturé {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    /* Actions */
+    .actions-cell {
+        display: flex;
+        gap: 6px;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-view {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .btn-view:hover {
+        background: #dbeafe;
+    }
+
+    .btn-edit {
+        background: #f0fdf4;
+        color: #15803d;
+    }
+
+    .btn-edit:hover {
+        background: #dcfce7;
+    }
+
+    .btn-assign {
+        background: #fefce8;
+        color: #a16207;
+    }
+
+    .btn-assign:hover {
+        background: #fef9c3;
+    }
+
+    .btn-close {
+        background: #f5f3ff;
+        color: #6d28d9;
+    }
+
+    .btn-close:hover {
+        background: #ede9fe;
+    }
+
+    /* Modal Form */
+    .modal-form {
+        padding: 4px 0;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-group.full {
+        grid-column: span 2;
+    }
+
+    .form-group label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    .req {
+        color: #ef4444;
+    }
+
+    .finput {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1.5px solid #e2e8f0;
+        font-size: 0.9rem;
+        color: #1e293b;
+        background: #f8fafc;
+        width: 100%;
+        box-sizing: border-box;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .finput:focus {
+        border-color: #004a99;
+        box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.08);
+        outline: none;
+    }
+
+    .finput:disabled {
+        background: #f1f5f9;
+        cursor: not-allowed;
+        color: #94a3b8;
+    }
+
+    .hint {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .hint.error {
+        color: #dc2626;
+    }
+
+    .file-zone {
+        position: relative;
+        border: 2px dashed #cbd5e1;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #94a3b8;
+        font-size: 0.88rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .file-zone i {
+        font-size: 1.8rem;
+        color: #004a99;
+    }
+
+    .file-zone:hover,
+    .file-zone.has-file {
+        border-color: #004a99;
+        background: #f0f7ff;
+        color: #004a99;
+    }
+
+    .form-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+        padding-top: 18px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .btn-cancel {
+        padding: 10px 20px;
+        border-radius: 10px;
+        border: 1.5px solid #e2e8f0;
+        background: white;
+        color: #64748b;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel:hover {
+        background: #f8fafc;
+    }
+
+    .btn-save {
+        padding: 10px 24px;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, #004a99, #0066cc);
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-save:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 74, 153, 0.3);
+    }
+
+    .btn-save:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Details */
+    .details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .detail-block {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 10px;
+    }
+
+    .detail-block.full {
+        grid-column: span 2;
+    }
+
+    .detail-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #94a3b8;
+        letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+        margin: 0;
+        color: #1e293b;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
+    .detail-value.title {
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .doc-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #004a99;
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 600;
+        padding: 8px 14px;
+        background: #eff6ff;
+        border-radius: 8px;
+        margin-top: 4px;
+        transition: background 0.2s;
+    }
+
+    .doc-link:hover {
+        background: #dbeafe;
+    }
+</style>

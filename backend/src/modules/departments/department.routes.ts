@@ -8,8 +8,8 @@ const router = Router();
 // Apply authentication
 router.use(authenticateToken);
 
-// Get all departments (Accessible to Admin SI for user management)
-router.get('/', authorizeRoles(UserRole.ADMIN_SI), async (req, res) => {
+// Get all departments (Accessible to any authenticated user)
+router.get('/', async (req, res) => {
     try {
         const departments = await Department.findAll();
         res.json(departments);

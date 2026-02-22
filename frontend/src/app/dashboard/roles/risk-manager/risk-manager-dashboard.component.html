@@ -1,19 +1,526 @@
 <div class="role-dashboard risk-manager">
-    <div class="welcome-banner">
+    <div class="welcome-banner blue-banner">
         <h2><i class="fas fa-exclamation-triangle"></i> {{ title }}</h2>
         <p>Gérez les risques, évaluez les impacts et suivez les plans de traitement.</p>
     </div>
 
     <div class="dashboard-grid">
-        <div *ngFor="let m of filteredModules" class="module-card premium">
-            <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
-            <h3>{{ m.title }}</h3>
-            <p class="desc">{{ m.desc }}</p>
-            <ul class="submodules-list">
-                <li *ngFor="let s of m.submodules" (click)="onOpenModule(m, s)">
-                    <i class="fas fa-chevron-right"></i> {{ s.title }}
-                </li>
-            </ul>
+        <!-- Card: Gestion des Risques -->
+        <div class="module-card premium special-admin">
+            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3>Gestion des Risques</h3>
+            <p class="desc">Créez, modifiez, assignez et suivez tous les risques depuis la page dédiée.</p>
+            <div class="card-footer">
+                <button (click)="onOpenRiskManagement()" class="btn-primary"
+                    style="display:inline-flex; align-items:center; gap:8px; text-decoration:none; border:none; cursor:pointer;">
+                    <i class="fas fa-arrow-right"></i> Ouvrir la gestion des risques
+                </button>
+            </div>
         </div>
     </div>
+
+    <!-- Create/Edit Risk Modal -->
+    <app-modal *ngIf="showCreateModal" [title]="isEditing ? 'Modifier le Risque' : 'Créer un Nouveau Risque'"
+        (close)="showCreateModal = false">
+        <div #projected modal-body class="modal-body-content">
+            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Titre du Risque</label>
+                    <input type="text" [(ngModel)]="newRisk.titre" placeholder="Ex: Fuite de données clients"
+                        class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Explication Détaillée</label>
+                    <textarea [(ngModel)]="newRisk.explication" rows="3" placeholder="Description du risque..."
+                        class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Domaine</label>
+                    <input type="text" [(ngModel)]="newRisk.domaine" placeholder="Ex: Cybersécurité"
+                        class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                </div>
+                <div class="form-group">
+                    <label>Département à Risque <span class="required">*</span></label>
+                    <select [(ngModel)]="newRisk.departementId" (change)="onDepartmentChange()" class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <option value="">Sélectionner un département</option>
+                        <option *ngFor="let dept of departments" [value]="dept.id">{{ dept.nom }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Responsable de traitement <span class="required">*</span></label>
+                    <select [(ngModel)]="newRisk.responsableTraitementId" class="premium-input"
+                        [disabled]="!newRisk.departementId"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <option value="">Sélectionner un collaborateur</option>
+                        <option *ngFor="let user of filteredAgents" [value]="user.id">{{ user.prenom }} {{ user.nom }}
+                            ({{ user.role }})</option>
+                    </select>
+                    <small *ngIf="!newRisk.departementId" style="color: #666; font-size: 0.75rem;">Sélectionnez d'abord
+                        un département</small>
+                    <small *ngIf="newRisk.departementId && filteredAgents.length === 0"
+                        style="color: #d32f2f; font-size: 0.75rem;">Aucun utilisateur dans ce département</small>
+                </div>
+                <div class="form-group">
+                    <label>Niveau de Risque <span class="required">*</span></label>
+                    <select [(ngModel)]="newRisk.niveauRisque" class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <option *ngFor="let lv of riskLevels" [value]="lv">{{ lv }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date d'échéance <span class="required">*</span></label>
+                    <input type="date" [(ngModel)]="newRisk.dateEcheance" [min]="today" class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                    <small *ngIf="newRisk.dateEcheance && newRisk.dateEcheance < today"
+                        style="color: #d32f2f; font-size: 0.75rem;">La date doit être aujourd'hui ou dans le
+                        futur</small>
+                </div>
+                <!-- Removed duplicate Responsible select that was using globales list -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Pièce Justificative (PDF/Image)</label>
+                    <div class="file-upload-box"
+                        style="border: 2px dashed #ddd; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative;">
+                        <input type="file" (change)="onFileSelected($event)"
+                            style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;">
+                        <i class="fas fa-cloud-upload-alt"
+                            style="font-size: 1.5rem; color: #004a99; margin-bottom: 5px; display: block;"></i>
+                        <span style="font-size: 0.9rem; color: #666;">{{ selectedFile ? selectedFile.name : 'Cliquez ou
+                            glissez un fichier ici' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 20px;">
+                <button class="btn-secondary" (click)="showCreateModal = false">Annuler</button>
+                <button class="btn-primary" (click)="saveRisk()" [disabled]="!isFormValid()"
+                    [title]="!isFormValid() ? 'Veuillez remplir tous les champs obligatoires' : ''">
+                    <i class="fas fa-save"></i> {{ isEditing ? 'Enregistrer les modifications' : 'Créer le Risque' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Assign Modal -->
+    <app-modal *ngIf="showAssignModal" title="Assigner le Risque" (close)="showAssignModal = false">
+        <div #projected modal-body>
+            <p>Choisissez un Risk Agent pour traiter le risque : <strong>{{ selectedRisk?.titre }}</strong></p>
+            <div class="form-group" style="margin: 20px 0;">
+                <label>Responsable</label>
+                <select #agentSelect class="premium-input"
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="">Sélectionner un collaborateur</option>
+                    <option *ngFor="let user of filteredAgents" [value]="user.id">
+                        {{ user.prenom }} {{ user.nom }} ({{ user.role }})
+                    </option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn-secondary" (click)="showAssignModal = false">Annuler</button>
+                <button class="btn-primary" (click)="assignRisk(agentSelect.value)"
+                    [disabled]="!agentSelect.value">Assigner
+                    Maintenant</button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Details Modal -->
+    <app-modal *ngIf="showDetailsModal" title="Détails du Risque" (close)="showDetailsModal = false">
+        <div #projected modal-body class="modal-body-content" *ngIf="selectedRisk">
+            <div class="details-grid"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #edf2f7;">
+                <div class="detail-item" style="grid-column: span 2;">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Titre</label>
+                    <p style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin: 5px 0 0;">{{
+                        selectedRisk.titre }}</p>
+                </div>
+                <div class="detail-item" style="grid-column: span 2;">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Explication</label>
+                    <p style="color: #475569; line-height: 1.5; margin: 5px 0 0;">{{ selectedRisk.explication }}</p>
+                </div>
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Domaine</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.domaine }}</p>
+                </div>
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Niveau</label>
+                    <div style="margin-top: 5px;">
+                        <span [class]="'badge level-' + selectedRisk.niveauRisque">{{ selectedRisk.niveauRisque
+                            }}</span>
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Département</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.departement?.nom }}</p>
+                </div>
+                <div class="detail-item">
+                    <label style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Date
+                        d'échéance</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                </div>
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Responsable</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.responsableTraitement?.prenom }} {{
+                        selectedRisk.responsableTraitement?.nom }}</p>
+                </div>
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Statut
+                        actuel</label>
+                    <div style="margin-top: 5px;">
+                        <span [class]="'badge status-' + selectedRisk.statut">{{ selectedRisk.statut }}</span>
+                    </div>
+                </div>
+                <div class="detail-item" *ngIf="selectedRisk.pieceJustificative"
+                    style="grid-column: span 2; margin-top: 10px; padding-top: 15px; border-top: 1px dashed #e2e8f0;">
+                    <a [href]="'http://localhost:3000/' + selectedRisk.pieceJustificative" target="_blank"
+                        class="btn-secondary"
+                        style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem;">
+                        <i class="fas fa-file-pdf"></i> Voir le justificatif
+                    </a>
+                </div>
+            </div>
+
+            <!-- Historique du traitement (Comments) -->
+            <div class="treatment-history" style="margin-top: 25px; border-top: 1px solid #edf2f7; padding-top: 20px;">
+                <h4
+                    style="color: #1e293b; margin-bottom: 15px; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-history" style="color: #64748b;"></i> Historique du traitement
+                </h4>
+
+                <div class="comments-list" style="max-height: 200px; overflow-y: auto; padding-right: 8px;">
+                    <div *ngFor="let comment of comments" class="comment-item"
+                        style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+                        <div
+                            style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem;">
+                            <span style="font-weight: 700; color: #334155;">{{ comment.user?.prenom }} {{
+                                comment.user?.nom }}</span>
+                            <span style="color: #94a3b8;">{{ comment.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                        </div>
+                        <p style="margin: 0; color: #475569; font-size: 0.88rem; line-height: 1.4;">{{ comment.content
+                            }}</p>
+                        <div *ngIf="comment.pieceJointe"
+                            style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
+                            <a [href]="'http://localhost:3000/' + comment.pieceJointe" target="_blank"
+                                style="color: #004a99; font-size: 0.8rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-paperclip"></i> Voir la preuve
+                            </a>
+                        </div>
+                    </div>
+                    <div *ngIf="comments.length === 0"
+                        style="text-align: center; padding: 15px; color: #94a3b8; font-style: italic; font-size: 0.85rem;">
+                        Aucun commentaire pour le moment.
+                    </div>
+                </div>
+
+                <!-- Add Comment Form for Risk Manager Dashboard -->
+                <div class="add-comment-form"
+                    style="margin-top: 20px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <h5 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #1e293b;">Ajouter un commentaire / Preuve
+                    </h5>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <textarea [(ngModel)]="treatmentContent" rows="2" class="premium-input"
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem;"
+                            placeholder="Ajouter une observation..."></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <div style="position: relative; flex: 1;">
+                            <input type="file" (change)="onFileSelected($event)"
+                                style="opacity:0; position:absolute; width:100%; height:100%; cursor:pointer;">
+                            <div
+                                style="border: 1px dashed #cbd5e1; padding: 6px; border-radius: 6px; font-size: 0.75rem; text-align: center; color: #64748b; background: white;">
+                                <i class="fas fa-upload"></i> {{ selectedFile ? selectedFile.name : 'Joindre un fichier'
+                                }}
+                            </div>
+                        </div>
+                        <button class="btn-primary" style="padding: 8px 15px; font-size: 0.85rem;"
+                            (click)="addComment()" [disabled]="!treatmentContent">
+                            Envoyer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+                <button class="btn-primary" (click)="showDetailsModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
 </div>
+
+<style>
+    .required {
+        color: #d32f2f;
+        margin-left: 2px;
+    }
+
+    .premium-input {
+        transition: all 0.3s ease;
+        background: #fff;
+    }
+
+    .premium-input:focus {
+        border-color: #004a99 !important;
+        box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.1);
+        outline: none;
+    }
+
+    .premium-input:disabled {
+        background: #f1f1f1;
+        cursor: not-allowed;
+    }
+
+    .file-upload-box:hover {
+        border-color: #004a99 !important;
+        background: #f0f7ff;
+    }
+
+    .badge {
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        display: inline-block;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .level-Faible {
+        background: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+
+    .level-Moyen {
+        background: #fff8e1;
+        color: #fbc02d;
+        border: 1px solid #ffecb3;
+    }
+
+    .level-Élevé {
+        background: #fff3e0;
+        color: #fb8c00;
+        border: 1px solid #ffe0b2;
+    }
+
+    .level-Critique {
+        background: #ffebee;
+        color: #d32f2f;
+        border: 1px solid #ffcdd2;
+    }
+
+    .status-Ouvert {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+
+    .status-En\ cours {
+        background: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+
+    .status-Traité {
+        background: #f3e5f5;
+        color: #7b1fa2;
+        border: 1px solid #e1bee7;
+    }
+
+    .status-Clôturé {
+        background: #eeeeee;
+        color: #616161;
+        border: 1px solid #e0e0e0;
+    }
+
+    .btn-sm {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+    .btn-sm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .risks-table-wrapper {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .premium-table thead tr {
+        background: #fcfcfc !important;
+    }
+
+    .premium-table tbody tr:hover {
+        background: #f9f9f9;
+    }
+
+    .modal-body-content label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #444;
+        font-size: 0.9rem;
+    }
+</style>
+<style>
+    .role-dashboard {
+        padding: 30px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100%;
+    }
+
+    .welcome-banner {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 25px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+    }
+
+    .blue-banner {
+        background: linear-gradient(135deg, #003366 0%, #004a99 100%) !important;
+        backdrop-filter: none;
+        border: none;
+        color: white;
+        box-shadow: 0 10px 30px rgba(0, 74, 153, 0.2) !important;
+    }
+
+    .blue-banner h2,
+    .blue-banner p {
+        color: white !important;
+    }
+
+    .module-card.premium {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .module-card.premium:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.06);
+    }
+
+    .risks-table-wrapper {
+        background: white;
+        border-radius: 16px;
+        padding: 10px;
+        margin-top: 20px;
+    }
+
+    .premium-table thead tr {
+        background: #f8fafc !important;
+    }
+
+    .premium-table th {
+        font-weight: 700;
+        color: #1e293b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.75rem;
+    }
+
+    .badge {
+        padding: 8px 14px;
+        border-radius: 30px;
+        font-weight: 700;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary.btn-sm {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary.btn-sm:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .modal-body-content label {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+
+    .premium-input {
+        border: 1.5px solid #e2e8f0 !important;
+        font-size: 0.95rem;
+    }
+
+    /* Existing styles inherited or refined */
+    .required {
+        color: #d32f2f;
+        margin-left: 2px;
+    }
+
+    .level-Faible {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .level-Moyen {
+        background: #fef9c3;
+        color: #854d0e;
+        border: 1px solid #fef08a;
+    }
+
+    .level-Élevé {
+        background: #ffedd5;
+        color: #9a3412;
+        border: 1px solid #fed7aa;
+    }
+
+    .level-Critique {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .status-Ouvert {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+
+    .status-En\ cours {
+        background: #e0f2fe;
+        color: #075985;
+        border: 1px solid #bae6fd;
+    }
+
+    .status-Traité {
+        background: #f5f3ff;
+        color: #5b21b6;
+        border: 1px solid #ddd6fe;
+    }
+
+    .status-Clôturé {
+        background: #f8fafc;
+        color: #94a3b8;
+        border: 1px solid #f1f5f9;
+    }
+</style>

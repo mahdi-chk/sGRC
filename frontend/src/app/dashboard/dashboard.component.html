@@ -7,12 +7,41 @@
         <div class="logo">CANADA CONSEIL GROUPE</div>
       </div>
       <div class="divider"></div>
-      <button class="icon-btn" title="Planning">
+      <button class="icon-btn" routerLink="/dashboard/planning" title="Planning">
         <i class="fas fa-calendar-alt"></i>
       </button>
       <button class="icon-btn" routerLink="/dashboard" title="Home">
         <i class="fas fa-home"></i>
       </button>
+      <div class="notif-container">
+        <button class="icon-btn notif-btn" title="Notifications" (click)="toggleNotifDropdown()">
+          <i class="fas fa-bell"></i>
+          <span class="notif-dot" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+        </button>
+
+        <!-- Notifications Dropdown -->
+        <div class="notifications-dropdown" *ngIf="showNotifDropdown">
+          <div class="dropdown-header">
+            <span>Notifications</span>
+            <button (click)="markAllAsRead()" *ngIf="unreadCount > 0">Marquer tout comme lu</button>
+          </div>
+          <div class="dropdown-body">
+            <div *ngIf="notifications.length === 0" class="empty-notif">
+              Aucune notification
+            </div>
+            <div *ngFor="let n of notifications" class="notif-item" [class.unread]="!n.isRead" (click)="markAsRead(n)">
+              <div class="notif-icon">
+                <i class="fas fa-info-circle text-primary"></i>
+              </div>
+              <div class="notif-content">
+                <p>{{ n.content }}</p>
+                <small>{{ n.createdAt | date:'short' }}</small>
+              </div>
+              <div class="unread-indicator" *ngIf="!n.isRead"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="header-right">

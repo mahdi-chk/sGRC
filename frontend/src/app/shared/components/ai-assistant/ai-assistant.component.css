@@ -6,18 +6,40 @@
     max-width: 90vw;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
-    z-index: 1000;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     overflow: hidden;
-    border: 1px solid #e0e0e0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .ai-assistant:not(.open) {
     width: 220px;
     cursor: pointer;
+    background: linear-gradient(135deg, #1a237e, #3949ab);
+    color: white;
+    border: none;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% {
+        box-shadow: 0 0 0 0 rgba(57, 73, 171, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(57, 73, 171, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(57, 73, 171, 0);
+    }
+}
+
+.ai-assistant:not(.open) .chat-header {
+    background: transparent;
 }
 
 .chat-header {
@@ -136,10 +158,19 @@
     cursor: not-allowed;
 }
 
+/* RAG Styles */
+.rag-container {
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
 .rag-warning {
     padding: 15px;
     background: #fff3cd;
-    border-bottom: 1px solid #ffeeba;
+    border: 1px solid #ffeeba;
+    border-radius: 8px;
+    margin: 10px 15px 0 15px;
     text-align: center;
 }
 
@@ -148,6 +179,27 @@
     color: #856404;
     font-size: 0.85rem;
     font-weight: 500;
+}
+
+.rag-indexed-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    padding: 10px 15px;
+    margin: 10px 15px 0 15px;
+    border-radius: 8px;
+}
+
+.rag-indexed-info p {
+    color: #1565c0;
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .index-btn {
@@ -164,6 +216,24 @@
     gap: 8px;
     margin: 0 auto;
     transition: all 0.2s;
+}
+
+.refresh-btn {
+    background: white;
+    color: #1976d2;
+    border: 1px solid #1976d2;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: #f5fafd;
 }
 
 .index-btn:hover:not(:disabled) {

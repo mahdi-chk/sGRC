@@ -10,12 +10,17 @@ export class SuperAdminDashboardComponent {
     @Input() filteredModules: any[] = [];
     @Output() openModule = new EventEmitter<any>();
     @Output() openUserManagement = new EventEmitter<void>();
+    @Output() toggleAssistant = new EventEmitter<void>();
 
     onOpenModule(m: any, s: any) {
         this.openModule.emit({ m, s });
     }
 
     onOpenUserManagement() {
-        // Super admin might have a different way to access users or more options
+        this.openUserManagement.emit();
+    }
+
+    onToggleAssistant() {
+        this.toggleAssistant.emit();
     }
 }

@@ -8,6 +8,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/src/storage', express.static('src/storage'));
 
 // Import module routers (will exist after module creation)
 try {
@@ -17,7 +18,9 @@ try {
 try {
   const risk = require('./modules/risk').router;
   app.use('/api/risk', risk);
-} catch (e) { }
+} catch (e) {
+  console.error('Failed to load risk module:', e);
+}
 try {
   const controls = require('./modules/controls').router;
   app.use('/api/controls', controls);
@@ -59,9 +62,17 @@ app.use('/api/users', userRoutes);
 import { router as departmentRoutes } from './modules/departments/department.routes';
 app.use('/api/departments', departmentRoutes);
 
+// Settings routes
+import { router as settingRoutes } from './modules/settings/setting.routes';
+app.use('/api/settings', settingRoutes);
+
 // AI routes
 import aiRoutes from './modules/ai/ai.routes';
 app.use('/api/ai', aiRoutes);
+
+// Notifications routes
+import { router as notificationRoutes } from './modules/notifications/routes';
+app.use('/api/notifications', notificationRoutes);
 
 // Sync Database
 sequelize.sync().then(() => {

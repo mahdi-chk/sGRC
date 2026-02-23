@@ -4,7 +4,21 @@
         <p>Vision stratégique, indicateurs clés et aide à la décision.</p>
     </div>
 
+
     <div class="dashboard-grid">
+        <!-- Analytics Card -->
+        <div class="module-card premium special-admin">
+            <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
+            <h3>Analytics Approfondis</h3>
+            <p class="desc">Visualisez des diagrammes détaillés, des taux de conformité et des analyses de tendances
+                pour une prise de décision stratégique.</p>
+            <div class="card-footer">
+                <button class="btn-primary" (click)="goToStatistics()">
+                    <i class="fas fa-external-link-alt"></i> Voir les détails
+                </button>
+            </div>
+        </div>
+
         <div *ngFor="let m of filteredModules" class="module-card premium">
             <div class="card-icon"><i class="fas fa-eye"></i></div>
             <h3>{{ m.title }}</h3>
@@ -16,4 +30,11 @@
             </ul>
         </div>
     </div>
+
+    <ng-template #noModules>
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <p>Aucun module fonctionnel n'est assigné à votre rôle.</p>
+        </div>
+    </ng-template>
 </div>

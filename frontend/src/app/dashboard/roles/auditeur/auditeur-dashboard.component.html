@@ -4,7 +4,7 @@
         <p>Réalisez les contrôles, collectez les preuves et documentez vos missions.</p>
     </div>
 
-    <div class="dashboard-grid">
+    <div class="dashboard-grid" *ngIf="filteredModules.length > 0; else noModules">
         <div *ngFor="let m of filteredModules" class="module-card premium">
             <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
             <h3>{{ m.title }}</h3>
@@ -16,4 +16,11 @@
             </ul>
         </div>
     </div>
+
+    <ng-template #noModules>
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <p>Aucun module fonctionnel n'est assigné à votre rôle.</p>
+        </div>
+    </ng-template>
 </div>

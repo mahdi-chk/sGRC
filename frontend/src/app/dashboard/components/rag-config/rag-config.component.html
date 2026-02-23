@@ -1,0 +1,28 @@
+<div class="module-card premium config-card">
+    <div class="card-icon"><i class="fas fa-database"></i></div>
+    <h3>Configuration RAG</h3>
+    <p class="desc">Configurer le chemin des documents source et l'indexation.</p>
+
+    <div class="config-form">
+        <div class="form-group">
+            <label>Chemin des documents</label>
+            <input type="text" [(ngModel)]="docsPath" placeholder="G:\Documents\sGRC\normes" class="path-input">
+        </div>
+
+        <div class="save-feedback" [class.error]="saveMessage.includes('Erreur')">
+            {{ saveMessage }}
+        </div>
+    </div>
+
+    <div class="card-footer settings-actions">
+        <button class="btn-primary" (click)="saveDocsPath()" [disabled]="isSaving">
+            <i class="fas" [class.fa-save]="!isSaving" [class.fa-spinner]="isSaving" [class.fa-spin]="isSaving"></i>
+            {{ isSaving ? 'Sauvegarde...' : 'Enregistrer' }}
+        </button>
+        <button class="btn-secondary" (click)="startIndexing()" [disabled]="isIndexing">
+            <i class="fas" [class.fa-sync-alt]="!isIndexing" [class.fa-spinner]="isIndexing"
+                [class.fa-spin]="isIndexing"></i>
+            {{ isIndexing ? 'Indexation...' : 'Indexer les Normes' }}
+        </button>
+    </div>
+</div>

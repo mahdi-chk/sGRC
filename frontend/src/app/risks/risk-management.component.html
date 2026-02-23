@@ -98,9 +98,12 @@
                         <button class="action-btn btn-edit" (click)="onEditRisk(risk)" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button *ngIf="risk.statut === 'Ouvert'" class="action-btn btn-assign"
-                            (click)="openAssign(risk)" title="Assigner">
+                        <button class="action-btn btn-assign" (click)="openAssign(risk)" title="Assigner">
                             <i class="fas fa-user-plus"></i>
+                        </button>
+                        <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-revert"
+                            (click)="revertToInProgress(risk.id)" title="Remettre en cours">
+                            <i class="fas fa-undo"></i>
                         </button>
                         <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-close"
                             (click)="closeRisk(risk.id)" title="Clôturer">
@@ -695,11 +698,6 @@
         color: #991b1b;
     }
 
-    .status-Ouvert {
-        background: #ecfdf5;
-        color: #065f46;
-    }
-
     .status-En\ cours {
         background: #eff6ff;
         color: #1d4ed8;
@@ -768,6 +766,15 @@
 
     .btn-close:hover {
         background: #ede9fe;
+    }
+
+    .btn-revert {
+        background: #fff7ed;
+        color: #ea580c;
+    }
+
+    .btn-revert:hover {
+        background: #ffedd5;
     }
 
     /* Modal Form */

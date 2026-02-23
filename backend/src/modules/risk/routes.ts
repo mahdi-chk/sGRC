@@ -41,14 +41,14 @@ const upload = multer({
 // Apply authentication to all routes
 router.use(authenticateToken);
 
-// Create Risk (Risk Manager only)
-router.post('/', authorizeRoles(UserRole.RISK_MANAGER), upload.single('pieceJustificative'), async (req: AuthRequest, res) => {
+// Create Risk (Risk Manager and Super Admin)
+router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), upload.single('pieceJustificative'), async (req: AuthRequest, res) => {
     try {
         const riskData = {
             ...req.body,
             riskManagerId: req.user!.id,
             pieceJustificative: req.file ? req.file.path : null,
-            statut: RiskStatus.OPEN
+            statut: RiskStatus.IN_PROGRESS
         };
 
         const risk = await Risk.create(riskData);
@@ -64,7 +64,7 @@ router.get('/', async (req: AuthRequest, res) => {
         const { role, id } = req.user!;
         let risks;
 
-        if (role === UserRole.SUPER_ADMIN) {
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
             risks = await Risk.findAll({ include: ['riskAgent', 'responsableTraitement', 'departement'] });
         } else if (role === UserRole.RISK_MANAGER) {
             risks = await Risk.findAll({
@@ -93,8 +93,8 @@ router.get('/', async (req: AuthRequest, res) => {
     }
 });
 
-// Assign Risk (Risk Manager only)
-router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER), async (req: AuthRequest, res) => {
+// Assign Risk (Risk Manager and Super Admin)
+router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
     try {
         const { id } = req.params;
         const { riskAgentId } = req.body;
@@ -139,8 +139,8 @@ router.put('/:id', upload.single('pieceJustificative'), async (req: AuthRequest,
         const updateData = { ...req.body };
         const { role } = req.user!;
 
-        if (role !== UserRole.RISK_MANAGER) {
-            return res.status(403).json({ message: 'Only Risk Manager can edit risk details' });
+        if (role !== UserRole.RISK_MANAGER && role !== UserRole.SUPER_ADMIN) {
+            return res.status(403).json({ message: 'Only Risk Manager and Super Admin can edit risk details' });
         }
 
         const risk = await Risk.findByPk(parseInt(id as string));
@@ -167,16 +167,17 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
         const risk = await Risk.findByPk(parseInt(id as string));
         if (!risk) return res.status(404).json({ message: 'Risk not found' });
 
-        // RBAC: Only manager or assigned agent can update status
-        if (role !== UserRole.RISK_MANAGER && risk.riskAgentId !== userId) {
+        // RBAC: Only manager, super admin or assigned agent can update status
+        if (role !== UserRole.SUPER_ADMIN && role !== UserRole.RISK_MANAGER && risk.riskAgentId !== userId) {
             return res.status(403).json({ message: 'Insufficient permissions' });
         }
 
-        // Risk Manager can set to CLOSED, Agent can set to TREATED
-        if (statut === RiskStatus.CLOSED && role !== UserRole.RISK_MANAGER) {
-            return res.status(403).json({ message: 'Only Risk Manager can close risks' });
+        // Risk Manager and Super Admin can set to CLOSED, Agent can set to TREATED
+        if (statut === RiskStatus.CLOSED && role !== UserRole.RISK_MANAGER && role !== UserRole.SUPER_ADMIN) {
+            return res.status(403).json({ message: 'Only Risk Manager and Super Admin can close risks' });
         }
 
+        const oldStatut = risk.statut;
         const newStatut = statut as RiskStatus;
         await risk.update({ statut: newStatut });
 
@@ -221,6 +222,21 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                     console.log('Notification created for agent:', agent.id);
                 } catch (notifErr) {
                     console.error('Error creating notification for agent:', notifErr);
+                }
+            }
+        } else if (newStatut === RiskStatus.IN_PROGRESS && oldStatut === RiskStatus.TREATED && role === UserRole.RISK_MANAGER) {
+            const agent = await User.findByPk(risk.riskAgentId!);
+            if (agent) {
+                try {
+                    await Notification.create({
+                        userId: agent.id,
+                        type: NotificationType.STATUS_CHANGED,
+                        content: `Le risque "${risk.titre}" a été remis en cours de traitement par le manager car il n'a pas été traité correctement.`,
+                        riskId: risk.id
+                    });
+                    console.log('Notification created for agent (revert):', agent.id);
+                } catch (notifErr) {
+                    console.error('Error creating notification for agent (revert):', notifErr);
                 }
             }
         }

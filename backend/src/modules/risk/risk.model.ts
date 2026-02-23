@@ -11,7 +11,6 @@ export enum RiskLevel {
 }
 
 export enum RiskStatus {
-    OPEN = 'Ouvert',
     IN_PROGRESS = 'En cours',
     TREATED = 'Traité',
     CLOSED = 'Clôturé',
@@ -99,7 +98,7 @@ Risk.init(
         statut: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: RiskStatus.OPEN,
+            defaultValue: RiskStatus.IN_PROGRESS,
             validate: {
                 isIn: [Object.values(RiskStatus)],
             },

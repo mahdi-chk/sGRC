@@ -124,6 +124,10 @@ export class DashboardComponent {
     }
   }
 
+  toggleAiAssistant() {
+    this.dashboardService.toggleAiAssistant();
+  }
+
   logout() {
     this.authService.logout();
   }

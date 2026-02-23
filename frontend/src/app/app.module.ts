@@ -23,6 +23,10 @@ import { DashboardHomeComponent } from './dashboard/dashboard-home.component';
 import { RiskManagementComponent } from './risks/risk-management.component';
 import { AssignedRisksComponent } from './dashboard/roles/risk-agent/assigned-risks/assigned-risks.component';
 import { PlanningComponent } from './modules/planning/planning.component';
+import { RagConfigComponent } from './dashboard/components/rag-config/rag-config.component';
+import { UserManagementCardComponent } from './dashboard/components/user-management-card/user-management-card.component';
+import { RiskManagementCardComponent } from './dashboard/components/risk-management-card/risk-management-card.component';
+import { RiskStatisticsComponent } from './dashboard/roles/top-management/risk-statistics/risk-statistics.component';
 
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -35,7 +39,8 @@ const routes: Routes = [
       { path: 'users', component: UserManagementComponent },
       { path: 'risks', component: RiskManagementComponent },
       { path: 'assigned-risks', component: AssignedRisksComponent },
-      { path: 'planning', component: PlanningComponent }
+      { path: 'planning', component: PlanningComponent },
+      { path: 'statistics', component: RiskStatisticsComponent }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -60,7 +65,11 @@ const routes: Routes = [
     DashboardHomeComponent,
     RiskManagementComponent,
     AssignedRisksComponent,
-    PlanningComponent
+    PlanningComponent,
+    RagConfigComponent,
+    UserManagementCardComponent,
+    RiskManagementCardComponent,
+    RiskStatisticsComponent
   ],
   imports: [
     BrowserModule,

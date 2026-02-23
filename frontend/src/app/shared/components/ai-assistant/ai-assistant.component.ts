@@ -22,6 +22,14 @@ export class AiAssistantComponent implements OnInit {
     this.dashboardService.toggleAiAssistant$.subscribe(() => {
       this.isOpen = true; // Auto open when triggered
     });
+    // Initial connection check
+    this.aiService.chat('ping').subscribe({
+      error: (err) => {
+        if (err.error?.error?.includes('Ollama est inaccessible')) {
+          this.messages.push({ role: 'ai', content: '⚠️ Le service Ollama n\'est pas lancé sur le serveur. Certaines fonctionnalités de l\'assistant pourraient être indisponibles.' });
+        }
+      }
+    });
   }
 
   checkIndexStatus() {

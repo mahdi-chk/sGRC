@@ -68,8 +68,10 @@ export class RAGEngine {
 
         for (const file of files) {
             try {
+                console.log(`Parsing ${path.basename(file)}...`);
                 const text = await this.parsePdf(file);
                 const chunks = this.splitText(text, 1000, 200);
+                console.log(`Chunks created for ${path.basename(file)}: ${chunks.length}`);
 
                 for (const chunk of chunks) {
                     if (!chunk.trim()) continue;
@@ -84,14 +86,15 @@ export class RAGEngine {
                     });
                     totalChunks++;
                 }
-                console.log(`Indexed ${path.basename(file)}: ${chunks.length} chunks.`);
-            } catch (err) {
-                console.error(`Error indexing ${file}:`, err);
+                console.log(`Successfully indexed ${path.basename(file)}.`);
+            } catch (err: any) {
+                console.error(`Error indexing ${file}:`, err.message || err);
             }
         }
 
         await this.saveDB();
         this.isLoaded = true;
+        console.log(`Indexing complete. Total chunks: ${totalChunks}`);
         return { success: true, count: totalChunks };
     }
 

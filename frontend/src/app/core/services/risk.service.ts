@@ -10,7 +10,6 @@ export enum RiskLevel {
 }
 
 export enum RiskStatus {
-    OPEN = 'Ouvert',
     IN_PROGRESS = 'En cours',
     TREATED = 'Traité',
     CLOSED = 'Clôturé',

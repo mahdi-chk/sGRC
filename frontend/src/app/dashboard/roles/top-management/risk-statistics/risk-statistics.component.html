@@ -1,0 +1,118 @@
+<div class="role-dashboard top-management statistics-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-pie"></i> Analyse Détaillée des Risques</h1>
+                <p>Vue d'ensemble analytique du paysage des risques de l'organisation.</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-export" (click)="exportCSV()">
+                <i class="fas fa-download"></i> Exporter CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Overview KPIs -->
+
+    <div class="dashboard-grid">
+        <!-- Distribution par Niveau (Donut Chart Style) -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-signal"></i> Distribution par Sévérité</h3>
+            <div class="chart-container donut-wrapper">
+                <div class="donut-chart" [style.--p_low]="(levelStats['Faible']/totalRisks*100) || 0"
+                    [style.--p_med]="(levelStats['Moyen']/totalRisks*100) || 0"
+                    [style.--p_high]="(levelStats['Élevé']/totalRisks*100) || 0"
+                    [style.--p_crit]="(levelStats['Critique']/totalRisks*100) || 0">
+                    <div class="donut-inner">
+                        <span class="total">{{ totalRisks }}</span>
+                        <span class="sub">Risques</span>
+                    </div>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item low"><span class="dot"></span> Faible ({{ levelStats['Faible'] || 0 }})
+                    </div>
+                    <div class="legend-item med"><span class="dot"></span> Moyen ({{ levelStats['Moyen'] || 0 }})</div>
+                    <div class="legend-item high"><span class="dot"></span> Élevé ({{ levelStats['Élevé'] || 0 }})</div>
+                    <div class="legend-item crit"><span class="dot"></span> Critique ({{ levelStats['Critique'] || 0 }})
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution par Statut (Bar Chart Style) -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-tasks"></i> État d'Avancement</h3>
+            <div class="chart-container bar-wrapper">
+                <div class="bar-chart">
+                    <div class="bar-group" *ngFor="let entry of statusStats | keyvalue">
+                        <div class="bar-label">{{ entry.key }}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill" [style.width.%]="(entry.value/totalRisks*100) || 0"
+                                [ngClass]="entry.key.toLowerCase().replace('é', 'e').replace('ô', 'o').replace(' ', '-')">
+                                <span class="bar-value">{{ entry.value }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicateurs de Performance (Progress Circles) -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-tachometer-alt"></i> Performance Stratégique</h3>
+            <div class="progress-circles small">
+                <div class="circle-item">
+                    <div class="premium-circle treatment" [style.--p]="treatmentRate">
+                        <span class="percent">{{ treatmentRate }}%</span>
+                    </div>
+                    <span class="circle-label">Traitement</span>
+                </div>
+                <div class="circle-item">
+                    <div class="premium-circle maturity" [style.--p]="(avgMaturity/5*100)">
+                        <span class="percent">{{ avgMaturity }}/5</span>
+                    </div>
+                    <span class="circle-label">Maturité</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution par Domaine (Visual Bar Chart) -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-layer-group"></i> Distribution par Domaine</h3>
+            <div class="chart-container bar-wrapper">
+                <div class="bar-chart">
+                    <div class="bar-group" *ngFor="let entry of domainStats | keyvalue">
+                        <div class="bar-label">{{ entry.key }}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill dept-fill" [style.width.%]="(entry.value/totalRisks*100) || 0">
+                                <span class="bar-value">{{ entry.value }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution par Département (Visual Bar Chart) -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-building"></i> Distribution par Département</h3>
+            <div class="chart-container bar-wrapper">
+                <div class="bar-chart">
+                    <div class="bar-group" *ngFor="let entry of deptStats | keyvalue">
+                        <div class="bar-label">{{ entry.key }}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill dept-fill" [style.width.%]="(entry.value/totalRisks*100) || 0"
+                                style="background: linear-gradient(90deg, #3b82f6 0%, #2dd4bf 100%);">
+                                <span class="bar-value">{{ entry.value }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

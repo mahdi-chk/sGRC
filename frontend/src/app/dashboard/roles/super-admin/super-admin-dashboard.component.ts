@@ -10,7 +10,12 @@ export class SuperAdminDashboardComponent {
     @Input() filteredModules: any[] = [];
     @Output() openModule = new EventEmitter<any>();
     @Output() openUserManagement = new EventEmitter<void>();
+    @Output() openRiskManagement = new EventEmitter<void>();
     @Output() toggleAssistant = new EventEmitter<void>();
+
+    onOpenRiskManagement() {
+        this.openRiskManagement.emit();
+    }
 
     onOpenModule(m: any, s: any) {
         this.openModule.emit({ m, s });

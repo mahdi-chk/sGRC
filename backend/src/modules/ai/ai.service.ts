@@ -32,6 +32,11 @@ ${prompt}
                 model: MODEL_NAME,
                 prompt: augmentedPrompt,
                 stream: false,
+            }).catch(err => {
+                if (!err.response) {
+                    throw new Error(`Ollama est inaccessible à l'adresse ${OLLAMA_URL}. Assurez-vous qu'Ollama est lancé.`);
+                }
+                throw err;
             });
 
             return response.data.response;
@@ -40,8 +45,8 @@ ${prompt}
                 console.error('Model not found in Ollama:', MODEL_NAME);
                 throw new Error(`Modèle '${MODEL_NAME}' introuvable. Veuillez exécuter 'ollama pull ${MODEL_NAME}' sur votre machine.`);
             }
-            console.error('Error calling Ollama:', error.message || error);
-            throw new Error('Could not get response from AI');
+            console.error('AI Service Error:', error.message || error);
+            throw new Error(error.message || 'Could not get response from AI');
         }
     }
 }

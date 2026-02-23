@@ -197,6 +197,12 @@ export class RiskManagementComponent implements OnInit {
         }
     }
 
+    revertToInProgress(riskId: number) {
+        if (confirm('Voulez-vous vraiment remettre ce risque en cours de traitement ?')) {
+            this.riskService.updateStatus(riskId, RiskStatus.IN_PROGRESS).subscribe(() => this.loadRisks());
+        }
+    }
+
     resetForm() {
         this.isEditing = false;
         this.editRiskId = null;

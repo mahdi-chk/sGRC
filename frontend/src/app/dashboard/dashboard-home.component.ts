@@ -151,11 +151,18 @@ export class DashboardHomeComponent implements OnInit {
         });
     }
 
-    get filteredModules() {
+    get filteredModules(): ModuleItem[] {
+        if (!this.currentUserRole) {
+            return [];
+        }
+
         if (this.currentUserRole === UserRole.SUPER_ADMIN) {
             return this.modules;
         }
-        return this.modules.filter(m => this.currentUserRole && m.roles.includes(this.currentUserRole));
+
+        return this.modules.filter(m =>
+            m.roles && m.roles.some(role => role === this.currentUserRole)
+        );
     }
 
     onOpenModule(event: { m: ModuleItem, s: Submodule }) {

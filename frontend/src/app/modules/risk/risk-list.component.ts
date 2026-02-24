@@ -19,7 +19,7 @@ export class RiskListComponent implements OnInit {
 
     // Unique values for filters
     levels: string[] = ['Faible', 'Moyen', 'Élevé', 'Critique'];
-    statuses: string[] = ['En cours', 'Traité', 'Clôturé'];
+    statuses: string[] = ['Ouvert', 'En cours', 'Traité', 'Clôturé'];
     domains: string[] = [];
 
     selectedRisk: Risk | null = null;

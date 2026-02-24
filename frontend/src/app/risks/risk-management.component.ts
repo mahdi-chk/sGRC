@@ -19,6 +19,7 @@ export class RiskManagementComponent implements OnInit {
     comments: any[] = [];
     treatmentContent = '';
     selectedFile: File | null = null;
+    isAssigning = false;
 
     showCreateModal = false;
     showAssignModal = false;
@@ -26,6 +27,13 @@ export class RiskManagementComponent implements OnInit {
     isEditing = false;
     selectedRisk: Risk | null = null;
     editRiskId: number | null = null;
+
+    // AI Generation
+    showAiModal = false;
+    situationText = '';
+    isGenerating = false;
+    suggestedRisks: any[] = [];
+
 
     newRisk = {
         titre: '',
@@ -153,7 +161,7 @@ export class RiskManagementComponent implements OnInit {
         this.resetForm();
     }
 
-    openAssign(risk: Risk) {
+    openAssignModal(risk: Risk) {
         this.selectedRisk = risk;
         // Show only Risk Agents, prioritized by department
         this.filteredAgents = this.riskAgents.filter(u =>
@@ -167,10 +175,20 @@ export class RiskManagementComponent implements OnInit {
     }
 
     assignRisk(agentId: string) {
-        if (this.selectedRisk) {
-            this.riskService.assignRisk(this.selectedRisk.id, parseInt(agentId)).subscribe(() => {
-                this.showAssignModal = false;
-                this.loadRisks();
+        if (this.selectedRisk && agentId) {
+            this.isAssigning = true;
+            this.riskService.assignRisk(this.selectedRisk.id, parseInt(agentId)).subscribe({
+                next: () => {
+                    this.isAssigning = false;
+                    this.showAssignModal = false;
+                    this.loadRisks();
+                    this.selectedRisk = null;
+                },
+                error: (err) => {
+                    this.isAssigning = false;
+                    console.error('Error assigning risk:', err);
+                    alert('Erreur lors de l\'assignation du risque. Veuillez réessayer.');
+                }
             });
         }
     }
@@ -201,6 +219,92 @@ export class RiskManagementComponent implements OnInit {
         if (confirm('Voulez-vous vraiment remettre ce risque en cours de traitement ?')) {
             this.riskService.updateStatus(riskId, RiskStatus.IN_PROGRESS).subscribe(() => this.loadRisks());
         }
+    }
+
+    generateWithAi() {
+        if (!this.situationText) return;
+        this.isGenerating = true;
+        this.suggestedRisks = [];
+        this.riskService.generateRisks(this.situationText).subscribe({
+            next: (risks) => {
+                this.suggestedRisks = risks.map(r => {
+                    const dept = this.departments.find(d => d.nom.toLowerCase().includes(r.departement.toLowerCase()));
+                    const deptId = dept ? dept.id : null;
+
+                    // Pre-calculate date
+                    let suggestedDate = '';
+                    if (r.delaiSuggestion) {
+                        const date = new Date();
+                        date.setDate(date.getDate() + r.delaiSuggestion);
+                        suggestedDate = date.toISOString().split('T')[0];
+                    }
+
+                    // Try to match user
+                    let matchedUserId = '';
+                    const suggestedResp = r.responsableSuggestion.toLowerCase();
+                    const matchedUser = this.allUsers.find(u =>
+                        (deptId ? u.departementId === deptId : true) && (
+                            u.prenom.toLowerCase().includes(suggestedResp) ||
+                            u.nom.toLowerCase().includes(suggestedResp) ||
+                            u.role.toLowerCase().includes(suggestedResp)
+                        )
+                    );
+                    if (matchedUser) matchedUserId = matchedUser.id.toString();
+
+                    return {
+                        ...r,
+                        selected: true,
+                        deptId,
+                        suggestedDate,
+                        manualResponsableId: matchedUserId
+                    };
+                });
+                this.isGenerating = false;
+            },
+            error: (err) => {
+                console.error(err);
+                this.isGenerating = false;
+                alert('Erreur lors de la génération des risques.');
+            }
+        });
+    }
+
+    toggleAiRiskSelection(risk: any) {
+        risk.selected = !risk.selected;
+    }
+
+    isAiFormValid(): boolean {
+        const selected = this.suggestedRisks.filter(r => r.selected);
+        if (selected.length === 0) return false;
+        // Every selected risk must have a responsible and a department
+        return selected.every(r => !!r.manualResponsableId && !!r.deptId);
+    }
+
+    addSelectedRisks() {
+        const selected = this.suggestedRisks.filter(r => r.selected);
+        if (selected.length === 0) return;
+
+        let completed = 0;
+        selected.forEach(risk => {
+            const formData = new FormData();
+            formData.append('titre', risk.titre);
+            formData.append('explication', risk.explication);
+            formData.append('domaine', risk.domaine);
+            formData.append('niveauRisque', risk.niveauRisque);
+            formData.append('departementId', risk.deptId.toString());
+            formData.append('dateEcheance', risk.suggestedDate || this.today);
+            formData.append('responsableTraitementId', risk.manualResponsableId);
+
+            this.riskService.createRisk(formData).subscribe(() => {
+                completed++;
+                if (completed === selected.length) {
+                    this.showAiModal = false;
+                    this.loadRisks();
+                    this.situationText = '';
+                    this.suggestedRisks = [];
+                }
+            });
+        });
     }
 
     resetForm() {

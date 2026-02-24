@@ -16,7 +16,24 @@
         </div>
     </div>
 
-    <!-- Overview KPIs -->
+    <div class="kpi-row mb-4">
+        <div class="kpi-card kpi-open">
+            <span class="kpi-value">{{ statusStats['Ouvert'] || 0 }}</span>
+            <span class="kpi-label">Ouverts</span>
+        </div>
+        <div class="kpi-card kpi-total">
+            <span class="kpi-value">{{ totalRisks }}</span>
+            <span class="kpi-label">Risques Totaux</span>
+        </div>
+        <div class="kpi-card kpi-progress">
+            <span class="kpi-value">{{ statusStats['En cours'] || 0 }}</span>
+            <span class="kpi-label">En traitement</span>
+        </div>
+        <div class="kpi-card kpi-closed">
+            <span class="kpi-value">{{ statusStats['Clôturé'] || 0 }}</span>
+            <span class="kpi-label">Clôturés</span>
+        </div>
+    </div>
 
     <div class="dashboard-grid">
         <!-- Distribution par Niveau (Donut Chart Style) -->

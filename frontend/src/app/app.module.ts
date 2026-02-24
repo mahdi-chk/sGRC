@@ -40,7 +40,14 @@ const routes: Routes = [
       { path: 'risks', component: RiskManagementComponent },
       { path: 'assigned-risks', component: AssignedRisksComponent },
       { path: 'planning', component: PlanningComponent },
-      { path: 'statistics', component: RiskStatisticsComponent }
+      { path: 'statistics', component: RiskStatisticsComponent },
+      { path: 'super-admin', component: SuperAdminDashboardComponent },
+      { path: 'admin-si', component: AdminSiDashboardComponent },
+      { path: 'auditeur', component: AuditeurDashboardComponent },
+      { path: 'audit-senior', component: AuditSeniorDashboardComponent },
+      { path: 'risk-manager', component: RiskManagerDashboardComponent },
+      { path: 'risk-agent', component: RiskAgentDashboardComponent },
+      { path: 'top-management', component: TopManagementDashboardComponent }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },

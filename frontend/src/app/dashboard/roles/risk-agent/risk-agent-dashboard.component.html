@@ -4,18 +4,91 @@
         <p>Consultez vos risques assignés, ajoutez des preuves de traitement et mettez à jour l'avancement.</p>
     </div>
 
-    <div class="dashboard-grid">
-        <!-- Assigned Risks Module Card -->
-        <div class="module-card premium">
-            <div class="card-icon"><i class="fas fa-tasks"></i></div>
-            <h3>Risques à Traiter</h3>
-            <p class="desc">Gérez les risques qui vous sont actuellement assignés pour traitement (Preuves, avancement,
-                etc.).</p>
-            <div class="card-footer" style="margin-top: 20px;">
-                <button class="btn-primary" (click)="goToAssignedRisks()">
-                    <i class="fas fa-external-link-alt"></i> Ouvrir la gestion des risques
-                </button>
+    <!-- Stats Section -->
+    <div class="stats-card premium-stats">
+        <div class="stats-header">
+            <h3><i class="fas fa-chart-line"></i> Vue d'ensemble de vos activités</h3>
+            <span class="badge premium">Temps Réel</span>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-item highlight">
+                <div class="stat-icon risks"><i class="fas fa-clipboard-list"></i></div>
+                <div class="stat-content">
+                    <span class="value">{{ stats.total }}</span>
+                    <span class="label">Total Assignés</span>
+                </div>
             </div>
+            <div class="stat-item info">
+                <div class="stat-icon maturity"><i class="fas fa-tasks"></i></div>
+                <div class="stat-content">
+                    <span class="value">{{ stats.unprocessed }}</span>
+                    <span class="label">À Traiter</span>
+                </div>
+            </div>
+            <div class="stat-item warn" [class.urgent-highlight]="stats.urgent > 0">
+                <div class="stat-icon critical"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-content">
+                    <span class="value">{{ stats.urgent }}</span>
+                    <span class="label">Échéance Proche</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Action Row: Assigned Risks (Left) & Urgent Risks (Right, Wide) -->
+    <div class="dashboard-action-row" *ngIf="assignedRisks.length > 0">
+        <!-- Assigned Risks Module Card (Left, Narrower) -->
+        <div class="assigned-risks-card-wrapper">
+            <div class="module-card premium assigned-module">
+                <div class="card-icon"><i class="fas fa-tasks"></i></div>
+                <h3>Gestion Globale</h3>
+                <p class="desc">Accédez à l'intégralité de vos risques pour mettre à jour l'avancement et les preuves.
+                </p>
+                <div class="card-footer">
+                    <button class="btn-primary" (click)="goToAssignedRisks()">
+                        Ouvrir la gestion <i class="fas fa-external-link-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Urgent Risks Section (Right, Wider) -->
+        <div class="urgent-risks-section" [class.full-width]="urgentRisks.length === 0">
+            <div class="section-header">
+                <h3><i class="fas fa-clock"></i> Risques Urgents</h3>
+                <span class="count-tag" *ngIf="urgentRisks.length > 0">{{ urgentRisks.length }}</span>
+            </div>
+
+            <div class="urgent-list-container" *ngIf="urgentRisks.length > 0; else noUrgent">
+                <div class="urgent-risk-item" *ngFor="let risk of urgentRisks"
+                    [class.overdue]="risk.statut === 'En cours'">
+                    <div class="risk-priority" [ngClass]="'level-' + risk.niveauRisque"></div>
+                    <div class="risk-info">
+                        <div class="risk-title-row">
+                            <span class="risk-title">{{ risk.titre }}</span>
+                            <span class="risk-badge" [ngClass]="'status-' + risk.statut">{{ risk.statut }}</span>
+                        </div>
+                        <div class="risk-meta">
+                            <span class="date-alert">
+                                <i class="fas fa-calendar-alt"></i> Échéance : {{ risk.dateEcheance | date:'dd/MM/yyyy'
+                                }}
+                            </span>
+                            <span class="priority-label">{{ risk.niveauRisque }}</span>
+                        </div>
+                    </div>
+                    <div class="risk-actions">
+                        <button class="btn-accéder" (click)="goToAssignedRisks()">
+                            <span>Agir</span> <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <ng-template #noUrgent>
+                <div class="empty-urgent-state">
+                    <i class="fas fa-check-circle"></i>
+                    <p>Aucun risque urgent pour le moment. Félicitations !</p>
+                </div>
+            </ng-template>
         </div>
     </div>
 </div>
@@ -133,5 +206,227 @@
     .comment-item:hover {
         transform: translateX(3px);
         border-color: #004a99 !important;
+    }
+
+    .urgent-highlight {
+        border-color: #ef4444 !important;
+        background: #fffafa !important;
+        animation: pulse-border 2s infinite;
+    }
+
+    @keyframes pulse-border {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+    }
+
+    .card-header-with-icon {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+
+    .card-header-with-icon h3 {
+        margin: 0;
+    }
+
+    /* Modern Redesign Styles */
+    .dashboard-action-row {
+        display: flex;
+        gap: 25px;
+        margin-top: 30px;
+        align-items: stretch;
+    }
+
+    .urgent-risks-section {
+        flex: 2;
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .urgent-risks-section.full-width {
+        flex: 1;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #1e293b;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-header h3 i {
+        color: #ef4444;
+    }
+
+    .count-tag {
+        background: #fee2e2;
+        color: #ef4444;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .urgent-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .urgent-risk-item {
+        display: flex;
+        align-items: center;
+        padding: 18px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #edf2f7;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .urgent-risk-item:hover {
+        transform: translateX(5px);
+        background: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6;
+    }
+
+    .urgent-risk-item.overdue {
+        border-left: 4px solid #ef4444;
+    }
+
+    .risk-priority {
+        width: 6px;
+        height: 40px;
+        border-radius: 3px;
+        margin-right: 20px;
+    }
+
+    .risk-info {
+        flex: 1;
+    }
+
+    .risk-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .risk-title {
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 1.05rem;
+    }
+
+    .risk-meta {
+        display: flex;
+        gap: 20px;
+        font-size: 0.85rem;
+        color: #64748b;
+        align-items: center;
+    }
+
+    .date-alert {
+        color: #ef4444;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .priority-label {
+        background: #e2e8f0;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+
+    .risk-actions .btn-accéder {
+        background: #004a99;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .risk-actions .btn-accéder:hover {
+        background: #003366;
+        box-shadow: 0 4px 12px rgba(0, 74, 153, 0.2);
+    }
+
+    .assigned-risks-card-wrapper {
+        flex: 1;
+        display: flex;
+    }
+
+    .assigned-module {
+        width: 100%;
+        margin: 0 !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
+        border: 1px solid rgba(0, 74, 153, 0.1) !important;
+    }
+
+    .empty-urgent-state {
+        padding: 40px;
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .empty-urgent-state i {
+        font-size: 3rem;
+        color: #10b981;
+        margin-bottom: 15px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+        .dashboard-action-row {
+            flex-direction: column;
+        }
+
+        .urgent-risks-section {
+            order: 2;
+        }
+
+        .assigned-risks-card-wrapper {
+            order: 1;
+        }
     }
 </style>

@@ -44,6 +44,7 @@ export class RiskStatisticsComponent implements OnInit {
         };
 
         this.statusStats = {
+            'Ouvert': 0,
             'En cours': 0,
             'Traité': 0,
             'Clôturé': 0

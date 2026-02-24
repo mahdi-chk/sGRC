@@ -12,6 +12,9 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="btn-ai" (click)="showAiModal = true" title="Générer par IA">
+                <i class="fas fa-robot"></i> Générer par IA
+            </button>
             <button class="btn-export" (click)="downloadReport()" title="Télécharger le rapport">
                 <i class="fas fa-file-download"></i> Exporter rapport
             </button>
@@ -98,7 +101,8 @@
                         <button class="action-btn btn-edit" (click)="onEditRisk(risk)" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn btn-assign" (click)="openAssign(risk)" title="Assigner">
+                        <button class="action-btn btn-assign" (click)="openAssignModal(risk)" title="Assigner"
+                            *ngIf="risk.statut === 'Ouvert'">
                             <i class="fas fa-user-plus"></i>
                         </button>
                         <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-revert"
@@ -206,9 +210,12 @@
                 </select>
             </div>
             <div class="form-footer">
-                <button class="btn-cancel" (click)="showAssignModal = false">Annuler</button>
+                <button class="btn-cancel" (click)="showAssignModal = false" [disabled]="isAssigning">Annuler</button>
                 <button class="btn-save" (click)="assignRisk(agentSelect.value)"
-                    [disabled]="!agentSelect.value">Assigner</button>
+                    [disabled]="!agentSelect.value || isAssigning">
+                    <i class="fas fa-spinner fa-spin" *ngIf="isAssigning"></i>
+                    {{ isAssigning ? 'Assignation...' : 'Assigner' }}
+                </button>
             </div>
         </div>
     </app-modal>
@@ -335,6 +342,86 @@
         </div>
     </app-modal>
 
+    <!-- ====================== AI Generation Modal ====================== -->
+    <app-modal *ngIf="showAiModal" title="Génération de Risques par IA" (close)="showAiModal = false">
+        <div #projected modal-body class="modal-form ai-modal">
+            <div class="ai-input-zone" *ngIf="suggestedRisks.length === 0">
+                <label>Décrivez une situation ou un contexte <span class="req">*</span></label>
+                <textarea [(ngModel)]="situationText" rows="4"
+                    placeholder="Ex: Mise en œuvre d'un système de télétravail pour 500 employés, incluant l'accès distant aux données sensibles..."
+                    class="finput"></textarea>
+                <div class="ai-actions">
+                    <button class="btn-ai-generate" (click)="generateWithAi()"
+                        [disabled]="!situationText || isGenerating">
+                        <i class="fas" [class.fa-robot]="!isGenerating" [class.fa-spinner]="isGenerating"
+                            [class.fa-spin]="isGenerating"></i>
+                        {{ isGenerating ? 'Génération en cours...' : 'Générer les risques' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="ai-results-zone" *ngIf="suggestedRisks.length > 0">
+                <div class="results-header">
+                    <h4>Risques suggérés par l'IA</h4>
+                    <button class="btn-text-only" (click)="suggestedRisks = []; situationText = ''">
+                        <i class="fas fa-redo"></i> Recommencer
+                    </button>
+                </div>
+
+                <div class="suggested-risks-list">
+                    <div *ngFor="let risk of suggestedRisks" class="suggested-risk-card"
+                        [class.selected]="risk.selected">
+                        <div class="risk-selection-check" (click)="risk.selected = !risk.selected">
+                            <i class="fas" [class.fa-check-circle]="risk.selected"
+                                [class.fa-circle]="!risk.selected"></i>
+                        </div>
+                        <div class="risk-info">
+                            <div class="risk-top-header">
+                                <h5>{{ risk.titre }}</h5>
+                                <span [class]="'badge level-' + risk.niveauRisque">{{ risk.niveauRisque }}</span>
+                            </div>
+                            <p class="risk-desc">{{ risk.explication }}</p>
+
+                            <div class="risk-details-grid">
+                                <div class="mini-detail">
+                                    <label>Domaine</label>
+                                    <span>{{ risk.domaine }}</span>
+                                </div>
+                                <div class="mini-detail">
+                                    <label>Département</label>
+                                    <span class="dept-tag">{{ risk.departement }}</span>
+                                </div>
+                                <div class="mini-detail">
+                                    <label>Échéance (+{{ risk.delaiSuggestion }} j.)</label>
+                                    <input type="date" [(ngModel)]="risk.suggestedDate" class="mini-input">
+                                </div>
+                                <div class="mini-detail full">
+                                    <label>Responsable de traitement <span class="req">*</span></label>
+                                    <select [(ngModel)]="risk.manualResponsableId" class="mini-input">
+                                        <option value="">Sélectionner</option>
+                                        <option *ngFor="let u of allUsers" [value]="u.id">
+                                            {{ u.prenom }} {{ u.nom }} ({{ u.role }})
+                                        </option>
+                                    </select>
+                                    <small class="hint" *ngIf="risk.responsableSuggestion">Suggéré : {{
+                                        risk.responsableSuggestion }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="form-footer">
+                    <button class="btn-cancel" (click)="showAiModal = false">Annuler</button>
+                    <button class="btn-save" (click)="addSelectedRisks()" [disabled]="!isAiFormValid()">
+                        <i class="fas fa-plus-circle"></i> Ajouter les risques sélectionnés
+                    </button>
+                </div>
+            </div>
+        </div>
+    </app-modal>
+
 </div>
 
 <style>
@@ -444,6 +531,27 @@
         background: #004a99;
         color: white;
         box-shadow: 0 4px 12px rgba(0, 74, 153, 0.25);
+    }
+
+    .btn-ai {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+        border: none;
+        padding: 12px 22px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.93rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        transition: all 0.3s;
+    }
+
+    .btn-ai:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
     }
 
     /* KPI */
@@ -751,12 +859,15 @@
     }
 
     .btn-assign {
-        background: #fefce8;
-        color: #a16207;
+        background: #fffbeb;
+        color: #d97706;
+        border: 1px solid #fde68a;
     }
 
     .btn-assign:hover {
-        background: #fef9c3;
+        background: #fef3c7;
+        color: #b45309;
+        transform: scale(1.05);
     }
 
     .btn-close {
@@ -792,6 +903,189 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+    }
+
+    /* AI Modal specific styles */
+    .ai-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 15px;
+    }
+
+    .btn-ai-generate {
+        background: #7c3aed;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s;
+    }
+
+    .btn-ai-generate:hover:not(:disabled) {
+        background: #6d28d9;
+    }
+
+    .btn-ai-generate:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .results-header h4 {
+        margin: 0;
+        color: #1e293b;
+    }
+
+    .btn-text-only {
+        background: none;
+        border: none;
+        color: #6366f1;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .suggested-risks-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 5px;
+        margin-bottom: 20px;
+    }
+
+    .suggested-risk-card {
+        display: flex;
+        gap: 15px;
+        padding: 20px;
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .suggested-risk-card.selected {
+        border-color: #8b5cf6;
+        box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.1);
+    }
+
+    .risk-selection-check {
+        color: #94a3b8;
+        font-size: 1.4rem;
+        cursor: pointer;
+    }
+
+    .suggested-risk-card.selected .risk-selection-check {
+        color: #8b5cf6;
+    }
+
+    .risk-info {
+        flex: 1;
+    }
+
+    .risk-top-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .risk-top-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .risk-desc {
+        color: #475569;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    .risk-details-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding-top: 16px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .mini-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .mini-detail.full {
+        grid-column: span 3;
+    }
+
+    .mini-detail label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+
+    .mini-detail span {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .dept-tag {
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+    .mini-input {
+        padding: 6px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        color: #1e293b;
+        background: #f8fafc;
+    }
+
+    .mini-input:focus {
+        border-color: #8b5cf6;
+        outline: none;
+    }
+
+    .hint {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+
+    .ai-domain {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 3px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
     }
 
     .form-group.full {

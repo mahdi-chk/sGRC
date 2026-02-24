@@ -1177,6 +1177,71 @@
       }
     }
   }
+
+  /* KPI Row in Statistics */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .kpi-card {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid #3b82f6;
+
+    .kpi-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .kpi-label {
+      font-size: 0.9rem;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    &.kpi-open {
+      border-left-color: #64748b;
+
+      .kpi-value {
+        color: #64748b;
+      }
+    }
+
+    &.kpi-total {
+      border-left-color: #3b82f6;
+
+      .kpi-value {
+        color: #3b82f6;
+      }
+    }
+
+    &.kpi-progress {
+      border-left-color: #f59e0b;
+
+      .kpi-value {
+        color: #f59e0b;
+      }
+    }
+
+    &.kpi-closed {
+      border-left-color: #10b981;
+
+      .kpi-value {
+        color: #10b981;
+      }
+    }
+  }
 }
 
 .mb-4 {

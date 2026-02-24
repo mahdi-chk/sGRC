@@ -48,7 +48,7 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
             ...req.body,
             riskManagerId: req.user!.id,
             pieceJustificative: req.file ? req.file.path : null,
-            statut: RiskStatus.IN_PROGRESS
+            statut: RiskStatus.OPEN
         };
 
         const risk = await Risk.create(riskData);
@@ -104,27 +104,29 @@ router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_A
 
         await risk.update({ riskAgentId: parseInt(riskAgentId as string), statut: RiskStatus.IN_PROGRESS });
 
-        // Notify Agent
-        const agent = await User.findByPk(parseInt(riskAgentId as string));
-        if (agent) {
-            await emailService.sendRiskAssignedEmail(
-                { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
-                { titre: risk.titre, id: risk.id }
-            );
-
-            // Create In-App Notification
+        // Background Notifications (non-blocking)
+        (async () => {
             try {
-                await Notification.create({
-                    userId: agent.id,
-                    type: NotificationType.RISK_ASSIGNED,
-                    content: `Un nouveau risque vous a été assigné : ${risk.titre}`,
-                    riskId: risk.id
-                });
-                console.log('Notification created for agent:', agent.id);
-            } catch (notifErr) {
-                console.error('Error creating notification for agent:', notifErr);
+                const agent = await User.findByPk(parseInt(riskAgentId as string));
+                if (agent) {
+                    await emailService.sendRiskAssignedEmail(
+                        { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
+                        { titre: risk.titre, id: risk.id }
+                    );
+
+                    // Create In-App Notification
+                    await Notification.create({
+                        userId: agent.id,
+                        type: NotificationType.RISK_ASSIGNED,
+                        content: `Un nouveau risque vous a été assigné : ${risk.titre}`,
+                        riskId: risk.id
+                    });
+                    console.log('Background notification created for agent:', agent.id);
+                }
+            } catch (err) {
+                console.error('Error in background notification for assignment:', err);
             }
-        }
+        })();
 
         res.json(risk);
     } catch (error: any) {

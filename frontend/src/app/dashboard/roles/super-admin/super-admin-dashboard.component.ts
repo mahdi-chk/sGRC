@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-super-admin-dashboard',
@@ -13,7 +14,10 @@ export class SuperAdminDashboardComponent {
     @Output() openRiskManagement = new EventEmitter<void>();
     @Output() toggleAssistant = new EventEmitter<void>();
 
+    constructor(private router: Router) { }
+
     onOpenRiskManagement() {
+        this.router.navigate(['/dashboard/risks']);
         this.openRiskManagement.emit();
     }
 
@@ -22,6 +26,7 @@ export class SuperAdminDashboardComponent {
     }
 
     onOpenUserManagement() {
+        this.router.navigate(['/dashboard/users']);
         this.openUserManagement.emit();
     }
 

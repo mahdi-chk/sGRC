@@ -11,6 +11,7 @@ export class AdminSiDashboardComponent {
     @Input() filteredModules: any[] = [];
     @Output() openModule = new EventEmitter<any>();
     @Output() openUserManagement = new EventEmitter<void>();
+    @Output() toggleAssistant = new EventEmitter<void>();
 
     constructor(private router: Router) { }
 
@@ -19,6 +20,11 @@ export class AdminSiDashboardComponent {
     }
 
     onOpenUserManagement() {
+        this.router.navigate(['/dashboard/users']);
         this.openUserManagement.emit();
+    }
+
+    onToggleAssistant() {
+        this.toggleAssistant.emit();
     }
 }

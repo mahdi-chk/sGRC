@@ -15,21 +15,22 @@ export class AiAssistantComponent implements OnInit {
   isIndexed = false;
   isIndexing = false;
 
+  sessionId = '';
+
   constructor(private aiService: AIService, private dashboardService: DashboardService) { }
 
   ngOnInit() {
     this.checkIndexStatus();
+    this.sessionId = sessionStorage.getItem('ai_session_id') || this.generateSessionId();
+    sessionStorage.setItem('ai_session_id', this.sessionId);
+
     this.dashboardService.toggleAiAssistant$.subscribe(() => {
       this.isOpen = true; // Auto open when triggered
     });
-    // Initial connection check
-    this.aiService.chat('ping').subscribe({
-      error: (err) => {
-        if (err.error?.error?.includes('Ollama est inaccessible')) {
-          this.messages.push({ role: 'ai', content: '⚠️ Le service Ollama n\'est pas lancé sur le serveur. Certaines fonctionnalités de l\'assistant pourraient être indisponibles.' });
-        }
-      }
-    });
+  }
+
+  generateSessionId() {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 
   checkIndexStatus() {
@@ -61,7 +62,7 @@ export class AiAssistantComponent implements OnInit {
     });
   }
 
-  sendMessage() {
+  async sendMessage() {
     if (!this.prompt.trim()) return;
 
     const userMsg = this.prompt;
@@ -69,16 +70,19 @@ export class AiAssistantComponent implements OnInit {
     this.prompt = '';
     this.isLoading = true;
 
-    this.aiService.chat(userMsg).subscribe({
-      next: (res) => {
-        this.messages.push({ role: 'ai', content: res.response });
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('AI Error:', err);
-        this.messages.push({ role: 'ai', content: 'Désolé, une erreur est survenue lors de la communication avec l\'IA.' });
-        this.isLoading = false;
+    // Add empty AI message for streaming
+    const aiMsgIndex = this.messages.push({ role: 'ai', content: '' }) - 1;
+
+    try {
+      const stream = this.aiService.chatStream(userMsg, this.sessionId);
+      for await (const chunk of stream) {
+        this.messages[aiMsgIndex].content += chunk;
+        this.isLoading = false; // Stop spinner once first chunk arrives
       }
-    });
+    } catch (err) {
+      console.error('AI Error:', err);
+      this.messages[aiMsgIndex].content = 'Désolé, une erreur est survenue lors de la communication avec l\'IA.';
+      this.isLoading = false;
+    }
   }
 }

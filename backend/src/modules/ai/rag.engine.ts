@@ -2,8 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { SystemSetting } from '../settings/setting.model';
+import { UserRole } from '../users/user.roles';
 
-const DEFAULT_NORMES_PATH = 'G:\\T\u00E9l\u00E9chargement\\sGRC\\normes';
+const DEFAULT_NORMES_PATH = 'G:\\Téléchargement\\sGRC\\normes';
 const OLLAMA_EMBED_URL = process.env.OLLAMA_EMBED_URL || 'http://localhost:11434/api/embeddings';
 const EMBED_MODEL = 'nomic-embed-text';
 const STORAGE_DIR = path.join(__dirname, '../../storage');
@@ -12,6 +13,7 @@ const DB_FILE = path.join(STORAGE_DIR, 'vector_db.json');
 interface VectorEntry {
     text: string;
     embedding: number[];
+    topic: 'risk' | 'audit' | 'general';
     metadata: {
         source: string;
         path: string;
@@ -51,51 +53,60 @@ export class RAGEngine {
     }
 
     static async getNormesPath(): Promise<string> {
-        console.log('Fetching DOCS_PATH from database...');
         const setting = await SystemSetting.findOne({ where: { key: 'DOCS_PATH' } });
-        const path = setting ? setting.value : DEFAULT_NORMES_PATH;
-        console.log('DOCS_PATH used:', path);
-        return path;
+        return setting ? setting.value : DEFAULT_NORMES_PATH;
     }
 
     static async indexDocuments(): Promise<{ success: boolean; count: number }> {
-        this.db = []; // Reset DB for fresh indexing
-        let totalChunks = 0;
-
+        this.db = [];
         const docsPath = await this.getNormesPath();
         const files = this.getAllPdfFiles(docsPath);
-        console.log(`Found ${files.length} PDF files to index at ${docsPath}.`);
+        console.log(`Found ${files.length} PDF files to index.`);
 
-        for (const file of files) {
-            try {
-                console.log(`Parsing ${path.basename(file)}...`);
-                const text = await this.parsePdf(file);
-                const chunks = this.splitText(text, 1000, 200);
-                console.log(`Chunks created for ${path.basename(file)}: ${chunks.length}`);
-
-                for (const chunk of chunks) {
-                    if (!chunk.trim()) continue;
-                    const embedding = await this.getEmbedding(chunk);
-                    this.db.push({
-                        text: chunk,
-                        embedding: embedding,
-                        metadata: {
-                            source: path.basename(file),
-                            path: file
-                        }
-                    });
-                    totalChunks++;
-                }
-                console.log(`Successfully indexed ${path.basename(file)}.`);
-            } catch (err: any) {
-                console.error(`Error indexing ${file}:`, err.message || err);
-            }
+        // Process files in batches to avoid memory/process overload
+        const BATCH_SIZE = 2;
+        for (let i = 0; i < files.length; i += BATCH_SIZE) {
+            const batch = files.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(file => this.indexFile(file)));
         }
 
         await this.saveDB();
         this.isLoaded = true;
-        console.log(`Indexing complete. Total chunks: ${totalChunks}`);
-        return { success: true, count: totalChunks };
+        console.log(`Indexing complete. Total chunks: ${this.db.length}`);
+        return { success: true, count: this.db.length };
+    }
+
+    private static async indexFile(file: string) {
+        try {
+            console.log(`Indexing ${path.basename(file)}...`);
+            const text = await this.parsePdf(file);
+            const chunks = this.splitText(text, 1000, 200);
+
+            // Determine topic based on folder name
+            let topic: 'risk' | 'audit' | 'general' = 'general';
+            const lowerPath = file.toLowerCase();
+            if (lowerPath.includes('iso') || lowerPath.includes('audit')) topic = 'audit';
+            if (lowerPath.includes('risk') || lowerPath.includes('risque')) topic = 'risk';
+
+            // Process chunks in parallel for this file
+            const embeddings = await Promise.all(
+                chunks.filter(c => c.trim()).map(chunk => this.getEmbedding(chunk))
+            );
+
+            chunks.filter(c => c.trim()).forEach((chunk, idx) => {
+                this.db.push({
+                    text: chunk,
+                    embedding: embeddings[idx],
+                    topic: topic,
+                    metadata: {
+                        source: path.basename(file),
+                        path: file
+                    }
+                });
+            });
+        } catch (err: any) {
+            console.error(`Error indexing ${file}:`, err.message || err);
+        }
     }
 
     private static async parsePdf(filePath: string): Promise<string> {
@@ -104,13 +115,9 @@ export class RAGEngine {
             let text = '';
             try {
                 new PdfReader().parseFileItems(filePath, (err: any, item: any) => {
-                    if (err) {
-                        reject(err);
-                    } else if (!item) {
-                        resolve(text);
-                    } else if (item.text) {
-                        text += item.text + ' ';
-                    }
+                    if (err) reject(err);
+                    else if (!item) resolve(text);
+                    else if (item.text) text += item.text + ' ';
                 });
             } catch (err) {
                 reject(err);
@@ -118,19 +125,29 @@ export class RAGEngine {
         });
     }
 
-    static async searchContext(query: string, k: number = 3): Promise<string[]> {
+    static async searchContext(query: string, role: UserRole, k: number = 3): Promise<string[]> {
         await this.loadDB();
         if (this.db.length === 0) return [];
 
         const queryEmbedding = await this.getEmbedding(query);
 
-        // Calculate cosine similarity for all entries
-        const scoredEntries = this.db.map(entry => ({
+        // Filter by topic based on role
+        let allowedTopics: string[] = ['general'];
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN_SI || role === UserRole.TOP_MANAGEMENT) {
+            allowedTopics = ['risk', 'audit', 'general'];
+        } else if (role === UserRole.RISK_MANAGER || role === UserRole.RISK_AGENT) {
+            allowedTopics = ['risk', 'general'];
+        } else if (role === UserRole.AUDIT_SENIOR || role === UserRole.AUDITEUR) {
+            allowedTopics = ['audit', 'general'];
+        }
+
+        const filteredDb = this.db.filter(entry => allowedTopics.includes(entry.topic));
+
+        const scoredEntries = filteredDb.map(entry => ({
             text: entry.text,
             score: this.cosineSimilarity(queryEmbedding, entry.embedding)
         }));
 
-        // Sort by score descending and take top k
         return scoredEntries
             .sort((a, b) => b.score - a.score)
             .slice(0, k)
@@ -153,11 +170,9 @@ export class RAGEngine {
     }
 
     private static splitText(text: string, chunkSize: number, overlap: number): string[] {
+        const cleanedText = text.replace(/\s+/g, ' ');
         const chunks: string[] = [];
         let start = 0;
-        // Basic normalization
-        const cleanedText = text.replace(/\s+/g, ' ');
-
         while (start < cleanedText.length) {
             let end = start + chunkSize;
             chunks.push(cleanedText.substring(start, end));
@@ -180,9 +195,7 @@ export class RAGEngine {
     }
 
     private static cosineSimilarity(vecA: number[], vecB: number[]): number {
-        let dotProduct = 0;
-        let normA = 0;
-        let normB = 0;
+        let dotProduct = 0, normA = 0, normB = 0;
         for (let i = 0; i < vecA.length; i++) {
             dotProduct += vecA[i] * vecB[i];
             normA += vecA[i] * vecA[i];

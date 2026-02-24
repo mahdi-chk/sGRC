@@ -9,23 +9,24 @@
     </app-risk-agent-dashboard>
 
     <app-audit-senior-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
-        title="Dashboard Audit Senior" (openModule)="onOpenModule($event)">
+        title="Dashboard Audit Senior" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
     </app-audit-senior-dashboard>
 
     <app-auditeur-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
-        title="Dashboard Auditeur" (openModule)="onOpenModule($event)">
+        title="Dashboard Auditeur" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
     </app-auditeur-dashboard>
 
     <app-admin-si-dashboard *ngSwitchCase="UserRole.ADMIN_SI" [filteredModules]="filteredModules"
         description="Gérez les accès, supervisez la plateforme et assistez les utilisateurs."
-        (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()">
+        (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()"
+        (toggleAssistant)="onToggleAiAssistant()">
     </app-admin-si-dashboard>
 
     <app-super-admin-dashboard *ngSwitchCase="UserRole.SUPER_ADMIN" [filteredModules]="filteredModules"
         title="Dashboard Super Admin"
         description="Accès complet à toutes les fonctionnalités et modules de la plateforme."
         (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()"
-        (openRiskManagement)="showRiskManagementView()">
+        (openRiskManagement)="showRiskManagementView()" (toggleAssistant)="onToggleAiAssistant()">
     </app-super-admin-dashboard>
 
     <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"

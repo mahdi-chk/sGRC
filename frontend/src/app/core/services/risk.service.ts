@@ -10,6 +10,7 @@ export enum RiskLevel {
 }
 
 export enum RiskStatus {
+    OPEN = 'Ouvert',
     IN_PROGRESS = 'En cours',
     TREATED = 'Traité',
     CLOSED = 'Clôturé',
@@ -69,5 +70,9 @@ export class RiskService {
 
     getComments(riskId: number): Observable<any[]> {
         return this.http.get<any[]>(`${this.apiUrl}/${riskId}/comments`);
+    }
+
+    generateRisks(situation: string): Observable<any[]> {
+        return this.http.post<any[]>('http://localhost:3000/api/ai/generate-risks', { situation });
     }
 }

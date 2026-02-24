@@ -6,33 +6,48 @@
 
     <div class="chat-body" *ngIf="isOpen">
         <!-- RAG Status & Indexing -->
-        <div class="rag-container" *ngIf="messages.length === 0 && !isIndexed">
+        <div class="rag-container" *ngIf="!isIndexed">
             <div class="rag-warning">
-                <p><i class="fas fa-exclamation-triangle"></i> Base vectorielle non initialisée.</p>
+                <p><i class="fas fa-database"></i> Base de connaissances non initialisée.</p>
                 <button (click)="startIndexing()" [disabled]="isIndexing" class="index-btn">
-                    <i class="fas" [ngClass]="isIndexing ? 'fa-spinner fa-spin' : 'fa-database'"></i>
-                    {{ isIndexing ? 'Indexation...' : 'Indexer les normes' }}
+                    <i class="fas" [ngClass]="isIndexing ? 'fa-spinner fa-spin' : 'fa-sync'"></i>
+                    {{ isIndexing ? 'Initialisation...' : 'Initialiser' }}
                 </button>
             </div>
         </div>
 
-        <div class="messages">
+        <div class="messages" #scrollMe [scrollTop]="scrollMe.scrollHeight">
+            <div *ngIf="messages.length === 0" class="empty-state">
+                <i class="fas fa-comments"></i>
+                <p>Besoin d'aide avec les normes ou les risques ?</p>
+                <div class="quick-suggestions">
+                    <button (click)="prompt = 'Quelles sont les étapes clés de l\'ISO 27001 ?'">ISO 27001 ?</button>
+                    <button (click)="prompt = 'Comment évaluer la criticité d\'un risque ?'">Évaluation risque
+                        ?</button>
+                </div>
+            </div>
+
             <div *ngFor="let msg of messages" class="message" [ngClass]="msg.role">
+                <div class="avatar" *ngIf="msg.role === 'ai'">
+                    <i class="fas fa-robot"></i>
+                </div>
                 <div class="bubble">
                     {{ msg.content }}
                 </div>
             </div>
+
             <div class="message ai" *ngIf="isLoading">
+                <div class="avatar"><i class="fas fa-robot"></i></div>
                 <div class="bubble loading">
-                    <i class="fas fa-spinner fa-spin"></i> En train de réfléchir...
+                    <span></span><span></span><span></span>
                 </div>
             </div>
         </div>
 
-        <div class="chat-input scroll-wrapper">
-            <textarea [(ngModel)]="prompt" (keyup.enter)="sendMessage()"
-                placeholder="Posez votre question sur la GRC..." rows="2"></textarea>
-            <button (click)="sendMessage()" [disabled]="isLoading || (messages.length === 0 && !isIndexed)">
+        <div class="chat-input-area">
+            <textarea [(ngModel)]="prompt" (keyup.enter)="sendMessage()" placeholder="Votre question..."
+                rows="1"></textarea>
+            <button class="send-btn" (click)="sendMessage()" [disabled]="isLoading || !prompt.trim()">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>

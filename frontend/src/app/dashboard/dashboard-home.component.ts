@@ -148,7 +148,27 @@ export class DashboardHomeComponent implements OnInit {
     ngOnInit() {
         this.authService.currentUser$.subscribe(user => {
             this.currentUserRole = user?.role;
+            if (this.currentUserRole) {
+                this.redirectByRole(this.currentUserRole);
+            }
         });
+    }
+
+    private redirectByRole(role: UserRole) {
+        let targetPath = '';
+        switch (role) {
+            case UserRole.SUPER_ADMIN: targetPath = 'super-admin'; break;
+            case UserRole.ADMIN_SI: targetPath = 'admin-si'; break;
+            case UserRole.AUDITEUR: targetPath = 'auditeur'; break;
+            case UserRole.AUDIT_SENIOR: targetPath = 'audit-senior'; break;
+            case UserRole.RISK_MANAGER: targetPath = 'risk-manager'; break;
+            case UserRole.RISK_AGENT: targetPath = 'risk-agent'; break;
+            case UserRole.TOP_MANAGEMENT: targetPath = 'top-management'; break;
+        }
+
+        if (targetPath && this.router.url === '/dashboard') {
+            this.router.navigate(['/dashboard', targetPath]);
+        }
     }
 
     get filteredModules(): ModuleItem[] {

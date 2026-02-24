@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../core/services/risk.service';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
 
 @Component({
@@ -21,6 +22,15 @@ export class RiskManagerDashboardComponent implements OnInit {
     comments: any[] = [];
     treatmentContent = '';
     selectedFile: File | null = null;
+    isAssigning = false;
+
+    // Statistics
+    stats = {
+        total: 0,
+        treatmentRate: 0,
+        avgMaturity: 0,
+        criticalCount: 0
+    };
 
     showCreateModal = false;
     showAssignModal = false;
@@ -43,7 +53,8 @@ export class RiskManagerDashboardComponent implements OnInit {
 
     constructor(
         private riskService: RiskService,
-        private http: HttpClient
+        private http: HttpClient,
+        private router: Router
     ) { }
 
     ngOnInit() {
@@ -52,7 +63,37 @@ export class RiskManagerDashboardComponent implements OnInit {
     }
 
     loadRisks() {
-        this.riskService.getRisks().subscribe(risks => this.risks = risks);
+        this.riskService.getRisks().subscribe(risks => {
+            this.risks = risks;
+            this.calculateStats();
+        });
+    }
+
+    calculateStats() {
+        if (!this.risks || this.risks.length === 0) {
+            this.stats = { total: 0, treatmentRate: 0, avgMaturity: 0, criticalCount: 0 };
+            return;
+        }
+
+        const total = this.risks.length;
+        const treated = this.risks.filter(r => r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED).length;
+        const critical = this.risks.filter(r => r.niveauRisque === RiskLevel.CRITICAL).length;
+
+        const treatmentRate = Math.round((treated / total) * 100);
+        const criticalRate = Math.round((critical / total) * 100);
+
+        // Formula from Top Management dashboard
+        const maturityBonus = (treatmentRate / 100) * 2.0;
+        const criticalPenalty = (criticalRate / 100) * 1.0;
+        let avgMaturity = Number((2.0 + maturityBonus - criticalPenalty + 1.0).toFixed(1));
+        if (avgMaturity > 5) avgMaturity = 5;
+
+        this.stats = {
+            total,
+            treatmentRate,
+            avgMaturity,
+            criticalCount: critical
+        };
     }
 
     loadInitialData() {
@@ -99,6 +140,7 @@ export class RiskManagerDashboardComponent implements OnInit {
     }
 
     onOpenRiskManagement() {
+        this.router.navigate(['/dashboard/risks']);
         this.openRiskManagement.emit();
     }
 
@@ -186,10 +228,20 @@ export class RiskManagerDashboardComponent implements OnInit {
     }
 
     assignRisk(agentId: string) {
-        if (this.selectedRisk) {
-            this.riskService.assignRisk(this.selectedRisk.id, parseInt(agentId)).subscribe(() => {
-                this.showAssignModal = false;
-                this.loadRisks();
+        if (this.selectedRisk && agentId) {
+            this.isAssigning = true;
+            this.riskService.assignRisk(this.selectedRisk.id, parseInt(agentId)).subscribe({
+                next: () => {
+                    this.isAssigning = false;
+                    this.showAssignModal = false;
+                    this.loadRisks();
+                    this.selectedRisk = null;
+                },
+                error: (err) => {
+                    this.isAssigning = false;
+                    console.error('Error assigning risk:', err);
+                    alert('Erreur lors de l\'assignation du risque. Veuillez réessayer.');
+                }
             });
         }
     }

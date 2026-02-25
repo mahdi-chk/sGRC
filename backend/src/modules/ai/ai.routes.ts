@@ -40,7 +40,7 @@ router.post('/generate-risks', authenticateToken, async (req: AuthRequest, res: 
         if (!situation) {
             return res.status(400).json({ error: 'Situation is required' });
         }
-        const risks = await AIService.generateRisksFromSituation(situation);
+        const risks = await AIService.generateRisksFromSituation(situation, req.user!.role);
         res.json(risks);
     } catch (error: any) {
         res.status(500).json({ error: error.message });

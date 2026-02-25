@@ -16,7 +16,7 @@ export class AIService {
         return this.http.post<{ response: string }>(`${this.apiUrl}/generate`, { prompt, sessionId });
     }
 
-    async *chatStream(prompt: string, sessionId: string): AsyncIterable<string> {
+    async *chatStream(prompt: string, sessionId: string, signal?: AbortSignal): AsyncIterable<string> {
         const token = this.authService.getToken();
         const response = await fetch(`${this.apiUrl}/generate`, {
             method: 'POST',
@@ -24,7 +24,8 @@ export class AIService {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ prompt, sessionId })
+            body: JSON.stringify({ prompt, sessionId }),
+            signal
         });
 
         if (!response.ok) throw new Error('AI Service Error');

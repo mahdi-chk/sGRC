@@ -16,6 +16,19 @@ interface UserSession {
     lastAccess: number;
 }
 
+const PLATFORM_CONTEXT = `
+CONTEXTE DE LA PLATEFORME sGRC :
+La plateforme sGRC est organisée en plusieurs modules clés :
+1. GOUVERNANCE : Gestion documentaire (ISO), workflows d'approbation et indicateurs de maturité (COBIT/ISO).
+2. GESTION DES RISQUES : Registre des risques, évaluation paramétrable, cartographie dynamique et plans de traitement (ISO 27005).
+3. CONTRÔLES INTERNES : Référentiel des contrôles, planification automatisée, collecte de preuves et suivi des non-conformités.
+4. CONFORMITÉ : Mapping des exigences réglementaires (ISO 27001, 27002), auto-évaluations et suivi des écarts.
+5. AUDIT : Planification pluriannuelle, gestion des missions, check-lists et rapports (ISO 19011).
+6. INCIDENTS : Enregistrement structuré, workflow de traitement et reporting consolidé.
+7. PLANS D'ACTIONS : Gestion centralisée des actions correctives et préventives.
+8. REPORTING & DASHBOARDS : KPI personnalisables et vision multi-entités.
+`;
+
 export class AIService {
     private static sessions = new Map<string, UserSession>();
     private static TTL = 30 * 60 * 1000; // 30 minutes
@@ -34,20 +47,39 @@ export class AIService {
 
     private static getSession(sessionId: string, role: UserRole): UserSession {
         if (!this.sessions.has(sessionId)) {
-            let roleInstruction = '';
+            let roleContext = '';
+
             if (role === UserRole.RISK_MANAGER || role === UserRole.RISK_AGENT) {
-                roleInstruction = "Tu agis pour un profil 'Gestion des Risques'. Tu dois répondre UNIQUEMENT aux questions concernant les risques, la norme ISO 27005 et le traitement des risques. Si on t'interroge sur l'audit interne ou d'autres normes (ISO 27001/27002, COBIT), refuse poliment car cela ne relève pas de tes attributions.";
+                roleContext = `
+TU AGIS POUR : Profil 'GESTION DES RISQUES'.
+MODULES AUTORISÉS : Registre des Risques, Évaluation, Cartographie, Traitement et Contrôles Internes.
+RECOURS AUX NORMES : Principalement ISO 27005 (Gestion des Risques).
+RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur l'Audit Interne, les Missions d'Audit ou les spécificités de l'ISO 27001/27002 qui relèvent de l'Audit. Refuse poliment ces questions en expliquant qu'elles sortent de ton périmètre opérationnel.
+`;
             } else if (role === UserRole.AUDIT_SENIOR || role === UserRole.AUDITEUR) {
-                roleInstruction = "Tu agis pour un profil 'Audit'. Tu dois répondre UNIQUEMENT aux questions concernant l'audit interne, les contrôles et les normes ISO 27001, 27002 ou COBIT. Si on t'interroge sur la gestion opérationnelle des risques ou l'ISO 27005, refuse poliment car cela ne relève pas de tes attributions.";
+                roleContext = `
+TU AGIS POUR : Profil 'AUDIT & CONFORMITÉ'.
+MODULES AUTORISÉS : Audit, Conformité, Incidents, Plans d'Actions.
+RECOURS AUX NORMES : ISO 27001 (SMSI), ISO 27002 (Mesures de sécurité), COBIT.
+RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion opérationnelle quotidienne des risques (ISO 27005) ou la maintenance de la cartographie des risques qui relèvent de la Gestion des Risques. Refuse poliment ces questions.
+`;
+            } else if (role === UserRole.TOP_MANAGEMENT) {
+                roleContext = "TU AGIS POUR : Profil 'DIRECTION'. Tu as une vue d'ensemble sur la Gouvernance, le Reporting et la Supervision sGRC.";
             } else {
-                roleInstruction = "Tu es un administrateur avec un accès complet à la base de connaissances (Risques et Audit).";
+                roleContext = "TU AGIS POUR : Profil 'ADMINISTRATEUR'. Tu as accès à tous les modules et à la configuration du système.";
             }
 
             this.sessions.set(sessionId, {
                 messages: [
                     {
                         role: 'system',
-                        content: `Tu es un assistant expert en GRC (Gouvernance, Risque et Conformité). Réponds toujours de manière professionnelle, précise et en français par défaut. ${roleInstruction}`
+                        content: `Tu es l'Assistant Expert de la plateforme sGRC. Réponds en français. 
+                        
+                        ${PLATFORM_CONTEXT}
+                        
+                        ${roleContext}
+                        
+                        CONSIGNE GÉNÉRALE : Si l'utilisateur pose une question hors de ses modules autorisés, explique-lui son périmètre et redirige-le vers les bonnes pratiques de son propre rôle.`
                     }
                 ],
                 lastAccess: Date.now()
@@ -124,10 +156,20 @@ export class AIService {
         }
     }
 
-    static async generateRisksFromSituation(situation: string): Promise<any[]> {
+    static async generateRisksFromSituation(situation: string, role: UserRole): Promise<any[]> {
         try {
+            const isIndexed = await RAGEngine.checkIndexStatus();
+            let contextText = '';
+
+            if (isIndexed) {
+                const contextChunks = await RAGEngine.searchContext(situation, role, 5);
+                if (contextChunks.length > 0) {
+                    contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES :\n${contextChunks.join('\n\n')}\n\n`;
+                }
+            }
+
             const systemPrompt = `Tu es un expert en gestion des risques GRC. 
-            À partir de la situation fournie par l'utilisateur, génère une liste de 3 à 5 risques potentiels.
+            À partir de la situation fournie par l'utilisateur${contextText ? ' et du contexte des normes ci-après' : ''}, génère une liste de 3 à 5 risques potentiels.${contextText ? contextText : ''}
             
             IMPORTANT : Tout le contenu doit être en FRANÇAIS.
             

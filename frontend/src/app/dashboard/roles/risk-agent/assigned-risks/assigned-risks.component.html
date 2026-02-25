@@ -20,7 +20,7 @@
                         <th>Titre</th>
                         <th>Niveau</th>
                         <th>Statut</th>
-                        <th>Responsable</th>
+                        <th>Responsable du département à risque</th>
                         <th>Échéance</th>
                         <th>Actions</th>
                     </tr>
@@ -172,7 +172,7 @@
                     <p class="detail-value">{{ selectedRisk.dateEcheance | date:'dd/MM/yyyy' }}</p>
                 </div>
                 <div class="detail-block">
-                    <span class="detail-label">Responsable</span>
+                    <span class="detail-label">Responsable du département à risque</span>
                     <p class="detail-value">{{ selectedRisk.responsableTraitement?.prenom }} {{
                         selectedRisk.responsableTraitement?.nom }}</p>
                 </div>

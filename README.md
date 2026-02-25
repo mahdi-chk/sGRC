@@ -1,7 +1,7 @@
 # GRC Platform - Governance, Risk, and Compliance
 
 ## Overview
-The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized solution designed for sophisticated corporate governance, risk assessment, and regulatory adherence. Featuring an AI-driven RAG engine and a robust notification system, it empowers organizations with real-time insights and automated GRC workflows.
+The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized solution designed for sophisticated corporate governance, risk assessment, and regulatory adherence. Featuring a highly optimized AI-driven RAG engine and a robust notification system, it empowers organizations with real-time insights and automated GRC workflows.
 
 ## 🚀 Key Modules & Functionalities
 
@@ -21,8 +21,9 @@ The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized s
 - **Multi-channel Alerts**: Automated email notifications via Nodemailer for critical GRC events.
 - **User Inbox**: Dedicated frontend notification center for managing personal and role-based alerts.
 
-### 🤖 AI Assistant (RAG Engine)
-- **Document Intelligence**: Retrieval-Augmented Generation (RAG) to query internal PDF reports and documentation.
+### 🤖 AI Assistant (Enhanced RAG Engine)
+- **Extreme Precision**: Highly optimized Retrieval-Augmented Generation (RAG) for querying complex internal PDF reports and unstructured documentation.
+- **Real-time Performance**: Reduced latency in AI responses with improved indexing and retrieval algorithms.
 - **Expert Sidekick**: Always-available AI assistant providing context-aware guidance directly on the dashboard.
 
 ### 📊 Role-Based Dashboards

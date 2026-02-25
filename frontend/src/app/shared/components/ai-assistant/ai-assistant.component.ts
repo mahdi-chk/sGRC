@@ -16,6 +16,7 @@ export class AiAssistantComponent implements OnInit {
   isIndexing = false;
 
   sessionId = '';
+  private abortController: AbortController | null = null;
 
   constructor(private aiService: AIService, private dashboardService: DashboardService) { }
 
@@ -42,6 +43,14 @@ export class AiAssistantComponent implements OnInit {
 
   toggleChat() {
     this.isOpen = !this.isOpen;
+  }
+
+  stopGeneration() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+      this.isLoading = false;
+    }
   }
 
   startIndexing() {
@@ -73,16 +82,24 @@ export class AiAssistantComponent implements OnInit {
     // Add empty AI message for streaming
     const aiMsgIndex = this.messages.push({ role: 'ai', content: '' }) - 1;
 
+    this.abortController = new AbortController();
+
     try {
-      const stream = this.aiService.chatStream(userMsg, this.sessionId);
+      const stream = this.aiService.chatStream(userMsg, this.sessionId, this.abortController.signal);
       for await (const chunk of stream) {
         this.messages[aiMsgIndex].content += chunk;
         this.isLoading = false; // Stop spinner once first chunk arrives
       }
-    } catch (err) {
-      console.error('AI Error:', err);
-      this.messages[aiMsgIndex].content = 'Désolé, une erreur est survenue lors de la communication avec l\'IA.';
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        this.messages[aiMsgIndex].content += ' [Génération interrompue]';
+      } else {
+        console.error('AI Error:', err);
+        this.messages[aiMsgIndex].content = 'Désolé, une erreur est survenue lors de la communication avec l\'IA.';
+      }
+    } finally {
       this.isLoading = false;
+      this.abortController = null;
     }
   }
 }

@@ -112,7 +112,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Responsable de traitement <span class="required">*</span></label>
+                    <label>Responsable du département à risque <span class="required">*</span></label>
                     <select [(ngModel)]="newRisk.responsableTraitementId" class="premium-input"
                         [disabled]="!newRisk.departementId"
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
@@ -171,7 +171,7 @@
         <div #projected modal-body>
             <p>Choisissez un Risk Agent pour traiter le risque : <strong>{{ selectedRisk?.titre }}</strong></p>
             <div class="form-group" style="margin: 20px 0;">
-                <label>Responsable</label>
+                <label>Agent de traitement du risque</label>
                 <select #agentSelect class="premium-input"
                     style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                     <option value="">Sélectionner un collaborateur</option>
@@ -233,7 +233,8 @@
                 </div>
                 <div class="detail-item">
                     <label
-                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Responsable</label>
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Responsable
+                        du département à risque</label>
                     <p style="margin: 5px 0 0;">{{ selectedRisk.responsableTraitement?.prenom }} {{
                         selectedRisk.responsableTraitement?.nom }}</p>
                 </div>

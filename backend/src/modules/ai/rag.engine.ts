@@ -82,11 +82,20 @@ export class RAGEngine {
             const text = await this.parsePdf(file);
             const chunks = this.splitText(text, 1000, 200);
 
-            // Determine topic based on folder name
+            // Refined topic classification
             let topic: 'risk' | 'audit' | 'general' = 'general';
+            const fileName = path.basename(file).toLowerCase();
             const lowerPath = file.toLowerCase();
-            if (lowerPath.includes('iso') || lowerPath.includes('audit')) topic = 'audit';
-            if (lowerPath.includes('risk') || lowerPath.includes('risque')) topic = 'risk';
+
+            // Risk specific (ISO 27005 is for risk management)
+            if (fileName.includes('27005') || lowerPath.includes('risk') || lowerPath.includes('risque')) {
+                topic = 'risk';
+            }
+            // Audit specific (ISO 27001, 27002, COBIT, Audit procedures)
+            else if (fileName.includes('27001') || fileName.includes('27002') || fileName.includes('27000') ||
+                fileName.includes('27032') || lowerPath.includes('audit') || lowerPath.includes('cobit')) {
+                topic = 'audit';
+            }
 
             // Process chunks in parallel for this file
             const embeddings = await Promise.all(

@@ -1,8 +1,17 @@
+/**
+ * @file risk.model.ts
+ * @description Définition du modèle de données pour les Risques.
+ * Utilise Sequelize pour la gestion du schéma et des relations.
+ */
+
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
 
+/**
+ * Niveaux de sévérité d'un risque.
+ */
 export enum RiskLevel {
     LOW = 'Faible',
     MEDIUM = 'Moyen',
@@ -10,6 +19,9 @@ export enum RiskLevel {
     CRITICAL = 'Critique',
 }
 
+/**
+ * États possibles du cycle de vie d'un risque.
+ */
 export enum RiskStatus {
     OPEN = 'Ouvert',
     IN_PROGRESS = 'En cours',
@@ -17,6 +29,9 @@ export enum RiskStatus {
     CLOSED = 'Clôturé',
 }
 
+/**
+ * Classe représentant un Risque dans le système GRC.
+ */
 export class Risk extends Model {
     public id!: number;
     public titre!: string;
@@ -34,6 +49,7 @@ export class Risk extends Model {
     public readonly updatedAt!: Date;
 }
 
+// Initialisation du schéma de la table 'risks'
 Risk.init(
     {
         id: {
@@ -53,6 +69,7 @@ Risk.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        // Clé étrangère vers le Département concerné
         departementId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -72,6 +89,7 @@ Risk.init(
                 isIn: [Object.values(RiskLevel)],
             },
         },
+        // Utilisateur responsable du département (Responsable de traitement)
         responsableTraitementId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -80,6 +98,7 @@ Risk.init(
                 key: 'id',
             },
         },
+        // Créateur du risque (Risk Manager)
         riskManagerId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -88,6 +107,7 @@ Risk.init(
                 key: 'id',
             },
         },
+        // Agent de traitement assigné
         riskAgentId: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -104,6 +124,7 @@ Risk.init(
                 isIn: [Object.values(RiskStatus)],
             },
         },
+        // Chemin vers le fichier justificatif (Upload)
         pieceJustificative: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -115,12 +136,18 @@ Risk.init(
     }
 );
 
-// Associations
+/**
+ * --- DÉFINITION DES RELATIONS ---
+ */
+
+// Un risque appartient à un département
 Risk.belongsTo(Department, { foreignKey: 'departementId', as: 'departement' });
+// Relations avec les utilisateurs selon leur rôle dans le traitement du risque
 Risk.belongsTo(User, { foreignKey: 'responsableTraitementId', as: 'responsableTraitement' });
 Risk.belongsTo(User, { foreignKey: 'riskManagerId', as: 'riskManager' });
 Risk.belongsTo(User, { foreignKey: 'riskAgentId', as: 'riskAgent' });
 
+// Inverse des relations pour faciliter les requêtes
 Department.hasMany(Risk, { foreignKey: 'departementId', as: 'risks' });
 User.hasMany(Risk, { foreignKey: 'riskManagerId', as: 'managedRisks' });
 User.hasMany(Risk, { foreignKey: 'riskAgentId', as: 'assignedRisks' });

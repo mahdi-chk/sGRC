@@ -1,9 +1,16 @@
+/**
+ * @file app.module.ts
+ * @description Module racine de l'application Angular. 
+ * Déclare les composants, importe les modules nécessaires et configure le routage.
+ */
+
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Routes } from '@angular/router';
 
+// Imports des composants de l'application
 import { AppComponent } from './app.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { LoginComponent } from './login/login.component';
@@ -28,12 +35,15 @@ import { UserManagementCardComponent } from './dashboard/components/user-managem
 import { RiskManagementCardComponent } from './dashboard/components/risk-management-card/risk-management-card.component';
 import { RiskStatisticsComponent } from './dashboard/roles/top-management/risk-statistics/risk-statistics.component';
 
+/**
+ * --- CONFIGURATION DU ROUTAGE ---
+ */
 const routes: Routes = [
   { path: 'login', component: LoginComponent },
   {
     path: 'dashboard',
     component: DashboardComponent,
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard], // Protection des routes par garde d'authentification
     children: [
       { path: '', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent },
@@ -41,6 +51,7 @@ const routes: Routes = [
       { path: 'assigned-risks', component: AssignedRisksComponent },
       { path: 'planning', component: PlanningComponent },
       { path: 'statistics', component: RiskStatisticsComponent },
+      // Routes spécifiques par rôle
       { path: 'super-admin', component: SuperAdminDashboardComponent },
       { path: 'admin-si', component: AdminSiDashboardComponent },
       { path: 'auditeur', component: AuditeurDashboardComponent },
@@ -51,7 +62,7 @@ const routes: Routes = [
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { path: '**', redirectTo: '/dashboard' }
+  { path: '**', redirectTo: '/dashboard' } // Redirection par défaut vers le dashboard
 ];
 
 @NgModule({
@@ -82,9 +93,10 @@ const routes: Routes = [
     BrowserModule,
     HttpClientModule,
     FormsModule,
-    RouterModule.forRoot(routes)
+    RouterModule.forRoot(routes) // Initialisation du module de routage
   ],
   providers: [
+    // Intercepteur HTTP pour injecter le token JWT dans chaque requête
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]

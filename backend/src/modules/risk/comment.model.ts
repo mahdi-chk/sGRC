@@ -1,8 +1,16 @@
+/**
+ * @file comment.model.ts
+ * @description Modèle pour les commentaires et preuves (evidences) associés aux risques.
+ */
+
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { Risk } from './risk.model';
 
+/**
+ * Classe représentant un Commentaire ou une Preuve de traitement.
+ */
 export class Comment extends Model {
     public id!: number;
     public content!: string;
@@ -13,6 +21,7 @@ export class Comment extends Model {
     public readonly updatedAt!: Date;
 }
 
+// Initialisation du schéma de la table 'risk_comments'
 Comment.init(
     {
         id: {
@@ -24,6 +33,7 @@ Comment.init(
             type: DataTypes.TEXT,
             allowNull: false,
         },
+        // Id du risque associé
         riskId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -32,6 +42,7 @@ Comment.init(
                 key: 'id',
             },
         },
+        // Id de l'auteur du commentaire
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -40,6 +51,7 @@ Comment.init(
                 key: 'id',
             },
         },
+        // Chemin vers un fichier joint (preuve facultative)
         pieceJointe: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -51,7 +63,11 @@ Comment.init(
     }
 );
 
-// Associations
+/**
+ * --- RELATIONS ---
+ */
+
+// Un commentaire est lié à un risque et à un utilisateur
 Comment.belongsTo(Risk, { foreignKey: 'riskId', as: 'risk' });
 Risk.hasMany(Comment, { foreignKey: 'riskId', as: 'comments' });
 

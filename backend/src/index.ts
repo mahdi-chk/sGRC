@@ -112,9 +112,9 @@ app.use('/api/settings', settingRoutes);
 import aiRoutes from './modules/ai/ai.routes';
 app.use('/api/assistant', aiRoutes);
 
-// Notifications
-import { router as notificationRoutes } from './modules/notifications/routes';
-app.use('/api/notifications', notificationRoutes);
+// Organigramme
+import organigrammeRoutes from './modules/organigramme/organigramme.routes';
+app.use('/api/organigramme', organigrammeRoutes);
 
 /**
  * --- INITIALISATION DE LA BASE DE DONNÉES ET DÉMARRAGE ---

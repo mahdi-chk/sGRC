@@ -91,7 +91,7 @@
                     <td><span class="domain-tag">{{ risk.domaine }}</span></td>
                     <td><span [class]="'badge level-' + risk.niveauRisque">{{ risk.niveauRisque }}</span></td>
                     <td><span [class]="'badge status-' + risk.statut">{{ risk.statut }}</span></td>
-                    <td>{{ risk.responsableTraitement?.prenom }} {{ risk.responsableTraitement?.nom }}</td>
+                    <td>{{ risk.responsableTraitement?.nom }}</td>
                     <td>
                         <span *ngIf="risk.riskAgent; else noAgent">
                             {{ risk.riskAgent.prenom }} {{ risk.riskAgent.nom }}
@@ -169,16 +169,10 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Responsable du département à risque <span class="req">*</span></label>
-                    <select [(ngModel)]="newRisk.responsableTraitementId" [disabled]="!newRisk.departementId"
-                        class="finput">
+                    <select [(ngModel)]="newRisk.responsableTraitementId" class="finput">
                         <option value="">Sélectionner un responsable</option>
-                        <option *ngFor="let u of filteredAgents" [value]="u.id">{{ u.prenom }} {{ u.nom }} ({{ u.role
-                            }})</option>
+                        <option *ngFor="let item of organigrammeItems" [value]="item.id">{{ item.nom }}</option>
                     </select>
-                    <small *ngIf="!newRisk.departementId" class="hint">Sélectionnez d'abord un département</small>
-                    <small *ngIf="newRisk.departementId && filteredAgents.length === 0" class="hint error">Aucun
-                        utilisateur dans ce département</small>
                 </div>
                 <div class="form-group">
                     <label>Niveau de Risque <span class="req">*</span></label>
@@ -276,8 +270,7 @@
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Responsable du département à risque</span>
-                    <p class="detail-value">{{ selectedRisk.responsableTraitement?.prenom }} {{
-                        selectedRisk.responsableTraitement?.nom }}</p>
+                    <p class="detail-value">{{ selectedRisk.responsableTraitement?.nom }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Agent de traitement du risque assigné</span>
@@ -436,8 +429,8 @@
                                     <label>Responsable du département à risque <span class="req">*</span></label>
                                     <select [(ngModel)]="risk.manualResponsableId" class="mini-input">
                                         <option value="">Sélectionner</option>
-                                        <option *ngFor="let u of allUsers" [value]="u.id">
-                                            {{ u.prenom }} {{ u.nom }} ({{ u.role }})
+                                        <option *ngFor="let item of organigrammeItems" [value]="item.id">
+                                            {{ item.nom }}
                                         </option>
                                     </select>
                                     <small class="hint" *ngIf="risk.responsableSuggestion">Suggéré : {{

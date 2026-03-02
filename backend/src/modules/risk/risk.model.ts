@@ -8,6 +8,7 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
+import { Organigramme } from '../organigramme/organigramme.model';
 
 /**
  * Niveaux de sévérité d'un risque.
@@ -111,12 +112,12 @@ Risk.init(
                 isIn: [Object.values(RiskLevel)],
             },
         },
-        // Utilisateur responsable du département (Responsable de traitement)
+        // Organigramme responsable du département (Responsable de traitement)
         responsableTraitementId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'users',
+                model: 'organigramme',
                 key: 'id',
             },
         },
@@ -247,8 +248,8 @@ function calculateNextDeadline(risk: Risk) {
 
 // Un risque appartient à un département
 Risk.belongsTo(Department, { foreignKey: 'departementId', as: 'departement' });
-// Relations avec les utilisateurs selon leur rôle dans le traitement du risque
-Risk.belongsTo(User, { foreignKey: 'responsableTraitementId', as: 'responsableTraitement' });
+// Relations avec les utilisateurs/organigramme selon leur rôle dans le traitement du risque
+Risk.belongsTo(Organigramme, { foreignKey: 'responsableTraitementId', as: 'responsableTraitement' });
 Risk.belongsTo(User, { foreignKey: 'riskManagerId', as: 'riskManager' });
 Risk.belongsTo(User, { foreignKey: 'riskAgentId', as: 'riskAgent' });
 
@@ -256,4 +257,4 @@ Risk.belongsTo(User, { foreignKey: 'riskAgentId', as: 'riskAgent' });
 Department.hasMany(Risk, { foreignKey: 'departementId', as: 'risks' });
 User.hasMany(Risk, { foreignKey: 'riskManagerId', as: 'managedRisks' });
 User.hasMany(Risk, { foreignKey: 'riskAgentId', as: 'assignedRisks' });
-User.hasMany(Risk, { foreignKey: 'responsableTraitementId', as: 'treatableRisks' });
+Organigramme.hasMany(Risk, { foreignKey: 'responsableTraitementId', as: 'treatableRisks' });

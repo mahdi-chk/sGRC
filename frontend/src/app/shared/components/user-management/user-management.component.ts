@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
 
 export interface User {
@@ -37,12 +38,19 @@ export class UserManagementComponent implements OnInit {
     departements: any[] = [];
     UserRole = UserRole;
 
-    constructor(private http: HttpClient) { }
+    constructor(
+        private http: HttpClient,
+        private router: Router
+    ) { }
 
     ngOnInit() {
         this.loadUsers();
         this.loadDepartments();
         this.loadRoles();
+    }
+
+    goBack() {
+        this.router.navigate(['/dashboard']);
     }
 
     private emptyUser(): User {

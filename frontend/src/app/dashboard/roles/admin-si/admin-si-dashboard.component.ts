@@ -35,6 +35,10 @@ export class AdminSiDashboardComponent implements OnInit {
         this.openUserManagement.emit();
     }
 
+    onOpenOrganigramme() {
+        this.router.navigate(['/dashboard/organigramme']);
+    }
+
     onToggleAssistant() {
         this.toggleAssistant.emit();
     }

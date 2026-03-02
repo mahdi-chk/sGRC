@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { RiskService, Risk, RiskLevel, RiskStatus, PeriodicFrequency } from '../core/services/risk.service';
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../core/models/user-role.enum';
+import { OrganigrammeService } from '../core/services/organigramme.service';
 
 @Component({
     selector: 'app-risk-management',
@@ -14,6 +15,7 @@ export class RiskManagementComponent implements OnInit {
     risks: Risk[] = [];
     departments: any[] = [];
     allUsers: any[] = [];
+    organigrammeItems: any[] = [];
     riskAgents: any[] = [];
     filteredAgents: any[] = [];
     comments: any[] = [];
@@ -62,6 +64,7 @@ export class RiskManagementComponent implements OnInit {
 
     constructor(
         private riskService: RiskService,
+        private organigrammeService: OrganigrammeService,
         private http: HttpClient,
         private router: Router
     ) { }
@@ -82,6 +85,7 @@ export class RiskManagementComponent implements OnInit {
 
     loadInitialData() {
         this.http.get<any[]>('http://localhost:3000/api/departments').subscribe(data => this.departments = data);
+        this.organigrammeService.getAll().subscribe(data => this.organigrammeItems = data);
         this.http.get<any[]>('http://localhost:3000/api/users').subscribe(users => {
             this.allUsers = users;
             this.riskAgents = users.filter(u => u.role === UserRole.RISK_AGENT);

@@ -1,0 +1,84 @@
+<div class="organigramme-management">
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h2><i class="fas fa-sitemap"></i> Gestion de l'Organigramme</h2>
+                <p>Gérez les intitulés des départements et postes pour la gestion des risques.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="actions-row">
+        <div class="form-card">
+            <h3><i class="fas fa-plus"></i> Ajouter un intitulé</h3>
+            <div class="input-group">
+                <input type="text" [(ngModel)]="newNom" placeholder="Ex: DSI, Direction Générale..."
+                    class="premium-input">
+                <button (click)="addEntry()" class="premium-button" [disabled]="!newNom">Ajouter</button>
+            </div>
+        </div>
+
+        <div class="import-card">
+            <h3><i class="fas fa-file-excel"></i> Import Excel</h3>
+            <div class="file-upload">
+                <input type="file" (change)="onFileSelected($event)" accept=".xlsx, .xls" id="excelFile"
+                    class="hidden-input">
+                <label for="excelFile" class="upload-label">
+                    <i class="fas fa-cloud-upload-alt"></i> {{ selectedFile ? selectedFile.name : 'Choisir un fichier'
+                    }}
+                </label>
+                <button (click)="importExcel()" class="premium-button secondary"
+                    [disabled]="!selectedFile">Importer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="list-section">
+        <div class="table-container">
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Intitulé / Nom</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of items">
+                        <td class="id-cell">#{{ item.id }}</td>
+                        <td>
+                            <input *ngIf="editingId === item.id" type="text" [(ngModel)]="editNom" class="edit-input">
+                            <span *ngIf="editingId !== item.id">{{ item.nom }}</span>
+                        </td>
+                        <td class="actions-cell">
+                            <button *ngIf="editingId !== item.id" (click)="startEdit(item)" class="action-btn edit"
+                                title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button *ngIf="editingId === item.id" (click)="saveEdit()" class="action-btn save"
+                                title="Enregistrer">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button *ngIf="editingId === item.id" (click)="cancelEdit()" class="action-btn cancel"
+                                title="Annuler">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button (click)="deleteEntry(item.id)" class="action-btn delete" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="items.length === 0">
+                        <td colspan="3" class="empty-msg">
+                            <i class="fas fa-folder-open"></i>
+                            <p>Aucun élément dans l'organigramme.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -30,6 +30,10 @@ export class SuperAdminDashboardComponent {
         this.openRiskManagement.emit();
     }
 
+    onOpenOrganigramme() {
+        this.router.navigate(['/dashboard/organigramme']);
+    }
+
     onOpenModule(m: any, s: any) {
         this.dashboardService.openSubmoduleModal(m, s);
         this.openModule.emit({ m, s });

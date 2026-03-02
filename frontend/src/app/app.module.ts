@@ -34,6 +34,7 @@ import { AuditingComponent } from './modules/auditing/auditing.component';
 import { StrategicEvaluationComponent } from './modules/evaluation/strategic-evaluation.component';
 import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
 import { SharedModule } from './shared/shared.module';
+import { OrganigrammeManagementComponent } from './dashboard/components/organigramme-management/organigramme-management.component';
 
 /**
  * --- CONFIGURATION DU ROUTAGE ---
@@ -61,7 +62,8 @@ const routes: Routes = [
       { path: 'risk-agent', component: RiskAgentDashboardComponent },
       { path: 'top-management', component: TopManagementDashboardComponent },
       { path: 'auditing', component: AuditingComponent },
-      { path: 'auditor-missions', component: AuditorMissionsComponent }
+      { path: 'auditor-missions', component: AuditorMissionsComponent },
+      { path: 'organigramme', component: OrganigrammeManagementComponent }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -85,7 +87,8 @@ const routes: Routes = [
     AssignedRisksComponent,
     PlanningComponent,
     RiskStatisticsComponent,
-    StrategicEvaluationComponent
+    StrategicEvaluationComponent,
+    OrganigrammeManagementComponent
   ],
   imports: [
     BrowserModule,

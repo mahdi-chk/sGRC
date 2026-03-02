@@ -15,6 +15,7 @@ import { RagConfigComponent } from '../dashboard/components/rag-config/rag-confi
 import { RiskEvalActionCardComponent } from '../dashboard/components/risk-eval-action-card/risk-eval-action-card.component';
 import { AuditPlanGenCardComponent } from '../dashboard/components/audit-plan-gen-card/audit-plan-gen-card.component';
 import { AuditorMissionCardComponent } from '../dashboard/components/auditor-mission-card/auditor-mission-card.component';
+import { OrganigrammeManagementCardComponent } from '../dashboard/components/organigramme-management-card/organigramme-management-card.component';
 
 @NgModule({
   declarations: [
@@ -26,7 +27,8 @@ import { AuditorMissionCardComponent } from '../dashboard/components/auditor-mis
     RagConfigComponent,
     RiskEvalActionCardComponent,
     AuditPlanGenCardComponent,
-    AuditorMissionCardComponent
+    AuditorMissionCardComponent,
+    OrganigrammeManagementCardComponent
   ],
   imports: [
     CommonModule,
@@ -42,6 +44,7 @@ import { AuditorMissionCardComponent } from '../dashboard/components/auditor-mis
     RiskEvalActionCardComponent,
     AuditPlanGenCardComponent,
     AuditorMissionCardComponent,
+    OrganigrammeManagementCardComponent,
     CommonModule,
     FormsModule
   ]

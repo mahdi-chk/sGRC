@@ -111,6 +111,61 @@ class EmailService {
         }
     }
 
+    async sendAuditMissionAssignedEmail(auditeur: { mail: string; nom: string; prenom: string }, mission: { titre: string; id: number }) {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: auditeur.mail,
+            subject: `Nouvelle mission d'audit assignée : ${mission.titre}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${auditeur.prenom},</h2>
+                    <p>Une nouvelle mission d'audit vous a été assignée sur la plateforme GRC.</p>
+                    <p><strong>Mission :</strong> ${mission.titre} (ID: ${mission.id})</p>
+                    <p>Veuillez vous connecter pour consulter les détails et commencer l'audit.</p>
+                    <br>
+                    <p>Cordialement,<br>L'équipe GRC</p>
+                </div>
+            `,
+        };
+
+        try {
+            return await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Error sending audit mission assigned email:', error);
+            return null;
+        }
+    }
+
+    async sendAuditReportSubmittedEmail(senior: { mail: string; nom: string; prenom: string }, mission: { titre: string; auditeurNom: string }) {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: senior.mail,
+            subject: `Rapport d'audit soumis : ${mission.titre}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${senior.prenom},</h2>
+                    <p>Un nouveau rapport d'audit a été soumis pour la mission suivante :</p>
+                    <p><strong>Mission :</strong> ${mission.titre}</p>
+                    <p><strong>Auditeur :</strong> ${mission.auditeurNom}</p>
+                    <p>Veuillez vous connecter pour valider les recommandations et clore la mission.</p>
+                    <br>
+                    <p>Cordialement,<br>L'équipe GRC</p>
+                </div>
+            `,
+        };
+
+        try {
+            return await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Error sending audit report submitted email:', error);
+            return null;
+        }
+    }
+
     async sendRiskClosedEmail(agent: { mail: string; nom: string; prenom: string }, risk: { titre: string }) {
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
 

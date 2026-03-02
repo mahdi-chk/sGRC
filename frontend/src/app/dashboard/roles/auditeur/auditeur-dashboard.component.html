@@ -4,16 +4,79 @@
         <p>Réalisez les contrôles, collectez les preuves et documentez vos missions.</p>
     </div>
 
-    <div class="dashboard-grid" *ngIf="filteredModules.length > 0; else noModules">
-        <div *ngFor="let m of filteredModules" class="module-card premium">
-            <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
-            <h3>{{ m.title }}</h3>
-            <p class="desc">{{ m.desc }}</p>
-            <ul class="submodules-list">
-                <li *ngFor="let s of m.submodules" (click)="onOpenModule(m, s)">
-                    <i class="fas fa-chevron-right"></i> {{ s.title }}
-                </li>
-            </ul>
+    <!-- Main Action Row: Missions (Left) & Urgent Audits (Right, Wide) -->
+    <div class="dashboard-action-row">
+        <!-- Missions Module Card (Left, Narrower) -->
+        <div class="assigned-risks-card-wrapper">
+            <div class="module-card premium assigned-module">
+                <div class="card-icon"><i class="fas fa-search-plus"></i></div>
+                <h3>Gestion des Missions</h3>
+                <p class="desc">Accédez à vos missions d'audit assignées pour réaliser les contrôles et soumettre vos
+                    rapports.</p>
+                <div class="card-footer">
+                    <button class="btn-primary" (click)="goToMissions()">
+                        Ouvrir les missions <i class="fas fa-external-link-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Urgent Audits Section (Right, Wider) -->
+        <div class="urgent-risks-section" [class.full-width]="urgentMissions.length === 0">
+            <div class="section-header">
+                <h3><i class="fas fa-clock"></i> Audits Urgents</h3>
+                <span class="count-tag" *ngIf="urgentMissions.length > 0">{{ urgentMissions.length }}</span>
+            </div>
+
+            <div class="urgent-list-container" *ngIf="urgentMissions.length > 0; else noUrgent">
+                <div class="urgent-risk-item" *ngFor="let mission of urgentMissions"
+                    [class.overdue]="mission.statut === 'En cours'">
+                    <div class="risk-priority level-Critique"></div>
+                    <div class="risk-info">
+                        <div class="risk-title-row">
+                            <span class="risk-title">{{ mission.titre }}</span>
+                            <span class="risk-badge status-En-cours">{{ mission.statut }}</span>
+                        </div>
+                        <div class="risk-meta">
+                            <span class="date-alert">
+                                <i class="fas fa-calendar-alt"></i> Délai : {{ mission.delai | date:'dd/MM/yyyy' }}
+                            </span>
+                            <span class="priority-label">Audit</span>
+                        </div>
+                    </div>
+                    <div class="risk-actions">
+                        <button class="btn-accéder" (click)="goToMissions()">
+                            <span>Agir</span> <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <ng-template #noUrgent>
+                <div class="empty-urgent-state">
+                    <i class="fas fa-check-circle"></i>
+                    <p>Aucun audit urgent pour le moment. Félicitations !</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+
+    <!-- Functional Modules Section -->
+    <div class="functional-modules-section" *ngIf="filteredModules.length > 0" style="margin-top: 30px;">
+        <h3 class="section-subtitle" style="margin-bottom: 20px; font-size: 1.25rem; color: #1e293b; font-weight: 700;">
+            <i class="fas fa-layer-group" style="color: #004a99; margin-right: 10px;"></i> Vos Modules de Travail
+        </h3>
+        <div class="dashboard-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px;">
+            <div *ngFor="let m of filteredModules" class="module-card premium">
+                <div class="card-icon"><i class="fas fa-cog"></i></div>
+                <h3>{{ m.title }}</h3>
+                <p class="desc">{{ m.desc }}</p>
+                <ul class="submodules-list">
+                    <li *ngFor="let s of m.submodules" (click)="onOpenModule(m, s)">
+                        <i class="fas fa-chevron-right"></i> {{ s.title }}
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -24,3 +87,188 @@
         </div>
     </ng-template>
 </div>
+
+<style>
+    /* Styles matching Risk Agent Dashboard */
+    .dashboard-action-row {
+        display: flex;
+        gap: 25px;
+        margin-top: 30px;
+        align-items: stretch;
+    }
+
+    .urgent-risks-section {
+        flex: 2;
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .urgent-risks-section.full-width {
+        flex: 1;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #1e293b;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-header h3 i {
+        color: #ef4444;
+    }
+
+    .count-tag {
+        background: #fee2e2;
+        color: #ef4444;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .urgent-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .urgent-risk-item {
+        display: flex;
+        align-items: center;
+        padding: 18px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #edf2f7;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .urgent-risk-item:hover {
+        transform: translateX(5px);
+        background: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6;
+    }
+
+    .risk-priority {
+        width: 6px;
+        height: 40px;
+        border-radius: 3px;
+        margin-right: 20px;
+    }
+
+    .level-Critique {
+        background: #ef4444;
+    }
+
+    .risk-info {
+        flex: 1;
+    }
+
+    .risk-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+    .risk-title {
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 1.05rem;
+    }
+
+    .risk-meta {
+        display: flex;
+        gap: 20px;
+        font-size: 0.85rem;
+        color: #64748b;
+        align-items: center;
+    }
+
+    .date-alert {
+        color: #ef4444;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .risk-actions .btn-accéder {
+        background: #004a99;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .assigned-risks-card-wrapper {
+        flex: 1;
+        display: flex;
+    }
+
+    .assigned-module {
+        width: 100%;
+        margin: 0 !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%) !important;
+        border: 1px solid rgba(0, 74, 153, 0.1) !important;
+    }
+
+    .empty-urgent-state {
+        padding: 40px;
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .empty-urgent-state i {
+        font-size: 3rem;
+        color: #10b981;
+        margin-bottom: 15px;
+    }
+
+    .risk-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .status-En-cours {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .priority-label {
+        background: #e2e8f0;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+</style>

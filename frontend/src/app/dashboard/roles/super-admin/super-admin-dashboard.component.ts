@@ -1,5 +1,8 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
+import { UserRole } from '../../../core/models/user-role.enum';
+import { DashboardService } from '../../../core/services/dashboard.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
     selector: 'app-super-admin-dashboard',
@@ -14,7 +17,13 @@ export class SuperAdminDashboardComponent {
     @Output() openRiskManagement = new EventEmitter<void>();
     @Output() toggleAssistant = new EventEmitter<void>();
 
-    constructor(private router: Router) { }
+    constructor(private router: Router, private dashboardService: DashboardService, private authService: AuthService) {
+        this.authService.currentUser$.subscribe(user => {
+            if (this.filteredModules.length === 0 && user?.role) {
+                this.filteredModules = this.dashboardService.getFilteredModules(user.role);
+            }
+        });
+    }
 
     onOpenRiskManagement() {
         this.router.navigate(['/dashboard/risks']);
@@ -22,6 +31,7 @@ export class SuperAdminDashboardComponent {
     }
 
     onOpenModule(m: any, s: any) {
+        this.dashboardService.openSubmoduleModal(m, s);
         this.openModule.emit({ m, s });
     }
 

@@ -65,8 +65,10 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 `;
             } else if (role === UserRole.TOP_MANAGEMENT) {
                 roleContext = "TU AGIS POUR : Profil 'DIRECTION'. Tu as une vue d'ensemble sur la Gouvernance, le Reporting et la Supervision sGRC.";
+            } else if (role === UserRole.SUPER_ADMIN) {
+                roleContext = "TU AGIS POUR : Profil 'SUPER ADMINISTRATEUR'. Tu es le maître absolu du système sGRC avec un accès illimité à tous les modules, données, et configurations du système.";
             } else {
-                roleContext = "TU AGIS POUR : Profil 'ADMINISTRATEUR'. Tu as accès à tous les modules et à la configuration du système.";
+                roleContext = "TU AGIS POUR : Profil 'ADMINISTRATEUR SI'. Tu as accès à la gestion des utilisateurs et à la configuration technique du système.";
             }
 
             this.sessions.set(sessionId, {
@@ -193,7 +195,8 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             4. niveauRisque : Le niveau de risque parmi : 'Faible', 'Moyen', 'Élevé', 'Critique'.
             5. departement : Le nom EXACT du département (parmi la liste ci-dessus).
             6. responsableSuggestion : Le titre ou rôle de la personne qui devrait être responsable (ex: 'DSI', 'Responsable Qualité').
-            7. delaiSuggestion : Un délai réaliste en NOMBRE DE JOURS (ex: 5, 15, 29, 100, etc.) selon la criticité.
+            7. delaiSuggestion : Un délai réaliste en NOMBRE DE JOURS (ex: 5, 15, 29, 100, etc.).
+            8. frequenceTraitement : Suggère une fréquence de traitement parmi : 'Quotidien', 'Hebdomadaire', 'Bimensuel', 'Mensuel', 'Trimestriel', 'Semestriel', 'Annuel', 'Aucun'.
 
             Réponds UNIQUEMENT avec un tableau JSON valide. Exemple de format :
             [
@@ -204,7 +207,8 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 "niveauRisque": "...",
                 "departement": "...",
                 "responsableSuggestion": "...",
-                "delaiSuggestion": 15
+                "delaiSuggestion": 15,
+                "frequenceTraitement": "Trimestriel"
               }
             ]`;
 
@@ -233,6 +237,131 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
         } catch (error: any) {
             console.error('AI Risk Generation Error:', error.message || error);
             throw new Error('Impossible de générer les risques par IA');
+        }
+    }
+
+    /**
+     * ÉVALUATION DES RISQUES PAR IA
+     * Analyse la priorité, l'impact et les tendances pour une liste de risques.
+     */
+    static async evaluateRisks(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any> {
+        try {
+            const risksText = risks.map(r => `- [${r.id}] ${r.titre} (Niveau: ${r.niveauRisque}, Domaine: ${r.domaine})`).join('\n');
+
+            // Intégration du contexte des normes RAG
+            const isIndexed = await RAGEngine.checkIndexStatus();
+            let contextText = '';
+            if (isIndexed) {
+                // On cherche du contexte basé sur les titres des risques
+                const query = risks.map(r => r.titre).join(' ');
+                const contextChunks = await RAGEngine.searchContext(query, role, 5);
+                if (contextChunks.length > 0) {
+                    contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES :\n${contextChunks.join('\n\n')}\n\n`;
+                }
+            }
+
+            const systemPrompt = `Tu es un Auditeur Senior expert. Analyse la liste de risques suivante et fournis une évaluation stratégique.${contextText ? ' Utilise les normes fournies en contexte pour affiner ton évaluation.' : ''}
+            ${contextText || ''}
+            Pour chaque risque, évalue :
+            1. Priorité (Score de 1 à 10)
+            2. Impact potentiel (Financier, Réputationnel, Opérationnel)
+            3. Tendance (Stable, En augmentation, En diminution)
+            4. Suggestion d'audit (Brève recommandation)
+
+            Réponds UNIQUEMENT avec un tableau JSON valide. Exemple :
+            [
+              {
+                "riskId": 1,
+                "priorite": 8,
+                "impact": "Financier élevé",
+                "tendance": "En augmentation",
+                "suggestion": "Effectuer un audit de conformité immédiat"
+              }
+            ]`;
+
+            const response = await axios.post(OLLAMA_CHAT_URL, {
+                model: MODEL_NAME,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `Liste des risques à évaluer :\n${risksText}` }
+                ],
+                stream: false,
+                format: 'json'
+            });
+
+            const content = response.data.message.content;
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+        } catch (error: any) {
+            console.error('AI Risk Evaluation Error:', error.message || error);
+            throw new Error('Impossible d\'évaluer les risques par IA');
+        }
+    }
+
+    /**
+     * GÉNÉRATION DU PLAN D'AUDIT ANNUEL PAR IA
+     * Suggère des missions d'audit basées sur les risques identifiés.
+     */
+    static async generateAuditPlan(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
+        try {
+            const risksText = risks.map(r => `- ${r.titre} (Niveau: ${r.niveauRisque}, Domaine: ${r.domaine})`).join('\n');
+
+            // Intégration du contexte des normes RAG pour le plan d'audit
+            const isIndexed = await RAGEngine.checkIndexStatus();
+            let contextText = '';
+            if (isIndexed) {
+                // Recherche de procédures d'audit dans les normes
+                const query = `Procédures d'audit pour les risques de : ${risks.map(r => r.domaine).join(', ')}`;
+                const contextChunks = await RAGEngine.searchContext(query, role, 5);
+                if (contextChunks.length > 0) {
+                    contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES (PROCÉDURES ET CONTRÔLES) :\n${contextChunks.join('\n\n')}\n\n`;
+                }
+            }
+
+            const systemPrompt = `Tu es un Auditeur Senior expert. À partir des risques identifiés et des normes de référence, génère un plan d'audit annuel composé de missions d'audit stratégiques.${contextText ? ' Appuie-toi sur les procédures et contrôles décrits dans le contexte des normes.' : ''}
+            
+            ${contextText || ''}
+
+            Chaque mission doit contenir :
+            1. titre : Titre de la mission.
+            2. objectifs : Objectifs détaillés de la mission.
+            3. responsabilites : Responsabilités principales de l'auditeur.
+            4. delaiSuggestion : Délai suggéré en jours (ex: 30, 60).
+            5. riskId : L'ID du risque associé.
+            
+            Risques identifiés :
+            ${risksText}
+
+            Réponds UNIQUEMENT avec un tableau JSON valide. Exemple :
+            [
+              {
+                "titre": "Audit de la Cybersécurité",
+                "objectifs": "Vérifier la robustesse des pare-feux et des accès...",
+                "responsabilites": "Analyse des logs, entretien avec la DSI...",
+                "delaiSuggestion": 45,
+                "riskId": 1
+              }
+            ]`;
+
+            // Mapping IDs for the prompt
+            const riskMapping = risks.map(r => `${r.id}: ${r.titre}`).join('\n');
+
+            const response = await axios.post(OLLAMA_CHAT_URL, {
+                model: MODEL_NAME,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `Génère des missions d'audit pour ces risques avec leurs IDs respectifs :\n${riskMapping}` }
+                ],
+                stream: false,
+                format: 'json'
+            });
+
+            const content = response.data.message.content;
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+        } catch (error: any) {
+            console.error('AI Audit Plan Generation Error:', error.message || error);
+            throw new Error('Impossible de générer le plan d\'audit par IA');
         }
     }
 }

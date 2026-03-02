@@ -1,1 +1,241 @@
-<p>Auditing module works!</p>
+<div class="audit-page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-clipboard-check"></i> Gestion des Audits</h1>
+                <p>Planifiez vos missions annuelles et suivez les rapports d'audit.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-ai-plan" (click)="generatePlan()" *ngIf="isSeniorAuditor" [disabled]="isGeneratingPlan">
+                <i class="fas" [class.fa-magic]="!isGeneratingPlan" [class.fa-spinner]="isGeneratingPlan"
+                    [class.fa-spin]="isGeneratingPlan"></i>
+                {{ isGeneratingPlan ? 'Analyse IA...' : 'Suggestion Plan Annuel' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+        <button [class.active]="activeTab === 'missions'" (click)="activeTab = 'missions'">
+            <i class="fas fa-list-tasks"></i> Liste des Missions
+        </button>
+        <button [class.active]="activeTab === 'plan'" (click)="activeTab = 'plan'" *ngIf="isSeniorAuditor">
+            <i class="fas fa-calendar-alt"></i> Plan Suggéré (IA)
+            <span class="badge-count" *ngIf="suggestedPlan.length > 0">{{ suggestedPlan.length }}</span>
+        </button>
+    </div>
+
+    <!-- Missions Tab Content -->
+    <div class="tab-content" *ngIf="activeTab === 'missions'">
+        <div class="missions-card">
+            <div class="table-loading" *ngIf="isLoadingMissions">
+                <i class="fas fa-circle-notch fa-spin"></i> Chargement des missions...
+            </div>
+
+            <table class="audit-table" *ngIf="!isLoadingMissions">
+                <thead>
+                    <tr>
+                        <th>Mission</th>
+                        <th>Risque Associé</th>
+                        <th>Auditeur</th>
+                        <th>Échéance</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let mission of missions">
+                        <td>
+                            <div class="mission-info">
+                                <strong>{{ mission.titre }}</strong>
+                                <small>{{ mission.objectifs | slice:0:60 }}...</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="risk-info-cell" [title]="mission.risk?.titre">
+                                <span class="risk-id">#{{ mission.riskId }}</span>
+                                <span class="risk-name">{{ mission.risk?.titre || 'Chargement...' }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="auditor-chip" *ngIf="mission.auditeur; else unassigned">
+                                <i class="fas fa-user-tie"></i>
+                                {{ mission.auditeur.prenom }} {{ mission.auditeur.nom }}
+                            </div>
+                            <ng-template #unassigned><em class="text-muted">Non assignée</em></ng-template>
+                        </td>
+                        <td>{{ mission.delai | date:'dd/MM/yyyy' }}</td>
+                        <td><span [class]="'badge status-' + mission.statut.replace(' ', '-').toLowerCase()">{{
+                                mission.statut }}</span></td>
+                        <td class="actions-cell">
+                            <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir détails">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="action-btn btn-assign" *ngIf="isSeniorAuditor && !mission.auditeur"
+                                (click)="openAssignModal(mission)" title="Assigner">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === 'En cours'"
+                                (click)="openReportModal(mission)" title="Faire le rapport">
+                                <i class="fas fa-file-signature"></i>
+                            </button>
+                            <!-- New Actions for Senior Auditor -->
+                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.statut === 'Terminé'"
+                                (click)="resetMission(mission.id)" title="Réinitialiser la mission">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                            <button class="action-btn btn-delete" *ngIf="isSeniorAuditor"
+                                (click)="deleteMission(mission.id)" title="Supprimer la mission">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="missions.length === 0">
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>Aucune mission d'audit enregistrée.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Plan Suggéré Tab Content -->
+    <div class="tab-content" *ngIf="activeTab === 'plan'">
+        <div class="plan-header">
+            <h3>Suggestions IA pour le Plan Annuel</h3>
+            <div class="plan-actions">
+                <button class="btn-cancel" (click)="suggestedPlan = []; activeTab = 'missions'">Effacer</button>
+                <button class="btn-save" (click)="createMissions()" [disabled]="isCreatingMissions">
+                    <i class="fas fa-check-circle"></i> Valider et Créer Missions
+                </button>
+            </div>
+        </div>
+
+        <div class="suggested-plan-grid">
+            <div *ngFor="let suggestion of suggestedPlan" class="suggestion-card"
+                [class.selected]="suggestion.selected">
+                <div class="card-check" (click)="suggestion.selected = !suggestion.selected">
+                    <i class="fas" [class.fa-check-square]="suggestion.selected"
+                        [class.fa-square]="!suggestion.selected"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-top">
+                        <h4>{{ suggestion.titre }}</h4>
+                        <span class="risk-ref">Risque #{{ suggestion.riskId }}</span>
+                    </div>
+                    <p class="obj"><strong>Objectif:</strong> {{ suggestion.objectifs }}</p>
+                    <p class="resp"><strong>Responsabilités:</strong> {{ suggestion.responsabilites }}</p>
+                    <div class="card-footer">
+                        <span><i class="fas fa-hourglass-half"></i> Délai suggéré: {{ suggestion.delaiSuggestion }}
+                            jours</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-plan" *ngIf="suggestedPlan.length === 0">
+                <i class="fas fa-robot"></i>
+                <h3>Aucun plan suggéré</h3>
+                <p>Cliquez sur "Suggestion Plan Annuel" pour laisser l'IA analyser vos risques et proposer des missions
+                    d'audit prioritaires.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Modal -->
+    <app-modal *ngIf="showAssignModal" title="Assigner un Auditeur" (close)="showAssignModal = false">
+        <div #projected modal-body class="modal-form">
+            <p>Assignez un auditeur qualifié pour la mission : <br><strong>{{ selectedMission?.titre }}</strong></p>
+            <div class="form-group">
+                <label>Choisir un Auditeur</label>
+                <select #auditeurSelect class="finput">
+                    <option value="">Sélectionner...</option>
+                    <option *ngFor="let u of auditors" [value]="u.id">{{ u.prenom }} {{ u.nom }}</option>
+                </select>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showAssignModal = false">Annuler</button>
+                <button class="btn-save" (click)="assignMission(auditeurSelect.value)"
+                    [disabled]="!auditeurSelect.value || isAssigning">
+                    {{ isAssigning ? 'Assignation...' : 'Assigner' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Report Modal -->
+    <app-modal *ngIf="showReportModal" title="Soumettre Rapport d'Audit" (close)="showReportModal = false">
+        <div #projected modal-body class="modal-form">
+            <div class="form-group full">
+                <label>Rapport Final d'Audit <span class="req">*</span></label>
+                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Décrivez les résultats de l'audit..."
+                    class="finput"></textarea>
+            </div>
+            <div class="form-group full">
+                <label>Recommandations <span class="req">*</span></label>
+                <textarea [(ngModel)]="reportData.recommandations" rows="4"
+                    placeholder="Actions correctives suggérées..." class="finput"></textarea>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showReportModal = false">Annuler</button>
+                <button class="btn-save" (click)="submitReport()" [disabled]="!reportData.rapport || isReporting">
+                    {{ isReporting ? 'Envoi...' : 'Soumettre le Rapport' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Detail Modal -->
+    <app-modal *ngIf="showDetailModal" title="Détails de la Mission" (close)="showDetailModal = false">
+        <div #projected modal-body class="modal-form">
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Titre</label>
+                    <span>{{ selectedMission?.titre }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Statut</label>
+                    <span [class]="'badge status-' + selectedMission?.statut?.replace(' ', '-')?.toLowerCase()">
+                        {{ selectedMission?.statut }}
+                    </span>
+                </div>
+                <div class="detail-item full">
+                    <label>Objectifs</label>
+                    <p>{{ selectedMission?.objectifs }}</p>
+                </div>
+                <div class="detail-item full">
+                    <label>Responsabilités</label>
+                    <p>{{ selectedMission?.responsabilites }}</p>
+                </div>
+                <div class="detail-item">
+                    <label>Échéance</label>
+                    <span>{{ selectedMission?.delai | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Auditeur</label>
+                    <span>{{ selectedMission?.auditeur ? (selectedMission?.auditeur.prenom + ' ' +
+                        selectedMission?.auditeur.nom) : 'Non assigné' }}</span>
+                </div>
+                <div class="detail-item full" *ngIf="selectedMission?.rapport">
+                    <label>Rapport d'Audit</label>
+                    <div class="suggestion-box">{{ selectedMission?.rapport }}</div>
+                </div>
+                <div class="detail-item full" *ngIf="selectedMission?.recommandations">
+                    <label>Recommandations</label>
+                    <div class="suggestion-box">{{ selectedMission?.recommandations }}</div>
+                </div>
+            </div>
+            <div class="form-footer">
+                <button class="btn-save" (click)="showDetailModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+
+</div>

@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
     providedIn: 'root'
 })
 export class AIService {
-    private apiUrl = `${environment.apiUrl}/ai`;
+    private apiUrl = `${environment.apiUrl}/assistant`;
 
     constructor(private http: HttpClient, private authService: AuthService) { }
 

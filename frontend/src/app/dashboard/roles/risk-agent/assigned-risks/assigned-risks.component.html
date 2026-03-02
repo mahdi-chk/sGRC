@@ -12,6 +12,37 @@
     </div>
 
     <div class="content-container">
+        <!-- Stats Section (Moved from Dashboard) -->
+        <div class="stats-card premium-stats" style="margin-bottom: 30px;">
+            <div class="stats-header">
+                <h3><i class="fas fa-chart-line"></i> Vue d'ensemble de vos activités</h3>
+                <span class="badge premium">Temps Réel</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item highlight">
+                    <div class="stat-icon risks"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="stat-content">
+                        <span class="value">{{ stats.total }}</span>
+                        <span class="label">Total Assignés</span>
+                    </div>
+                </div>
+                <div class="stat-item info">
+                    <div class="stat-icon maturity"><i class="fas fa-tasks"></i></div>
+                    <div class="stat-content">
+                        <span class="value">{{ stats.unprocessed }}</span>
+                        <span class="label">À Traiter</span>
+                    </div>
+                </div>
+                <div class="stat-item warn" [class.urgent-highlight]="stats.urgent > 0">
+                    <div class="stat-icon critical"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-content">
+                        <span class="value">{{ stats.urgent }}</span>
+                        <span class="label">Échéance Proche</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Assigned Risks Table -->
         <div class="risks-card">
             <table class="risks-table">
@@ -556,5 +587,26 @@
     .comment-item:hover {
         transform: translateX(3px);
         border-color: #004a99;
+    }
+
+    /* Urgent Highlight Animation */
+    .urgent-highlight {
+        border-color: #ef4444 !important;
+        background: #fffafa !important;
+        animation: pulse-border 2s infinite;
+    }
+
+    @keyframes pulse-border {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
     }
 </style>

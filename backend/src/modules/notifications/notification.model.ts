@@ -6,6 +6,8 @@ export enum NotificationType {
     RISK_ASSIGNED = 'RISK_ASSIGNED',
     STATUS_CHANGED = 'STATUS_CHANGED',
     COMMENT_ADDED = 'COMMENT_ADDED',
+    AUDIT_MISSION_ASSIGNED = 'AUDIT_MISSION_ASSIGNED',
+    AUDIT_REPORT_SUBMITTED = 'AUDIT_REPORT_SUBMITTED',
 }
 
 export class Notification extends Model {
@@ -15,6 +17,7 @@ export class Notification extends Model {
     public content!: string;
     public isRead!: boolean;
     public riskId!: number | null;
+    public auditMissionId!: number | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -51,6 +54,14 @@ Notification.init(
             allowNull: true,
             references: {
                 model: 'risks',
+                key: 'id',
+            }
+        },
+        auditMissionId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'audit_missions',
                 key: 'id',
             }
         }

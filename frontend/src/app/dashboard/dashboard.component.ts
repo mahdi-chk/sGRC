@@ -6,6 +6,7 @@ import { NotificationService } from '../core/services/notification.service';
 import { Notification } from '../core/models/notification.model';
 import { UserRole } from '../core/models/user-role.enum';
 import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
+import { Router } from '@angular/router';
 
 interface Submodule {
   title: string;
@@ -53,7 +54,8 @@ export class DashboardComponent {
     private http: HttpClient,
     private authService: AuthService,
     private dashboardService: DashboardService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private router: Router
   ) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUserRole = user?.role;

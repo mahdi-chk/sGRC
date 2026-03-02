@@ -6,7 +6,7 @@ import { UserRole } from '../users/user.roles';
 const router = Router();
 
 router.use(authenticateToken);
-router.use(authorizeRoles(UserRole.ADMIN_SI));
+router.use(authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI));
 
 // Get all settings or a specific one
 router.get('/', async (req, res) => {

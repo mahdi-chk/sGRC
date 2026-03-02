@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create user (Admin SI only)
-router.post('/', authorizeRoles(UserRole.ADMIN_SI), async (req, res) => {
+router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const userData = { ...req.body };
         if (userData.password) {
@@ -61,7 +61,7 @@ router.post('/', authorizeRoles(UserRole.ADMIN_SI), async (req, res) => {
 });
 
 // Update user (Admin SI only)
-router.put('/:id', authorizeRoles(UserRole.ADMIN_SI), async (req, res) => {
+router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const { id } = req.params;
         const userData = { ...req.body };
@@ -89,7 +89,7 @@ router.put('/:id', authorizeRoles(UserRole.ADMIN_SI), async (req, res) => {
 });
 
 // Delete user (Admin SI only)
-router.delete('/:id', authorizeRoles(UserRole.ADMIN_SI), async (req, res) => {
+router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const { id } = req.params;
         const deleted = await User.destroy({ where: { id } });

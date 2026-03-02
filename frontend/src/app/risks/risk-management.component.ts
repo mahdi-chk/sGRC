@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { RiskService, Risk, RiskLevel, RiskStatus } from '../core/services/risk.service';
+import { RiskService, Risk, RiskLevel, RiskStatus, PeriodicFrequency } from '../core/services/risk.service';
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../core/models/user-role.enum';
 
@@ -34,6 +34,11 @@ export class RiskManagementComponent implements OnInit {
     isGenerating = false;
     suggestedRisks: any[] = [];
 
+    // AI Evaluation
+    showEvaluationModal = false;
+    isEvaluating = false;
+    aiEvaluationResults: any[] = [];
+
 
     newRisk = {
         titre: '',
@@ -42,10 +47,13 @@ export class RiskManagementComponent implements OnInit {
         departementId: '',
         dateEcheance: '',
         niveauRisque: RiskLevel.MEDIUM,
-        responsableTraitementId: ''
+        responsableTraitementId: '',
+        frequenceTraitement: PeriodicFrequency.NONE,
+        prochaineEcheance: ''
     };
     riskLevels = Object.values(RiskLevel);
     riskStatuses = Object.values(RiskStatus);
+    periodicFrequencies = Object.values(PeriodicFrequency);
     today = new Date().toISOString().split('T')[0];
 
     filterStatut = '';
@@ -61,6 +69,11 @@ export class RiskManagementComponent implements OnInit {
     ngOnInit() {
         this.loadRisks();
         this.loadInitialData();
+    }
+
+    get isSeniorAuditor(): boolean {
+        const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
+        return user.role === UserRole.AUDIT_SENIOR || user.role === UserRole.SUPER_ADMIN;
     }
 
     loadRisks() {
@@ -117,7 +130,9 @@ export class RiskManagementComponent implements OnInit {
             departementId: risk.departementId.toString(),
             dateEcheance: new Date(risk.dateEcheance).toISOString().split('T')[0],
             niveauRisque: risk.niveauRisque,
-            responsableTraitementId: risk.responsableTraitementId.toString()
+            responsableTraitementId: risk.responsableTraitementId.toString(),
+            frequenceTraitement: risk.frequenceTraitement || PeriodicFrequency.NONE,
+            prochaineEcheance: risk.prochaineEcheance ? new Date(risk.prochaineEcheance).toISOString().split('T')[0] : ''
         };
         this.updateFilteredAgents();
         this.showCreateModal = true;
@@ -215,9 +230,49 @@ export class RiskManagementComponent implements OnInit {
         }
     }
 
+    evaluateRisksWithAi() {
+        const riskIds = this.filteredRisks.map(r => r.id);
+        if (riskIds.length === 0) return;
+
+        this.isEvaluating = true;
+        this.showEvaluationModal = true;
+        this.aiEvaluationResults = [];
+
+        this.riskService.evaluateRisks(riskIds).subscribe({
+            next: (results) => {
+                this.aiEvaluationResults = results;
+                this.isEvaluating = false;
+            },
+            error: (err) => {
+                console.error(err);
+                this.isEvaluating = false;
+                alert('Erreur lors de l\'évaluation des risques.');
+            }
+        });
+    }
+
     revertToInProgress(riskId: number) {
         if (confirm('Voulez-vous vraiment remettre ce risque en cours de traitement ?')) {
             this.riskService.updateStatus(riskId, RiskStatus.IN_PROGRESS).subscribe(() => this.loadRisks());
+        }
+    }
+
+    get isRiskManager(): boolean {
+        const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
+        return user.role === UserRole.RISK_MANAGER || user.role === UserRole.SUPER_ADMIN;
+    }
+
+    deleteRisk(riskId: number) {
+        if (confirm('Êtes-vous sûr de vouloir supprimer définitivement ce risque ? Cette action est irréversible.')) {
+            this.riskService.deleteRisk(riskId).subscribe({
+                next: () => {
+                    this.loadRisks();
+                },
+                error: (err) => {
+                    console.error('Error deleting risk:', err);
+                    alert('Erreur lors de la suppression du risque.');
+                }
+            });
         }
     }
 
@@ -294,6 +349,7 @@ export class RiskManagementComponent implements OnInit {
             formData.append('departementId', risk.deptId.toString());
             formData.append('dateEcheance', risk.suggestedDate || this.today);
             formData.append('responsableTraitementId', risk.manualResponsableId);
+            formData.append('frequenceTraitement', risk.frequenceTraitement || PeriodicFrequency.NONE);
 
             this.riskService.createRisk(formData).subscribe(() => {
                 completed++;
@@ -317,7 +373,9 @@ export class RiskManagementComponent implements OnInit {
             departementId: '',
             dateEcheance: '',
             niveauRisque: RiskLevel.MEDIUM,
-            responsableTraitementId: ''
+            responsableTraitementId: '',
+            frequenceTraitement: PeriodicFrequency.NONE,
+            prochaineEcheance: ''
         };
         this.selectedFile = null;
         this.filteredAgents = [];

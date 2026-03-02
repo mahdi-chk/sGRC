@@ -28,6 +28,20 @@ export enum RiskStatus {
 }
 
 /**
+ * Fréquences de traitement périodique (synchronisées avec le backend)
+ */
+export enum PeriodicFrequency {
+    QUOTIDIEN = 'Quotidien',
+    HEBDOMADAIRE = 'Hebdomadaire',
+    BIMENSUEL = 'Bimensuel',
+    MENSUEL = 'Mensuel',
+    TRIMESTRIEL = 'Trimestriel',
+    SEMESTRIEL = 'Semestriel',
+    ANNUEL = 'Annuel',
+    NONE = 'Aucun',
+}
+
+/**
  * Interface représentant l'objet Risque côté frontend
  */
 export interface Risk {
@@ -43,6 +57,14 @@ export interface Risk {
     riskAgentId: number | null;
     statut: RiskStatus;
     pieceJustificative: string | null;
+    frequenceTraitement: PeriodicFrequency;
+    prochaineEcheance: Date | null;
+    dernierTraitement: Date | null;
+    aiAnalysisScore?: number | null;
+    aiAnalysisImpact?: string | null;
+    aiAnalysisTendance?: string | null;
+    aiAnalysisSuggestion?: string | null;
+    aiAnalysisDate?: Date | null;
     createdAt: Date;
     updatedAt: Date;
     riskAgent?: any;
@@ -111,6 +133,23 @@ export class RiskService {
      * Utilise l'IA pour générer des suggestions de risques à partir d'une situation donnée.
      */
     generateRisks(situation: string): Observable<any[]> {
-        return this.http.post<any[]>('http://localhost:3000/api/ai/generate-risks', { situation });
+        return this.http.post<any[]>('http://localhost:3000/api/assistant/generate-risks', { situation });
+    }
+
+    /**
+     * Évaluation stratégique des risques via IA.
+     */
+    /**
+     * Évaluation stratégique des risques via IA.
+     */
+    evaluateRisks(riskIds: number[]): Observable<any[]> {
+        return this.http.post<any[]>(`${this.apiUrl}/evaluate`, { riskIds });
+    }
+
+    /**
+     * Supprime un risque de la base de données.
+     */
+    deleteRisk(id: number): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/${id}`);
     }
 }

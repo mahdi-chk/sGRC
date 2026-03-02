@@ -14,7 +14,6 @@ import { RouterModule, Routes } from '@angular/router';
 import { AppComponent } from './app.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { LoginComponent } from './login/login.component';
-import { ModalComponent } from './shared/modal/modal.component';
 import { AuthGuard } from './core/guards/auth.guard';
 import { RiskManagerDashboardComponent } from './dashboard/roles/risk-manager/risk-manager-dashboard.component';
 import { RiskAgentDashboardComponent } from './dashboard/roles/risk-agent/risk-agent-dashboard.component';
@@ -24,16 +23,17 @@ import { AdminSiDashboardComponent } from './dashboard/roles/admin-si/admin-si-d
 import { SuperAdminDashboardComponent } from './dashboard/roles/super-admin/super-admin-dashboard.component';
 import { TopManagementDashboardComponent } from './dashboard/roles/top-management/top-management-dashboard.component';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
-import { AiAssistantComponent } from './shared/components/ai-assistant/ai-assistant.component';
 import { UserManagementComponent } from './shared/components/user-management/user-management.component';
 import { DashboardHomeComponent } from './dashboard/dashboard-home.component';
 import { RiskManagementComponent } from './risks/risk-management.component';
 import { AssignedRisksComponent } from './dashboard/roles/risk-agent/assigned-risks/assigned-risks.component';
 import { PlanningComponent } from './modules/planning/planning.component';
-import { RagConfigComponent } from './dashboard/components/rag-config/rag-config.component';
-import { UserManagementCardComponent } from './dashboard/components/user-management-card/user-management-card.component';
-import { RiskManagementCardComponent } from './dashboard/components/risk-management-card/risk-management-card.component';
 import { RiskStatisticsComponent } from './dashboard/roles/top-management/risk-statistics/risk-statistics.component';
+import { AuditingModule } from './modules/auditing/auditing.module';
+import { AuditingComponent } from './modules/auditing/auditing.component';
+import { StrategicEvaluationComponent } from './modules/evaluation/strategic-evaluation.component';
+import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
+import { SharedModule } from './shared/shared.module';
 
 /**
  * --- CONFIGURATION DU ROUTAGE ---
@@ -48,6 +48,7 @@ const routes: Routes = [
       { path: '', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent },
       { path: 'risks', component: RiskManagementComponent },
+      { path: 'strategic-evaluation', component: StrategicEvaluationComponent },
       { path: 'assigned-risks', component: AssignedRisksComponent },
       { path: 'planning', component: PlanningComponent },
       { path: 'statistics', component: RiskStatisticsComponent },
@@ -58,7 +59,9 @@ const routes: Routes = [
       { path: 'audit-senior', component: AuditSeniorDashboardComponent },
       { path: 'risk-manager', component: RiskManagerDashboardComponent },
       { path: 'risk-agent', component: RiskAgentDashboardComponent },
-      { path: 'top-management', component: TopManagementDashboardComponent }
+      { path: 'top-management', component: TopManagementDashboardComponent },
+      { path: 'auditing', component: AuditingComponent },
+      { path: 'auditor-missions', component: AuditorMissionsComponent }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -70,7 +73,6 @@ const routes: Routes = [
     AppComponent,
     DashboardComponent,
     LoginComponent,
-    ModalComponent,
     RiskManagerDashboardComponent,
     RiskAgentDashboardComponent,
     AuditSeniorDashboardComponent,
@@ -78,21 +80,19 @@ const routes: Routes = [
     AdminSiDashboardComponent,
     SuperAdminDashboardComponent,
     TopManagementDashboardComponent,
-    AiAssistantComponent,
-    UserManagementComponent,
     DashboardHomeComponent,
     RiskManagementComponent,
     AssignedRisksComponent,
     PlanningComponent,
-    RagConfigComponent,
-    UserManagementCardComponent,
-    RiskManagementCardComponent,
-    RiskStatisticsComponent
+    RiskStatisticsComponent,
+    StrategicEvaluationComponent
   ],
   imports: [
     BrowserModule,
     HttpClientModule,
     FormsModule,
+    SharedModule,
+    AuditingModule,
     RouterModule.forRoot(routes) // Initialisation du module de routage
   ],
   providers: [

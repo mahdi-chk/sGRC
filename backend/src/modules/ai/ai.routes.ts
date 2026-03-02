@@ -47,4 +47,13 @@ router.post('/generate-risks', authenticateToken, async (req: AuthRequest, res: 
     }
 });
 
+router.post('/index', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await RAGEngine.indexDocuments();
+        res.json(result);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;

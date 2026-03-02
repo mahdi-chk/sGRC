@@ -5,6 +5,7 @@ import './modules/users/user.model';
 import './modules/risk/risk.model';
 import './modules/risk/comment.model';
 import './modules/notifications/notification.model';
+import './modules/auditing/audit-mission.model';
 
 async function sync() {
     try {

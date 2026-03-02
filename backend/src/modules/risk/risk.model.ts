@@ -30,6 +30,20 @@ export enum RiskStatus {
 }
 
 /**
+ * Fréquences de traitement périodique pour un risque.
+ */
+export enum PeriodicFrequency {
+    QUOTIDIEN = 'Quotidien',
+    HEBDOMADAIRE = 'Hebdomadaire',
+    BIMENSUEL = 'Bimensuel',
+    MENSUEL = 'Mensuel',
+    TRIMESTRIEL = 'Trimestriel',
+    SEMESTRIEL = 'Semestriel',
+    ANNUEL = 'Annuel',
+    NONE = 'Aucun',
+}
+
+/**
  * Classe représentant un Risque dans le système GRC.
  */
 export class Risk extends Model {
@@ -45,6 +59,14 @@ export class Risk extends Model {
     public riskAgentId!: number | null;
     public statut!: RiskStatus;
     public pieceJustificative!: string | null;
+    public frequenceTraitement!: PeriodicFrequency;
+    public prochaineEcheance!: Date | null;
+    public dernierTraitement!: Date | null;
+    public aiAnalysisScore!: number | null;
+    public aiAnalysisImpact!: string | null;
+    public aiAnalysisTendance!: string | null;
+    public aiAnalysisSuggestion!: string | null;
+    public aiAnalysisDate!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -129,12 +151,95 @@ Risk.init(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        frequenceTraitement: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: PeriodicFrequency.NONE,
+            validate: {
+                isIn: [Object.values(PeriodicFrequency)],
+            },
+        },
+        prochaineEcheance: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        dernierTraitement: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        aiAnalysisScore: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        aiAnalysisImpact: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        aiAnalysisTendance: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        aiAnalysisSuggestion: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        aiAnalysisDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
     },
     {
         sequelize,
         tableName: 'risks',
+        hooks: {
+            beforeValidate: (risk: Risk) => {
+                // Normalisation de la fréquence (ex: "trimestriel" -> "Trimestriel")
+                if (risk.frequenceTraitement && typeof risk.frequenceTraitement === 'string') {
+                    const normalized = risk.frequenceTraitement.charAt(0).toUpperCase() + risk.frequenceTraitement.slice(1).toLowerCase();
+                    if (Object.values(PeriodicFrequency).includes(normalized as any)) {
+                        risk.frequenceTraitement = normalized as any;
+                    }
+                }
+            },
+            beforeCreate: (risk: Risk) => {
+                calculateNextDeadline(risk);
+            },
+            beforeUpdate: (risk: Risk) => {
+                calculateNextDeadline(risk);
+            }
+        }
     }
 );
+
+/**
+ * Calcule la prochaine échéance en fonction de la fréquence.
+ */
+function calculateNextDeadline(risk: Risk) {
+    if (!risk.frequenceTraitement || risk.frequenceTraitement === PeriodicFrequency.NONE) {
+        risk.prochaineEcheance = null;
+        return;
+    }
+
+    const baseDate = risk.dernierTraitement ? new Date(risk.dernierTraitement) : new Date(risk.dateEcheance);
+    const next = new Date(baseDate);
+
+    if (isNaN(next.getTime())) {
+        risk.prochaineEcheance = null;
+        return;
+    }
+
+    switch (risk.frequenceTraitement) {
+        case PeriodicFrequency.QUOTIDIEN: next.setDate(next.getDate() + 1); break;
+        case PeriodicFrequency.HEBDOMADAIRE: next.setDate(next.getDate() + 7); break;
+        case PeriodicFrequency.BIMENSUEL: next.setDate(next.getDate() + 15); break;
+        case PeriodicFrequency.MENSUEL: next.setMonth(next.getMonth() + 1); break;
+        case PeriodicFrequency.TRIMESTRIEL: next.setMonth(next.getMonth() + 3); break;
+        case PeriodicFrequency.SEMESTRIEL: next.setMonth(next.getMonth() + 6); break;
+        case PeriodicFrequency.ANNUEL: next.setFullYear(next.getFullYear() + 1); break;
+        default: return;
+    }
+    risk.prochaineEcheance = next;
+}
 
 /**
  * --- DÉFINITION DES RELATIONS ---

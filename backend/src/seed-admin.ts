@@ -9,7 +9,19 @@ async function seed() {
         // We assume the schema is synced via the app or manual script if needed, 
         // but here we just ensure data is there.
 
-        const departmentNames = ['Risques', 'Audit', 'Direction', 'Informatique'];
+        const departmentNames = [
+            'Audit des risques',
+            'Audit interne',
+            'Audit externe',
+            'Audit des systèmes d’information',
+            'Audit financier & comptable',
+            'Audit qualité',
+            'Audit de conformité & réglementaire',
+            'Audit opérationnel',
+            'Audit technique spécialisé',
+            'Audit public / inspection',
+            'Audit tierce partie'
+        ];
         const departments: { [key: string]: number } = {};
 
         for (const name of departmentNames) {

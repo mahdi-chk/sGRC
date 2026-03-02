@@ -1,9 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { RiskService, Risk } from '../../core/services/risk.service';
+import { AuditingService, AuditMission } from '../../core/services/auditing.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 interface CalendarDay {
     date: Date | null;
     risks: Risk[];
+    missions: AuditMission[];
     isToday: boolean;
     isCurrentMonth: boolean;
 }
@@ -17,6 +21,7 @@ export class PlanningComponent implements OnInit {
     currentDate: Date = new Date();
     days: CalendarDay[] = [];
     risks: Risk[] = [];
+    missions: AuditMission[] = [];
     selectedDay: CalendarDay | null = null;
     monthNames = [
         'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -24,15 +29,22 @@ export class PlanningComponent implements OnInit {
     ];
     dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
-    constructor(private riskService: RiskService) { }
+    constructor(
+        private riskService: RiskService,
+        private auditingService: AuditingService
+    ) { }
 
     ngOnInit(): void {
         this.loadRisks();
     }
 
     loadRisks(): void {
-        this.riskService.getRisks().subscribe(risks => {
-            this.risks = risks;
+        forkJoin({
+            risks: this.riskService.getRisks().pipe(catchError(() => of([]))),
+            missions: this.auditingService.getMissions().pipe(catchError(() => of([])))
+        }).subscribe(({ risks, missions }) => {
+            this.risks = risks || [];
+            this.missions = missions || [];
             this.generateCalendar();
         });
     }
@@ -51,11 +63,11 @@ export class PlanningComponent implements OnInit {
         this.days = [];
 
         // Previous month padding
-        const prevMonthLastDay = new Date(year, month, 0).getDate();
         for (let i = startDay - 1; i >= 0; i--) {
             this.days.push({
-                date: null, // Or actual date if we want to show it dimmed
+                date: null,
                 risks: [],
+                missions: [],
                 isToday: false,
                 isCurrentMonth: false
             });
@@ -65,16 +77,25 @@ export class PlanningComponent implements OnInit {
         const today = new Date();
         for (let d = 1; d <= lastDayOfMonth.getDate(); d++) {
             const date = new Date(year, month, d);
+
             const dayRisks = this.risks.filter(r => {
-                const riskDate = new Date(r.dateEcheance);
-                return riskDate.getDate() === d &&
-                    riskDate.getMonth() === month &&
-                    riskDate.getFullYear() === year;
+                const rDate = new Date(r.dateEcheance);
+                return rDate.getFullYear() === year &&
+                    rDate.getMonth() === month &&
+                    rDate.getDate() === d;
+            });
+
+            const dayMissions = this.missions.filter(m => {
+                const mDate = new Date(m.delai);
+                return mDate.getFullYear() === year &&
+                    mDate.getMonth() === month &&
+                    mDate.getDate() === d;
             });
 
             this.days.push({
                 date,
                 risks: dayRisks,
+                missions: dayMissions,
                 isToday: date.toDateString() === today.toDateString(),
                 isCurrentMonth: true
             });
@@ -86,6 +107,7 @@ export class PlanningComponent implements OnInit {
             this.days.push({
                 date: null,
                 risks: [],
+                missions: [],
                 isToday: false,
                 isCurrentMonth: false
             });

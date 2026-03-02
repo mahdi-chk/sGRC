@@ -1,0 +1,169 @@
+<div class="audit-page auditor-view">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-tasks"></i> Mon Espace d'Audit</h1>
+                <p>Consultez vos missions et gérez vos rapports en toute simplicité.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="stat-info">
+                <span class="label">Total Missions</span>
+                <span class="value">{{ totalAssigned }}</span>
+            </div>
+        </div>
+        <div class="stat-card pending">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-info">
+                <span class="label">En Cours</span>
+                <span class="value">{{ pendingCount }}</span>
+            </div>
+        </div>
+        <div class="stat-card completed">
+            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-info">
+                <span class="label">Terminées</span>
+                <span class="value">{{ completedCount }}</span>
+            </div>
+        </div>
+        <div class="stat-card risks">
+            <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="stat-info">
+                <span class="label">Risques Couverts</span>
+                <span class="value">{{ missions.length }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Missions Table -->
+    <div class="missions-card">
+        <div class="table-loading" *ngIf="isLoading">
+            <i class="fas fa-circle-notch fa-spin"></i> Chargement de vos missions...
+        </div>
+
+        <table class="audit-table" *ngIf="!isLoading">
+            <thead>
+                <tr>
+                    <th>Mission</th>
+                    <th>Engagement par</th>
+                    <th>Risque Associé</th>
+                    <th>Échéance</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let mission of missions">
+                    <td>
+                        <div class="mission-info">
+                            <strong>{{ mission.titre }}</strong>
+                            <small>{{ mission.objectifs | slice:0:60 }}...</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="senior-info" *ngIf="mission.auditSenior">
+                            <i class="fas fa-user-tie"></i> {{ mission.auditSenior.prenom }} {{ mission.auditSenior.nom
+                            }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="risk-info-cell" [title]="mission.risk?.titre">
+                            <span class="risk-id">#{{ mission.riskId }}</span>
+                            <span class="risk-name">{{ mission.risk?.titre }}</span>
+                        </div>
+                    </td>
+                    <td>{{ mission.delai | date:'dd/MM/yyyy' }}</td>
+                    <td>
+                        <span [class]="'badge status-' + mission.statut.replace(' ', '-').toLowerCase()">
+                            {{ mission.statut }}
+                        </span>
+                    </td>
+                    <td class="actions-cell">
+                        <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir détails">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="action-btn btn-report" *ngIf="mission.statut === 'En cours'"
+                            (click)="openReportModal(mission)" title="Soumettre Rapport">
+                            <i class="fas fa-file-signature"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr *ngIf="missions.length === 0">
+                    <td colspan="5" class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <p>Vous n'avez aucune mission d'audit assignée pour le moment.</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Report Modal -->
+    <app-modal *ngIf="showReportModal" title="Soumettre Rapport d'Audit" (close)="showReportModal = false">
+        <div #projected modal-body class="modal-form">
+            <div class="form-group full">
+                <label>Rapport Final d'Audit <span class="req">*</span></label>
+                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Décrivez les résultats de l'audit..."
+                    class="finput"></textarea>
+            </div>
+            <div class="form-group full">
+                <label>Recommandations <span class="req">*</span></label>
+                <textarea [(ngModel)]="reportData.recommandations" rows="4"
+                    placeholder="Actions correctives suggérées..." class="finput"></textarea>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showReportModal = false">Annuler</button>
+                <button class="btn-save" (click)="submitReport()" [disabled]="!reportData.rapport || isLoading">
+                    {{ isLoading ? 'Envoi...' : 'Soumettre le Rapport' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Detail Modal -->
+    <app-modal *ngIf="showDetailModal" title="Détails de la Mission" (close)="showDetailModal = false">
+        <!-- Re-use the detail grid from senior view, simplified -->
+        <div #projected modal-body class="modal-form">
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Titre</label>
+                    <span>{{ selectedMission?.titre }}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Statut</label>
+                    <span [class]="'badge status-' + selectedMission?.statut?.replace(' ', '-')?.toLowerCase()">
+                        {{ selectedMission?.statut }}
+                    </span>
+                </div>
+                <div class="detail-item full">
+                    <label>Objectifs</label>
+                    <p>{{ selectedMission?.objectifs }}</p>
+                </div>
+                <div class="detail-item full">
+                    <label>Responsabilités</label>
+                    <p>{{ selectedMission?.responsabilites }}</p>
+                </div>
+                <div class="detail-item">
+                    <label>Échéance</label>
+                    <span>{{ selectedMission?.delai | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="detail-item full" *ngIf="selectedMission?.rapport">
+                    <label>Votre Rapport</label>
+                    <div class="report-preview">{{ selectedMission?.rapport }}</div>
+                </div>
+            </div>
+            <div class="form-footer">
+                <button class="btn-save" (click)="showDetailModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+</div>

@@ -115,20 +115,44 @@
         font-weight: 700;
     }
 
+    .indicators {
+        display: flex;
+        gap: 2px;
+        position: absolute;
+        bottom: 4px;
+    }
+
     &.selected {
-        background: var(--micepp-blue);
+        background: var(--micepp-blue) !important;
         color: white !important;
         box-shadow: 0 4px 10px rgba(0, 74, 153, 0.3);
+
+        .day-number {
+            border-bottom-color: white;
+        }
+
+        .risk-indicator-dot {
+            background: white;
+        }
+
+        .mission-indicator-dot {
+            background: white;
+        }
     }
 }
 
 .risk-indicator-dot {
-    width: 4px;
-    height: 4px;
-    background: currentColor;
+    width: 6px;
+    height: 6px;
+    background: var(--micepp-gold);
     border-radius: 50%;
-    position: absolute;
-    bottom: 4px;
+}
+
+.mission-indicator-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--micepp-blue);
+    border-radius: 50%;
 }
 
 .details-section {
@@ -149,9 +173,95 @@
         font-size: 1.1rem;
     }
 
-    .risk-count {
+    .risk-count,
+    .mission-count {
         font-size: 0.8rem;
         color: var(--micepp-text-muted);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .stats-mini {
+        display: flex;
+        gap: 15px;
+        margin-top: 5px;
+    }
+}
+
+.mission-card {
+    background: rgba(0, 74, 153, 0.03);
+    border: 1px solid rgba(0, 74, 153, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-left: 4px solid var(--micepp-blue);
+    transition: transform 0.2s, box-shadow 0.2s;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+}
+
+.mission-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.mission-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--micepp-blue-dark);
+}
+
+.mission-detail {
+    font-size: 0.85rem;
+    color: var(--micepp-text-muted);
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.mission-meta {
+    .tag {
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: var(--micepp-blue);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+
+    &.status-à-venir {
+        background: #9c27b0;
+    }
+
+    &.status-en-cours {
+        background: #2196f3;
+    }
+
+    &.status-terminé {
+        background: #4caf50;
+    }
+
+    &.status-en-retard {
+        background: #f44336;
+    }
+
+    &.status-annulé {
+        background: #607d8b;
     }
 }
 

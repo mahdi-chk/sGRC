@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { RiskService, Risk, RiskStatus } from '../../../core/services/risk.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
 
 @Component({
     selector: 'app-risk-agent-dashboard',
@@ -28,7 +29,8 @@ export class RiskAgentDashboardComponent implements OnInit {
     constructor(
         private router: Router,
         private riskService: RiskService,
-        private authService: AuthService
+        private authService: AuthService,
+        private dashboardService: DashboardService
     ) { }
 
     ngOnInit() {
@@ -36,6 +38,9 @@ export class RiskAgentDashboardComponent implements OnInit {
             this.currentUser = user;
             if (this.currentUser) {
                 this.loadRisks();
+                if (this.filteredModules.length === 0) {
+                    this.filteredModules = this.dashboardService.getFilteredModules(user.role);
+                }
             }
         });
     }
@@ -75,6 +80,7 @@ export class RiskAgentDashboardComponent implements OnInit {
     }
 
     onOpenModule(m: any, s: any) {
+        this.dashboardService.openSubmoduleModal(m, s);
         this.openModule.emit({ m, s });
     }
 }

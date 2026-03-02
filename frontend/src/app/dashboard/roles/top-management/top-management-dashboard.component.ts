@@ -1,6 +1,8 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../core/services/risk.service';
 import { Router } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
 
 @Component({
     selector: 'app-top-management-dashboard',
@@ -17,10 +19,20 @@ export class TopManagementDashboardComponent implements OnInit {
     maturityLevel: number = 0;
     treatmentRate: number = 0;
 
-    constructor(private riskService: RiskService, private router: Router) { }
+    constructor(
+        private riskService: RiskService,
+        private router: Router,
+        private authService: AuthService,
+        private dashboardService: DashboardService
+    ) { }
 
     ngOnInit() {
         this.loadStatistics();
+        this.authService.currentUser$.subscribe(user => {
+            if (this.filteredModules.length === 0 && user?.role) {
+                this.filteredModules = this.dashboardService.getFilteredModules(user.role);
+            }
+        });
     }
 
     loadStatistics() {
@@ -38,6 +50,7 @@ export class TopManagementDashboardComponent implements OnInit {
     }
 
     onOpenModule(m: any, s: any) {
+        this.dashboardService.openSubmoduleModal(m, s);
         this.openModule.emit({ m, s });
     }
 

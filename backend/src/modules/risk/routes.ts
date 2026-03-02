@@ -16,6 +16,7 @@ import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware
 import { UserRole } from '../users/user.roles';
 import { emailService } from '../../utils/email.service';
 import { Notification, NotificationType } from '../notifications/notification.model';
+import { AIService } from '../ai/ai.service';
 
 const router = Router();
 
@@ -61,8 +62,16 @@ router.use(authenticateToken);
  */
 router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), upload.single('pieceJustificative'), async (req: AuthRequest, res) => {
     try {
+        // Nettoyage des données : conversion des chaînes vides en null
+        const cleanedBody = { ...req.body };
+        for (const key in cleanedBody) {
+            if (cleanedBody[key] === '' || cleanedBody[key] === 'null' || cleanedBody[key] === 'undefined') {
+                cleanedBody[key] = null;
+            }
+        }
+
         const riskData = {
-            ...req.body,
+            ...cleanedBody,
             riskManagerId: req.user!.id,
             pieceJustificative: req.file ? req.file.path : null,
             statut: RiskStatus.OPEN
@@ -71,7 +80,12 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
         const risk = await Risk.create(riskData);
         res.status(201).json(risk);
     } catch (error: any) {
-        res.status(400).json({ message: 'Erreur lors de la création du risque', error: error.message });
+        console.error('Erreur creation risque:', error);
+        res.status(400).json({
+            message: 'Erreur lors de la création du risque',
+            error: error.message,
+            validationErrors: error.errors ? error.errors.map((e: any) => e.message) : undefined
+        });
     }
 });
 
@@ -85,7 +99,7 @@ router.get('/', async (req: AuthRequest, res) => {
         let risks;
 
         // Logique de filtrage par rôle
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.AUDIT_SENIOR) {
             // Accès total
             risks = await Risk.findAll({ include: ['riskAgent', 'responsableTraitement', 'departement'] });
         } else if (role === UserRole.RISK_MANAGER) {
@@ -268,6 +282,34 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 });
 
 /**
+ * ÉVALUATION DES RISQUES PAR IA
+ */
+router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+    try {
+        const { riskIds } = req.body;
+        const risks = await Risk.findAll({ where: { id: riskIds } });
+        const evaluation = await AIService.evaluateRisks(risks, req.user!.role);
+
+        // Persist AI evaluation results to the database
+        for (const result of evaluation) {
+            await Risk.update({
+                aiAnalysisScore: result.priorite,
+                aiAnalysisImpact: result.impact,
+                aiAnalysisTendance: result.tendance,
+                aiAnalysisSuggestion: result.suggestion,
+                aiAnalysisDate: new Date()
+            }, {
+                where: { id: result.riskId }
+            });
+        }
+
+        res.json(evaluation);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors de l\'évaluation des risques', error: error.message });
+    }
+});
+
+/**
  * AJOUTER UN COMMENTAIRE OU UNE PREUVE
  */
 router.post('/:id/comments', upload.single('pieceJointe'), async (req: AuthRequest, res) => {
@@ -317,6 +359,27 @@ router.get('/:id/comments', async (req, res) => {
         res.json(comments);
     } catch (error: any) {
         res.status(500).json({ message: 'Erreur lors de la récupération des commentaires', error: error.message });
+    }
+});
+
+/**
+ * SUPPRIMER UN RISQUE
+ * Accessible par : Risk Manager, Super Admin
+ */
+router.delete('/:id', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+    try {
+        const { id } = req.params;
+        const risk = await Risk.findByPk(parseInt(id as string));
+
+        if (!risk) {
+            return res.status(404).json({ message: 'Risque non trouvé' });
+        }
+
+        await risk.destroy();
+        res.status(204).send();
+    } catch (error: any) {
+        console.error('Erreur suppression risque:', error);
+        res.status(500).json({ message: 'Erreur lors de la suppression du risque', error: error.message });
     }
 });
 

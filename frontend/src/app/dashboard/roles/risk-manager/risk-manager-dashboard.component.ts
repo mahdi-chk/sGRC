@@ -3,6 +3,8 @@ import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../core/services
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
+import { AuthService } from '../../../core/services/auth.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
 
 @Component({
     selector: 'app-risk-manager-dashboard',
@@ -54,12 +56,19 @@ export class RiskManagerDashboardComponent implements OnInit {
     constructor(
         private riskService: RiskService,
         private http: HttpClient,
-        private router: Router
+        private router: Router,
+        private authService: AuthService,
+        private dashboardService: DashboardService
     ) { }
 
     ngOnInit() {
         this.loadRisks();
         this.loadInitialData();
+        this.authService.currentUser$.subscribe(user => {
+            if (this.filteredModules.length === 0 && user?.role) {
+                this.filteredModules = this.dashboardService.getFilteredModules(user.role);
+            }
+        });
     }
 
     loadRisks() {
@@ -135,6 +144,7 @@ export class RiskManagerDashboardComponent implements OnInit {
         } else if (s.title === 'Mes Risques') {
             this.loadRisks();
         } else {
+            this.dashboardService.openSubmoduleModal(m, s);
             this.openModule.emit({ m, s });
         }
     }

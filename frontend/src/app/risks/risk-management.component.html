@@ -15,6 +15,10 @@
             <button class="btn-ai" (click)="showAiModal = true" title="Générer par IA">
                 <i class="fas fa-robot"></i> Générer par IA
             </button>
+            <button class="btn-ai-eval" (click)="evaluateRisksWithAi()" *ngIf="isSeniorAuditor"
+                title="Évaluer les risques">
+                <i class="fas fa-chart-line"></i> Évaluer via IA
+            </button>
             <button class="btn-export" (click)="downloadReport()" title="Télécharger le rapport">
                 <i class="fas fa-file-download"></i> Exporter rapport
             </button>
@@ -75,6 +79,7 @@
                     <th>Statut</th>
                     <th>Responsable du département à risque</th>
                     <th>Agent de traitement du risque</th>
+                    <th>Fréquence</th>
                     <th>Échéance</th>
                     <th>Actions</th>
                 </tr>
@@ -93,7 +98,15 @@
                         </span>
                         <ng-template #noAgent><em class="text-muted">Non assigné</em></ng-template>
                     </td>
-                    <td>{{ risk.dateEcheance | date:'dd/MM/yyyy' }}</td>
+                    <td><span class="freq-tag" *ngIf="risk.frequenceTraitement !== 'Aucun'">{{ risk.frequenceTraitement
+                            }}</span></td>
+                    <td>
+                        <div class="deadline-box">
+                            <span class="main-date">{{ risk.dateEcheance | date:'dd/MM/yyyy' }}</span>
+                            <small class="next-date" *ngIf="risk.prochaineEcheance">Prochain : {{ risk.prochaineEcheance
+                                | date:'dd/MM/yyyy' }}</small>
+                        </div>
+                    </td>
                     <td class="actions-cell">
                         <button class="action-btn btn-view" (click)="onViewDetails(risk)" title="Voir détails">
                             <i class="fas fa-eye"></i>
@@ -112,6 +125,10 @@
                         <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-close"
                             (click)="closeRisk(risk.id)" title="Clôturer">
                             <i class="fas fa-check-double"></i>
+                        </button>
+                        <button *ngIf="isRiskManager" class="action-btn btn-delete" (click)="deleteRisk(risk.id)"
+                            title="Supprimer">
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </td>
                 </tr>
@@ -172,8 +189,16 @@
                 <div class="form-group">
                     <label>Date d'échéance <span class="req">*</span></label>
                     <input type="date" [(ngModel)]="newRisk.dateEcheance" [min]="today" class="finput">
-                    <small *ngIf="newRisk.dateEcheance && newRisk.dateEcheance < today" class="hint error">La date doit
-                        être aujourd'hui ou dans le futur</small>
+                </div>
+                <div class="form-group">
+                    <label>Fréquence de Traitement</label>
+                    <select [(ngModel)]="newRisk.frequenceTraitement" class="finput">
+                        <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ freq }}</option>
+                    </select>
+                </div>
+                <div class="form-group" *ngIf="newRisk.frequenceTraitement !== 'Aucun'">
+                    <label>Prochaine Échéance Périodique</label>
+                    <input type="date" [(ngModel)]="newRisk.prochaineEcheance" [min]="today" class="finput">
                 </div>
                 <div class="form-group full">
                     <label>Pièce Justificative (PDF/Image)</label>
@@ -262,6 +287,17 @@
                 <div class="detail-block">
                     <span class="detail-label">Date d'échéance</span>
                     <p class="detail-value">{{ selectedRisk.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Fréquence de Traitement</span>
+                    <p class="detail-value"><span class="freq-tag"
+                            *ngIf="selectedRisk.frequenceTraitement !== 'Aucun'">{{ selectedRisk.frequenceTraitement
+                            }}</span><span *ngIf="selectedRisk.frequenceTraitement === 'Aucun'">Aucun</span></p>
+                </div>
+                <div class="detail-block" *ngIf="selectedRisk.frequenceTraitement !== 'Aucun'">
+                    <span class="detail-label">Prochaine Échéance</span>
+                    <p class="detail-value" style="color: #0ea5e9; font-weight: 700;">{{ selectedRisk.prochaineEcheance
+                        | date:'dd/MM/yyyy' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Date de création</span>
@@ -407,6 +443,13 @@
                                     <small class="hint" *ngIf="risk.responsableSuggestion">Suggéré : {{
                                         risk.responsableSuggestion }}</small>
                                 </div>
+                                <div class="mini-detail">
+                                    <label>Fréquence Suggérée</label>
+                                    <select [(ngModel)]="risk.frequenceTraitement" class="mini-input">
+                                        <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ freq }}
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -425,12 +468,177 @@
 
 </div>
 
+<!-- ====================== AI Evaluation Results Modal ====================== -->
+<app-modal *ngIf="showEvaluationModal" title="Évaluation Stratégique par IA" (close)="showEvaluationModal = false">
+    <div #projected modal-body class="modal-form">
+        <div class="ai-loading" *ngIf="isEvaluating">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>L'IA analyse les risques...</p>
+        </div>
+        <div class="eval-results" *ngIf="!isEvaluating">
+            <div *ngFor="let res of aiEvaluationResults" class="eval-card">
+                <div class="eval-header">
+                    <span class="eval-risk-id">#{{ res.riskId }}</span>
+                    <div class="eval-priority">
+                        <label>Priorité</label>
+                        <span class="prio-value">{{ res.priorite }}/10</span>
+                    </div>
+                </div>
+                <div class="eval-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-bolt"></i>
+                        <strong>Impact :</strong> {{ res.impact }}
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-chart-line"></i>
+                        <strong>Tendance :</strong> {{ res.tendance }}
+                    </div>
+                </div>
+                <div class="eval-suggestion">
+                    <i class="fas fa-lightbulb"></i>
+                    <p>{{ res.suggestion }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button class="btn-save" (click)="showEvaluationModal = false">Fermer</button>
+        </div>
+    </div>
+</app-modal>
+
 <style>
     .risk-page {
         padding: 30px;
         background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
         min-height: 100vh;
         font-family: 'Inter', sans-serif;
+    }
+
+    .btn-ai-eval {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        color: white;
+        border: none;
+        padding: 12px 22px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.93rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        transition: all 0.3s;
+    }
+
+    .btn-ai-eval:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+    }
+
+    .freq-tag {
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .deadline-box {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .main-date {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .next-date {
+        font-size: 0.72rem;
+        color: #0ea5e9;
+        font-weight: 500;
+    }
+
+    /* AI Evaluation results styles */
+    .ai-loading {
+        text-align: center;
+        padding: 40px;
+        color: #64748b;
+    }
+
+    .ai-loading i {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+
+    .eval-results {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+    .eval-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: transform 0.2s;
+    }
+
+    .eval-card:hover {
+        transform: scale(1.02);
+    }
+
+    .eval-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .prio-value {
+        background: #1e293b;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 0.9rem;
+    }
+
+    .eval-meta {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .meta-item i {
+        width: 18px;
+        color: #64748b;
+    }
+
+    .eval-suggestion {
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: #475569;
+        display: flex;
+        gap: 8px;
+    }
+
+    .eval-suggestion i {
+        color: #f59e0b;
+        margin-top: 3px;
     }
 
     /* Header */
@@ -887,6 +1095,15 @@
 
     .btn-revert:hover {
         background: #ffedd5;
+    }
+
+    .btn-delete {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .btn-delete:hover {
+        background: #fecaca;
     }
 
     /* Modal Form */

@@ -203,7 +203,7 @@ export class RiskManagementComponent implements OnInit {
                     this.loadRisks();
                     this.selectedRisk = null;
                 },
-                error: (err) => {
+                error: (err: any) => {
                     this.isAssigning = false;
                     console.error('Error assigning risk:', err);
                     alert('Erreur lors de l\'assignation du risque. Veuillez réessayer.');
@@ -272,7 +272,7 @@ export class RiskManagementComponent implements OnInit {
                 next: () => {
                     this.loadRisks();
                 },
-                error: (err) => {
+                error: (err: any) => {
                     console.error('Error deleting risk:', err);
                     alert('Erreur lors de la suppression du risque.');
                 }

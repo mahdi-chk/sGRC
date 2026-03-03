@@ -43,7 +43,7 @@ router.get('/missions', async (req: AuthRequest, res) => {
         const { role, id } = req.user!;
         let missions;
 
-        if (role === UserRole.SUPER_ADMIN) {
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.ADMIN_SI) {
             missions = await AuditMission.findAll({ include: ['auditSenior', 'auditeur', 'risk'] });
         } else if (role === UserRole.AUDIT_SENIOR) {
             missions = await AuditMission.findAll({

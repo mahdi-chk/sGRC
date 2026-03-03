@@ -70,11 +70,7 @@ export class RiskStatisticsComponent implements OnInit {
         const treatedCount = (this.statusStats['Traité'] || 0) + (this.statusStats['Clôturé'] || 0);
         this.treatmentRate = this.totalRisks > 0 ? Math.round((treatedCount / this.totalRisks) * 100) : 0;
 
-        // Dynamic maturity: base 2.0 + bonus for treated risks + bonus for low critical rate
-        const maturityBonus = (this.treatmentRate / 100) * 2.0;
-        const criticalPenalty = (this.criticalRate / 100) * 1.0;
-        this.avgMaturity = Number((2.0 + maturityBonus - criticalPenalty + 1.0).toFixed(1));
-        if (this.avgMaturity > 5) this.avgMaturity = 5;
+        this.avgMaturity = RiskService.calculateMaturityIndex(this.risks);
     }
 
     // Helper for CSS Pie Charts

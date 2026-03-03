@@ -44,8 +44,7 @@ export class TopManagementDashboardComponent implements OnInit {
             const treatedCount = risks.filter(r => r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED).length;
             this.treatmentRate = this.totalRisks > 0 ? Math.round((treatedCount / this.totalRisks) * 100) : 0;
 
-            // Real maturity calculation: (Base 2.5) + (2.5 * treatmentRate/100)
-            this.maturityLevel = Number((2.5 + (2.5 * (this.treatmentRate / 100))).toFixed(1));
+            this.maturityLevel = RiskService.calculateMaturityIndex(this.risks);
         });
     }
 
@@ -56,5 +55,9 @@ export class TopManagementDashboardComponent implements OnInit {
 
     goToStatistics() {
         this.router.navigate(['/dashboard/statistics']);
+    }
+
+    goToAuditStatistics() {
+        this.router.navigate(['/dashboard/audit-statistics']);
     }
 }

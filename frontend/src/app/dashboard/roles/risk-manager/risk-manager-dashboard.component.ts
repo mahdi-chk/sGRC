@@ -91,11 +91,7 @@ export class RiskManagerDashboardComponent implements OnInit {
         const treatmentRate = Math.round((treated / total) * 100);
         const criticalRate = Math.round((critical / total) * 100);
 
-        // Formula from Top Management dashboard
-        const maturityBonus = (treatmentRate / 100) * 2.0;
-        const criticalPenalty = (criticalRate / 100) * 1.0;
-        let avgMaturity = Number((2.0 + maturityBonus - criticalPenalty + 1.0).toFixed(1));
-        if (avgMaturity > 5) avgMaturity = 5;
+        const avgMaturity = RiskService.calculateMaturityIndex(this.risks);
 
         this.stats = {
             total,
@@ -247,7 +243,7 @@ export class RiskManagerDashboardComponent implements OnInit {
                     this.loadRisks();
                     this.selectedRisk = null;
                 },
-                error: (err) => {
+                error: (err: any) => {
                     this.isAssigning = false;
                     console.error('Error assigning risk:', err);
                     alert('Erreur lors de l\'assignation du risque. Veuillez réessayer.');

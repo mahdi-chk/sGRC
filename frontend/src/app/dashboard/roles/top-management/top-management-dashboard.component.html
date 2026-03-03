@@ -6,14 +6,27 @@
 
 
     <div class="dashboard-grid">
-        <!-- Analytics Card -->
+        <!-- Risk Analytics Card -->
         <div class="module-card premium special-admin">
             <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
-            <h3>Analytics Approfondis</h3>
-            <p class="desc">Visualisez des diagrammes détaillés, des taux de conformité et des analyses de tendances
-                pour une prise de décision stratégique.</p>
+            <h3>Analytics Risques</h3>
+            <p class="desc">Suivez l'évolution du paysage des risques, les taux de traitement et l'indice de maturité
+                GRC pour un pilotage stratégique.</p>
             <div class="card-footer">
                 <button class="btn-primary" (click)="goToStatistics()">
+                    <i class="fas fa-external-link-alt"></i> Voir les détails
+                </button>
+            </div>
+        </div>
+
+        <!-- Audit Analytics Card -->
+        <div class="module-card premium special-admin">
+            <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
+            <h3>Analytics Audit</h3>
+            <p class="desc">Suivez la performance des audits, les missions en cours et les taux de complétion pour
+                une vue d'ensemble du contrôle interne.</p>
+            <div class="card-footer">
+                <button class="btn-primary" (click)="goToAuditStatistics()">
                     <i class="fas fa-external-link-alt"></i> Voir les détails
                 </button>
             </div>

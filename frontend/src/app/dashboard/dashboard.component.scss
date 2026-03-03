@@ -1046,6 +1046,23 @@
         background: #64748b; // Slate grey
       }
 
+      // Audit specific statuses
+      &.a-venir {
+        background: #94a3b8;
+      }
+
+      &.termine {
+        background: #10b981;
+      }
+
+      &.en-retard {
+        background: #ef4444;
+      }
+
+      &.annule {
+        background: #64748b;
+      }
+
       &.dept-fill {
         background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
       }

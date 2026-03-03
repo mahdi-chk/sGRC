@@ -147,6 +147,46 @@ export class RiskService {
     }
 
     /**
+     * Calcule l'indice de maturité globale (0 à 5) basé sur plusieurs dimensions.
+     * @param risks Liste des risques à analyser
+     */
+    static calculateMaturityIndex(risks: Risk[]): number {
+        if (!risks || risks.length === 0) return 0;
+
+        const total = risks.length;
+
+        // 1. Qualité d'Identification (Max 1.0)
+        // Les risques doivent avoir un département et un domaine spécifiés
+        const identifiedCount = risks.filter(r => r.domaine && r.departementId).length;
+        const identificationScore = (identifiedCount / total) * 1.0;
+
+        // 2. Efficacité du Traitement (Max 2.0)
+        // Ratio de risques traités ou clôturés
+        const treatedCount = risks.filter(r => r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED).length;
+        const treatmentScore = (treatedCount / total) * 2.0;
+
+        // 3. Maîtrise de la Sévérité (Max 1.0)
+        // Pénalité pour les risques Critiques et Élevés non traités
+        const highSeverityUntreated = risks.filter(r =>
+            (r.niveauRisque === RiskLevel.CRITICAL || r.niveauRisque === RiskLevel.HIGH) &&
+            (r.statut !== RiskStatus.TREATED && r.statut !== RiskStatus.CLOSED)
+        ).length;
+        const severityScore = Math.max(0, 1.0 - (highSeverityUntreated / total));
+
+        // 4. Respect des Délais (Max 1.0)
+        // Risques non en retard
+        const today = new Date();
+        const onTimeCount = risks.filter(r => {
+            if (r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED) return true;
+            return new Date(r.dateEcheance) >= today;
+        }).length;
+        const timelinessScore = (onTimeCount / total) * 1.0;
+
+        const totalMaturity = identificationScore + treatmentScore + severityScore + timelinessScore;
+        return Number(Math.min(5.0, totalMaturity).toFixed(1));
+    }
+
+    /**
      * Supprime un risque de la base de données.
      */
     deleteRisk(id: number): Observable<void> {

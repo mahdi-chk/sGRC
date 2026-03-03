@@ -1,0 +1,103 @@
+<div class="role-dashboard top-management statistics-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-clipboard-check"></i> Analytics Audit</h1>
+                <p>Analyse de la performance des processus d'audit, suivi des missions et taux de complétion.</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-export" (click)="exportCSV()">
+                <i class="fas fa-download"></i> Exporter CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- KPIs Overview -->
+    <div class="kpi-row mb-4">
+        <div class="kpi-card kpi-total">
+            <span class="kpi-value">{{ totalMissions }}</span>
+            <span class="kpi-label">Missions Totales</span>
+        </div>
+        <div class="kpi-card kpi-progress">
+            <span class="kpi-value">{{ statusStats['En cours'] || 0 }}</span>
+            <span class="kpi-label">En cours</span>
+        </div>
+        <div class="kpi-card kpi-closed">
+            <span class="kpi-value">{{ statusStats['Terminé'] || 0 }}</span>
+            <span class="kpi-label">Terminées</span>
+        </div>
+        <div class="kpi-card kpi-open">
+            <span class="kpi-value">{{ statusStats['En retard'] || 0 }}</span>
+            <span class="kpi-label">En retard</span>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Missions Status Distribution (Bar Chart Style) -->
+        <div class="module-card premium chart-card full-width-module">
+            <h3><i class="fas fa-tasks"></i> État d'Avancement des Missions</h3>
+            <div class="chart-container bar-wrapper">
+                <div class="bar-chart">
+                    <div class="bar-group" *ngFor="let entry of statusStats | keyvalue">
+                        <div class="bar-label">{{ entry.key }}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill" [style.width.%]="(entry.value/totalMissions*100) || 0"
+                                [ngClass]="entry.key.toLowerCase().replace('à', 'a').replace(' ', '-').replace('é', 'e')">
+                                <span class="bar-value">{{ entry.value }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Indicators -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-tachometer-alt"></i> Performance Opérationnelle</h3>
+            <div class="progress-circles">
+                <div class="circle-item">
+                    <div class="premium-circle treatment" [style.--p]="completionRate">
+                        <span class="percent">{{ completionRate }}%</span>
+                    </div>
+                    <span class="circle-label">Taux de Complétion</span>
+                </div>
+                <div class="circle-item">
+                    <div class="premium-circle maturity" [style.--p]="onTimeRate">
+                        <span class="percent">{{ onTimeRate }}%</span>
+                    </div>
+                    <span class="circle-label">Taux de Ponctualité</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risks Summary (If applicable or placeholder for more stats) -->
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-info-circle"></i> Synthèse d'Audit</h3>
+            <div class="domain-list">
+                <div class="domain-item">
+                    <div class="domain-info">
+                        <span class="name">Missions Critiques (Retard)</span>
+                        <span class="count">{{ statusStats['En retard'] || 0 }}</span>
+                    </div>
+                    <div class="progress-lite">
+                        <div class="fill" [style.width.%]="delayedRate" style="background: #ef4444;"></div>
+                    </div>
+                </div>
+                <div class="domain-item">
+                    <div class="domain-info">
+                        <span class="name">Missions à venir</span>
+                        <span class="count">{{ statusStats['À venir'] || 0 }}</span>
+                    </div>
+                    <div class="progress-lite">
+                        <div class="fill" [style.width.%]="(statusStats['À venir']/totalMissions*100) || 0"
+                            style="background: #3b82f6;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

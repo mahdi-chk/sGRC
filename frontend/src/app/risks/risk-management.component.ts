@@ -286,38 +286,43 @@ export class RiskManagementComponent implements OnInit {
         this.suggestedRisks = [];
         this.riskService.generateRisks(this.situationText).subscribe({
             next: (risks) => {
-                this.suggestedRisks = risks.map(r => {
-                    const dept = this.departments.find(d => d.nom.toLowerCase().includes(r.departement.toLowerCase()));
-                    const deptId = dept ? dept.id : null;
+                this.suggestedRisks = risks
+                    .filter(r => r && r.titre) // Exclure les risques invalides/vides
+                    .map(r => {
+                        const deptName = r.departement || '';
+                        const dept = deptName ? this.departments.find(d => d.nom.toLowerCase().includes(deptName.toLowerCase())) : null;
+                        const deptId = dept ? dept.id : null;
 
-                    // Pre-calculate date
-                    let suggestedDate = '';
-                    if (r.delaiSuggestion) {
-                        const date = new Date();
-                        date.setDate(date.getDate() + r.delaiSuggestion);
-                        suggestedDate = date.toISOString().split('T')[0];
-                    }
+                        // Pre-calculate date
+                        let suggestedDate = '';
+                        if (r.delaiSuggestion) {
+                            const date = new Date();
+                            date.setDate(date.getDate() + r.delaiSuggestion);
+                            suggestedDate = date.toISOString().split('T')[0];
+                        }
 
-                    // Try to match user
-                    let matchedUserId = '';
-                    const suggestedResp = r.responsableSuggestion.toLowerCase();
-                    const matchedUser = this.allUsers.find(u =>
-                        (deptId ? u.departementId === deptId : true) && (
-                            u.prenom.toLowerCase().includes(suggestedResp) ||
-                            u.nom.toLowerCase().includes(suggestedResp) ||
-                            u.role.toLowerCase().includes(suggestedResp)
-                        )
-                    );
-                    if (matchedUser) matchedUserId = matchedUser.id.toString();
+                        // Try to match user
+                        let matchedUserId = '';
+                        const suggestedResp = (r.responsableSuggestion || '').toLowerCase();
+                        if (suggestedResp) {
+                            const matchedUser = this.allUsers.find(u =>
+                                (deptId ? u.departementId === deptId : true) && (
+                                    (u.prenom || '').toLowerCase().includes(suggestedResp) ||
+                                    (u.nom || '').toLowerCase().includes(suggestedResp) ||
+                                    (u.role || '').toLowerCase().includes(suggestedResp)
+                                )
+                            );
+                            if (matchedUser) matchedUserId = matchedUser.id.toString();
+                        }
 
-                    return {
-                        ...r,
-                        selected: true,
-                        deptId,
-                        suggestedDate,
-                        manualResponsableId: matchedUserId
-                    };
-                });
+                        return {
+                            ...r,
+                            selected: true,
+                            deptId,
+                            suggestedDate,
+                            manualResponsableId: matchedUserId
+                        };
+                    });
                 this.isGenerating = false;
             },
             error: (err) => {

@@ -30,6 +30,7 @@ The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized s
 
 ### 🤖 AI Assistant (Enhanced RAG Engine)
 - **Extreme Precision**: Highly optimized Retrieval-Augmented Generation (RAG) for querying complex internal PDF reports and unstructured documentation.
+- **Data Integration**: New AI Data Service seamlessly connects the AI with structured risk data for deep, contextual insights.
 - **Real-time Performance**: Reduced latency in AI responses with improved indexing and retrieval algorithms.
 - **Expert Sidekick**: Always-available AI assistant providing context-aware guidance directly on the dashboard.
 

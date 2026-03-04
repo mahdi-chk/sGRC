@@ -82,6 +82,14 @@ try {
   app.use('/api/reporting', reporting);
 } catch (e) { }
 
+// Module Notifications
+try {
+  const notifications = require('./modules/notifications').router;
+  app.use('/api/notifications', notifications);
+} catch (e) {
+  console.error('Failed to load notifications module:', e);
+}
+
 // Module Supervision
 try {
   const supervision = require('./modules/supervision').router;

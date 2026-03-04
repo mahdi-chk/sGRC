@@ -17,7 +17,7 @@ router.post('/generate', authenticateToken, async (req: AuthRequest, res: Respon
         }
 
         // Pass res for streaming mode
-        await AIService.generateResponse(prompt, role, sessionId, res);
+        await AIService.generateResponse(prompt, role, sessionId, req.user!.id, res);
     } catch (error: any) {
         if (!res.headersSent) {
             res.status(500).json({ error: error.message });

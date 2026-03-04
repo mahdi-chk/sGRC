@@ -30,7 +30,9 @@ export interface AuthRequest extends Request {
  */
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Allow token to be passed via query string for GET image/file requests
+    const queryToken = req.query.token as string;
+    const token = (authHeader && authHeader.split(' ')[1]) || queryToken;
 
     if (!token) return res.sendStatus(401); // Unauthorized si pas de token
 

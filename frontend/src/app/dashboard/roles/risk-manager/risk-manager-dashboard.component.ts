@@ -53,6 +53,15 @@ export class RiskManagerDashboardComponent implements OnInit {
     riskLevels = Object.values(RiskLevel);
     today = new Date().toISOString().split('T')[0];
 
+    filterStatut = '';
+    filterNiveau = '';
+    searchText = '';
+
+    get authQueryToken(): string {
+        const token = sessionStorage.getItem('sgrc_token');
+        return token ? '?token=' + token : '';
+    }
+
     constructor(
         private riskService: RiskService,
         private http: HttpClient,

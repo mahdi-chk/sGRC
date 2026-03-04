@@ -71,6 +71,7 @@ User.init(
     {
         sequelize,
         tableName: 'users',
+        paranoid: true, // Active le Soft Delete (ajoute deletedAt) pour le RGPD
     }
 );
 

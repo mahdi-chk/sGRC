@@ -79,6 +79,11 @@ export class RiskManagementComponent implements OnInit {
         return user.role === UserRole.AUDIT_SENIOR || user.role === UserRole.SUPER_ADMIN;
     }
 
+    get authQueryToken(): string {
+        const token = sessionStorage.getItem('sgrc_token');
+        return token ? '?token=' + token : '';
+    }
+
     loadRisks() {
         this.riskService.getRisks().subscribe(risks => this.risks = risks);
     }

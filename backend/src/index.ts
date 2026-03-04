@@ -7,7 +7,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import sequelize from './database';
+import { authenticateToken } from './middleware/auth.middleware';
 
 // Configuration des variables d'environnement
 dotenv.config();
@@ -18,14 +21,32 @@ const app = express();
  * --- CONFIGURATION DES MIDDLEWARES ---
  */
 
-// Activation de CORS (Cross-Origin Resource Sharing)
-app.use(cors());
+// Injection des recommandations OWASP pour la sécurisation des requêtes (HSTS, NoSniff, etc.)
+// Désactive crossOriginResourcePolicy pour permettre au frontend d'importer les pièces jointes
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
+// Throttling adaptatif pour bloquer les attaques de force brute sur l'authentification
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // Limite calculée sur une fenêtre de 15 minutes
+  max: 10, // Déclenchement d'un drop IP après 10 erreurs de login répétées
+  message: "Système de protection activé : Trop de tentatives. Veuillez réessayer plus tard.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Activation de CORS (Cross-Origin Resource Sharing) - Restreint au frontend !
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+  optionsSuccessStatus: 200
+}));
 
 // Middleware pour parser le corps des requêtes en JSON
 app.use(express.json());
 
-// Service des fichiers statiques pour le stockage des pièces justificatives
-app.use('/src/storage', express.static('src/storage'));
+// Service des fichiers statiques pour le stockage des pièces justificatives (Protégé par JWT)
+app.use('/src/storage', authenticateToken, express.static('src/storage'));
 
 /**
  * --- ENREGISTREMENT DES MODULES GRC ---
@@ -103,6 +124,7 @@ try {
 // Authentification
 import { router as authRoutes } from './modules/auth/auth.routes';
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/login', authLimiter); // Appliquer le limiteur spécifiquement sur le login
 
 // Utilisateurs
 import { router as userRoutes } from './modules/users/user.routes';
@@ -154,6 +176,16 @@ sequelize.sync().then(async () => {
     await addColumn('aiAnalysisTendance', 'NVARCHAR(255) NULL');
     await addColumn('aiAnalysisSuggestion', 'NVARCHAR(MAX) NULL');
     await addColumn('aiAnalysisDate', 'DATETIMEOFFSET NULL');
+
+    // Ajout manuel de la colonne 'deletedAt' pour le Soft Delete (Paranoid) des utilisateurs
+    try {
+      await sequelize.query(`
+        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[users]') AND name = 'deletedAt')
+        ALTER TABLE [users] ADD deletedAt DATETIMEOFFSET NULL;
+      `);
+    } catch (e) {
+      console.error('Failed to add deletedAt to users:', e);
+    }
 
     // Mise à jour de la table notifications pour inclure auditMissionId
     try {

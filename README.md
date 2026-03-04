@@ -7,6 +7,7 @@ The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized s
 
 ### 🏢 Governance & Core Management
 - **Organigramme Management**: Dynamic management of organizational structures, departments, and positions.
+- **User Management**: Comprehensive administration of user roles and permissions.
 - **Excel Import**: Bulk data integration for organigrammes via Excel (`.xlsx`, `.xls`) using the `xlsx` library.
 - **Audit Module**: End-to-end audit lifecycle management, from planning to findings and remediation.
 - **Policy Management**: Centralized repository for governance frameworks and organizational policies.

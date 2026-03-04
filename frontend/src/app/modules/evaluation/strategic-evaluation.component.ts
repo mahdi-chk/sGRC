@@ -23,6 +23,12 @@ export class StrategicEvaluationComponent implements OnInit {
     // Modal Historique
     showHistoryModal = false;
     selectedRiskForHistory: (Risk & { treatments?: any[] }) | null = null;
+    today = new Date().toISOString().split('T')[0];
+
+    get authQueryToken(): string {
+        const token = sessionStorage.getItem('sgrc_token');
+        return token ? '?token=' + token : '';
+    }
 
     constructor(
         private riskService: RiskService,

@@ -49,13 +49,15 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async 
             console.error('Failed to send welcome email:', emailError);
         }
 
-        res.status(201).json(user);
+        const userResponse = user.toJSON();
+        delete userResponse.password_hash;
+        delete userResponse.password_salt;
+
+        res.status(201).json(userResponse);
     } catch (error: any) {
-        console.error('Sequelize Error Details:', error);
+        console.error('User Creation Error:', error.message);
         res.status(400).json({
-            message: 'Error creating user',
-            error: error.message,
-            details: error.errors // Sequelize validation errors
+            message: 'Erreur lors de la création de l\'utilisateur. Vérifiez les données fournies.'
         });
     }
 });
@@ -74,16 +76,17 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), asyn
         const [updated] = await User.update(userData, { where: { id } });
         if (updated) {
             const updatedUser = await User.findByPk(id as string);
-            res.json(updatedUser);
+            const userResponse = updatedUser?.toJSON() || {};
+            delete userResponse.password_hash;
+            delete userResponse.password_salt;
+            res.json(userResponse);
         } else {
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error: any) {
-        console.error('Sequelize Error Details:', error);
+        console.error('User Update Error:', error.message);
         res.status(400).json({
-            message: 'Error updating user',
-            error: error.message,
-            details: error.errors
+            message: 'Erreur lors de la mise à jour de l\'utilisateur. Vérifiez les données fournies.'
         });
     }
 });
@@ -98,8 +101,9 @@ router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), a
         } else {
             res.status(404).json({ message: 'User not found' });
         }
-    } catch (error) {
-        res.status(400).json({ message: 'Error deleting user', error });
+    } catch (error: any) {
+        console.error('User Deletion Error:', error.message);
+        res.status(400).json({ message: 'Erreur inattendue lors de la suppression de l\'utilisateur.' });
     }
 });
 

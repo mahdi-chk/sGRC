@@ -13,6 +13,7 @@ export class AssignedRisksComponent implements OnInit {
     selectedRisk: Risk | null = null;
     showTreatmentModal = false;
     showDetailsModal = false;
+    isAssigning = false;
 
     treatmentContent = '';
     selectedFile: File | null = null;
@@ -24,6 +25,11 @@ export class AssignedRisksComponent implements OnInit {
         urgent: 0
     };
     currentUser: any;
+
+    get authQueryToken(): string {
+        const token = sessionStorage.getItem('sgrc_token');
+        return token ? '?token=' + token : '';
+    }
 
     constructor(
         private riskService: RiskService,

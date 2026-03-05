@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
                 departementNom: user.departement?.nom
             },
             JWT_SECRET,
-            { expiresIn: '1d' }
+            { expiresIn: '10m' }
         );
 
         res.json({
@@ -58,6 +58,24 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', error });
     }
+});
+
+// Refresh token route
+router.get('/refresh', async (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.sendStatus(401);
+
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+        if (err) return res.sendStatus(403);
+
+        // Remove iat and exp to sign a new token
+        const { iat, exp, ...payload } = user;
+
+        const newToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '10m' });
+        res.json({ token: newToken });
+    });
 });
 
 export { router };

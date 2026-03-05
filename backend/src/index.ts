@@ -37,8 +37,16 @@ const authLimiter = rateLimit({
 });
 
 // Activation de CORS (Cross-Origin Resource Sharing) - Restreint au frontend !
+const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:4200'].filter(Boolean) as string[];
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+  origin: (origin, callback) => {
+    // Permettre les requêtes sans origine (comme les outils de test API) ou les origines autorisées
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   optionsSuccessStatus: 200
 }));
 

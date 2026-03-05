@@ -37,6 +37,8 @@ import { SharedModule } from './shared/shared.module';
 import { OrganigrammeManagementComponent } from './dashboard/components/organigramme-management/organigramme-management.component';
 import { AuditStatisticsComponent } from './dashboard/roles/top-management/audit-statistics/audit-statistics.component';
 
+import { UserRole } from './core/models/user-role.enum';
+
 /**
  * --- CONFIGURATION DU ROUTAGE ---
  */
@@ -45,27 +47,28 @@ const routes: Routes = [
   {
     path: 'dashboard',
     component: DashboardComponent,
-    canActivate: [AuthGuard], // Protection des routes par garde d'authentification
+    canActivate: [AuthGuard], // Protection racine
+    canActivateChild: [AuthGuard], // Protection des sous-routes (RBAC)
     children: [
       { path: '', component: DashboardHomeComponent },
-      { path: 'users', component: UserManagementComponent },
+      { path: 'users', component: UserManagementComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] } },
       { path: 'risks', component: RiskManagementComponent },
-      { path: 'strategic-evaluation', component: StrategicEvaluationComponent },
-      { path: 'assigned-risks', component: AssignedRisksComponent },
-      { path: 'planning', component: PlanningComponent },
-      { path: 'statistics', component: RiskStatisticsComponent },
-      { path: 'audit-statistics', component: AuditStatisticsComponent },
-      // Routes spécifiques par rôle
-      { path: 'super-admin', component: SuperAdminDashboardComponent },
-      { path: 'admin-si', component: AdminSiDashboardComponent },
-      { path: 'auditeur', component: AuditeurDashboardComponent },
-      { path: 'audit-senior', component: AuditSeniorDashboardComponent },
-      { path: 'risk-manager', component: RiskManagerDashboardComponent },
-      { path: 'risk-agent', component: RiskAgentDashboardComponent },
-      { path: 'top-management', component: TopManagementDashboardComponent },
-      { path: 'auditing', component: AuditingComponent },
-      { path: 'auditor-missions', component: AuditorMissionsComponent },
-      { path: 'organigramme', component: OrganigrammeManagementComponent }
+      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT] } },
+      { path: 'assigned-risks', component: AssignedRisksComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
+      { path: 'planning', component: PlanningComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR] } },
+      { path: 'statistics', component: RiskStatisticsComponent, data: { expectedRoles: [UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT] } },
+      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      // Routes spécifiques par rôle (Strictement 1:1)
+      { path: 'super-admin', component: SuperAdminDashboardComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
+      { path: 'admin-si', component: AdminSiDashboardComponent, data: { expectedRoles: [UserRole.ADMIN_SI] } },
+      { path: 'auditeur', component: AuditeurDashboardComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
+      { path: 'audit-senior', component: AuditSeniorDashboardComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR] } },
+      { path: 'risk-manager', component: RiskManagerDashboardComponent, data: { expectedRoles: [UserRole.RISK_MANAGER] } },
+      { path: 'risk-agent', component: RiskAgentDashboardComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
+      { path: 'top-management', component: TopManagementDashboardComponent, data: { expectedRoles: [UserRole.TOP_MANAGEMENT] } },
+      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
+      { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
+      { path: 'organigramme', component: OrganigrammeManagementComponent, data: { expectedRoles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN] } }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },

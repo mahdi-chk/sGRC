@@ -7,6 +7,7 @@ import { Notification } from '../core/models/notification.model';
 import { UserRole } from '../core/models/user-role.enum';
 import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 interface Submodule {
   title: string;
@@ -150,7 +151,7 @@ export class DashboardComponent {
 
   checkBackend() {
     this.status = 'Checking...';
-    this.http.get('http://localhost:3000/api/governance').subscribe(
+    this.http.get(`${environment.apiUrl}/governance`).subscribe(
       () => this.status = 'Backend reachable (GET /api/governance)',
       (err: any) => this.status = 'Backend unreachable: ' + (err.status || err.message)
     );

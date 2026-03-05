@@ -3,12 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, timer, of } from 'rxjs';
 import { switchMap, tap, catchError } from 'rxjs/operators';
 import { Notification } from '../models/notification.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class NotificationService {
-    private apiUrl = 'http://localhost:3000/api/notifications';
+    private apiUrl = `${environment.apiUrl}/notifications`;
     private notificationsSubject = new BehaviorSubject<Notification[]>([]);
     public notifications$ = this.notificationsSubject.asObservable();
     private unreadCountSubject = new BehaviorSubject<number>(0);

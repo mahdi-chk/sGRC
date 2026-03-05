@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * @file organigramme.service.ts
@@ -10,7 +11,7 @@ import { Observable } from 'rxjs';
     providedIn: 'root'
 })
 export class OrganigrammeService {
-    private apiUrl = 'http://localhost:3000/api/organigramme';
+    private apiUrl = `${environment.apiUrl}/organigramme`;
 
     constructor(private http: HttpClient) { }
 

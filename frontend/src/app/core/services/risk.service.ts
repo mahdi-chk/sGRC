@@ -6,6 +6,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Énumération des niveaux de risque (synchronisée avec le backend)
@@ -76,7 +77,7 @@ export interface Risk {
     providedIn: 'root'
 })
 export class RiskService {
-    private apiUrl = 'http://localhost:3000/api/risk';
+    private apiUrl = `${environment.apiUrl}/risk`;
 
     constructor(private http: HttpClient) { }
 
@@ -133,7 +134,7 @@ export class RiskService {
      * Utilise l'IA pour générer des suggestions de risques à partir d'une situation donnée.
      */
     generateRisks(situation: string): Observable<any[]> {
-        return this.http.post<any[]>('http://localhost:3000/api/assistant/generate-risks', { situation });
+        return this.http.post<any[]>(`${environment.apiUrl}/assistant/generate-risks`, { situation });
     }
 
     /**

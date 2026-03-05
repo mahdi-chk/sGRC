@@ -18,7 +18,7 @@ const sequelize = new Sequelize(
     process.env.DB_USER || 'sa',      // Utilisateur
     process.env.DB_PASS || 'Sa@12345', // Mot de passe
     {
-        host: process.env.DB_HOST || 'DESKTOP-MAHDI',
+        host: process.env.DB_HOST || 'localhost', // Hôte de la base de données
         dialect: 'mssql', // Utilisation du dialecte Microsoft SQL Server
         dialectOptions: {
             options: {

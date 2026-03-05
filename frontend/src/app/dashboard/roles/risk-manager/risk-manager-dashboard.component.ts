@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { AuthService } from '../../../core/services/auth.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
     selector: 'app-risk-manager-dashboard',
@@ -16,6 +17,7 @@ export class RiskManagerDashboardComponent implements OnInit {
     @Input() title: string = 'Dashboard Risk Manager';
     @Output() openModule = new EventEmitter<any>();
     @Output() openRiskManagement = new EventEmitter<void>();
+    environment = environment;
 
     risks: Risk[] = [];
     departments: any[] = [];
@@ -111,8 +113,8 @@ export class RiskManagerDashboardComponent implements OnInit {
     }
 
     loadInitialData() {
-        this.http.get<any[]>('http://localhost:3000/api/departments').subscribe(data => this.departments = data);
-        this.http.get<any[]>('http://localhost:3000/api/users').subscribe(users => {
+        this.http.get<any[]>(`${environment.apiUrl}/departments`).subscribe(data => this.departments = data);
+        this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe(users => {
             this.allUsers = users;
             // Initially, filteredAgents will be empty or all Agents depending on dept selection
             this.updateFilteredAgents();

@@ -3,6 +3,7 @@ import { AuditingService, AuditMission, AuditMissionStatus } from '../../core/se
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-auditing',
@@ -75,7 +76,7 @@ export class AuditingComponent implements OnInit {
   }
 
   loadUsers() {
-    this.http.get<any[]>('http://localhost:3000/api/users').subscribe(users => {
+    this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe(users => {
       this.allUsers = users;
       this.auditors = users.filter(u => u.role === UserRole.AUDITEUR);
     });

@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { RiskService, Risk } from '../../core/services/risk.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Component({
     selector: 'app-strategic-evaluation',
@@ -10,6 +11,7 @@ import { catchError } from 'rxjs/operators';
     styleUrls: ['./strategic-evaluation.component.scss']
 })
 export class StrategicEvaluationComponent implements OnInit {
+    environment = environment;
     risks: (Risk & { treatments?: any[] })[] = [];
     filteredRisks: (Risk & { treatments?: any[] })[] = [];
     isEvaluating = false;

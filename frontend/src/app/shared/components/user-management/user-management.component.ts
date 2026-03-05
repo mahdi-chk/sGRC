@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
+import { environment } from '../../../../environments/environment';
 
 export interface User {
     id?: number;
@@ -67,21 +68,21 @@ export class UserManagementComponent implements OnInit {
     }
 
     loadUsers() {
-        this.http.get<User[]>('http://localhost:3000/api/users').subscribe(
+        this.http.get<User[]>(`${environment.apiUrl}/users`).subscribe(
             (data: User[]) => this.users = data,
             (err: any) => this.status = 'Error loading users: ' + (err.status || err.message)
         );
     }
 
     loadDepartments() {
-        this.http.get<any[]>('http://localhost:3000/api/departments').subscribe(
+        this.http.get<any[]>(`${environment.apiUrl}/departments`).subscribe(
             (data: any[]) => this.departements = data,
             (err: any) => this.status = 'Error loading departments: ' + (err.status || err.message)
         );
     }
 
     loadRoles() {
-        this.http.get<string[]>('http://localhost:3000/api/users/roles').subscribe(
+        this.http.get<string[]>(`${environment.apiUrl}/users/roles`).subscribe(
             (data: string[]) => this.postes = data,
             (err: any) => this.status = 'Error loading roles: ' + (err.status || err.message)
         );
@@ -175,7 +176,7 @@ export class UserManagementComponent implements OnInit {
         delete payload.confirmPassword;
 
         if (this.editingUser) {
-            this.http.put(`http://localhost:3000/api/users/${this.editingUser.id}`, payload).subscribe(
+            this.http.put(`${environment.apiUrl}/users/${this.editingUser.id}`, payload).subscribe(
                 () => {
                     this.status = 'Utilisateur modifié';
                     this.loadUsers();
@@ -184,7 +185,7 @@ export class UserManagementComponent implements OnInit {
                 (err: any) => this.status = 'Error updating user: ' + (err.status || err.message)
             );
         } else {
-            this.http.post('http://localhost:3000/api/users', payload).subscribe(
+            this.http.post(`${environment.apiUrl}/users`, payload).subscribe(
                 () => {
                     this.status = 'Utilisateur créé';
                     this.loadUsers();
@@ -204,7 +205,7 @@ export class UserManagementComponent implements OnInit {
     deleteUser(event: Event, user: User) {
         event.stopPropagation();
         if (confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${user.prenom} ${user.nom} ?`)) {
-            this.http.delete(`http://localhost:3000/api/users/${user.id}`).subscribe(
+            this.http.delete(`${environment.apiUrl}/users/${user.id}`).subscribe(
                 () => {
                     this.status = 'Utilisateur supprimé';
                     this.loadUsers();

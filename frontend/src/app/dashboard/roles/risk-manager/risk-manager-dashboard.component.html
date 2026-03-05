@@ -268,7 +268,7 @@
                 </div>
                 <div class="detail-item" *ngIf="selectedRisk.pieceJustificative"
                     style="grid-column: span 2; margin-top: 10px; padding-top: 15px; border-top: 1px dashed #e2e8f0;">
-                    <a [href]="'http://localhost:3000/' + selectedRisk.pieceJustificative + authQueryToken"
+                    <a [href]="environment.serverUrl + '/' + selectedRisk.pieceJustificative + authQueryToken"
                         target="_blank" class="btn-secondary"
                         style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem;">
                         <i class="fas fa-file-pdf"></i> Voir le justificatif
@@ -296,7 +296,8 @@
                             }}</p>
                         <div *ngIf="comment.pieceJointe"
                             style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #cbd5e1;">
-                            <a [href]="'http://localhost:3000/' + comment.pieceJointe + authQueryToken" target="_blank"
+                            <a [href]="environment.serverUrl + '/' + comment.pieceJointe + authQueryToken"
+                                target="_blank"
                                 style="color: #004a99; font-size: 0.8rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                                 <i class="fas fa-paperclip"></i> Voir la preuve
                             </a>

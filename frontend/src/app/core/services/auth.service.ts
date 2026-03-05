@@ -9,12 +9,13 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-    private apiUrl = 'http://localhost:3000/api/auth';
+    private apiUrl = `${environment.apiUrl}/auth`;
 
     // Sujet pour suivre l'utilisateur actuellement connecté de manière réactive
     private currentUserSubject = new BehaviorSubject<any>(null);

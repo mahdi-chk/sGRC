@@ -6,6 +6,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Énumération des statuts de mission d'audit (synchronisée avec le backend)
@@ -45,7 +46,7 @@ export interface AuditMission {
     providedIn: 'root'
 })
 export class AuditingService {
-    private apiUrl = 'http://localhost:3000/api/auditing';
+    private apiUrl = `${environment.apiUrl}/auditing`;
 
     constructor(private http: HttpClient) { }
 

@@ -199,7 +199,7 @@
                             {{ treatment.content }}
                         </div>
                         <div class="card-footer" *ngIf="treatment.pieceJointe">
-                            <a [href]="'http://localhost:3000/' + treatment.pieceJointe + authQueryToken"
+                            <a [href]="environment.serverUrl + '/' + treatment.pieceJointe + authQueryToken"
                                 target="_blank" class="attachment-link">
                                 <i class="fas fa-paperclip"></i> Voir la pièce jointe
                             </a>

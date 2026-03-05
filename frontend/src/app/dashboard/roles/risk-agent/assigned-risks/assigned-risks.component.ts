@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { RiskService, Risk, RiskStatus } from '../../../../core/services/risk.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
     selector: 'app-assigned-risks',
@@ -9,6 +10,7 @@ import { AuthService } from '../../../../core/services/auth.service';
     styleUrls: ['../../../dashboard.component.scss']
 })
 export class AssignedRisksComponent implements OnInit {
+    environment = environment;
     assignedRisks: Risk[] = [];
     selectedRisk: Risk | null = null;
     showTreatmentModal = false;

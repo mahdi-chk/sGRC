@@ -4,7 +4,7 @@ import axios from 'axios';
 import { SystemSetting } from '../settings/setting.model';
 import { UserRole } from '../users/user.roles';
 
-const DEFAULT_NORMES_PATH = 'G:\\Téléchargement\\sGRC\\normes';
+const DEFAULT_NORMES_PATH = process.env.NORMES_PATH || path.join(__dirname, '../../../normes');
 const OLLAMA_EMBED_URL = process.env.OLLAMA_EMBED_URL || 'http://localhost:11434/api/embeddings';
 const EMBED_MODEL = 'nomic-embed-text';
 const STORAGE_DIR = path.join(__dirname, '../../storage');

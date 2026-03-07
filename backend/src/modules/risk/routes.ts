@@ -284,7 +284,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 /**
  * ÉVALUATION DES RISQUES PAR IA
  */
-router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT), async (req: AuthRequest, res) => {
     try {
         const { riskIds } = req.body;
         const risks = await Risk.findAll({ where: { id: riskIds } });

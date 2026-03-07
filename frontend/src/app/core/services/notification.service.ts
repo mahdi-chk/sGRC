@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable, timer, of } from 'rxjs';
 import { switchMap, tap, catchError } from 'rxjs/operators';
 import { Notification } from '../models/notification.model';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 @Injectable({
     providedIn: 'root'
@@ -15,12 +16,27 @@ export class NotificationService {
     private unreadCountSubject = new BehaviorSubject<number>(0);
     public unreadCount$ = this.unreadCountSubject.asObservable();
 
-    constructor(private http: HttpClient) {
-        // Start polling every 30 seconds
-        timer(0, 5000).pipe(
+    private pollingSubscription: any;
+
+    constructor(private http: HttpClient, private authService: AuthService) {
+        // Start polling only when authenticated
+        this.authService.currentUser$.subscribe(user => {
+            if (user) {
+                this.startPolling();
+            } else {
+                this.stopPolling();
+            }
+        });
+    }
+
+    private startPolling() {
+        this.stopPolling(); // Ensure no duplicate timers
+        this.pollingSubscription = timer(0, 30000).pipe( // Changed to 30s to be more reasonable
             switchMap(() => this.getNotifications().pipe(
                 catchError(err => {
-                    console.error('Error fetching notifications:', err);
+                    if (err.status !== 401) {
+                        console.error('Error fetching notifications:', err);
+                    }
                     return of([]);
                 })
             ))
@@ -30,6 +46,13 @@ export class NotificationService {
                 this.unreadCountSubject.next(notifications.filter(n => !n.isRead).length);
             }
         });
+    }
+
+    private stopPolling() {
+        if (this.pollingSubscription) {
+            this.pollingSubscription.unsubscribe();
+            this.pollingSubscription = null;
+        }
     }
 
     getNotifications(): Observable<Notification[]> {

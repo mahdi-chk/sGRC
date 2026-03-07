@@ -33,9 +33,21 @@ export class AuthService {
     constructor(private http: HttpClient, private router: Router, private ngZone: NgZone) {
         // Restauration de la session depuis le sessionStorage au démarrage
         const savedUser = sessionStorage.getItem('sgrc_user');
-        if (savedUser) {
-            this.currentUserSubject.next(JSON.parse(savedUser));
-            this.startActivityMonitoring();
+        const savedToken = sessionStorage.getItem('sgrc_token');
+
+        if (savedUser && savedToken) {
+            try {
+                this.currentUserSubject.next(JSON.parse(savedUser));
+                this.startActivityMonitoring();
+            } catch (e) {
+                console.error('Error parsing saved user, clearing session');
+                this.logout();
+            }
+        } else if (savedUser || savedToken) {
+            // État incohérent : on nettoie tout
+            console.warn('Inconsistent session state detected, clearing sessionStorage');
+            sessionStorage.removeItem('sgrc_user');
+            sessionStorage.removeItem('sgrc_token');
         }
     }
 

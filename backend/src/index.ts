@@ -131,8 +131,8 @@ try {
 
 // Authentification
 import { router as authRoutes } from './modules/auth/auth.routes';
-app.use('/api/auth', authRoutes);
 app.use('/api/auth/login', authLimiter); // Appliquer le limiteur spécifiquement sur le login
+app.use('/api/auth', authRoutes);
 
 // Utilisateurs
 import { router as userRoutes } from './modules/users/user.routes';

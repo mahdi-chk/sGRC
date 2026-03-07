@@ -53,9 +53,9 @@ const routes: Routes = [
       { path: '', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] } },
       { path: 'risks', component: RiskManagementComponent },
-      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT] } },
+      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR] } },
       { path: 'assigned-risks', component: AssignedRisksComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
-      { path: 'planning', component: PlanningComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR] } },
+      { path: 'planning', component: PlanningComponent },
       { path: 'statistics', component: RiskStatisticsComponent, data: { expectedRoles: [UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT] } },
       { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       // Routes spécifiques par rôle (Strictement 1:1)
@@ -66,7 +66,7 @@ const routes: Routes = [
       { path: 'risk-manager', component: RiskManagerDashboardComponent, data: { expectedRoles: [UserRole.RISK_MANAGER] } },
       { path: 'risk-agent', component: RiskAgentDashboardComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'top-management', component: TopManagementDashboardComponent, data: { expectedRoles: [UserRole.TOP_MANAGEMENT] } },
-      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
+      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
       { path: 'organigramme', component: OrganigrammeManagementComponent, data: { expectedRoles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN] } }
     ]

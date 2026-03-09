@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { environment } from '../../../../environments/environment';
 
@@ -31,6 +34,7 @@ export class UserManagementComponent implements OnInit {
     users: User[] = [];
     validationErrors: any = {};
     status: string | null = null;
+    showExportMenu = false;
 
     showPassword = false;
     showConfirmPassword = false;
@@ -247,5 +251,58 @@ export class UserManagementComponent implements OnInit {
 
     toggleConfirmPasswordVisibility() {
         this.showConfirmPassword = !this.showConfirmPassword;
+    }
+
+    exportToXLSX() {
+        const dataToExport = this.filteredUsers.map(u => ({
+            'Nom': u.nom,
+            'Prénom': u.prenom,
+            'Email': u.mail,
+            'Téléphone': u.telephone,
+            'Rôle': u.role,
+            'Département': this.departements.find(d => d.id === u.departementId)?.nom || 'N/A'
+        }));
+
+        const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
+        const wb: XLSX.WorkBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Utilisateurs');
+        XLSX.writeFile(wb, `Export_Utilisateurs_${new Date().getTime()}.xlsx`);
+        this.showExportMenu = false;
+    }
+
+    exportToPDF() {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(18);
+        doc.setTextColor(0, 74, 153);
+        doc.text('Rapport de Gestion des Utilisateurs', 14, 22);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
+
+        const columns = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Rôle', 'Département'];
+        const rows = this.filteredUsers.map(u => [
+            u.nom,
+            u.prenom,
+            u.mail,
+            u.telephone,
+            u.role,
+            this.departements.find(d => d.id === u.departementId)?.nom || 'N/A'
+        ]);
+
+        autoTable(doc, {
+            head: [columns],
+            body: rows,
+            startY: 40,
+            theme: 'striped',
+            headStyles: { fillColor: [0, 74, 153], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 9, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [245, 247, 250] }
+        });
+
+        doc.save(`Export_Utilisateurs_${new Date().getTime()}.pdf`);
+        this.showExportMenu = false;
     }
 }

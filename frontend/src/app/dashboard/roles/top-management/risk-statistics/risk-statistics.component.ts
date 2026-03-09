@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../../core/services/risk.service';
 import { Router } from '@angular/router';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
     selector: 'app-risk-statistics',
@@ -20,6 +23,7 @@ export class RiskStatisticsComponent implements OnInit {
     criticalRate: number = 0;
     treatmentRate: number = 0;
     avgMaturity: number = 0;
+    showExportMenu = false;
 
     constructor(private riskService: RiskService, private router: Router) { }
 
@@ -79,15 +83,20 @@ export class RiskStatisticsComponent implements OnInit {
     }
 
     exportCSV() {
+        // Replaced by XLSX and PDF
+    }
+
+    exportToXLSX() {
+        this.showExportMenu = false;
         const rows = [
-            ['Categorie', 'Metrique', 'Valeur'],
-            ['Overview', 'Total Risques', this.totalRisks],
-            ['Overview', 'Taux de Traitement', this.treatmentRate + '%'],
-            ['Overview', 'Niveau de Maturite', this.avgMaturity + '/5'],
-            ['Overview', 'Taux de Risques Critiques', this.criticalRate + '%'],
+            ['Catégorie', 'Métrique', 'Valeur'],
+            ['Vue d\'ensemble', 'Total Risques', this.totalRisks],
+            ['Vue d\'ensemble', 'Taux de Traitement', this.treatmentRate + '%'],
+            ['Vue d\'ensemble', 'Niveau de Maturité', this.avgMaturity + '/5'],
+            ['Vue d\'ensemble', 'Taux de Risques Critiques', this.criticalRate + '%'],
             [''],
             ['Distribution par Sévérité', '', ''],
-            ...Object.entries(this.levelStats).map(([k, v]) => ['Severite', k, v]),
+            ...Object.entries(this.levelStats).map(([k, v]) => ['Sévérité', k, v]),
             [''],
             ['État d\'Avancement', '', ''],
             ...Object.entries(this.statusStats).map(([k, v]) => ['Statut', k, v]),
@@ -96,20 +105,63 @@ export class RiskStatisticsComponent implements OnInit {
             ...Object.entries(this.domainStats).map(([k, v]) => ['Domaine', k, v]),
             [''],
             ['Distribution par Département', '', ''],
-            ...Object.entries(this.deptStats).map(([k, v]) => ['Departement', k, v])
+            ...Object.entries(this.deptStats).map(([k, v]) => ['Département', k, v])
         ];
 
-        const csvContent = rows.map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
+        const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(rows);
+        const wb: XLSX.WorkBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Statistiques Risques');
+        XLSX.writeFile(wb, `statistiques_risques_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
 
-        link.setAttribute("href", url);
-        link.setAttribute("download", `statistiques_risques_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    exportToPDF() {
+        this.showExportMenu = false;
+        const doc = new jsPDF('p', 'mm', 'a4');
+
+        doc.setFontSize(18);
+        doc.text('Statistiques des Risques', 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
+
+        const overviewData = [
+            ['Risques Totaux', this.totalRisks.toString()],
+            ['Taux de Traitement', this.treatmentRate + '%'],
+            ['Indice de Maturité', this.avgMaturity + '/5'],
+            ['Taux Critiques', this.criticalRate + '%']
+        ];
+
+        autoTable(doc, {
+            startY: 40,
+            head: [['Métrique', 'Valeur']],
+            body: overviewData,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 74, 153] }
+        });
+
+        // Distribution sections
+        let finalY = (doc as any).lastAutoTable.finalY + 15;
+
+        const sections = [
+            { title: 'Distribution par Sévérité', data: this.levelStats, head: ['Sévérité', 'Nombre'] },
+            { title: 'État d\'Avancement', data: this.statusStats, head: ['Statut', 'Nombre'] }
+        ];
+
+        sections.forEach(section => {
+            if (finalY > 240) { doc.addPage(); finalY = 20; }
+            doc.setFontSize(14);
+            doc.text(section.title, 14, finalY);
+            autoTable(doc, {
+                startY: finalY + 5,
+                head: [section.head],
+                body: Object.entries(section.data).map(([k, v]) => [k, v.toString()]),
+                theme: 'striped',
+                headStyles: { fillColor: [0, 74, 153] }
+            });
+            finalY = (doc as any).lastAutoTable.finalY + 15;
+        });
+
+        doc.save(`statistiques_risques_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
     goBack() {

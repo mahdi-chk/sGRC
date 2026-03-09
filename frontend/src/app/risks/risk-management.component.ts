@@ -5,6 +5,9 @@ import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../core/models/user-role.enum';
 import { OrganigrammeService } from '../core/services/organigramme.service';
 import { environment } from '../../environments/environment';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
     selector: 'app-risk-management',
@@ -31,6 +34,7 @@ export class RiskManagementComponent implements OnInit {
     isEditing = false;
     selectedRisk: Risk | null = null;
     editRiskId: number | null = null;
+    showExportMenu = false;
 
     // AI Generation
     showAiModal = false;
@@ -439,7 +443,39 @@ export class RiskManagementComponent implements OnInit {
     }
 
     downloadReport() {
-        const headers = ['Titre', 'Domaine', 'Niveau', 'Statut', 'Responsable', 'Agent', 'Date Echéance', 'Date Création'];
+        // This is now replaced by the dropdown options
+    }
+
+    exportToXLSX() {
+        this.showExportMenu = false;
+        const data = this.risks.map(r => ({
+            'Titre': r.titre,
+            'Domaine': r.domaine,
+            'Niveau': r.niveauRisque,
+            'Statut': r.statut,
+            'Responsable': `${r.responsableTraitement?.prenom || ''} ${r.responsableTraitement?.nom || ''}`.trim(),
+            'Agent': r.riskAgent ? `${r.riskAgent.prenom} ${r.riskAgent.nom}` : 'Non assigné',
+            'Date Echéance': new Date(r.dateEcheance).toLocaleDateString('fr-FR'),
+            'Date Création': new Date(r.createdAt).toLocaleDateString('fr-FR')
+        }));
+
+        const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
+        const wb: XLSX.WorkBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Risques');
+        XLSX.writeFile(wb, `rapport-risques-${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    exportToPDF() {
+        this.showExportMenu = false;
+        const doc = new jsPDF('l', 'mm', 'a4');
+
+        doc.setFontSize(18);
+        doc.text('Rapport des Risques', 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
+
+        const head = [['Titre', 'Domaine', 'Niveau', 'Statut', 'Responsable', 'Agent', 'Échéance']];
         const rows = this.risks.map(r => [
             r.titre,
             r.domaine,
@@ -447,17 +483,18 @@ export class RiskManagementComponent implements OnInit {
             r.statut,
             `${r.responsableTraitement?.prenom || ''} ${r.responsableTraitement?.nom || ''}`.trim(),
             r.riskAgent ? `${r.riskAgent.prenom} ${r.riskAgent.nom}` : 'Non assigné',
-            new Date(r.dateEcheance).toLocaleDateString('fr-FR'),
-            new Date(r.createdAt).toLocaleDateString('fr-FR')
+            new Date(r.dateEcheance).toLocaleDateString('fr-FR')
         ]);
-        const csvContent = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `rapport-risques-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+
+        autoTable(doc, {
+            startY: 35,
+            head: head,
+            body: rows,
+            theme: 'striped',
+            headStyles: { fillColor: [0, 74, 153] }
+        });
+
+        doc.save(`rapport-risques-${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
     get filteredRisks(): Risk[] {

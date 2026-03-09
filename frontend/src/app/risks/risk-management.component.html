@@ -19,9 +19,19 @@
                 title="Évaluer les risques">
                 <i class="fas fa-chart-line"></i> Évaluer via IA
             </button>
-            <button class="btn-export" (click)="downloadReport()" title="Télécharger le rapport">
-                <i class="fas fa-file-download"></i> Exporter rapport
-            </button>
+            <div class="export-dropdown">
+                <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
+                    <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="dropdown-menu" [class.show]="showExportMenu">
+                    <button (click)="exportToXLSX()">
+                        <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
+                    </button>
+                    <button (click)="exportToPDF()">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
+                    </button>
+                </div>
+            </div>
             <button class="btn-create" (click)="openCreateModal()">
                 <i class="fas fa-plus"></i> Nouveau Risque
             </button>
@@ -770,6 +780,8 @@
         transform: translateY(-2px);
     }
 
+
+
     .btn-ai {
         background: linear-gradient(135deg, #7c3aed, #8b5cf6);
         color: white;
@@ -793,7 +805,6 @@
         filter: brightness(1.1);
     }
 
-    /* KPI */
     .kpi-row {
         display: grid;
         grid-template-columns: repeat(4, 1fr);

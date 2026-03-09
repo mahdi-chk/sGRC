@@ -12,7 +12,8 @@
                 <p>Analyse globale des risques et suivi des traitements assisté par l'intelligence artificielle.</p>
             </div>
         </div>
-        <div class="strategic-controls">
+        <div class="strategic-controls"
+            style="display: flex; gap: 10px; align-items: center; position: relative; z-index: 1000;">
             <button class="btn-ai-eval" (click)="evaluateRisks()" [disabled]="isEvaluating"
                 [class.evaluating-pulse]="isEvaluating">
                 <i class="fas" [class.fa-robot]="!isEvaluating" [class.fa-spinner]="isEvaluating"

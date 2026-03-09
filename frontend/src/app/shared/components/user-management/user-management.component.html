@@ -37,33 +37,50 @@
         <i class="fas fa-times"></i> Réinitialiser
       </button>
     </div>
-    <div class="user-count">
+
+    <!-- Export Button aligned to the right -->
+    <div class="export-dropdown" style="margin-left: auto;">
+      <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
+        <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
+      </button>
+      <div class="dropdown-menu" [class.show]="showExportMenu">
+        <button (click)="exportToXLSX()">
+          <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
+        </button>
+        <button (click)="exportToPDF()">
+          <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
+        </button>
+      </div>
+    </div>
+
+    <div class="user-count" style="margin-left: 15px;">
       <strong>{{ filteredUsers.length }}</strong> utilisateur(s) trouvé(s)
     </div>
   </div>
 
-  <div class="status-message" *ngIf="status">
-    {{ status }}
-  </div>
-
   <div class="users-list">
-    <div class="user-card" *ngFor="let u of filteredUsers" (click)="selectUser(u)">
-      <div class="user-avatar">
-        <span class="initials">{{ u.prenom.charAt(0) }}{{ u.nom.charAt(0) }}</span>
-      </div>
+    <div class="user-card" *ngFor="let user of filteredUsers" (click)="selectUser(user)">
+      <div class="user-avatar">{{ user.prenom[0] }}{{ user.nom[0] }}</div>
       <div class="user-info">
-        <h3>{{ u.prenom }} {{ u.nom }}</h3>
-        <span class="role-badge" [class]="u.role.toLowerCase()">{{ u.role }}</span>
+        <span class="role-badge" [ngClass]="{
+          'admin_si': user.role === UserRole.ADMIN_SI,
+          'super_admin': user.role === UserRole.SUPER_ADMIN,
+          'risk_manager': user.role === UserRole.RISK_MANAGER,
+          'risk_agent': user.role === UserRole.RISK_AGENT,
+          'auditeur': user.role === UserRole.AUDITEUR,
+          'audit_senior': user.role === UserRole.AUDIT_SENIOR
+        }">{{ user.role }}</span>
+        <h3>{{ user.prenom }} {{ user.nom }}</h3>
         <div class="contact-info">
-          <span><i class="fas fa-envelope"></i> {{ u.mail }}</span>
-          <span><i class="fas fa-phone"></i> {{ u.telephone }}</span>
+          <span><i class="fas fa-envelope"></i> {{ user.mail }}</span>
+          <span><i class="fas fa-phone"></i> {{ user.telephone }}</span>
         </div>
       </div>
       <div class="user-actions">
-        <button class="btn-icon edit-btn" (click)="$event.stopPropagation(); selectUser(u)" title="Modifier">
-          <i class="fas fa-pen"></i>
+        <button class="btn-icon edit-btn" (click)="openUserModal(user); $event.stopPropagation()" title="Modifier">
+          <i class="fas fa-edit"></i>
         </button>
-        <button class="btn-icon delete-btn" (click)="deleteUser($event, u)" title="Supprimer">
+        <button class="btn-icon delete-btn" (click)="deleteUser($event, user)" title="Supprimer">
           <i class="fas fa-trash-alt"></i>
         </button>
       </div>
@@ -71,132 +88,126 @@
 
     <div class="no-users" *ngIf="filteredUsers.length === 0">
       <i class="fas fa-users-slash"></i>
-      <p>Aucun utilisateur trouvé.</p>
+      <p>Aucun utilisateur trouvé correspondant à vos critères.</p>
     </div>
   </div>
-</div>
 
-<!-- Modal for Create/Edit -->
-<app-modal *ngIf="modalVisible" [title]="editingUser ? 'Modifier Utilisateur' : 'Nouvel Utilisateur'"
-  (close)="closeUserModal()">
-  <div #projected modal-body>
-    <div class="form-section">
-      <div class="section-title">
-        <i class="fas fa-id-card"></i>
-        <span>Informations Personnelles</span>
+  <!-- Modal for Create/Edit -->
+  <app-modal *ngIf="modalVisible" [title]="editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'"
+    (close)="closeUserModal()">
+    <div #projected modal-body class="modal-form">
+      <div class="form-section">
+        <div class="section-title"><i class="fas fa-user-circle"></i> Informations Personnelles</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Prénom <span class="required">*</span></label>
+            <div class="input-icon-wrapper">
+              <i class="fas fa-id-card icon"></i>
+              <input type="text" [(ngModel)]="userForm.prenom" placeholder="Prénom"
+                [class.input-error]="validationErrors.prenom">
+            </div>
+            <span class="error" *ngIf="validationErrors.prenom">{{ validationErrors.prenom }}</span>
+          </div>
+          <div class="form-row">
+            <label>Nom <span class="required">*</span></label>
+            <div class="input-icon-wrapper">
+              <i class="fas fa-user icon"></i>
+              <input type="text" [(ngModel)]="userForm.nom" placeholder="Nom"
+                [class.input-error]="validationErrors.nom">
+            </div>
+            <span class="error" *ngIf="validationErrors.nom">{{ validationErrors.nom }}</span>
+          </div>
+          <div class="form-row">
+            <label>Email <span class="required">*</span></label>
+            <div class="input-icon-wrapper">
+              <i class="fas fa-envelope icon"></i>
+              <input type="email" [(ngModel)]="userForm.mail" placeholder="email@exemple.com"
+                [class.input-error]="validationErrors.mail">
+            </div>
+            <span class="error" *ngIf="validationErrors.mail">{{ validationErrors.mail }}</span>
+          </div>
+          <div class="form-row">
+            <label>Téléphone <span class="required">*</span></label>
+            <div class="input-icon-wrapper">
+              <i class="fas fa-phone icon"></i>
+              <input type="text" [(ngModel)]="userForm.telephone" placeholder="Téléphone"
+                [class.input-error]="validationErrors.telephone">
+            </div>
+            <span class="error" *ngIf="validationErrors.telephone">{{ validationErrors.telephone }}</span>
+          </div>
+        </div>
       </div>
-      <div class="form-grid">
-        <div class="form-row">
-          <label>Nom <span class="required">*</span></label>
-          <div class="input-icon-wrapper">
-            <i class="fas fa-user icon"></i>
-            <input [(ngModel)]="userForm.nom" [class.input-error]="validationErrors.nom" placeholder="Ex: Nom" />
-          </div>
-          <span class="error" *ngIf="validationErrors.nom">{{ validationErrors.nom }}</span>
-        </div>
-        <div class="form-row">
-          <label>Prénom <span class="required">*</span></label>
-          <div class="input-icon-wrapper">
-            <i class="fas fa-user icon"></i>
-            <input [(ngModel)]="userForm.prenom" [class.input-error]="validationErrors.prenom"
-              placeholder="Ex: Prénom" />
-          </div>
-          <span class="error" *ngIf="validationErrors.prenom">{{ validationErrors.prenom }}</span>
-        </div>
-        <div class="form-row">
-          <label>Email Professionnel <span class="required">*</span></label>
-          <div class="input-icon-wrapper">
-            <i class="fas fa-envelope icon"></i>
-            <input type="email" [(ngModel)]="userForm.mail" [class.input-error]="validationErrors.mail"
-              placeholder="email@sgrc.com" />
-          </div>
-          <span class="error" *ngIf="validationErrors.mail">{{ validationErrors.mail }}</span>
-        </div>
-        <div class="form-row">
-          <label>Téléphone <span class="required">*</span></label>
-          <div class="input-icon-wrapper">
-            <i class="fas fa-phone icon"></i>
-            <input [(ngModel)]="userForm.telephone" [class.input-error]="validationErrors.telephone"
-              placeholder="+212 6..." />
-          </div>
-          <span class="error" *ngIf="validationErrors.telephone">{{ validationErrors.telephone }}</span>
-        </div>
-      </div>
-    </div>
 
-    <div class="form-section">
-      <div class="section-title">
-        <i class="fas fa-briefcase"></i>
-        <span>Rôle & Accès</span>
-      </div>
-      <div class="form-grid">
-        <div class="form-row">
-          <label>Rôle / Fonction <span class="required">*</span></label>
-          <div class="select-wrapper">
-            <i class="fas fa-user-tag icon"></i>
-            <select [(ngModel)]="userForm.role" [class.input-error]="validationErrors.role">
-              <option value="">Sélectionner un rôle...</option>
-              <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
-            </select>
+      <div class="form-section">
+        <div class="section-title"><i class="fas fa-briefcase"></i> Rôle et Affectation</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Rôle <span class="required">*</span></label>
+            <div class="select-wrapper">
+              <i class="fas fa-user-tag icon"></i>
+              <select [(ngModel)]="userForm.role" [class.input-error]="validationErrors.role">
+                <option value="">Sélectionner un rôle</option>
+                <option *ngFor="let role of postes" [value]="role">{{ role }}</option>
+              </select>
+            </div>
+            <span class="error" *ngIf="validationErrors.role">{{ validationErrors.role }}</span>
           </div>
-          <span class="error" *ngIf="validationErrors.role">{{ validationErrors.role }}</span>
-        </div>
-        <div class="form-row">
-          <label>Département <span class="required">*</span></label>
-          <div class="select-wrapper">
-            <i class="fas fa-building icon"></i>
-            <select [(ngModel)]="userForm.departementId" [class.input-error]="validationErrors.departementId">
-              <option value="0">Sélectionner un département...</option>
-              <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
-            </select>
+          <div class="form-row">
+            <label>Département <span class="required">*</span></label>
+            <div class="select-wrapper">
+              <i class="fas fa-building icon"></i>
+              <select [(ngModel)]="userForm.departementId" [class.input-error]="validationErrors.departementId">
+                <option value="0">Sélectionner un département</option>
+                <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
+              </select>
+            </div>
+            <span class="error" *ngIf="validationErrors.departementId">{{ validationErrors.departementId }}</span>
           </div>
-          <span class="error" *ngIf="validationErrors.departementId">{{ validationErrors.departementId }}</span>
         </div>
       </div>
-    </div>
 
-    <div class="form-section security-section">
-      <div class="section-title">
-        <i class="fas fa-lock"></i>
-        <span>Sécurité</span>
-      </div>
-      <div class="form-grid">
-        <div class="form-row password-row">
-          <label>Mot de passe {{ editingUser ? '(Laisser vide pour conserver l\'actuel)' : '*' }}</label>
-          <div class="input-with-hint">
+      <div class="form-section">
+        <div class="section-title"><i class="fas fa-lock"></i> Sécurité</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Mot de passe {{ editingUser ? '(Optionnel)' : '*' }}</label>
             <div class="password-toggle-wrapper">
               <i class="fas fa-key icon"></i>
               <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password"
-                [class.input-error]="validationErrors.password" placeholder="******" />
-              <button type="button" class="btn-toggle" (click)="togglePasswordVisibility()">
-                <i class="fas" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
-              </button>
+                placeholder="Mot de passe" [class.input-error]="validationErrors.password">
+              <button class="btn-toggle" (click)="togglePasswordVisibility()"><i class="fas"
+                  [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i></button>
             </div>
-            <small class="hint" *ngIf="editingUser">Remplir uniquement pour réinitialiser le mot de passe.</small>
+            <span class="error" *ngIf="validationErrors.password">{{ validationErrors.password }}</span>
           </div>
-          <span class="error" *ngIf="validationErrors.password">{{ validationErrors.password }}</span>
-        </div>
-        <div class="form-row password-row">
-          <label>Confirmer le mot de passe <span class="required" *ngIf="!editingUser">*</span></label>
-          <div class="password-toggle-wrapper">
-            <i class="fas fa-shield-alt icon"></i>
-            <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="userForm.confirmPassword"
-              [class.input-error]="validationErrors.confirmPassword" placeholder="******" />
-            <button type="button" class="btn-toggle" (click)="toggleConfirmPasswordVisibility()">
-              <i class="fas" [ngClass]="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
-            </button>
+          <div class="form-row">
+            <label>Confirmer le mot de passe</label>
+            <div class="password-toggle-wrapper">
+              <i class="fas fa-check-circle icon"></i>
+              <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="userForm.confirmPassword"
+                placeholder="Confirmer" [class.input-error]="validationErrors.confirmPassword">
+              <button class="btn-toggle" (click)="toggleConfirmPasswordVisibility()"><i class="fas"
+                  [class.fa-eye]="!showConfirmPassword" [class.fa-eye-slash]="showConfirmPassword"></i></button>
+            </div>
+            <span class="error" *ngIf="validationErrors.confirmPassword">{{ validationErrors.confirmPassword }}</span>
           </div>
-          <span class="error" *ngIf="validationErrors.confirmPassword">{{ validationErrors.confirmPassword }}</span>
         </div>
+        <span class="hint" *ngIf="editingUser">Laissez vide si vous ne souhaitez pas modifier le mot de passe.</span>
+      </div>
+
+      <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+        <button class="btn-outline" (click)="closeUserModal()">Annuler</button>
+        <button class="btn-primary" (click)="saveUser()">{{ editingUser ? 'Mettre à jour' : 'Créer l\'utilisateur'
+          }}</button>
       </div>
     </div>
-  </div>
+  </app-modal>
 
-  <div modal-footer>
-    <button class="btn-outline" (click)="closeUserModal()">Annuler</button>
-    <button class="btn-primary" (click)="saveUser()">
-      <i class="fas" [ngClass]="editingUser ? 'fa-save' : 'fa-plus-circle'"></i>
-      {{ editingUser ? 'Mettre à jour' : 'Créer Utilisateur' }}
-    </button>
+  <div class="status-message" *ngIf="status"
+    style="position: fixed; bottom: 20px; right: 20px; background: #004a99; color: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000;">
+    {{ status }}
+    <button (click)="status = null"
+      style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer;"><i
+        class="fas fa-times"></i></button>
   </div>
-</app-modal>
+</div>

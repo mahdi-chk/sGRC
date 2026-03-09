@@ -4,6 +4,9 @@ import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
   selector: 'app-auditing',
@@ -16,6 +19,7 @@ export class AuditingComponent implements OnInit {
   suggestedPlan: any[] = [];
   allUsers: any[] = [];
   auditors: any[] = [];
+  showExportMenu = false;
 
   // UI States
   isLoadingMissions = false;
@@ -200,5 +204,56 @@ export class AuditingComponent implements OnInit {
 
   goBack() {
     this.router.navigate(['/dashboard']);
+  }
+
+  exportToXLSX() {
+    const dataToExport = this.missions.map(m => ({
+      'Mission': m.titre,
+      'Objectifs': m.objectifs,
+      'Risque Associé': m.risk?.titre || `ID: ${m.riskId}`,
+      'Auditeur': m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : 'Non assigné',
+      'Échéance': new Date(m.delai).toLocaleDateString(),
+      'Statut': m.statut
+    }));
+
+    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Missions_Audit');
+    XLSX.writeFile(wb, `Export_Audit_Missions_${new Date().getTime()}.xlsx`);
+    this.showExportMenu = false;
+  }
+
+  exportToPDF() {
+    const doc = new jsPDF('l', 'mm', 'a4');
+
+    doc.setFontSize(18);
+    doc.setTextColor(0, 74, 153);
+    doc.text('Rapport de Gestion des Audits', 14, 22);
+
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
+
+    const columns = ['Mission', 'Risque Associé', 'Auditeur', 'Échéance', 'Statut'];
+    const rows = this.missions.map(m => [
+      m.titre,
+      m.risk?.titre || `ID: ${m.riskId}`,
+      m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : 'Non assigné',
+      new Date(m.delai).toLocaleDateString(),
+      m.statut
+    ]);
+
+    autoTable(doc, {
+      head: [columns],
+      body: rows,
+      startY: 40,
+      theme: 'striped',
+      headStyles: { fillColor: [0, 74, 153], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 4 },
+      alternateRowStyles: { fillColor: [245, 247, 250] }
+    });
+
+    doc.save(`Export_Audit_Missions_${new Date().getTime()}.pdf`);
+    this.showExportMenu = false;
   }
 }

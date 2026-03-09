@@ -9,6 +9,21 @@
                 <p>Gérez les intitulés des départements et postes pour la gestion des risques.</p>
             </div>
         </div>
+        <div class="header-right">
+            <div class="export-dropdown">
+                <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
+                    <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="dropdown-menu" [class.show]="showExportMenu">
+                    <button (click)="exportToXLSX()">
+                        <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
+                    </button>
+                    <button (click)="exportToPDF()">
+                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="actions-row">

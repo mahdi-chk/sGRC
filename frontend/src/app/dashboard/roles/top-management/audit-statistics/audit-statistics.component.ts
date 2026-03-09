@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditMission, AuditMissionStatus } from '../../../../core/services/auditing.service';
 import { Router } from '@angular/router';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
     selector: 'app-audit-statistics',
@@ -17,6 +20,7 @@ export class AuditStatisticsComponent implements OnInit {
     completionRate: number = 0;
     delayedRate: number = 0;
     onTimeRate: number = 0;
+    showExportMenu = false;
 
     constructor(private auditingService: AuditingService, private router: Router) { }
 
@@ -64,27 +68,67 @@ export class AuditStatisticsComponent implements OnInit {
     }
 
     exportCSV() {
+        // Replaced by XLSX and PDF
+    }
+
+    exportToXLSX() {
+        this.showExportMenu = false;
         const rows = [
-            ['Categorie', 'Metrique', 'Valeur'],
-            ['Overview', 'Total Missions', this.totalMissions],
-            ['Overview', 'Taux de Complétion', this.completionRate + '%'],
-            ['Overview', 'Taux de Retard', this.delayedRate + '%'],
+            ['Catégorie', 'Métrique', 'Valeur'],
+            ['Vue d\'ensemble', 'Total Missions', this.totalMissions],
+            ['Vue d\'ensemble', 'Taux de Complétion', this.completionRate + '%'],
+            ['Vue d\'ensemble', 'Taux de Retard', this.delayedRate + '%'],
+            ['Vue d\'ensemble', 'Taux à Temps', this.onTimeRate + '%'],
             [''],
             ['État d\'Avancement des Missions', '', ''],
             ...Object.entries(this.statusStats).map(([k, v]) => ['Statut', k, v])
         ];
 
-        const csvContent = rows.map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
+        const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(rows);
+        const wb: XLSX.WorkBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Statistiques Audit');
+        XLSX.writeFile(wb, `statistiques_audit_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
 
-        link.setAttribute("href", url);
-        link.setAttribute("download", `statistiques_audit_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    exportToPDF() {
+        this.showExportMenu = false;
+        const doc = new jsPDF('p', 'mm', 'a4');
+
+        doc.setFontSize(18);
+        doc.text('Statistiques d\'Audit', 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
+
+        const overviewData = [
+            ['Missions Totales', this.totalMissions.toString()],
+            ['Taux de Complétion', this.completionRate + '%'],
+            ['Taux de Retard', this.delayedRate + '%'],
+            ['Taux à Temps', this.onTimeRate + '%']
+        ];
+
+        autoTable(doc, {
+            startY: 40,
+            head: [['Métrique', 'Valeur']],
+            body: overviewData,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 74, 153] }
+        });
+
+        const statusData = Object.entries(this.statusStats).map(([k, v]) => [k, v.toString()]);
+
+        doc.setFontSize(14);
+        doc.text('État d\'Avancement', 14, (doc as any).lastAutoTable.finalY + 15);
+
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Statut', 'Nombre']],
+            body: statusData,
+            theme: 'striped',
+            headStyles: { fillColor: [0, 74, 153] }
+        });
+
+        doc.save(`statistiques_audit_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
     goBack() {

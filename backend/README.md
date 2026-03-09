@@ -1,108 +1,50 @@
 # GRC Platform Backend
 
-This is the backend for the Governance, Risk, and Compliance (GRC) platform. It is built using Node.js and Express, providing a robust API for managing governance, risk management, internal controls, regulatory compliance, auditing, incident management, action plans, reporting, and supervision.
+Advanced API servicing the Governance, Risk, and Compliance (GRC) platform.
 
-## Table of Contents
+## 🛠 Technical Stack
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [API Endpoints](#api-endpoints)
-- [Modules](#modules)
-- [Security](#security)
-- [Contributing](#contributing)
-- [License](#license)
+- **Runtime**: Node.js (v14+)
+- **Framework**: Express.js
+- **Language**: TypeScript
+- **ORM**: Sequelize
+- **Database**: Microsoft SQL Server (MSSQL)
+- **AI/ML**: 
+  - **RAG Engine**: Built with LangChain/Ollama (Retrieval-Augmented Generation)
+  - **OCR**: Integrated Tesseract with `fra.traineddata` for complex document scanning.
+- **Security**: JWT (jsonwebtoken) & bcryptjs
 
-## Installation
+## 🚀 Specialized Features
 
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd grc-platform/backend
-   ```
+### 🤖 Intelligent AI Sidekick
+- **Document Processing**: Automatic parsing and vectorization of PDF reports.
+- **Contextual RAG**: High-precision retrieval for answering complex regulatory questions.
+- **OCR Integration**: Able to process image-based documents and historical scans.
 
-2. Install dependencies:
-   ```
+### 🛡️ Secure Session Management
+- **Token Refresh**: Automatic JWT rotation logic.
+- **Inactivity Monitoring**: Backend support for identifying and expiring idle sessions.
+
+## ⚙️ Installation & Setup
+
+1. **Install Dependencies**:
+   ```bash
    npm install
    ```
+2. **Environment Configuration**:
+   Create a `.env` file based on `.env.example`.
+3. **Run Platform**:
+   ```bash
+   npm start
+   ```
 
-3. Set up environment variables:
-   Copy `.env.example` to `.env` and configure your environment variables.
+## 📁 Project Structure
 
-## Usage
+- `src/modules/ai`: RAG engine, OCR logic, and AI services.
+- `src/modules/auth`: Authentication and session monitoring.
+- `src/modules/risk`: Risk assessment API logic.
+- `src/modules/auditing`: Audit lifecycle management.
+- `src/database.ts`: Sequelize & MSSQL configuration.
 
-To start the backend server, run:
-```
-npm start
-```
-
-The server will run on the specified port in your configuration.
-
-## API Endpoints
-
-The backend provides the following API endpoints:
-
-- **Governance**
-  - `GET /api/governance`
-  - `POST /api/governance`
-  
-- **Risk Management**
-  - `GET /api/risk`
-  - `POST /api/risk`
-  
-- **Internal Controls**
-  - `GET /api/controls`
-  - `POST /api/controls`
-  
-- **Compliance**
-  - `GET /api/compliance`
-  - `POST /api/compliance`
-  
-- **Auditing**
-  - `GET /api/auditing`
-  - `POST /api/auditing`
-  
-- **Incident Management**
-  - `GET /api/incidents`
-  - `POST /api/incidents`
-  
-- **Action Plans**
-  - `GET /api/actions`
-  - `POST /api/actions`
-  
-- **Reporting**
-  - `GET /api/reporting`
-  - `POST /api/reporting`
-  
-- **Supervision**
-  - `GET /api/supervision`
-  - `POST /api/supervision`
-
-## Modules
-
-The backend is organized into several modules, each responsible for a specific area of functionality:
-
-- Governance
-- Risk Management
-- Internal Controls
-- Compliance
-- Auditing
-- Incident Management
-- Action Plans
-- Reporting
-- Supervision
-
-## Security
-
-The backend implements security measures including:
-
-- JWT authentication for secure API access.
-- Data encryption for sensitive information.
-- Middleware for error handling and authentication.
-
-## Contributing
-
-Contributions are welcome! Please submit a pull request or open an issue for discussion.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+## 📜 License
+MIT License.

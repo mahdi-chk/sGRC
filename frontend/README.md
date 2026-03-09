@@ -1,67 +1,51 @@
 # GRC Platform Frontend
 
-This is the frontend application for the Governance, Risk, and Compliance (GRC) solution. The application is built using Angular and provides a comprehensive interface for managing governance, risk management, internal controls, regulatory compliance, auditing, incident management, action plans, reporting, and supervision.
+Premium Angular application for the Governance, Risk, and Compliance (GRC) solution.
 
-## Project Structure
+## 🛠 Technical Stack
 
-The project is organized into several modules, each corresponding to a specific area of the GRC solution:
+- **Framework**: Angular 12
+- **State Management**: Reactive programming with RxJS
+- **Styling**: SCSS (Advanced Design System)
+- **Visuals**: Font Awesome, Custom Glassmorphism UI
+- **Build Tool**: Angular CLI
 
-- **Governance**: Manages governance-related components and services.
-- **Risk Management**: Handles risk assessment and management functionalities.
-- **Internal Controls**: Provides tools for managing internal controls.
-- **Compliance**: Ensures adherence to regulatory requirements.
-- **Auditing**: Facilitates auditing processes and documentation.
-- **Incident Management**: Manages incidents and their resolutions.
-- **Action Plans**: Tracks action plans and their implementation.
-- **Reporting**: Generates reports for various GRC activities.
-- **Supervision**: Oversees compliance and governance activities.
+## ✨ Key Features
 
-## Installation
+### 🏢 Role-Based Dashboards
+Tailored interfaces with specific KPIs and tools for:
+- **Super Admin**: System governance.
+- **Top Management**: Strategic reporting.
+- **Risk Manager/Agent**: Operational risk tracking.
+- **Auditeur/Senior Audit**: Field work and report generation.
 
-To install the necessary dependencies, run:
+### 🤖 AI Sidekick UI
+- **Interactive Chat**: Directly accessible on the main dashboard.
+- **RAG Integration**: Real-time querying of corporate documentation.
 
-```
-npm install
-```
+### 🛡️ Security & Activity
+- **Session Monitoring**: Automatic inactivity detection (10 min limit).
+- **Auto-Logout**: Secure cleanup and redirection.
+- **Token Refresh**: Background synchronization with the backend.
 
-## Development
+## ⚙️ Quick Start
 
-To start the development server, use:
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+2. **Development Server**:
+   ```bash
+   ng serve
+   ```
+   Navigate to `http://localhost:4200/`.
 
-```
-ng serve
-```
+## 📁 Key Directories
 
-The application will be available at `http://localhost:4200/`.
+- `src/app/core`: Authentication, guards, and shared services.
+- `src/app/dashboard`: Role-based components and dashboard layout.
+- `src/app/risks`: Risk management specialized modules.
+- `src/app/shared`: Common UI components (Modals, Tables).
 
-## Build
-
-To build the application for production, run:
-
-```
-ng build --prod
-```
-
-The output will be stored in the `dist/` directory.
-
-## Testing
-
-To run unit tests, use:
-
-```
-ng test
-```
-
-For end-to-end testing, use:
-
-```
-ng e2e
-```
-
-## Contributing
-
-Contributions are welcome! Please submit a pull request or open an issue for any enhancements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+## 📜 License
+MIT License.

@@ -22,7 +22,10 @@ export class AiAssistantComponent implements OnInit {
 
   ngOnInit() {
     this.checkIndexStatus();
-    this.sessionId = sessionStorage.getItem('ai_session_id') || this.generateSessionId();
+
+    // Always generate a unique sessionId per tab instance to prevent
+    // cross-tab session conflicts (e.g. when duplicating a tab)
+    this.sessionId = this.generateSessionId();
     sessionStorage.setItem('ai_session_id', this.sessionId);
 
     this.dashboardService.toggleAiAssistant$.subscribe(() => {

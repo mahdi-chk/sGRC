@@ -1,11 +1,28 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import http from 'http';
 import { RAGEngine } from './rag.engine';
 import { AIDataService } from './ai.data.service';
 import { UserRole } from '../users/user.roles';
 import { Response } from 'express';
+import * as mammoth from 'mammoth';
+import { createWorker } from 'tesseract.js';
+import { PdfReader } from 'pdfreader';
 
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || 'http://localhost:11434/api/chat';
 const MODEL_NAME = process.env.OLLAMA_MODEL || 'llama3';
+
+/**
+ * Optimized axios instance for Ollama to handle concurrency properly.
+ * We disable keepAlive to avoid connection saturation and use a specific agent.
+ */
+const ollamaAxios: AxiosInstance = axios.create({
+    httpAgent: new http.Agent({
+        keepAlive: false,
+        maxSockets: 10
+    })
+});
+
+let activeRequests = 0;
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -46,8 +63,9 @@ export class AIService {
         }, 10 * 60 * 1000);
     }
 
-    private static async getSession(sessionId: string, role: UserRole): Promise<UserSession> {
-        if (!this.sessions.has(sessionId)) {
+    private static async getSession(userId: number, sessionId: string, role: UserRole): Promise<UserSession> {
+        const sessionKey = `${userId}-${sessionId}`;
+        if (!this.sessions.has(sessionKey)) {
             let roleContext = '';
             const metadata = await AIDataService.fetchSystemMetadata();
 
@@ -73,7 +91,7 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 roleContext = "TU AGIS POUR : Profil 'ADMINISTRATEUR SI'. Tu as accès à la gestion des utilisateurs et à la configuration technique du système.";
             }
 
-            this.sessions.set(sessionId, {
+            this.sessions.set(sessionKey, {
                 messages: [
                     {
                         role: 'system',
@@ -91,14 +109,18 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 lastAccess: Date.now()
             });
         }
-        const session = this.sessions.get(sessionId)!;
+        const session = this.sessions.get(sessionKey)!;
         session.lastAccess = Date.now();
         return session;
     }
 
     static async generateResponse(prompt: string, role: UserRole, sessionId: string, userId: number, res?: Response): Promise<string | void> {
+        activeRequests++;
+        const requestId = Math.floor(Math.random() * 10000);
+        console.log(`[AI] Request #${requestId} START (active: ${activeRequests}) sessionId=${sessionId} userId=${userId}`);
+
         try {
-            const session = await this.getSession(sessionId, role);
+            const session = await this.getSession(userId, sessionId, role);
 
             // 1. Context from Standards (RAG)
             const isIndexed = await RAGEngine.checkIndexStatus();
@@ -119,18 +141,30 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 
             const isStreaming = !!res;
 
-            const response = await axios.post(OLLAMA_CHAT_URL, {
+            console.log(`[AI] Request #${requestId} sending to Ollama (stream=${isStreaming})...`);
+
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: session.messages,
                 stream: isStreaming,
+                options: {
+                    num_ctx: 2048,
+                    num_predict: 500,
+                    temperature: 0.7
+                }
             }, {
-                responseType: isStreaming ? 'stream' : 'json'
+                responseType: isStreaming ? 'stream' : 'json',
+                timeout: 0
             });
 
             if (isStreaming) {
                 res!.setHeader('Content-Type', 'text/event-stream');
                 res!.setHeader('Cache-Control', 'no-cache');
                 res!.setHeader('Connection', 'keep-alive');
+                res!.setHeader('X-Accel-Buffering', 'no');
+                res!.flushHeaders();
+
+                console.log(`[AI] Request #${requestId} Ollama responded, streaming data...`);
 
                 let fullContent = '';
                 response.data.on('data', (chunk: Buffer) => {
@@ -148,20 +182,36 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                                 session.messages.push({ role: 'assistant', content: fullContent });
                                 res!.write('data: [DONE]\n\n');
                                 res!.end();
+                                activeRequests--;
+                                console.log(`[AI] Request #${requestId} DONE (active: ${activeRequests})`);
                             }
                         } catch (e) {
-                            // Incomplete JSON chunk, skip or handle buffering
+                            // Incomplete JSON chunk
                         }
                     }
                 });
+
+                response.data.on('error', (err: Error) => {
+                    activeRequests--;
+                    console.error(`[AI] Request #${requestId} STREAM ERROR:`, err.message);
+                    if (!res!.writableEnded) res!.end();
+                });
+
+                res!.on('close', () => {
+                    if (!response.data.destroyed) response.data.destroy();
+                });
+
                 return;
             } else {
                 const aiMsg = response.data.message.content;
                 session.messages.push({ role: 'assistant', content: aiMsg });
+                activeRequests--;
+                console.log(`[AI] Request #${requestId} DONE (active: ${activeRequests})`);
                 return aiMsg;
             }
         } catch (error: any) {
-            console.error('AI Service Error:', error.message || error);
+            activeRequests--;
+            console.error(`[AI] Request #${requestId} ERROR:`, error.message || error);
             throw new Error(error.message || 'Could not get response from AI');
         }
     }
@@ -173,11 +223,13 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 
             if (isIndexed) {
                 const contextChunks = await RAGEngine.searchContext(situation, role, 5);
+                console.log(`[AI-RAG] Found ${contextChunks.length} fragments for role ${role}`);
                 if (contextChunks.length > 0) {
                     contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES :\n${contextChunks.join('\n\n')}\n\n`;
                 }
             }
 
+            console.log(`[AI] Generating risks for situation: "${situation.substring(0, 50)}..." (Role: ${role})`);
             const metadata = await AIDataService.fetchSystemMetadata();
 
             const systemPrompt = `Tu es un expert en gestion des risques GRC. 
@@ -192,7 +244,7 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             Pour chaque risque, fournis : titre, explication, domaine, niveauRisque, departement, responsableSuggestion, delaiSuggestion (nombre), frequenceTraitement.
             Réponds UNIQUEMENT avec un tableau JSON.`;
 
-            const response = await axios.post(OLLAMA_CHAT_URL, {
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
                     { role: 'system', content: systemPrompt },
@@ -203,11 +255,12 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 options: {
                     temperature: 0.4,
                     num_predict: 1000,
-                    num_ctx: 2048
+                    num_ctx: 4096
                 }
             });
 
             const content = response.data.message.content;
+            console.log(`[AI] Received response length: ${content.length} chars`);
             const jsonMatch = content.match(/\[[\s\S]*\]/);
             let risks: any[] = [];
 
@@ -256,14 +309,19 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             Pour chaque risque, évalue : priorité (score de 1 à 10), impact potentiel, tendance, et suggestion d'audit.
             Réponds UNIQUEMENT avec un tableau JSON. Exemple : [ { "riskId": 1, "priorite": 8, "impact": "...", "tendance": "...", "suggestion": "..." } ]`;
 
-            const response = await axios.post(OLLAMA_CHAT_URL, {
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: `Liste des risques à évaluer :\n${risksText}` }
                 ],
                 stream: false,
-                format: 'json'
+                format: 'json',
+                options: {
+                    num_ctx: 4096,
+                    num_predict: 1000,
+                    temperature: 0.3
+                }
             });
 
             const content = response.data.message.content;
@@ -319,14 +377,19 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 
             const riskMapping = risks.map(r => `${r.id}: ${r.titre}`).join('\n');
 
-            const response = await axios.post(OLLAMA_CHAT_URL, {
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: `Génère des missions d'audit pour ces risques :\n${riskMapping}` }
                 ],
                 stream: false,
-                format: 'json'
+                format: 'json',
+                options: {
+                    num_ctx: 4096,
+                    num_predict: 1000,
+                    temperature: 0.4
+                }
             });
 
             const content = response.data.message.content;
@@ -349,5 +412,54 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             console.error('AI Audit Plan Generation Error:', error.message || error);
             return [];
         }
+    }
+    /**
+     * Nettoie le texte en supprimant les espaces multiples, les sauts de ligne excessifs
+     * et les caractères non imprimables.
+     */
+    static cleanText(text: string): string {
+        return text
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Supprime les caractères non imprimables
+            .replace(/\s+/g, ' ') // Remplace les espaces multiples/tabulations/sauts de ligne par un seul espace
+            .trim();
+    }
+
+    /**
+     * Limite la taille du texte pour ne pas dépasser le contexte de l'IA.
+     */
+    static limitText(text: string, maxChars: number = 4000): string {
+        if (text.length <= maxChars) return text;
+        return text.substring(0, maxChars) + '... [Texte tronqué]';
+    }
+
+    /**
+     * Extrait le texte d'un fichier (PDF, Word, Image)
+     */
+    static async extractTextFromFile(file: Express.Multer.File): Promise<string> {
+        const extension = file.originalname.split('.').pop()?.toLowerCase();
+        let extractedText = '';
+
+        if (extension === 'pdf') {
+            extractedText = await new Promise((resolve, reject) => {
+                let text = '';
+                new PdfReader().parseBuffer(file.buffer, (err: any, item: any) => {
+                    if (err) reject(err);
+                    else if (!item) resolve(text);
+                    else if (item.text) text += item.text + ' ';
+                });
+            });
+        } else if (extension === 'docx') {
+            const result = await mammoth.extractRawText({ buffer: file.buffer });
+            extractedText = result.value;
+        } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
+            const worker = await createWorker('fra');
+            const { data: { text } } = await worker.recognize(file.buffer);
+            await worker.terminate();
+            extractedText = text;
+        } else {
+            throw new Error('Format de fichier non supporté pour l\'extraction de texte');
+        }
+
+        return this.limitText(this.cleanText(extractedText));
     }
 }

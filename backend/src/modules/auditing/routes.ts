@@ -43,7 +43,7 @@ router.get('/missions', async (req: AuthRequest, res) => {
         const { role, id } = req.user!;
         let missions;
 
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.ADMIN_SI) {
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.ADMIN_SI || role === UserRole.RISK_MANAGER) {
             missions = await AuditMission.findAll({ include: ['auditSenior', 'auditeur', 'risk'] });
         } else if (role === UserRole.AUDIT_SENIOR) {
             missions = await AuditMission.findAll({
@@ -54,6 +54,17 @@ router.get('/missions', async (req: AuthRequest, res) => {
             missions = await AuditMission.findAll({
                 where: { auditeurId: id },
                 include: ['auditSenior', 'risk']
+            });
+        } else if (role === UserRole.RISK_AGENT) {
+            missions = await AuditMission.findAll({
+                include: [
+                    {
+                        model: Risk,
+                        as: 'risk',
+                        where: { riskAgentId: id }
+                    },
+                    'auditSenior', 'auditeur'
+                ]
             });
         } else {
             return res.status(403).json({ message: 'Accès non autorisé' });

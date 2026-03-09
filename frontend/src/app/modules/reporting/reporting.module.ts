@@ -7,4 +7,4 @@ import { ReportingComponent } from './reporting.component';
   imports: [CommonModule],
   exports: [ReportingComponent]
 })
-export class ReportingModule {}
+export class ReportingModule { }

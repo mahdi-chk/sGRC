@@ -37,6 +37,9 @@ export class RiskManagementComponent implements OnInit {
     situationText = '';
     isGenerating = false;
     suggestedRisks: any[] = [];
+    aiMode: 'text' | 'file' = 'text';
+    aiFile: File | null = null;
+    aiFileError = '';
 
     // AI Evaluation
     showEvaluationModal = false;
@@ -287,11 +290,37 @@ export class RiskManagementComponent implements OnInit {
         }
     }
 
+    onAiFileSelected(event: any) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        this.aiFileError = '';
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png'].includes(extension || '');
+
+        if (isImage && file.size > 4 * 1024 * 1024) {
+            this.aiFileError = 'Les images pour l\'OCR sont limitées à 4Mo.';
+            this.aiFile = null;
+        } else if (file.size > 5 * 1024 * 1024) {
+            this.aiFileError = 'Le fichier est trop volumineux (Max 5Mo).';
+            this.aiFile = null;
+        } else {
+            this.aiFile = file;
+        }
+    }
+
     generateWithAi() {
-        if (!this.situationText) return;
+        if (this.aiMode === 'text' && !this.situationText) return;
+        if (this.aiMode === 'file' && !this.aiFile) return;
+
         this.isGenerating = true;
         this.suggestedRisks = [];
-        this.riskService.generateRisks(this.situationText).subscribe({
+
+        const obs = this.aiMode === 'text'
+            ? this.riskService.generateRisks(this.situationText)
+            : this.riskService.generateRisksFromFile(this.aiFile!);
+
+        obs.subscribe({
             next: (risks) => {
                 this.suggestedRisks = risks
                     .filter(r => r && r.titre) // Exclure les risques invalides/vides
@@ -335,7 +364,8 @@ export class RiskManagementComponent implements OnInit {
             error: (err) => {
                 console.error(err);
                 this.isGenerating = false;
-                alert('Erreur lors de la génération des risques.');
+                const msg = err.error?.error || 'Erreur lors de la génération des risques.';
+                alert(msg);
             }
         });
     }
@@ -394,6 +424,9 @@ export class RiskManagementComponent implements OnInit {
             prochaineEcheance: ''
         };
         this.selectedFile = null;
+        this.aiFile = null;
+        this.aiFileError = '';
+        this.aiMode = 'text';
         this.filteredAgents = [];
     }
 

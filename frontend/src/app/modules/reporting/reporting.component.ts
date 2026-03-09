@@ -4,4 +4,4 @@ import { Component } from '@angular/core';
   selector: 'app-reporting',
   templateUrl: './reporting.component.html'
 })
-export class ReportingComponent {}
+export class ReportingComponent { }

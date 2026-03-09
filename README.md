@@ -10,6 +10,7 @@ The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized s
 - **User Management**: Comprehensive administration of user roles and permissions.
 - **Excel Import**: Bulk data integration for organigrammes via Excel (`.xlsx`, `.xls`) using the `xlsx` library.
 - **Audit Module**: End-to-end audit lifecycle management, from planning to findings and remediation.
+- **Advanced Reporting**: Custom reporting dashboard for real-time visualization of GRC metrics.
 - **Policy Management**: Centralized repository for governance frameworks and organizational policies.
 - **Supervision**: High-level oversight tools for monitoring GRC health across the organization.
 
@@ -31,6 +32,7 @@ The Governance, Risk, and Compliance (GRC) Platform is a powerful, centralized s
 
 ### 🤖 AI Assistant (Enhanced RAG Engine)
 - **Extreme Precision**: Highly optimized Retrieval-Augmented Generation (RAG) for querying complex internal PDF reports and unstructured documentation.
+- **OCR Intelligence**: Integrated OCR capabilities for processing image-based documents and complex scans.
 - **Data Integration**: New AI Data Service seamlessly connects the AI with structured risk data for deep, contextual insights.
 - **Real-time Performance**: Reduced latency in AI responses with improved indexing and retrieval algorithms.
 - **Expert Sidekick**: Always-available AI assistant providing context-aware guidance directly on the dashboard.

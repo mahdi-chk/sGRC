@@ -138,6 +138,15 @@ export class RiskService {
     }
 
     /**
+     * Utilise l'IA pour générer des suggestions de risques à partir d'un fichier.
+     */
+    generateRisksFromFile(file: File): Observable<any[]> {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post<any[]>(`${environment.apiUrl}/assistant/generate-risks-file`, formData);
+    }
+
+    /**
      * Évaluation stratégique des risques via IA.
      */
     /**

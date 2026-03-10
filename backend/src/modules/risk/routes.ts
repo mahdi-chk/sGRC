@@ -229,53 +229,55 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
         const newStatut = statut as RiskStatus;
         await risk.update({ statut: newStatut });
 
-        /**
-         * LOGIQUE DE NOTIFICATION SUR CHANGEMENT DE STATUT
-         */
-        if (newStatut === RiskStatus.TREATED) {
-            // L'agent a traité le risque, on notifie le manager
-            const manager = await User.findByPk(risk.riskManagerId);
-            if (manager) {
-                await emailService.sendRiskStatusUpdateEmail(
-                    { mail: manager.mail, nom: manager.nom, prenom: manager.prenom },
-                    { titre: risk.titre, statut: newStatut }
-                );
-                await Notification.create({
-                    userId: manager.id,
-                    type: NotificationType.STATUS_CHANGED,
-                    content: `Le statut du risque "${risk.titre}" a été mis à jour par l'agent : ${newStatut}`,
-                    riskId: risk.id
-                });
-            }
-        } else if (newStatut === RiskStatus.CLOSED) {
-            // Le manager a clôturé, on notifie l'agent
-            const agent = await User.findByPk(risk.riskAgentId!);
-            if (agent) {
-                await emailService.sendRiskClosedEmail(
-                    { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
-                    { titre: risk.titre }
-                );
-                await Notification.create({
-                    userId: agent.id,
-                    type: NotificationType.STATUS_CHANGED,
-                    content: `Le risque "${risk.titre}" a été clôturé par le manager.`,
-                    riskId: risk.id
-                });
-            }
-        } else if (newStatut === RiskStatus.IN_PROGRESS && oldStatut === RiskStatus.TREATED && role === UserRole.RISK_MANAGER) {
-            // Le manager rejette le traitement et remet en cours
-            const agent = await User.findByPk(risk.riskAgentId!);
-            if (agent) {
-                await Notification.create({
-                    userId: agent.id,
-                    type: NotificationType.STATUS_CHANGED,
-                    content: `Le risque "${risk.titre}" a été remis en cours de traitement par le manager car il n'a pas été traité correctement.`,
-                    riskId: risk.id
-                });
-            }
-        }
-
+        // Respond immediately
         res.json(risk);
+
+        // Fire-and-forget: send notifications in background
+        (async () => {
+            try {
+                if (newStatut === RiskStatus.TREATED) {
+                    const manager = await User.findByPk(risk.riskManagerId);
+                    if (manager) {
+                        emailService.sendRiskStatusUpdateEmail(
+                            { mail: manager.mail, nom: manager.nom, prenom: manager.prenom },
+                            { titre: risk.titre, statut: newStatut }
+                        ).catch(e => console.error('Email error:', e));
+                        await Notification.create({
+                            userId: manager.id,
+                            type: NotificationType.STATUS_CHANGED,
+                            content: `Le statut du risque "${risk.titre}" a été mis à jour par l'agent : ${newStatut}`,
+                            riskId: risk.id
+                        });
+                    }
+                } else if (newStatut === RiskStatus.CLOSED) {
+                    const agent = await User.findByPk(risk.riskAgentId!);
+                    if (agent) {
+                        emailService.sendRiskClosedEmail(
+                            { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
+                            { titre: risk.titre }
+                        ).catch(e => console.error('Email error:', e));
+                        await Notification.create({
+                            userId: agent.id,
+                            type: NotificationType.STATUS_CHANGED,
+                            content: `Le risque "${risk.titre}" a été clôturé par le manager.`,
+                            riskId: risk.id
+                        });
+                    }
+                } else if (newStatut === RiskStatus.IN_PROGRESS && oldStatut === RiskStatus.TREATED && role === UserRole.RISK_MANAGER) {
+                    const agent = await User.findByPk(risk.riskAgentId!);
+                    if (agent) {
+                        await Notification.create({
+                            userId: agent.id,
+                            type: NotificationType.STATUS_CHANGED,
+                            content: `Le risque "${risk.titre}" a été remis en cours de traitement par le manager car il n'a pas été traité correctement.`,
+                            riskId: risk.id
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Background notification error:', err);
+            }
+        })();
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la mise à jour du statut', error: error.message });
     }
@@ -284,7 +286,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 /**
  * ÉVALUATION DES RISQUES PAR IA
  */
-router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT), async (req: AuthRequest, res) => {
+router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER), async (req: AuthRequest, res) => {
     try {
         const { riskIds } = req.body;
         const risks = await Risk.findAll({ where: { id: riskIds } });
@@ -380,6 +382,61 @@ router.delete('/:id', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN
     } catch (error: any) {
         console.error('Erreur suppression risque:', error);
         res.status(500).json({ message: 'Erreur lors de la suppression du risque', error: error.message });
+    }
+});
+
+/**
+ * ENVOYER UNE NOTIFICATION EMAIL D'ALERTE POUR UN RISQUE
+ */
+router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res) => {
+    try {
+        const { id } = req.params;
+        const risk = await Risk.findByPk(parseInt(id as string));
+        if (!risk) return res.status(404).json({ message: 'Risque non trouvé' });
+
+        // Respond immediately, send emails in background
+        res.json({ message: 'Notifications en cours d\'envoi...', sentCount: 0, totalRecipients: 0 });
+
+        // Fire-and-forget: send emails in background
+        (async () => {
+            try {
+                const recipients: { mail: string; nom: string; prenom: string }[] = [];
+
+                if (risk.riskAgentId) {
+                    const agent = await User.findByPk(risk.riskAgentId);
+                    if (agent) recipients.push({ mail: agent.mail, nom: agent.nom, prenom: agent.prenom });
+                }
+                if (risk.responsableTraitementId && risk.responsableTraitementId !== risk.riskAgentId) {
+                    const responsable = await User.findByPk(risk.responsableTraitementId);
+                    if (responsable) recipients.push({ mail: responsable.mail, nom: responsable.nom, prenom: responsable.prenom });
+                }
+                if (risk.riskManagerId && risk.riskManagerId !== req.user!.id) {
+                    const manager = await User.findByPk(risk.riskManagerId);
+                    if (manager) recipients.push({ mail: manager.mail, nom: manager.nom, prenom: manager.prenom });
+                }
+
+                for (const recipient of recipients) {
+                    await emailService.sendRiskStatusUpdateEmail(
+                        recipient,
+                        { titre: risk.titre, statut: `⚠️ ALERTE — Risque ${risk.niveauRisque}: ${risk.statut}` }
+                    );
+                    const user = await User.findOne({ where: { mail: recipient.mail } });
+                    if (user) {
+                        await Notification.create({
+                            userId: user.id,
+                            type: NotificationType.STATUS_CHANGED,
+                            content: `⚠️ Alerte envoyée pour le risque "${risk.titre}"`,
+                            riskId: risk.id
+                        });
+                    }
+                }
+                console.log(`Notifications envoyées pour le risque ${risk.id}`);
+            } catch (err) {
+                console.error('Erreur envoi notification en arrière-plan:', err);
+            }
+        })();
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors de l\'envoi de la notification', error: error.message });
     }
 });
 

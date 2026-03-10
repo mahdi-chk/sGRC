@@ -36,6 +36,8 @@ import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.co
 import { SharedModule } from './shared/shared.module';
 import { OrganigrammeManagementComponent } from './dashboard/components/organigramme-management/organigramme-management.component';
 import { AuditStatisticsComponent } from './dashboard/roles/top-management/audit-statistics/audit-statistics.component';
+import { AlertesMonitoringComponent } from './risks/alertes-monitoring/alertes-monitoring.component';
+import { TreatmentPlansComponent } from './risks/treatment-plans/treatment-plans.component';
 
 import { UserRole } from './core/models/user-role.enum';
 
@@ -53,11 +55,13 @@ const routes: Routes = [
       { path: '', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] } },
       { path: 'risks', component: RiskManagementComponent },
-      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR] } },
+      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.RISK_MANAGER] } },
       { path: 'assigned-risks', component: AssignedRisksComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'planning', component: PlanningComponent },
-      { path: 'statistics', component: RiskStatisticsComponent, data: { expectedRoles: [UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT] } },
-      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      { path: 'statistics', component: RiskStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT] } },
+      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
+      { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       // Routes spécifiques par rôle (Strictement 1:1)
       { path: 'super-admin', component: SuperAdminDashboardComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'admin-si', component: AdminSiDashboardComponent, data: { expectedRoles: [UserRole.ADMIN_SI] } },
@@ -94,7 +98,9 @@ const routes: Routes = [
     RiskStatisticsComponent,
     StrategicEvaluationComponent,
     OrganigrammeManagementComponent,
-    AuditStatisticsComponent
+    AuditStatisticsComponent,
+    AlertesMonitoringComponent,
+    TreatmentPlansComponent
   ],
   imports: [
     BrowserModule,

@@ -1377,3 +1377,145 @@
     }
   }
 }
+/* ===== RISK MATRIX HEATMAP ===== */
+.risk-matrix-card {
+  overflow: visible !important;
+  
+  .matrix-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+
+    h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #1e293b; }
+  }
+
+  .matrix-legend {
+    display: flex;
+    gap: 12px;
+
+    .legend-chip {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      
+      &.green { background: #d1fae5; color: #065f46; }
+      &.yellow { background: #fef3c7; color: #92400e; }
+      &.orange { background: #ffedd5; color: #9a3412; }
+      &.red { background: #fee2e2; color: #991b1b; }
+    }
+  }
+}
+
+.risk-matrix-container {
+  position: relative;
+  padding: 40px 20px 20px 60px;
+  background: white;
+  border-radius: 12px;
+}
+
+.risk-matrix-table {
+  width: 100%;
+  border-spacing: 6px;
+  border-collapse: separate;
+
+  th, td {
+    width: 20%;
+    height: 60px;
+    border-radius: 8px;
+    position: relative;
+  }
+
+  .impact-header {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-bottom: 15px;
+    border: none;
+    
+    i { margin-right: 8px; color: #3b82f6; }
+  }
+
+  .impact-label {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    
+    .score { display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
+  }
+
+  .prob-label {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 10px;
+    text-align: right;
+    border: 1px solid #e2e8f0;
+    padding-right: 15px;
+    border-radius: 8px;
+    
+    .score { display: inline-block; font-size: 0.7rem; color: #94a3b8; margin-left: 6px; }
+  }
+
+  .axis-corner { border: none; background: transparent; }
+
+  .cell {
+    transition: all 0.2s;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    
+    &:hover {
+      transform: scale(1.02);
+      filter: brightness(0.95);
+      z-index: 2;
+    }
+
+    .cell-value {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Heatmap Colors */
+    &.cell-lightgreen { background-color: #ecfdf5; border-color: #d1fae5; .cell-value { color: #10b981; } }
+    &.cell-green { background-color: #10b981; .cell-value { color: white; } }
+    &.cell-lightyellow { background-color: #fffbeb; border-color: #fef3c7; .cell-value { color: #f59e0b; } }
+    &.cell-yellow { background-color: #fbbf24; .cell-value { color: white; } }
+    &.cell-orange { background-color: #f97316; .cell-value { color: white; } }
+    &.cell-red { background-color: #ef4444; .cell-value { color: white; } }
+    &.cell-darkred { background-color: #b91c1c; .cell-value { color: white; } }
+  }
+}
+
+.prob-axis-label {
+  position: absolute;
+  left: 10px;
+  top: 55%;
+  transform: translateY(-50%) rotate(-90deg);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  
+  i { margin-right: 8px; color: #3b82f6; }
+}
+

@@ -1,0 +1,212 @@
+<div class="role-dashboard treatment-plans-page">
+    <!-- HEADER -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-tasks"></i> Plans de Traitement</h1>
+                <p>Planifier les réponses, tracker l'exécution et mesurer l'efficacité</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-action secondary" (click)="loadPlans()">
+                <i class="fas fa-sync-alt"></i> Rafraîchir
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row mb-4">
+        <div class="kpi-card kpi-total">
+            <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
+            <span class="kpi-value">{{ metrics.total }}</span>
+            <span class="kpi-label">Total des Plans</span>
+        </div>
+        <div class="kpi-card kpi-progress">
+            <div class="kpi-icon"><i class="fas fa-spinner"></i></div>
+            <span class="kpi-value">{{ metrics.enCours }}</span>
+            <span class="kpi-label">En Cours</span>
+        </div>
+        <div class="kpi-card kpi-danger">
+            <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <span class="kpi-value">{{ metrics.enRetard }}</span>
+            <span class="kpi-label">En Retard</span>
+        </div>
+        <div class="kpi-card kpi-closed">
+            <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
+            <span class="kpi-value">{{ metrics.termines }}</span>
+            <span class="kpi-label">Terminés</span>
+        </div>
+    </div>
+
+    <!-- PERFORMANCE -->
+    <div class="module-card premium stats-card mb-4" *ngIf="metrics.total > 0">
+        <div class="stats-header">
+            <h3><i class="fas fa-tachometer-alt"></i> Performance Globale</h3>
+        </div>
+        <div class="progress-row">
+            <div class="progress-item">
+                <span class="progress-title">Taux d'achèvement</span>
+                <div class="progress-track">
+                    <div class="progress-fill success" [style.width.%]="completionRate"></div>
+                </div>
+                <span class="progress-value">{{ completionRate }}%</span>
+            </div>
+            <div class="progress-item">
+                <span class="progress-title">Plans en retard</span>
+                <div class="progress-track">
+                    <div class="progress-fill danger" [style.width.%]="overdueRate"></div>
+                </div>
+                <span class="progress-value">{{ overdueRate }}%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="module-card premium full-width-card">
+        <div class="card-header-bar">
+            <h3><i class="fas fa-list-check"></i> Suivi des Exécutions</h3>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Plan d'Action</th>
+                        <th>Responsable</th>
+                        <th>Progression</th>
+                        <th>Statut</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let plan of plans" [class.row-selected]="selectedPlan?.id === plan.id">
+                        <td>
+                            <div class="plan-name">{{ plan.name }}</div>
+                        </td>
+                        <td>
+                            <div class="owner-cell">
+                                <span class="owner-avatar">{{ plan.owner.charAt(0) }}</span>
+                                <span>{{ plan.owner }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="progress-cell">
+                                <div class="mini-progress-track">
+                                    <div class="mini-progress-fill"
+                                         [ngClass]="{'success': plan.status === 'Terminé', 'primary': plan.status === 'En cours', 'danger': plan.status === 'En retard'}"
+                                         [style.width.%]="plan.progress"></div>
+                                </div>
+                                <span class="progress-text">{{ plan.progress }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge"
+                                  [ngClass]="{'badge-success': plan.status === 'Terminé', 'badge-primary': plan.status === 'En cours', 'badge-danger': plan.status === 'En retard'}">
+                                {{ plan.status }}
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <div class="table-actions">
+                                <button class="action-btn primary" title="Voir détails" (click)="viewDetails(plan)"><i class="fas fa-eye"></i></button>
+                                <button class="action-btn secondary" title="Éditer" (click)="editPlan(plan)"><i class="fas fa-edit"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr *ngIf="plans.length === 0">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <i class="fas fa-clipboard-check"></i>
+                                <p>Aucun plan de traitement trouvé.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- DETAIL / EDIT PANEL (Inline Slide-in) -->
+    <div class="detail-panel-overlay" *ngIf="showDetailPanel" (click)="closePanel()">
+        <div class="detail-panel" (click)="$event.stopPropagation()">
+            <div class="panel-header">
+                <h3>
+                    <i class="fas" [ngClass]="isEditing ? 'fa-edit' : 'fa-info-circle'"></i>
+                    {{ isEditing ? 'Modifier le Plan' : 'Détails du Plan' }}
+                </h3>
+                <button class="close-btn" (click)="closePanel()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="panel-body" *ngIf="selectedPlan">
+                <!-- Infos -->
+                <div class="detail-section">
+                    <label>Plan d'action</label>
+                    <p class="detail-value">{{ selectedPlan.name }}</p>
+                </div>
+
+                <div class="detail-section">
+                    <label>Risque associé</label>
+                    <p class="detail-value">{{ selectedPlan.riskTitle }}</p>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-section">
+                        <label>Responsable</label>
+                        <p class="detail-value">
+                            <span class="owner-avatar small">{{ selectedPlan.owner.charAt(0) }}</span>
+                            {{ selectedPlan.owner }}
+                        </p>
+                    </div>
+                    <div class="detail-section">
+                        <label>Domaine</label>
+                        <p class="detail-value">{{ selectedPlan.domaine || 'Non spécifié' }}</p>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-section">
+                        <label>Échéance</label>
+                        <p class="detail-value">{{ selectedPlan.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                    </div>
+                    <div class="detail-section">
+                        <label>Statut actuel</label>
+                        <span class="status-badge"
+                              [ngClass]="{'badge-success': selectedPlan.status === 'Terminé', 'badge-primary': selectedPlan.status === 'En cours', 'badge-danger': selectedPlan.status === 'En retard'}">
+                            {{ selectedPlan.status }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <label>Progression</label>
+                    <div class="detail-progress">
+                        <div class="detail-progress-track">
+                            <div class="detail-progress-fill"
+                                 [ngClass]="{'success': selectedPlan.status === 'Terminé', 'primary': selectedPlan.status === 'En cours', 'danger': selectedPlan.status === 'En retard'}"
+                                 [style.width.%]="selectedPlan.progress"></div>
+                        </div>
+                        <span class="detail-progress-text">{{ selectedPlan.progress }}%</span>
+                    </div>
+                </div>
+
+                <div class="detail-section" *ngIf="selectedPlan.description">
+                    <label>Description</label>
+                    <p class="detail-value desc">{{ selectedPlan.description }}</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="panel-actions">
+                    <button class="btn-action primary full" (click)="markAsCompleted(selectedPlan)" *ngIf="selectedPlan.status !== 'Terminé'">
+                        <i class="fas fa-check"></i> Marquer comme terminé
+                    </button>
+                    <button class="btn-action secondary full" (click)="closePanel()">
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

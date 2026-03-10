@@ -241,6 +241,13 @@ export class RiskService {
     }
 
     /**
+     * Envoie une notification email d'alerte pour un risque donné.
+     */
+    sendNotification(riskId: number): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/${riskId}/notify`, {});
+    }
+
+    /**
      * Supprime un risque de la base de données.
      */
     deleteRisk(id: number): Observable<void> {

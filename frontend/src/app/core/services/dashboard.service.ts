@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { UserRole } from '../models/user-role.enum';
 
@@ -142,6 +143,8 @@ export class DashboardService {
         }
     ];
 
+    constructor(private router: Router) {}
+
     getModules(): ModuleItem[] {
         return this.modules;
     }
@@ -158,7 +161,19 @@ export class DashboardService {
     }
 
     openSubmoduleModal(m: any, s: any) {
-        this.openModalSource.next({ m, s });
+        if (s.title === 'Registre des Risques') {
+            this.router.navigate(['/dashboard/risks']);
+        } else if (s.title === 'Évaluation Paramétrable') {
+            this.router.navigate(['/dashboard/strategic-evaluation']);
+        } else if (s.title === 'Cartographie Dynamique') {
+            this.router.navigate(['/dashboard/statistics']);
+        } else if (s.title === 'Alertes et Monitoring') {
+            this.router.navigate(['/dashboard/alertes-monitoring']);
+        } else if (s.title === 'Plans de Traitement') {
+            this.router.navigate(['/dashboard/treatment-plans']);
+        } else {
+            this.openModalSource.next({ m, s });
+        }
     }
 
     toggleAiAssistant() {

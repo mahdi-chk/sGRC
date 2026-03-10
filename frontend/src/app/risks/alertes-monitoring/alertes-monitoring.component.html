@@ -1,0 +1,134 @@
+<div class="role-dashboard alertes-monitoring-page">
+    <!-- HEADER -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-shield-alt"></i> Alertes et Monitoring</h1>
+                <p>Surveillance en temps réel des risques et notifications automatiques</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-action primary" (click)="loadAlerts()">
+                <i class="fas fa-sync-alt"></i> Rafraîchir
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="kpi-row mb-4">
+        <div class="kpi-card kpi-danger">
+            <div class="kpi-icon"><i class="fas fa-bell"></i></div>
+            <span class="kpi-value">{{ metrics.active }}</span>
+            <span class="kpi-label">Alertes Actives</span>
+        </div>
+        <div class="kpi-card kpi-total">
+            <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <span class="kpi-value">{{ criticalCount }}</span>
+            <span class="kpi-label">Critiques</span>
+        </div>
+        <div class="kpi-card kpi-progress">
+            <div class="kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
+            <span class="kpi-value">{{ warningCount }}</span>
+            <span class="kpi-label">Avertissements</span>
+        </div>
+        <div class="kpi-card kpi-closed">
+            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+            <span class="kpi-value">{{ overdueCount }}</span>
+            <span class="kpi-label">En retard</span>
+        </div>
+    </div>
+
+    <!-- ALERTES TABLE -->
+    <div class="module-card premium full-width-card">
+        <div class="card-header-bar">
+            <h3><i class="fas fa-stream"></i> Flux d'Alertes en Temps Réel</h3>
+            <span class="live-dot">
+                <span class="ping"></span>
+                <span class="dot"></span>
+            </span>
+        </div>
+
+        <div class="alerts-list" *ngIf="alerts.length > 0">
+            <div class="alert-item" *ngFor="let alert of alerts"
+                 [ngClass]="{'alert-critical': alert.type === 'critical', 'alert-warning': alert.type === 'warning', 'alert-info': alert.type === 'info'}">
+                <div class="alert-icon-container">
+                    <i *ngIf="alert.type === 'critical'" class="fas fa-exclamation-circle"></i>
+                    <i *ngIf="alert.type === 'warning'" class="fas fa-exclamation-triangle"></i>
+                    <i *ngIf="alert.type === 'info'" class="fas fa-info-circle"></i>
+                </div>
+                <div class="alert-body">
+                    <p class="alert-message">{{ alert.message }}</p>
+                    <span class="alert-time"><i class="far fa-clock"></i> {{ alert.time }}</span>
+                </div>
+                <div class="alert-actions">
+                    <button class="action-btn success" title="Marquer comme traité" (click)="markAsTreated(alert)">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="action-btn info" title="Envoyer un Email" (click)="openEmailModal(alert)">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-state" *ngIf="alerts.length === 0">
+            <i class="fas fa-check-circle"></i>
+            <p>Aucune alerte active. Tout est sous contrôle.</p>
+        </div>
+    </div>
+
+    <!-- EMAIL CONFIRMATION MODAL -->
+    <div class="modal-overlay" *ngIf="showEmailModal" (click)="closeEmailModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <!-- Before sending -->
+            <div *ngIf="!emailSuccess">
+                <div class="modal-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <h3>Confirmer l'envoi de notification</h3>
+                <p class="modal-desc">
+                    Envoyer une notification email à toutes les parties prenantes concernées par le risque :
+                </p>
+                <div class="modal-risk-name">
+                    « {{ selectedAlert?.riskTitle }} »
+                </div>
+                <p class="modal-note">
+                    <i class="fas fa-info-circle"></i>
+                    L'email sera envoyé à l'agent assigné, au responsable de traitement et au risk manager.
+                </p>
+
+                <div class="modal-error" *ngIf="emailError">
+                    <i class="fas fa-times-circle"></i> {{ emailError }}
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-action secondary" (click)="closeEmailModal()" [disabled]="emailSending">
+                        Annuler
+                    </button>
+                    <button class="btn-action primary" (click)="confirmSendEmail()" [disabled]="emailSending">
+                        <i class="fas fa-spinner fa-spin" *ngIf="emailSending"></i>
+                        <i class="fas fa-paper-plane" *ngIf="!emailSending"></i>
+                        {{ emailSending ? 'Envoi en cours...' : 'Confirmer l\'envoi' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- After success -->
+            <div *ngIf="emailSuccess" class="success-state">
+                <div class="modal-icon success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Notification envoyée !</h3>
+                <p class="modal-desc">Les parties prenantes ont été notifiées par email avec succès.</p>
+                <div class="modal-actions">
+                    <button class="btn-action primary" (click)="closeEmailModal()">
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

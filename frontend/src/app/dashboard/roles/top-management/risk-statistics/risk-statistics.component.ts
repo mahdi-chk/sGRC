@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../../core/services/risk.service';
+import { RiskService, Risk, RiskLevel, RiskStatus, RiskProbability, RiskImpact } from '../../../../core/services/risk.service';
 import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -24,6 +24,16 @@ export class RiskStatisticsComponent implements OnInit {
     treatmentRate: number = 0;
     avgMaturity: number = 0;
     showExportMenu = false;
+
+    // 4x4 Matrix for Heat Map (Rows = Probabilite, Cols = Impact)
+    // Probabilités: Permanent (0), Probable (1), Possible (2), Rare (3)
+    // Impacts: Limité (0), Moyen (1), Significatif (2), Critique (3)
+    riskMatrix: number[][] = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ];
 
     constructor(private riskService: RiskService, private router: Router) { }
 
@@ -57,6 +67,13 @@ export class RiskStatisticsComponent implements OnInit {
         this.domainStats = {};
         this.deptStats = {};
 
+        this.riskMatrix = [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ];
+
         this.risks.forEach(r => {
             if (this.levelStats[r.niveauRisque] !== undefined) this.levelStats[r.niveauRisque]++;
             if (this.statusStats[r.statut] !== undefined) this.statusStats[r.statut]++;
@@ -66,6 +83,28 @@ export class RiskStatisticsComponent implements OnInit {
 
             const dept = r.departement?.nom || 'Non spécifié';
             this.deptStats[dept] = (this.deptStats[dept] || 0) + 1;
+
+            // Populate Matrix
+            let row = -1;
+            let col = -1;
+            
+            switch (r.probabilite) {
+                case RiskProbability.PERMANENT: row = 0; break;
+                case RiskProbability.PROBABLE: row = 1; break;
+                case RiskProbability.POSSIBLE: row = 2; break;
+                case RiskProbability.RARE: row = 3; break;
+            }
+
+            switch (r.impact) {
+                case RiskImpact.LIMITÉ: col = 0; break;
+                case RiskImpact.MOYEN: col = 1; break;
+                case RiskImpact.SIGNIFICATIF: col = 2; break;
+                case RiskImpact.CRITIQUE: col = 3; break;
+            }
+
+            if (row !== -1 && col !== -1) {
+                this.riskMatrix[row][col]++;
+            }
         });
 
         const criticalCount = this.levelStats['Critique'] || 0;

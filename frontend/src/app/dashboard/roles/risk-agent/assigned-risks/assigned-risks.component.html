@@ -103,8 +103,26 @@
                     <p class="detail-value">{{ selectedRisk?.domaine }}</p>
                 </div>
                 <div class="detail-block">
-                    <span class="detail-label">Niveau</span>
-                    <span [class]="'badge level-' + selectedRisk?.niveauRisque">{{ selectedRisk?.niveauRisque }}</span>
+                    <span class="detail-label">Macro Processus</span>
+                    <p class="detail-value">{{ selectedRisk?.macroProcessus || '—' }}</p>
+                </div>
+                <div class="detail-block full">
+                    <span class="detail-label">Processus</span>
+                    <p class="detail-value">{{ selectedRisk?.processus || '—' }}</p>
+                </div>
+                
+                <div class="detail-block">
+                    <span class="detail-label">Risque Brut</span>
+                    <span [class]="'badge level-' + selectedRisk?.cotationRisqueBrut">{{ selectedRisk?.cotationRisqueBrut || '—' }}</span>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Risque Net</span>
+                    <span [class]="'badge level-' + (selectedRisk?.cotationRisqueNet || selectedRisk?.niveauRisque)">{{ selectedRisk?.cotationRisqueNet || selectedRisk?.niveauRisque }}</span>
+                </div>
+
+                <div class="detail-block full">
+                    <span class="detail-label">Plan d'action prévu</span>
+                    <p class="detail-value">{{ selectedRisk?.planActionTraitement || '—' }}</p>
                 </div>
             </div>
 
@@ -192,8 +210,47 @@
                     <p class="detail-value">{{ selectedRisk.domaine }}</p>
                 </div>
                 <div class="detail-block">
-                    <span class="detail-label">Niveau</span>
-                    <span [class]="'badge level-' + selectedRisk.niveauRisque">{{ selectedRisk.niveauRisque }}</span>
+                    <span class="detail-label">Macro Processus</span>
+                    <p class="detail-value">{{ selectedRisk.macroProcessus || '—' }}</p>
+                </div>
+                <div class="detail-block full">
+                    <span class="detail-label">Processus</span>
+                    <p class="detail-value">{{ selectedRisk.processus || '—' }}</p>
+                </div>
+
+                <div class="detail-block">
+                    <span class="detail-label">Probabilité / Impact</span>
+                    <p class="detail-value">{{ selectedRisk.probabilite || '—' }} / {{ selectedRisk.impact || '—' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Risque Brut</span>
+                    <div style="margin-top: 5px;">
+                        <span [class]="'badge level-' + selectedRisk.cotationRisqueBrut">{{ selectedRisk.cotationRisqueBrut || '—' }}</span>
+                        <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueBrut">({{ selectedRisk.niveauCotationRisqueBrut }})</small>
+                    </div>
+                </div>
+
+                <div class="detail-block full">
+                    <span class="detail-label">DMR Existant</span>
+                    <p class="detail-value">{{ selectedRisk.dmrExistant || '—' }}</p>
+                </div>
+
+                <div class="detail-block">
+                    <span class="detail-label">Maîtrise (DMR)</span>
+                    <p class="detail-value">{{ selectedRisk.niveauMaitrise || '—' }}</p>
+                </div>
+                
+                <div class="detail-block">
+                    <span class="detail-label">Risque Net</span>
+                    <div style="margin-top: 5px;">
+                        <span [class]="'badge level-' + (selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque)">{{ selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque }}</span>
+                        <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueNet">({{ selectedRisk.niveauCotationRisqueNet }})</small>
+                    </div>
+                </div>
+
+                <div class="detail-block full">
+                    <span class="detail-label">Plan d'action de traitement</span>
+                    <p class="detail-value">{{ selectedRisk.planActionTraitement || '—' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Département</span>

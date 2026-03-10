@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
-import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../core/services/risk.service';
+import { RiskService, Risk, RiskLevel, RiskStatus, RiskProbability, RiskImpact, MaitriseLevel } from '../../../core/services/risk.service';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
@@ -43,16 +43,31 @@ export class RiskManagerDashboardComponent implements OnInit {
     selectedRisk: Risk | null = null;
     editRiskId: number | null = null;
 
-    newRisk = {
+    newRisk: any = {
         titre: '',
         explication: '',
         domaine: '',
+        macroProcessus: null,
+        processus: null,
         departementId: '',
         dateEcheance: '',
         niveauRisque: RiskLevel.MEDIUM,
+        probabilite: null,
+        impact: null,
+        niveauMaitrise: null,
+        dmrExistant: '',
+        planActionTraitement: '',
+        cotationRisqueBrut: null,
+        niveauCotationRisqueBrut: null,
+        cotationRisqueNet: null,
+        niveauCotationRisqueNet: null,
         responsableTraitementId: ''
     };
     riskLevels = Object.values(RiskLevel);
+    riskProbabilities = Object.values(RiskProbability);
+    riskImpacts = Object.values(RiskImpact);
+    maitriseLevels = Object.values(MaitriseLevel);
+    
     today = new Date().toISOString().split('T')[0];
 
     filterStatut = '';
@@ -169,16 +184,66 @@ export class RiskManagerDashboardComponent implements OnInit {
         this.isEditing = true;
         this.editRiskId = risk.id;
         this.newRisk = {
-            titre: risk.titre,
-            explication: risk.explication,
-            domaine: risk.domaine,
+            ...risk,
             departementId: risk.departementId.toString(),
             dateEcheance: new Date(risk.dateEcheance).toISOString().split('T')[0],
-            niveauRisque: risk.niveauRisque,
             responsableTraitementId: risk.responsableTraitementId.toString()
         };
+        this.calculateScores();
         this.updateFilteredAgents();
         this.showCreateModal = true;
+    }
+
+    calculateScores() {
+        let probaVal = 0;
+        switch (this.newRisk.probabilite) {
+            case RiskProbability.RARE: probaVal = 1; break;
+            case RiskProbability.POSSIBLE: probaVal = 2; break;
+            case RiskProbability.PROBABLE: probaVal = 4; break;
+            case RiskProbability.PERMANENT: probaVal = 8; break;
+        }
+
+        let impactVal = 0;
+        switch (this.newRisk.impact) {
+            case RiskImpact.LIMITÉ: impactVal = 1; break;
+            case RiskImpact.MOYEN: impactVal = 4; break;
+            case RiskImpact.SIGNIFICATIF: impactVal = 16; break;
+            case RiskImpact.CRITIQUE: impactVal = 64; break;
+        }
+
+        if (probaVal && impactVal) {
+            const brut = probaVal * impactVal;
+            this.newRisk.niveauCotationRisqueBrut = brut;
+            if (brut <= 8) this.newRisk.cotationRisqueBrut = RiskLevel.LOW;
+            else if (brut <= 32) this.newRisk.cotationRisqueBrut = RiskLevel.LIMITED;
+            else if (brut <= 128) this.newRisk.cotationRisqueBrut = RiskLevel.MEDIUM;
+            else this.newRisk.cotationRisqueBrut = RiskLevel.HIGH;
+        } else {
+            this.newRisk.niveauCotationRisqueBrut = null;
+            this.newRisk.cotationRisqueBrut = null;
+        }
+
+        let dmrVal = 0;
+        switch (this.newRisk.niveauMaitrise) {
+            case MaitriseLevel.FAIBLE: dmrVal = 4; break;
+            case MaitriseLevel.LIMITÉ: dmrVal = 3; break;
+            case MaitriseLevel.MOYEN: dmrVal = 2; break;
+            case MaitriseLevel.ÉLEVÉ: dmrVal = 1; break;
+        }
+
+        if (this.newRisk.niveauCotationRisqueBrut && dmrVal) {
+            const net = this.newRisk.niveauCotationRisqueBrut * dmrVal;
+            this.newRisk.niveauCotationRisqueNet = net;
+            if (net <= 32) this.newRisk.cotationRisqueNet = RiskLevel.LOW;
+            else if (net <= 128) this.newRisk.cotationRisqueNet = RiskLevel.LIMITED;
+            else if (net <= 512) this.newRisk.cotationRisqueNet = RiskLevel.MEDIUM;
+            else this.newRisk.cotationRisqueNet = RiskLevel.HIGH;
+            
+            this.newRisk.niveauRisque = this.newRisk.cotationRisqueNet;
+        } else {
+             this.newRisk.niveauCotationRisqueNet = null;
+             this.newRisk.cotationRisqueNet = null;
+        }
     }
 
     saveRisk() {
@@ -276,9 +341,20 @@ export class RiskManagerDashboardComponent implements OnInit {
             titre: '',
             explication: '',
             domaine: '',
+            macroProcessus: null,
+            processus: null,
             departementId: '',
             dateEcheance: '',
             niveauRisque: RiskLevel.MEDIUM,
+            probabilite: null,
+            impact: null,
+            niveauMaitrise: null,
+            dmrExistant: '',
+            planActionTraitement: '',
+            cotationRisqueBrut: null,
+            niveauCotationRisqueBrut: null,
+            cotationRisqueNet: null,
+            niveauCotationRisqueNet: null,
             responsableTraitementId: ''
         };
         this.selectedFile = null;

@@ -124,6 +124,18 @@
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                 </div>
                 <div class="form-group">
+                    <label>Macro Processus</label>
+                    <input type="text" [(ngModel)]="newRisk.macroProcessus" placeholder="Ex: Finance"
+                        class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Processus</label>
+                    <input type="text" [(ngModel)]="newRisk.processus" placeholder="Ex: Gestion Trésorerie"
+                        class="premium-input"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                </div>
+                <div class="form-group">
                     <label>Département à Risque <span class="required">*</span></label>
                     <select [(ngModel)]="newRisk.departementId" (change)="onDepartmentChange()" class="premium-input"
                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
@@ -145,12 +157,62 @@
                     <small *ngIf="newRisk.departementId && filteredAgents.length === 0"
                         style="color: #d32f2f; font-size: 0.75rem;">Aucun utilisateur dans ce département</small>
                 </div>
+
+                <div style="grid-column: span 2; margin: 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">
+                    <h5 style="color:#475569; margin:0;">Cotation du Risque</h5>
+                </div>
+
                 <div class="form-group">
-                    <label>Niveau de Risque <span class="required">*</span></label>
-                    <select [(ngModel)]="newRisk.niveauRisque" class="premium-input"
-                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
-                        <option *ngFor="let lv of riskLevels" [value]="lv">{{ lv }}</option>
+                    <label>Probabilité</label>
+                    <select [(ngModel)]="newRisk.probabilite" (change)="calculateScores()" class="premium-input" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <option [ngValue]="null">Sélectionner</option>
+                        <option *ngFor="let p of riskProbabilities" [value]="p">{{ p }}</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Impact</label>
+                    <select [(ngModel)]="newRisk.impact" (change)="calculateScores()" class="premium-input" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <option [ngValue]="null">Sélectionner</option>
+                        <option *ngFor="let i of riskImpacts" [value]="i">{{ i }}</option>
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Risque Brut</label>
+                    <div style="padding:10px; border-radius:6px; border:1px solid #ddd; background:#f9f9f9;">
+                        <span [class]="'badge level-' + newRisk.cotationRisqueBrut" *ngIf="newRisk.cotationRisqueBrut">{{ newRisk.cotationRisqueBrut }}</span>
+                        <span style="color:#666;" *ngIf="!newRisk.cotationRisqueBrut">Non évalué</span>
+                        <small style="margin-left: 10px; color:#666;" *ngIf="newRisk.niveauCotationRisqueBrut">(Score: {{newRisk.niveauCotationRisqueBrut}}/512)</small>
+                    </div>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>DMR Existant</label>
+                    <textarea [(ngModel)]="newRisk.dmrExistant" rows="2" placeholder="Dispositifs existants..."
+                        class="premium-input" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Niveau de Maîtrise</label>
+                    <select [(ngModel)]="newRisk.niveauMaitrise" (change)="calculateScores()" class="premium-input" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <option [ngValue]="null">Sélectionner</option>
+                        <option *ngFor="let m of maitriseLevels" [value]="m">{{ m }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Risque Net <span class="required">*</span></label>
+                    <div style="padding:10px; border-radius:6px; border:1px solid #ddd; background:#f9f9f9;">
+                        <span [class]="'badge level-' + (newRisk.cotationRisqueNet || newRisk.niveauRisque)">{{ newRisk.cotationRisqueNet || newRisk.niveauRisque }}</span>
+                        <small style="margin-left: 10px; color:#666;" *ngIf="newRisk.niveauCotationRisqueNet">(Score: {{newRisk.niveauCotationRisqueNet}}/2048)</small>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Plan d'action de traitement</label>
+                    <textarea [(ngModel)]="newRisk.planActionTraitement" rows="3" placeholder="Plan pour traiter ce risque..."
+                        class="premium-input" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+
+                <div style="grid-column: span 2; margin: 10px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">
+                    <h5 style="color:#475569; margin:0;">Planification</h5>
                 </div>
                 <div class="form-group">
                     <label>Date d'échéance <span class="required">*</span></label>
@@ -235,11 +297,54 @@
                 </div>
                 <div class="detail-item">
                     <label
-                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Niveau</label>
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Macro Processus</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.macroProcessus || '—' }}</p>
+                </div>
+                <div class="detail-item" style="grid-column: span 2;">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Processus</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.processus || '—' }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Probabilité / Impact</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.probabilite || '—' }} / {{ selectedRisk.impact || '—' }}</p>
+                </div>
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Risque Brut</label>
                     <div style="margin-top: 5px;">
-                        <span [class]="'badge level-' + selectedRisk.niveauRisque">{{ selectedRisk.niveauRisque
-                            }}</span>
+                        <span [class]="'badge level-' + selectedRisk.cotationRisqueBrut">{{ selectedRisk.cotationRisqueBrut || '—' }}</span>
+                        <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueBrut">({{ selectedRisk.niveauCotationRisqueBrut }})</small>
                     </div>
+                </div>
+
+                <div class="detail-item" style="grid-column: span 2;">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">DMR Existant</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.dmrExistant || '—' }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Maîtrise (DMR)</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.niveauMaitrise || '—' }}</p>
+                </div>
+                
+                <div class="detail-item">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Risque Net</label>
+                    <div style="margin-top: 5px;">
+                        <span [class]="'badge level-' + (selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque)">{{ selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque }}</span>
+                        <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueNet">({{ selectedRisk.niveauCotationRisqueNet }})</small>
+                    </div>
+                </div>
+
+                <div class="detail-item" style="grid-column: span 2;">
+                    <label
+                        style="color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: 700;">Plan d'action de traitement</label>
+                    <p style="margin: 5px 0 0;">{{ selectedRisk.planActionTraitement || '—' }}</p>
                 </div>
                 <div class="detail-item">
                     <label

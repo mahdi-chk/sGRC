@@ -172,6 +172,14 @@
                     <input type="text" [(ngModel)]="newRisk.domaine" placeholder="Ex: Cybersécurité" class="finput">
                 </div>
                 <div class="form-group">
+                    <label>Macro Processus</label>
+                    <input type="text" [(ngModel)]="newRisk.macroProcessus" placeholder="Ex: Capital Humain" class="finput">
+                </div>
+                <div class="form-group full">
+                    <label>Processus</label>
+                    <input type="text" [(ngModel)]="newRisk.processus" placeholder="Ex: Gestion de la trésorerie" class="finput">
+                </div>
+                <div class="form-group">
                     <label>Département <span class="req">*</span></label>
                     <select [(ngModel)]="newRisk.departementId" (change)="onDepartmentChange()" class="finput">
                         <option value="">Sélectionner</option>
@@ -179,16 +187,67 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Resp. Département <span class="req">*</span></label>
                     <select [(ngModel)]="newRisk.responsableTraitementId" class="finput">
                         <option value="">Sélectionner un responsable</option>
                         <option *ngFor="let item of organigrammeItems" [value]="item.id">{{ item.nom }}</option>
                     </select>
                 </div>
+
+                <!-- section évaluation -->
+                <div class="section-divider full" style="margin: 10px 0;">
+                    <h5 style="border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; color:#475569;">Cotation du Risque</h5>
+                </div>
+                
                 <div class="form-group">
-                    <label>Niveau de Risque <span class="req">*</span></label>
-                    <select [(ngModel)]="newRisk.niveauRisque" class="finput">
-                        <option *ngFor="let lv of riskLevels" [value]="lv">{{ lv }}</option>
+                    <label>Probabilité</label>
+                    <select [(ngModel)]="newRisk.probabilite" (change)="calculateScores()" class="finput">
+                        <option [ngValue]="null">Sélectionner</option>
+                        <option *ngFor="let p of riskProbabilities" [value]="p">{{ p }}</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Impact</label>
+                    <select [(ngModel)]="newRisk.impact" (change)="calculateScores()" class="finput">
+                        <option [ngValue]="null">Sélectionner</option>
+                        <option *ngFor="let i of riskImpacts" [value]="i">{{ i }}</option>
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Risque Brut</label>
+                    <div style="padding:10px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; font-weight:600;">
+                        <span [class]="'badge level-' + newRisk.cotationRisqueBrut" *ngIf="newRisk.cotationRisqueBrut">{{ newRisk.cotationRisqueBrut }}</span>
+                        <span style="color:#64748b;" *ngIf="!newRisk.cotationRisqueBrut">Non évalué</span>
+                        <small style="margin-left: 10px; color:#64748b;" *ngIf="newRisk.niveauCotationRisqueBrut">(Score: {{newRisk.niveauCotationRisqueBrut}}/512)</small>
+                    </div>
+                </div>
+
+                <div class="form-group full">
+                    <label>DMR Existant</label>
+                    <textarea [(ngModel)]="newRisk.dmrExistant" rows="2" placeholder="Dispositif de Maîtrise des Risques..." class="finput"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Niveau de Maîtrise</label>
+                    <select [(ngModel)]="newRisk.niveauMaitrise" (change)="calculateScores()" class="finput">
+                        <option [ngValue]="null">Sélectionner</option>
+                        <option *ngFor="let m of maitriseLevels" [value]="m">{{ m }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Risque Net <span class="req">*</span></label>
+                    <div style="padding:10px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; font-weight:600;">
+                        <span [class]="'badge level-' + (newRisk.cotationRisqueNet || newRisk.niveauRisque)">{{ newRisk.cotationRisqueNet || newRisk.niveauRisque }}</span>
+                        <small style="margin-left: 10px; color:#64748b;" *ngIf="newRisk.niveauCotationRisqueNet">(Score: {{newRisk.niveauCotationRisqueNet}}/2048)</small>
+                    </div>
+                </div>
+
+                <div class="form-group full">
+                    <label>Plan d'action de traitement</label>
+                    <textarea [(ngModel)]="newRisk.planActionTraitement" rows="3" placeholder="Plan pour traiter ce risque..." class="finput"></textarea>
+                </div>
+
+                <div class="section-divider full" style="margin: 10px 0;">
+                    <h5 style="border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; color:#475569;">Planification et Suivi</h5>
                 </div>
                 <div class="form-group">
                     <label>Date d'échéance <span class="req">*</span></label>
@@ -267,8 +326,41 @@
                     <p class="detail-value">{{ selectedRisk.domaine }}</p>
                 </div>
                 <div class="detail-block">
-                    <span class="detail-label">Niveau</span>
-                    <span [class]="'badge level-' + selectedRisk.niveauRisque">{{ selectedRisk.niveauRisque }}</span>
+                    <span class="detail-label">Macro Processus</span>
+                    <p class="detail-value">{{ selectedRisk.macroProcessus || '—' }}</p>
+                </div>
+                <div class="detail-block full">
+                    <span class="detail-label">Processus</span>
+                    <p class="detail-value">{{ selectedRisk.processus || '—' }}</p>
+                </div>
+
+                <div class="detail-block">
+                    <span class="detail-label">Probabilité / Impact</span>
+                    <p class="detail-value">{{ selectedRisk.probabilite || '—' }} / {{ selectedRisk.impact || '—' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Risque Brut</span>
+                    <span [class]="'badge level-' + selectedRisk.cotationRisqueBrut">{{ selectedRisk.cotationRisqueBrut || '—' }}</span>
+                    <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueBrut">({{ selectedRisk.niveauCotationRisqueBrut }})</small>
+                </div>
+                
+                <div class="detail-block full">
+                    <span class="detail-label">DMR Existant</span>
+                    <p class="detail-value">{{ selectedRisk.dmrExistant || '—' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Maîtrise (DMR)</span>
+                    <p class="detail-value">{{ selectedRisk.niveauMaitrise || '—' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Risque Net</span>
+                    <span [class]="'badge level-' + (selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque)">{{ selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque }}</span>
+                    <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueNet">({{ selectedRisk.niveauCotationRisqueNet }})</small>
+                </div>
+                
+                <div class="detail-block full">
+                    <span class="detail-label">Plan d'action de traitement</span>
+                    <p class="detail-value">{{ selectedRisk.planActionTraitement || '—' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Statut</span>
@@ -456,11 +548,28 @@
                                     <span>{{ risk.domaine }}</span>
                                 </div>
                                 <div class="mini-detail">
+                                    <label>Macro Processus</label>
+                                    <span>{{ risk.macroProcessus || '—' }}</span>
+                                </div>
+                                <div class="mini-detail full">
+                                    <label>Probabilité & Impact (IA)</label>
+                                    <span>{{ risk.probabilite || 'Non évalué' }} / {{ risk.impact || 'Non évalué' }}</span>
+                                </div>
+                                <div class="mini-detail">
                                     <label>Département</label>
                                     <span class="dept-tag">{{ risk.departement }}</span>
                                 </div>
+                                <div class="mini-detail full">
+                                    <label>DMR Suggéré</label>
+                                    <p style="font-size: 0.8rem; margin: 0; color: #475569;">{{ risk.dmrExistant || '—' }}</p>
+                                    <span class="badge" *ngIf="risk.niveauMaitrise">Maîtrise: {{ risk.niveauMaitrise }}</span>
+                                </div>
+                                <div class="mini-detail full">
+                                    <label>Plan d'action prévu (IA)</label>
+                                    <p style="font-size: 0.8rem; margin: 0; color: #475569;">{{ risk.planActionTraitement || '—' }}</p>
+                                </div>
                                 <div class="mini-detail">
-                                    <label>Échéance ({{ risk.delaiSuggestion }} jours)</label>
+                                    <label>Échéance ({{ risk.delaiSuggestion }} jrs)</label>
                                     <input type="date" [(ngModel)]="risk.suggestedDate" class="mini-input">
                                 </div>
                                 <div class="mini-detail full">

@@ -185,6 +185,22 @@ sequelize.sync().then(async () => {
     await addColumn('aiAnalysisSuggestion', 'NVARCHAR(MAX) NULL');
     await addColumn('aiAnalysisDate', 'DATETIMEOFFSET NULL');
 
+    // Ajout manuel des nouvelles colonnes pour la cotation granulaire des risques
+    await addColumn('macroProcessus', 'NVARCHAR(255) NULL');
+    await addColumn('processus', 'NVARCHAR(255) NULL');
+    await addColumn('probabilite', 'NVARCHAR(50) NULL');
+    await addColumn('cotationProbabilite', 'INT NULL');
+    await addColumn('impact', 'NVARCHAR(50) NULL');
+    await addColumn('cotationImpact', 'INT NULL');
+    await addColumn('cotationRisqueBrut', 'NVARCHAR(50) NULL');
+    await addColumn('niveauCotationRisqueBrut', 'INT NULL');
+    await addColumn('dmrExistant', 'NVARCHAR(MAX) NULL');
+    await addColumn('niveauMaitrise', 'NVARCHAR(50) NULL');
+    await addColumn('cotationDmr', 'INT NULL');
+    await addColumn('cotationRisqueNet', 'NVARCHAR(50) NULL');
+    await addColumn('niveauCotationRisqueNet', 'INT NULL');
+    await addColumn('planActionTraitement', 'NVARCHAR(MAX) NULL');
+
     // Ajout manuel de la colonne 'deletedAt' pour le Soft Delete (Paranoid) des utilisateurs
     try {
       await sequelize.query(`

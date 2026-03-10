@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { RiskService, Risk, RiskLevel, RiskStatus, PeriodicFrequency } from '../core/services/risk.service';
+import { RiskService, Risk, RiskLevel, RiskStatus, PeriodicFrequency, RiskProbability, RiskImpact, MaitriseLevel } from '../core/services/risk.service';
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../core/models/user-role.enum';
 import { OrganigrammeService } from '../core/services/organigramme.service';
@@ -51,13 +51,27 @@ export class RiskManagementComponent implements OnInit {
     aiEvaluationResults: any[] = [];
 
 
-    newRisk = {
+    newRisk: any = {
         titre: '',
         explication: '',
         domaine: '',
+        macroProcessus: null,
+        processus: null,
         departementId: '',
         dateEcheance: '',
         niveauRisque: RiskLevel.MEDIUM,
+        
+        probabilite: null,
+        impact: null,
+        niveauMaitrise: null,
+        dmrExistant: '',
+        planActionTraitement: '',
+        
+        cotationRisqueBrut: null,
+        niveauCotationRisqueBrut: null,
+        cotationRisqueNet: null,
+        niveauCotationRisqueNet: null,
+        
         responsableTraitementId: '',
         frequenceTraitement: PeriodicFrequency.NONE,
         prochaineEcheance: ''
@@ -65,6 +79,11 @@ export class RiskManagementComponent implements OnInit {
     riskLevels = Object.values(RiskLevel);
     riskStatuses = Object.values(RiskStatus);
     periodicFrequencies = Object.values(PeriodicFrequency);
+    
+    riskProbabilities = Object.values(RiskProbability);
+    riskImpacts = Object.values(RiskImpact);
+    maitriseLevels = Object.values(MaitriseLevel);
+    
     today = new Date().toISOString().split('T')[0];
 
     filterStatut = '';
@@ -138,20 +157,75 @@ export class RiskManagementComponent implements OnInit {
         this.showCreateModal = true;
     }
 
+    calculateScores() {
+        // 1. Calcul Probabilité
+        let probaVal = 0;
+        switch (this.newRisk.probabilite) {
+            case RiskProbability.RARE: probaVal = 1; break;
+            case RiskProbability.POSSIBLE: probaVal = 2; break;
+            case RiskProbability.PROBABLE: probaVal = 4; break;
+            case RiskProbability.PERMANENT: probaVal = 8; break;
+        }
+
+        // 2. Calcul Impact
+        let impactVal = 0;
+        switch (this.newRisk.impact) {
+            case RiskImpact.LIMITÉ: impactVal = 1; break;
+            case RiskImpact.MOYEN: impactVal = 4; break;
+            case RiskImpact.SIGNIFICATIF: impactVal = 16; break;
+            case RiskImpact.CRITIQUE: impactVal = 64; break;
+        }
+
+        // 3. Risque Brut
+        if (probaVal && impactVal) {
+            const brut = probaVal * impactVal;
+            this.newRisk.niveauCotationRisqueBrut = brut;
+            if (brut <= 8) this.newRisk.cotationRisqueBrut = RiskLevel.LOW;
+            else if (brut <= 32) this.newRisk.cotationRisqueBrut = RiskLevel.LIMITED;
+            else if (brut <= 128) this.newRisk.cotationRisqueBrut = RiskLevel.MEDIUM;
+            else this.newRisk.cotationRisqueBrut = RiskLevel.HIGH;
+        } else {
+            this.newRisk.niveauCotationRisqueBrut = null;
+            this.newRisk.cotationRisqueBrut = null;
+        }
+
+        // 4. Calcul DMR
+        let dmrVal = 0;
+        switch (this.newRisk.niveauMaitrise) {
+            case MaitriseLevel.FAIBLE: dmrVal = 4; break;
+            case MaitriseLevel.LIMITÉ: dmrVal = 3; break;
+            case MaitriseLevel.MOYEN: dmrVal = 2; break;
+            case MaitriseLevel.ÉLEVÉ: dmrVal = 1; break;
+        }
+
+        // 5. Risque Net
+        if (this.newRisk.niveauCotationRisqueBrut && dmrVal) {
+            const net = this.newRisk.niveauCotationRisqueBrut * dmrVal;
+            this.newRisk.niveauCotationRisqueNet = net;
+            if (net <= 32) this.newRisk.cotationRisqueNet = RiskLevel.LOW;
+            else if (net <= 128) this.newRisk.cotationRisqueNet = RiskLevel.LIMITED;
+            else if (net <= 512) this.newRisk.cotationRisqueNet = RiskLevel.MEDIUM;
+            else this.newRisk.cotationRisqueNet = RiskLevel.HIGH;
+            
+            this.newRisk.niveauRisque = this.newRisk.cotationRisqueNet; // Sync pour compatibilité visuelle
+        } else {
+             this.newRisk.niveauCotationRisqueNet = null;
+             this.newRisk.cotationRisqueNet = null;
+        }
+    }
+
     onEditRisk(risk: Risk) {
         this.isEditing = true;
         this.editRiskId = risk.id;
         this.newRisk = {
-            titre: risk.titre,
-            explication: risk.explication,
-            domaine: risk.domaine,
+            ...risk,
             departementId: risk.departementId.toString(),
             dateEcheance: new Date(risk.dateEcheance).toISOString().split('T')[0],
-            niveauRisque: risk.niveauRisque,
             responsableTraitementId: risk.responsableTraitementId.toString(),
             frequenceTraitement: risk.frequenceTraitement || PeriodicFrequency.NONE,
             prochaineEcheance: risk.prochaineEcheance ? new Date(risk.prochaineEcheance).toISOString().split('T')[0] : ''
         };
+        this.calculateScores();
         this.updateFilteredAgents();
         this.showCreateModal = true;
     }
@@ -360,7 +434,11 @@ export class RiskManagementComponent implements OnInit {
                             selected: true,
                             deptId,
                             suggestedDate,
-                            manualResponsableId: matchedUserId
+                            manualResponsableId: matchedUserId,
+                            // Mappage par défaut si l'IA s'est trompée de case
+                            probabilite: r.probabilite || null,
+                            impact: r.impact || null,
+                            niveauMaitrise: r.niveauMaitrise || null
                         };
                     });
                 this.isGenerating = false;
@@ -393,13 +471,26 @@ export class RiskManagementComponent implements OnInit {
         selected.forEach(risk => {
             const formData = new FormData();
             formData.append('titre', risk.titre);
-            formData.append('explication', risk.explication);
-            formData.append('domaine', risk.domaine);
-            formData.append('niveauRisque', risk.niveauRisque);
+            formData.append('explication', risk.explication || '');
+            formData.append('domaine', risk.domaine || '');
+            if(risk.macroProcessus) formData.append('macroProcessus', risk.macroProcessus);
+            if(risk.processus) formData.append('processus', risk.processus);
+            if(risk.probabilite) formData.append('probabilite', risk.probabilite);
+            if(risk.impact) formData.append('impact', risk.impact);
+            if(risk.niveauMaitrise) formData.append('niveauMaitrise', risk.niveauMaitrise);
+            if(risk.dmrExistant) formData.append('dmrExistant', risk.dmrExistant);
+            if(risk.planActionTraitement) formData.append('planActionTraitement', risk.planActionTraitement);
+            
+            formData.append('niveauRisque', risk.niveauRisque || RiskLevel.MEDIUM);
             formData.append('departementId', risk.deptId.toString());
             formData.append('dateEcheance', risk.suggestedDate || this.today);
             formData.append('responsableTraitementId', risk.manualResponsableId);
-            formData.append('frequenceTraitement', risk.frequenceTraitement || PeriodicFrequency.NONE);
+            
+            let freq = risk.frequenceTraitement;
+            if (!Object.values(PeriodicFrequency).includes(freq)) {
+                freq = PeriodicFrequency.NONE;
+            }
+            formData.append('frequenceTraitement', freq);
 
             this.riskService.createRisk(formData).subscribe(() => {
                 completed++;
@@ -420,9 +511,20 @@ export class RiskManagementComponent implements OnInit {
             titre: '',
             explication: '',
             domaine: '',
+            macroProcessus: null,
+            processus: null,
             departementId: '',
             dateEcheance: '',
             niveauRisque: RiskLevel.MEDIUM,
+            probabilite: null,
+            impact: null,
+            niveauMaitrise: null,
+            dmrExistant: '',
+            planActionTraitement: '',
+            cotationRisqueBrut: null,
+            niveauCotationRisqueBrut: null,
+            cotationRisqueNet: null,
+            niveauCotationRisqueNet: null,
             responsableTraitementId: '',
             frequenceTraitement: PeriodicFrequency.NONE,
             prochaineEcheance: ''

@@ -240,9 +240,15 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             ${metadata}
             
             CONSIGNE : Pour chaque risque, choisis OBLIGATOIREMENT un département parmi ceux listés ci-dessus.
+            Génère les champs suivants selon la nomenclature stricte :
+            - probabilite: Choisir parmi ["Rare", "Possible", "Probable", "Permanent"]
+            - impact: Choisir parmi ["Limité", "Moyen", "Significatif", "Critique"]
+            - niveauMaitrise: Choisir parmi ["Faible", "Limité", "Moyen", "Elevé"]
+            - frequenceTraitement: Choisir parmi ["Quotidien", "Hebdomadaire", "Bimensuel", "Mensuel", "Trimestriel", "Semestriel", "Annuel", "Aucun"]
+            - planActionTraitement: Donne les étapes nécessaires pour traiter et atténuer ce risque.
 
-            Pour chaque risque, fournis : titre, explication, domaine, niveauRisque, departement, responsableSuggestion, delaiSuggestion (nombre), frequenceTraitement.
-            Réponds UNIQUEMENT avec un tableau JSON.`;
+            Pour chaque risque, fournis EXACTEMENT ces champs : titre, explication, domaine, macroProcessus, processus, probabilite, impact, niveauMaitrise, dmrExistant, planActionTraitement, departement, responsableSuggestion, delaiSuggestion (nombre), frequenceTraitement.
+            Réponds UNIQUEMENT avec un tableau JSON valide.`;
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
@@ -301,13 +307,24 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 }
             }
 
-            const systemPrompt = `Tu es un Auditeur Senior expert GRC. Analyse la liste de risques suivante et fournis une évaluation stratégique.${contextText ? ' Utilise les normes fournies en contexte pour affiner ton évaluation.' : ''}
+            const systemPrompt = `Tu es un Auditeur Senior expert GRC. Analyse la liste de risques suivante et fournis une évaluation stratégique détaillée.${contextText ? ' Utilise les normes fournies en contexte pour affiner ton évaluation.' : ''}
             
             IMPORTANT : Tout le contenu doit être en FRANÇAIS.
             
             ${contextText || ''}
-            Pour chaque risque, évalue : priorité (score de 1 à 10), impact potentiel, tendance, et suggestion d'audit.
-            Réponds UNIQUEMENT avec un tableau JSON. Exemple : [ { "riskId": 1, "priorite": 8, "impact": "...", "tendance": "...", "suggestion": "..." } ]`;
+            Considère ces échelles strictes :
+            - Impact : 1 (Limité), 4 (Moyen), 16 (Significatif), 64 (Critique)
+            - Probabilité : 1 (Rare), 2 (Possible), 4 (Probable), 8 (Permanent)
+            - DMR (Maîtrise) : 4 (Faible), 3 (Limité), 2 (Moyen), 1 (Elevé)
+
+            Pour chaque risque, évalue : 
+            1. priorite (score de 1 à 10 global pour l'audit)
+            2. impact (le type textuel de l'impact, ex: "Critique")
+            3. probabilite (ex: "Possible")
+            4. tendance (ex: "En hausse", "Stable")
+            5. suggestion (Suggestion d'action ou de contrôle d'audit)
+            
+            Réponds UNIQUEMENT avec un tableau JSON. Exemple : [ { "riskId": 1, "priorite": 8, "impact": "Critique", "probabilite": "Possible", "tendance": "Stable", "suggestion": "..." } ]`;
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,

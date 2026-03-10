@@ -11,13 +11,44 @@ import { Department } from '../departments/department.model';
 import { Organigramme } from '../organigramme/organigramme.model';
 
 /**
- * Niveaux de sévérité d'un risque.
+ * Niveaux de sévérité d'un risque / Cotation générique
  */
 export enum RiskLevel {
     LOW = 'Faible',
     MEDIUM = 'Moyen',
     HIGH = 'Élevé',
     CRITICAL = 'Critique',
+    LIMITED = 'Limité',
+}
+
+/**
+ * Probabilité du risque
+ */
+export enum RiskProbability {
+    RARE = 'Rare', // 1
+    POSSIBLE = 'Possible', // 2
+    PROBABLE = 'Probable', // 4
+    PERMANENT = 'Permanent', // 8
+}
+
+/**
+ * Impact du risque
+ */
+export enum RiskImpact {
+    LIMITÉ = 'Limité', // 1
+    MOYEN = 'Moyen', // 4
+    SIGNIFICATIF = 'Significatif', // 16
+    CRITIQUE = 'Critique', // 64
+}
+
+/**
+ * Niveau de maîtrise (DMR)
+ */
+export enum MaitriseLevel {
+    FAIBLE = 'Faible', // 4
+    LIMITÉ = 'Limité', // 3
+    MOYEN = 'Moyen', // 2
+    ÉLEVÉ = 'Elevé', // 1
 }
 
 /**
@@ -61,6 +92,30 @@ export class Risk extends Model {
     public statut!: RiskStatus;
     public pieceJustificative!: string | null;
     public frequenceTraitement!: PeriodicFrequency;
+    
+    // Nouveaux champs d'évaluation complète
+    public macroProcessus!: string | null;
+    public processus!: string | null;
+    
+    public probabilite!: RiskProbability | null;
+    public cotationProbabilite!: number | null;
+    
+    public impact!: RiskImpact | null;
+    public cotationImpact!: number | null;
+    
+    public cotationRisqueBrut!: RiskLevel | null;
+    public niveauCotationRisqueBrut!: number | null;
+    
+    public dmrExistant!: string | null;
+    public niveauMaitrise!: MaitriseLevel | null;
+    public cotationDmr!: number | null;
+    
+    // Le risque net correspondra au niveauGlobal (RiskLevel) et aura sa propre valeur calculée
+    public cotationRisqueNet!: RiskLevel | null;
+    public niveauCotationRisqueNet!: number | null;
+    
+    public planActionTraitement!: string | null;
+
     public prochaineEcheance!: Date | null;
     public dernierTraitement!: Date | null;
     public aiAnalysisScore!: number | null;
@@ -108,9 +163,75 @@ Risk.init(
         niveauRisque: {
             type: DataTypes.STRING,
             allowNull: false,
+            defaultValue: RiskLevel.LOW,
             validate: {
                 isIn: [Object.values(RiskLevel)],
             },
+        },
+        macroProcessus: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        processus: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        probabilite: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            validate: {
+                isIn: [Object.values(RiskProbability)],
+            },
+        },
+        cotationProbabilite: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        impact: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            validate: {
+                isIn: [Object.values(RiskImpact)],
+            },
+        },
+        cotationImpact: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        cotationRisqueBrut: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        niveauCotationRisqueBrut: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        dmrExistant: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        niveauMaitrise: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            validate: {
+                isIn: [Object.values(MaitriseLevel)],
+            },
+        },
+        cotationDmr: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        cotationRisqueNet: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        niveauCotationRisqueNet: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        planActionTraitement: {
+            type: DataTypes.TEXT,
+            allowNull: true,
         },
         // Organigramme responsable du département (Responsable de traitement)
         responsableTraitementId: {
@@ -200,6 +321,66 @@ Risk.init(
                     if (Object.values(PeriodicFrequency).includes(normalized as any)) {
                         risk.frequenceTraitement = normalized as any;
                     }
+                }
+                
+                // --- Calculs Automatiques de Cotation ---
+                
+                // 1. Détermination de la cotation de la probabilité
+                if (risk.probabilite) {
+                    switch (risk.probabilite) {
+                        case RiskProbability.RARE: risk.cotationProbabilite = 1; break;
+                        case RiskProbability.POSSIBLE: risk.cotationProbabilite = 2; break;
+                        case RiskProbability.PROBABLE: risk.cotationProbabilite = 4; break;
+                        case RiskProbability.PERMANENT: risk.cotationProbabilite = 8; break;
+                        default: risk.cotationProbabilite = null;
+                    }
+                }
+
+                // 2. Détermination de la cotation de l'impact
+                if (risk.impact) {
+                    switch (risk.impact) {
+                        case RiskImpact.LIMITÉ: risk.cotationImpact = 1; break;
+                        case RiskImpact.MOYEN: risk.cotationImpact = 4; break;
+                        case RiskImpact.SIGNIFICATIF: risk.cotationImpact = 16; break;
+                        case RiskImpact.CRITIQUE: risk.cotationImpact = 64; break;
+                        default: risk.cotationImpact = null;
+                    }
+                }
+
+                // 3. Calcul du Risque Brut
+                if (risk.cotationProbabilite && risk.cotationImpact) {
+                    const brut = risk.cotationProbabilite * risk.cotationImpact;
+                    risk.niveauCotationRisqueBrut = brut;
+                    
+                    if (brut <= 8) risk.cotationRisqueBrut = RiskLevel.LOW;
+                    else if (brut <= 32) risk.cotationRisqueBrut = RiskLevel.LIMITED;
+                    else if (brut <= 128) risk.cotationRisqueBrut = RiskLevel.MEDIUM;
+                    else risk.cotationRisqueBrut = RiskLevel.HIGH;
+                }
+
+                // 4. Détermination de la cotation du DMR
+                if (risk.niveauMaitrise) {
+                    switch (risk.niveauMaitrise) {
+                        case MaitriseLevel.FAIBLE: risk.cotationDmr = 4; break;
+                        case MaitriseLevel.LIMITÉ: risk.cotationDmr = 3; break;
+                        case MaitriseLevel.MOYEN: risk.cotationDmr = 2; break;
+                        case MaitriseLevel.ÉLEVÉ: risk.cotationDmr = 1; break;
+                        default: risk.cotationDmr = null;
+                    }
+                }
+
+                // 5. Calcul du Risque Net
+                if (risk.niveauCotationRisqueBrut && risk.cotationDmr) {
+                    const net = risk.niveauCotationRisqueBrut * risk.cotationDmr;
+                    risk.niveauCotationRisqueNet = net;
+                    
+                    if (net <= 32) risk.cotationRisqueNet = RiskLevel.LOW;
+                    else if (net <= 128) risk.cotationRisqueNet = RiskLevel.LIMITED;
+                    else if (net <= 512) risk.cotationRisqueNet = RiskLevel.MEDIUM;
+                    else risk.cotationRisqueNet = RiskLevel.HIGH;
+
+                    // Synchronisation de l'ancien champ 'niveauRisque' avec le risque net calculé
+                    risk.niveauRisque = risk.cotationRisqueNet;
                 }
             },
             beforeCreate: (risk: Risk) => {

@@ -16,6 +16,28 @@ export enum RiskLevel {
     MEDIUM = 'Moyen',
     HIGH = 'Élevé',
     CRITICAL = 'Critique',
+    LIMITED = 'Limité',
+}
+
+export enum RiskProbability {
+    RARE = 'Rare',
+    POSSIBLE = 'Possible',
+    PROBABLE = 'Probable',
+    PERMANENT = 'Permanent',
+}
+
+export enum RiskImpact {
+    LIMITÉ = 'Limité',
+    MOYEN = 'Moyen',
+    SIGNIFICATIF = 'Significatif',
+    CRITIQUE = 'Critique',
+}
+
+export enum MaitriseLevel {
+    FAIBLE = 'Faible',
+    LIMITÉ = 'Limité',
+    MOYEN = 'Moyen',
+    ÉLEVÉ = 'Elevé',
 }
 
 /**
@@ -50,9 +72,29 @@ export interface Risk {
     titre: string;
     explication: string;
     domaine: string;
+    macroProcessus?: string | null;
+    processus?: string | null;
+    
+    probabilite?: RiskProbability | null;
+    cotationProbabilite?: number | null;
+    impact?: RiskImpact | null;
+    cotationImpact?: number | null;
+    
+    cotationRisqueBrut?: RiskLevel | null;
+    niveauCotationRisqueBrut?: number | null;
+    
+    dmrExistant?: string | null;
+    niveauMaitrise?: MaitriseLevel | null;
+    cotationDmr?: number | null;
+    
+    cotationRisqueNet?: RiskLevel | null;
+    niveauCotationRisqueNet?: number | null;
+    
+    planActionTraitement?: string | null;
+
     departementId: number;
     dateEcheance: Date;
-    niveauRisque: RiskLevel;
+    niveauRisque: RiskLevel; // À terme remplacé/écrasé par cotationRisqueNet
     responsableTraitementId: number;
     riskManagerId: number;
     riskAgentId: number | null;
@@ -61,11 +103,13 @@ export interface Risk {
     frequenceTraitement: PeriodicFrequency;
     prochaineEcheance: Date | null;
     dernierTraitement: Date | null;
+    
     aiAnalysisScore?: number | null;
     aiAnalysisImpact?: string | null;
     aiAnalysisTendance?: string | null;
     aiAnalysisSuggestion?: string | null;
     aiAnalysisDate?: Date | null;
+    
     createdAt: Date;
     updatedAt: Date;
     riskAgent?: any;

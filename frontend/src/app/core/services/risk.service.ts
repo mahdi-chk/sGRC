@@ -253,4 +253,11 @@ export class RiskService {
     deleteRisk(id: number): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${id}`);
     }
+
+    /**
+     * Exporte un risque vers une fiche incident pré-remplie.
+     */
+    exportIncident(id: number): Observable<Blob> {
+        return this.http.get(`${this.apiUrl}/${id}/export-incident`, { responseType: 'blob' });
+    }
 }

@@ -6,9 +6,9 @@
 
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
+import { Organigramme } from '../organigramme/organigramme.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
-import { Organigramme } from '../organigramme/organigramme.model';
 
 /**
  * Niveaux de sévérité d'un risque / Cotation générique
@@ -125,6 +125,12 @@ export class Risk extends Model {
     public aiAnalysisDate!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
+
+    // Associations
+    public riskManager?: User;
+    public riskAgent?: User;
+    public responsableTraitement?: Organigramme;
+    public departement?: Department;
 }
 
 // Initialisation du schéma de la table 'risks'

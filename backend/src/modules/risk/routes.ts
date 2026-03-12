@@ -17,6 +17,9 @@ import { UserRole } from '../users/user.roles';
 import { emailService } from '../../utils/email.service';
 import { Notification, NotificationType } from '../notifications/notification.model';
 import { AIService } from '../ai/ai.service';
+// @ts-ignore
+import XlsxPopulate from 'xlsx-populate';
+import fs from 'fs';
 
 const router = Router();
 
@@ -437,6 +440,132 @@ router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_
         })();
     } catch (error: any) {
         res.status(500).json({ message: 'Erreur lors de l\'envoi de la notification', error: error.message });
+    }
+});
+
+/**
+ * EXPORTER UN RISQUE VERS LE TEMPLATE FICHE INCIDENT
+ */
+router.get('/:id/export-incident', async (req: AuthRequest, res) => {
+    try {
+        const { id } = req.params;
+        const risk = await Risk.findByPk(parseInt(id as string), {
+            include: ['riskManager', 'riskAgent', 'responsableTraitement', 'departement']
+        });
+
+        if (!risk) {
+            return res.status(404).json({ message: 'Risque non trouvé' });
+        }
+
+        const templatePath = path.resolve(__dirname, '../../../assets/templates/Fiche_incident.xlsm');
+        
+        if (!fs.existsSync(templatePath)) {
+            return res.status(404).json({ message: 'Template non trouvé sur le serveur' });
+        }
+
+        // Chargement du template
+        const workbook = await XlsxPopulate.fromFileAsync(templatePath);
+        const sheet = workbook.sheet("Incident1");
+
+        if (!sheet) {
+            return res.status(500).json({ message: 'Feuille "Incident1" non trouvée dans le template' });
+        }
+
+        // Population des champs (basé sur l'analyse visuelle et structurelle)
+        
+        // N° Incident (E2)
+        sheet.cell("E2").value(risk.id);
+
+        // --- SECTION 1: IDENTIFICATION ---
+        // Top Left
+        sheet.cell("B3").value("Direction Générale"); // *Direction
+        if (risk.departement) {
+            sheet.cell("B4").value(risk.departement.nom); // *Département
+        }
+        sheet.cell("B5").value("Audit des risques"); // Service (Approx based on user feedback)
+
+        // Top Right / Status & Actors
+        // C3: *Statut :, C4: *Créé par :, C5: *Créé le :
+        // E4: *Validé par :, E5: *Validé le :
+        // G4: Clos par :, G5: Clos le :
+        
+        sheet.cell("D3").value(risk.statut); // Statut
+        
+        if (risk.riskManager) {
+            sheet.cell("D4").value(`${risk.riskManager.prenom} ${risk.riskManager.nom}`); // Créé par
+        }
+        if (risk.riskAgent) {
+            sheet.cell("F4").value(`${risk.riskAgent.prenom} ${risk.riskAgent.nom}`); // Validé par
+        }
+        
+        // Clos par? If treated, we can put the agent or manager.
+        if (risk.statut === 'Traité' || risk.statut === 'Clôturé') {
+            const closer = risk.riskAgent || risk.riskManager;
+            if (closer) sheet.cell("H4").value(`${closer.prenom} ${closer.nom}`);
+        }
+
+        const formatDate = (date: Date) => {
+            if (!date) return "";
+            return new Date(date).toLocaleDateString('fr-FR');
+        };
+
+        sheet.cell("D5").value(formatDate(risk.createdAt)); // Créé le
+        sheet.cell("F5").value(formatDate(risk.updatedAt)); // Validé le
+        if (risk.statut === 'Clôturé') {
+            sheet.cell("H5").value(formatDate(risk.updatedAt)); // Clos le
+        }
+
+        // --- SECTION 2: DESCRIPTION DE L'INCIDENT ---
+        sheet.cell("B9").value(risk.titre); // *Libellé
+        sheet.cell("B10").value(risk.explication); // *Description
+        sheet.cell("B11").value(formatDate(risk.createdAt)); // *Survenu le
+        sheet.cell("B12").value(formatDate(risk.createdAt)); // Détecté le
+
+        // Classification
+        if (risk.domaine) sheet.cell("B13").value(risk.domaine);
+        if (risk.macroProcessus) sheet.cell("B14").value(risk.macroProcessus);
+        if (risk.processus) sheet.cell("B15").value(risk.processus);
+        
+        sheet.cell("B16").value("Activité standard"); // Activité
+        sheet.cell("B17").value(risk.titre); // Intitulé du risque opé
+
+        // --- SECTION 3: CAUSE DE L'INCIDENT ---
+        sheet.cell("B19").value("Cause à analyser"); // Cause
+        sheet.cell("B20").value(risk.departement ? risk.departement.nom : "N/A"); // Entité responsable
+
+        // --- SECTION 4: IMPACTS FINANCIERS ---
+        // Put default 0s if nothing else
+        sheet.cell("F47").value(0); // Perte sèche brute (A)
+        sheet.cell("F55").value(0); // Récupérations (B)
+        sheet.cell("F57").value(0); // Montant brut (A-C)
+        sheet.cell("F58").value(0); // Montant net (A-B-C)
+
+        // --- SECTION 5: IMPACTS QUALITATIFS ---
+        if (risk.niveauRisque === 'Critique' || risk.niveauRisque === 'Élevé') {
+            sheet.cell("G66").value("X"); // Risque d'image row index changed in analysis
+            sheet.cell("G68").value("X"); // Interruption de processus
+        }
+        
+        // --- SECTION 6: SUIVI DES ACTIONS ---
+        if (risk.planActionTraitement) {
+            sheet.cell("B75").value("Plan de traitement initial"); // Réf
+            sheet.cell("B76").value(risk.planActionTraitement); // Description
+            sheet.cell("B77").value(formatDate(risk.dateEcheance)); // Date cible
+            sheet.cell("B78").value(risk.statut === 'Traité' ? 'Réalisé' : 'En cours'); // État
+        }
+
+        // Génération du buffer
+        const buffer = await workbook.outputAsync();
+
+        // Envoi du fichier
+        const fileName = `Fiche_Incident_${risk.id}_${Date.now()}.xlsm`;
+        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+        res.setHeader('Content-Type', 'application/vnd.ms-excel.sheet.macroEnabled.12');
+        res.send(buffer);
+
+    } catch (error: any) {
+        console.error('Erreur export incident:', error);
+        res.status(500).json({ message: 'Erreur lors de la génération de la fiche incident', error: error.message });
     }
 });
 

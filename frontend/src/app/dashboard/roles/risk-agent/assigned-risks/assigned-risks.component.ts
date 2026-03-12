@@ -119,6 +119,23 @@ export class AssignedRisksComponent implements OnInit {
         });
     }
 
+    downloadIncident() {
+        if (!this.selectedRisk) return;
+        this.riskService.exportIncident(this.selectedRisk.id).subscribe((blob: Blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Fiche_Incident_${this.selectedRisk!.id}.xlsm`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, error => {
+            console.error('Erreur lors du téléchargement de la fiche incident:', error);
+            alert('Erreur lors de la génération de la fiche incident');
+        });
+    }
+
     goBack() {
         this.router.navigate(['/dashboard']);
     }

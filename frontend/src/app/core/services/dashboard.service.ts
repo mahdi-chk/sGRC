@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { UserRole } from '../models/user-role.enum';
+import { AuthService } from './auth.service';
 
 export interface Submodule {
     title: string;
@@ -143,7 +144,10 @@ export class DashboardService {
         }
     ];
 
-    constructor(private router: Router) {}
+    constructor(
+        private router: Router,
+        private authService: AuthService
+    ) {}
 
     getModules(): ModuleItem[] {
         return this.modules;
@@ -161,8 +165,15 @@ export class DashboardService {
     }
 
     openSubmoduleModal(m: any, s: any) {
+        const currentUser = this.authService.getCurrentUser();
+        const isRiskAgent = currentUser?.role === UserRole.RISK_AGENT;
+
         if (s.title === 'Registre des Risques') {
-            this.router.navigate(['/dashboard/risks']);
+            if (isRiskAgent) {
+                this.router.navigate(['/dashboard/assigned-risks']);
+            } else {
+                this.router.navigate(['/dashboard/risks']);
+            }
         } else if (s.title === 'Évaluation Paramétrable') {
             this.router.navigate(['/dashboard/strategic-evaluation']);
         } else if (s.title === 'Cartographie Dynamique') {

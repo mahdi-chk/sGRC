@@ -1379,29 +1379,30 @@
 }
 /* ===== RISK MATRIX HEATMAP ===== */
 .risk-matrix-card {
+  max-width: 600px;
+  margin: 0 auto 2rem;
   overflow: visible !important;
   
   .matrix-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 0 10px;
+    margin-bottom: 12px;
+    padding: 0 5px;
 
-    h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #1e293b; }
+    h3 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b; }
   }
 
   .matrix-legend {
     display: flex;
-    gap: 12px;
+    gap: 6px;
 
     .legend-chip {
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 6px;
+      padding: 2px 6px;
+      border-radius: 4px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
       
       &.green { background: #d1fae5; color: #065f46; }
       &.yellow { background: #fef3c7; color: #92400e; }
@@ -1412,85 +1413,96 @@
 }
 
 .risk-matrix-container {
-  position: relative;
-  padding: 40px 20px 20px 60px;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  grid-template-rows: auto 30px;
+  gap: 8px;
   background: white;
+  padding: 12px;
   border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.risk-matrix-y-axis {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-lr;
+  rotate: 180deg;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  
+  i { margin-bottom: 6px; color: #3b82f6; }
+}
+
+.risk-matrix-body {
+  grid-row: 1;
+  grid-column: 2;
+  overflow: hidden;
 }
 
 .risk-matrix-table {
   width: 100%;
-  border-spacing: 6px;
+  table-layout: fixed;
+  border-spacing: 4px;
   border-collapse: separate;
 
   th, td {
-    width: 20%;
-    height: 60px;
-    border-radius: 8px;
-    position: relative;
-  }
-
-  .impact-header {
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 800;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding-bottom: 15px;
-    border: none;
-    
-    i { margin-right: 8px; color: #3b82f6; }
+    padding: 0;
+    height: 48px;
+    border-radius: 6px;
+    vertical-align: middle;
   }
 
   .impact-label {
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    font-size: 0.85rem;
-    padding: 10px;
+    font-size: 0.75rem;
     text-align: center;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
     
-    .score { display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 2px; }
+    .score { display: block; font-size: 0.6rem; color: #94a3b8; margin-top: 1px; }
   }
 
   .prob-label {
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    font-size: 0.85rem;
-    padding: 10px;
-    text-align: right;
+    font-size: 0.75rem;
+    text-align: center;
     border: 1px solid #e2e8f0;
-    padding-right: 15px;
-    border-radius: 8px;
+    width: 90px;
     
-    .score { display: inline-block; font-size: 0.7rem; color: #94a3b8; margin-left: 6px; }
+    .score { display: block; font-size: 0.6rem; color: #94a3b8; }
   }
 
-  .axis-corner { border: none; background: transparent; }
+  .axis-corner { border: none; background: transparent; width: 90px; }
 
   .cell {
-    transition: all 0.2s;
-    cursor: default;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    cursor: pointer;
+    text-align: center;
     border: 2px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
     &:hover {
-      transform: scale(1.02);
-      filter: brightness(0.95);
-      z-index: 2;
+      transform: scale(1.05);
+      z-index: 10;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      border-color: rgba(255,255,255,0.4);
     }
 
     .cell-value {
-      font-size: 1.4rem;
+      font-size: 1.1rem;
       font-weight: 900;
       color: white;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
 
     /* Heatmap Colors */
@@ -1504,18 +1516,18 @@
   }
 }
 
-.prob-axis-label {
-  position: absolute;
-  left: 10px;
-  top: 55%;
-  transform: translateY(-50%) rotate(-90deg);
-  font-size: 0.85rem;
+.risk-matrix-x-axis {
+  grid-row: 2;
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
   font-weight: 800;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 1px;
-  white-space: nowrap;
   
-  i { margin-right: 8px; color: #3b82f6; }
+  i { margin-right: 6px; color: #3b82f6; }
 }
 

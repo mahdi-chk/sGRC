@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../core/services/auth.service';
 import { DashboardService } from '../core/services/dashboard.service';
 import { NotificationService } from '../core/services/notification.service';
-import { Notification } from '../core/models/notification.model';
+import { Notification, NotificationType } from '../core/models/notification.model';
 import { UserRole } from '../core/models/user-role.enum';
 import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
 import { Router } from '@angular/router';
@@ -69,7 +69,16 @@ export class DashboardComponent {
     });
 
     this.notificationService.notifications$.subscribe(notifs => {
-      this.notifications = notifs;
+      if (this.currentUserRole === UserRole.RISK_AGENT) {
+        // Filter notifications to only show risk-related notifications for this agent
+        this.notifications = notifs.filter(n =>
+          n.type === NotificationType.RISK_ASSIGNED ||
+          n.type === NotificationType.STATUS_CHANGED ||
+          n.type === NotificationType.COMMENT_ADDED
+        );
+      } else {
+        this.notifications = notifs;
+      }
     });
 
     this.notificationService.unreadCount$.subscribe(count => {

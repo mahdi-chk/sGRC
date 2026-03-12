@@ -286,7 +286,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 /**
  * ÉVALUATION DES RISQUES PAR IA
  */
-router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER), async (req: AuthRequest, res) => {
+router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { riskIds } = req.body;
         const risks = await Risk.findAll({ where: { id: riskIds } });
@@ -388,7 +388,7 @@ router.delete('/:id', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN
 /**
  * ENVOYER UNE NOTIFICATION EMAIL D'ALERTE POUR UN RISQUE
  */
-router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res) => {
+router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { id } = req.params;
         const risk = await Risk.findByPk(parseInt(id as string));

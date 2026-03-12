@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { RiskService, RiskLevel, RiskStatus } from '../../core/services/risk.service';
 import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { UserRole } from '../../core/models/user-role.enum';
 
 @Component({
   selector: 'app-alertes-monitoring',
@@ -21,11 +23,19 @@ export class AlertesMonitoringComponent implements OnInit {
   emailSending = false;
   emailSuccess = false;
   emailError = '';
+  currentUser: any = null;
 
-  constructor(private riskService: RiskService, private router: Router) { }
+  constructor(
+    private riskService: RiskService,
+    private router: Router,
+    private authService: AuthService
+  ) { }
 
   ngOnInit(): void {
-    this.loadAlerts();
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      this.loadAlerts();
+    });
   }
 
   loadAlerts() {
@@ -36,7 +46,13 @@ export class AlertesMonitoringComponent implements OnInit {
       this.warningCount = 0;
       this.overdueCount = 0;
 
-      risks.forEach(r => {
+      // Filter for Risk Agent if applicable
+      let filteredRisks = risks;
+      if (this.currentUser?.role === UserRole.RISK_AGENT) {
+        filteredRisks = risks.filter(r => r.riskAgentId === this.currentUser.id);
+      }
+
+      filteredRisks.forEach(r => {
         if (r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED) return;
 
         if (new Date(r.dateEcheance) < today) {

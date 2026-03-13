@@ -5,29 +5,14 @@ import { authenticateToken, AuthRequest, authorizeRoles } from '../../middleware
 import { UserRole } from '../users/user.roles';
 import multer from 'multer';
 
+import { secureUpload } from '../../middleware/file.middleware';
+
 const router = Router();
 
-// Multer configuration for security and performance
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit for general docs
-    },
-    fileFilter: (req, file, cb) => {
-        const extension = file.originalname.split('.').pop()?.toLowerCase();
-        const allowedExtensions = ['pdf', 'docx', 'jpg', 'jpeg', 'png'];
-
-        if (allowedExtensions.includes(extension || '')) {
-            // Specific limit for images (OCR performance)
-            if (['jpg', 'jpeg', 'png'].includes(extension || '') && parseInt(req.headers['content-length'] || '0') > 4 * 1024 * 1024) {
-                return cb(new Error('Les images pour l\'OCR sont limitées à 4Mo'));
-            }
-            cb(null, true);
-        } else {
-            cb(new Error('Format de fichier non supporté. Utilisez PDF, DOCX, JPG ou PNG.'));
-        }
-    }
-});
+/**
+ * Middleware d'upload sécurisé pour les documents (PDF, DOCX, Images)
+ */
+const uploadSecureDoc = secureUpload(['pdf', 'docx', 'jpg', 'jpeg', 'png'], 'file', 5 * 1024 * 1024);
 
 // Main chat endpoint with streaming support
 router.post('/generate', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -73,7 +58,7 @@ router.post('/generate-risks', authenticateToken, async (req: AuthRequest, res: 
 /**
  * Génération de risques à partir d'un fichier (PDF, Word, Image)
  */
-router.post('/generate-risks-file', authenticateToken, upload.single('file'), async (req: AuthRequest, res: Response) => {
+router.post('/generate-risks-file', authenticateToken, uploadSecureDoc, async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Fichier requis' });

@@ -23,34 +23,31 @@ import fs from 'fs';
 
 const router = Router();
 
-/**
- * --- CONFIGURATION DU STOCKAGE DES FICHIERS (MULTER) ---
- */
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'src/storage/risks');
-    },
-    filename: (req, file, cb) => {
-        // Génération d'un nom de fichier unique
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+import { secureUpload } from '../../middleware/file.middleware';
 
-const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5 Mo
-    fileFilter: (req, file, cb) => {
-        // Filtrage des types de fichiers autorisés
-        const allowedTypes = /pdf|jpg|jpeg|png/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-        if (extname && mimetype) {
-            return cb(null, true);
-        }
-        cb(new Error('Seuls les fichiers PDF et les images (JPG/PNG) sont autorisés'));
+/**
+ * Middleware d'upload sécurisé pour les pièces justificatives
+ */
+const uploadSecurePiece = secureUpload(['pdf', 'jpg', 'jpeg', 'png'], 'pieceJustificative', 5 * 1024 * 1024);
+
+/**
+ * Middleware d'upload sécurisé pour les commentaires (pièces jointes)
+ */
+const uploadSecureComment = secureUpload(['pdf', 'jpg', 'jpeg', 'png'], 'pieceJointe', 5 * 1024 * 1024);
+
+/**
+ * Helper to save buffer to storage
+ */
+const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
+    const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const fullPath = path.join('src/storage', subDir, fileName);
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
     }
-});
+    fs.writeFileSync(fullPath, file.buffer);
+    return fullPath;
+};
 
 // Appliquer l'authentification à toutes les routes de ce module
 router.use(authenticateToken);
@@ -63,7 +60,7 @@ router.use(authenticateToken);
  * CRÉER UN RISQUE
  * Accessible par : Risk Manager, Super Admin
  */
-router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), upload.single('pieceJustificative'), async (req: AuthRequest, res) => {
+router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), uploadSecurePiece, async (req: AuthRequest, res) => {
     try {
         // Nettoyage des données : conversion des chaînes vides en null
         const cleanedBody = { ...req.body };
@@ -76,7 +73,7 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
         const riskData = {
             ...cleanedBody,
             riskManagerId: req.user!.id,
-            pieceJustificative: req.file ? req.file.path : null,
+            pieceJustificative: req.file ? saveToStorage(req.file, 'risks') : null,
             statut: RiskStatus.OPEN
         };
 
@@ -181,7 +178,7 @@ router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_A
 /**
  * METTRE À JOUR LES DÉTAILS D'UN RISQUE
  */
-router.put('/:id', upload.single('pieceJustificative'), async (req: AuthRequest, res) => {
+router.put('/:id', uploadSecurePiece, async (req: AuthRequest, res) => {
     try {
         const { id } = req.params;
         const updateData = { ...req.body };
@@ -196,7 +193,7 @@ router.put('/:id', upload.single('pieceJustificative'), async (req: AuthRequest,
         if (!risk) return res.status(404).json({ message: 'Risque non trouvé' });
 
         if (req.file) {
-            updateData.pieceJustificative = req.file.path;
+            updateData.pieceJustificative = saveToStorage(req.file, 'risks');
         }
 
         await risk.update(updateData);
@@ -317,7 +314,7 @@ router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_AD
 /**
  * AJOUTER UN COMMENTAIRE OU UNE PREUVE
  */
-router.post('/:id/comments', upload.single('pieceJointe'), async (req: AuthRequest, res) => {
+router.post('/:id/comments', uploadSecureComment, async (req: AuthRequest, res) => {
     try {
         const { id } = req.params;
         const { content } = req.body;
@@ -327,7 +324,7 @@ router.post('/:id/comments', upload.single('pieceJointe'), async (req: AuthReque
             content,
             riskId: parseInt(id as string),
             userId,
-            pieceJointe: req.file ? (req.file.path as string) : null
+            pieceJointe: req.file ? saveToStorage(req.file, 'comments') : null
         });
 
         // Notifier l'autre partie (Agent <=> Manager)

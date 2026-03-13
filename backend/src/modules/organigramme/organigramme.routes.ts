@@ -5,8 +5,14 @@ import { UserRole } from '../users/user.roles';
 import multer from 'multer';
 import * as xlsx from 'xlsx';
 
+import { secureUpload } from '../../middleware/file.middleware';
+
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+
+/**
+ * Middleware d'upload sécurisé pour l'organigramme (Excel seulement)
+ */
+const uploadSecureExcel = secureUpload(['xlsx'], 'file', 2 * 1024 * 1024);
 
 /**
  * @route GET /api/organigramme
@@ -80,7 +86,7 @@ router.delete('/:id', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), asyn
  * @desc Importer des noms depuis un fichier Excel (Admin seulement)
  * @access Admin SI, Super Admin
  */
-router.post('/import', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), upload.single('file'), async (req: AuthRequest, res: Response) => {
+router.post('/import', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), uploadSecureExcel, async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) return res.status(400).json({ message: 'Aucun fichier téléchargé' });
 

@@ -12,6 +12,7 @@ import { Risk, RiskLevel, RiskStatus } from './risk.model';
 import { Comment } from './comment.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
+import { Incident } from '../incidents/incident.model';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
 import { emailService } from '../../utils/email.service';
@@ -553,6 +554,29 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
 
         // Génération du buffer
         const buffer = await workbook.outputAsync();
+
+        // --- AUTOMATISATION : CRÉATION DE L'INCIDENT ---
+        try {
+            await Incident.create({
+                titre: risk.titre || 'Incident Mappé (Sans Titre)',
+                description: risk.explication || 'Issu d\'une Fiche Incident',
+                dateSurvenance: risk.createdAt,
+                statut: 'Nouveau',
+                pieceJointe: null,
+                userId: req.user?.id || null, // Optional chaining in case auth is incomplete
+                departementId: risk.departementId,
+                domaine: risk.domaine,
+                macroProcessus: risk.macroProcessus,
+                processus: risk.processus,
+                planActionTraitement: risk.planActionTraitement,
+                dateEcheance: risk.dateEcheance,
+                niveauRisque: risk.niveauRisque
+            });
+            console.log(`[Auto-Create] Incident généré pour le risque #${risk.id}`);
+        } catch (incidentError) {
+            console.error('[Auto-Create Error] Impossible de créer l\'incident en base:', incidentError);
+            // On ne bloque pas le retour du fichier Excel
+        }
 
         // Envoi du fichier
         const fileName = `Fiche_Incident_${risk.id}_${Date.now()}.xlsm`;

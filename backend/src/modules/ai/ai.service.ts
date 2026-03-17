@@ -7,6 +7,7 @@ import { Response } from 'express';
 import * as mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
 import { PdfReader } from 'pdfreader';
+import { Incident } from '../incidents/incident.model';
 
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || 'http://localhost:11434/api/chat';
 const MODEL_NAME = process.env.OLLAMA_MODEL || 'llama3';
@@ -283,6 +284,100 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             }));
         } catch (error: any) {
             console.error('AI Risk Generation Error:', error.message || error);
+            return [];
+        }
+    }
+
+    /**
+     * GÉNÉRATION DE RISQUES INTELLIGENTE DEPUIS UN INCIDENT (AVEC HISTORIQUE)
+     */
+    static async generateRisksFromIncident(incident: Incident, pieceJointeTexte: string, role: UserRole): Promise<any[]> {
+        try {
+            console.log(`[AI] Generating risks for incident #${incident.id} (Role: ${role})`);
+            
+            // 1. Récupération des 5 incidents les plus récents (hors celui en cours)
+            const recentIncidents = await Incident.findAll({
+                where: incident.id ? { id: { [require('sequelize').Op.ne]: incident.id } } : undefined,
+                order: [['dateSurvenance', 'DESC']],
+                limit: 5
+            });
+
+            // Structuration du contexte historique
+            let historiqueContext = '';
+            if (recentIncidents.length > 0) {
+                historiqueContext = `\n--- CONTEXTE HISTORIQUE DES INCIDENTS (5 derniers incidents pour identifier des schémas récurrents) ---\n`;
+                recentIncidents.forEach((inc, index) => {
+                    historiqueContext += `[Incident - ${inc.dateSurvenance.toLocaleDateString()}] Titre: ${inc.titre}\nDescription: ${inc.description}\n\n`;
+                });
+            }
+
+            // Récupérations des métadonnées (Départements, etc.)
+            const metadata = await AIDataService.fetchSystemMetadata();
+
+            // Structuration de l'incident actuel
+            let incidentActuelContext = `\n--- INCIDENT ACTUEL ---\nTitre: ${incident.titre}\nDescription: ${incident.description}\n`;
+            if (pieceJointeTexte) {
+                incidentActuelContext += `Extraits de la pièce jointe: ${this.limitText(pieceJointeTexte, 2000)}\n`;
+            }
+
+            const systemPrompt = `Tu es un expert en gestion des risques GRC. 
+            À partir des informations de l'incident actuel et du contexte historique des incidents passés, génère une liste de 3 à 5 risques potentiels pertinents.
+            
+            IMPORTANT : Tout le contenu doit être en FRANÇAIS.
+            
+            RÈGLES STRICTES :
+            - Identifie les risques potentiels directement liés ou induits par l'incident actuel.
+            - Base-toi sur les incidents similaires du contexte historique pour affiner tes propositions.
+            - Évite les duplications avec l'historique (ne propose pas exactement les mêmes risques si le contexte est différent).
+            
+            ${metadata}
+            
+            CONSIGNE : Pour chaque risque, choisis OBLIGATOIREMENT un département parmi ceux listés ci-dessus.
+            Génère les champs suivants selon la nomenclature stricte :
+            - probabilite: Choisir parmi ["Rare", "Possible", "Probable", "Permanent"]
+            - impact: Choisir parmi ["Limité", "Moyen", "Significatif", "Critique"]
+            - niveauMaitrise: Choisir parmi ["Faible", "Limité", "Moyen", "Elevé"]
+            - frequenceTraitement: Choisir parmi ["Quotidien", "Hebdomadaire", "Bimensuel", "Mensuel", "Trimestriel", "Semestriel", "Annuel", "Aucun"]
+            - planActionTraitement: Donne les étapes nécessaires pour traiter et atténuer ce risque.
+
+            Pour chaque risque, fournis EXACTEMENT ces champs : titre, explication, domaine, macroProcessus, processus, probabilite, impact, niveauMaitrise, dmrExistant, planActionTraitement, departement, responsableSuggestion, delaiSuggestion (nombre), frequenceTraitement.
+            Réponds UNIQUEMENT avec un tableau JSON valide.`;
+
+            const fullPrompt = `${historiqueContext}${incidentActuelContext}`;
+
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
+                model: MODEL_NAME,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: fullPrompt }
+                ],
+                stream: false,
+                format: 'json',
+                options: {
+                    temperature: 0.4,
+                    num_predict: 1500,
+                    num_ctx: 4096
+                }
+            });
+
+            const content = response.data.message.content;
+            console.log(`[AI] Received response length: ${content.length} chars`);
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            let risks: any[] = [];
+
+            if (jsonMatch) {
+                risks = JSON.parse(jsonMatch[0]);
+            } else {
+                const parsed = JSON.parse(content);
+                risks = Array.isArray(parsed) ? parsed : [parsed];
+            }
+
+            return risks.map(r => ({
+                ...r,
+                delaiSuggestion: r.delaiSuggestion ? parseInt(r.delaiSuggestion.toString()) : 30
+            }));
+        } catch (error: any) {
+            console.error('AI Risk Generation Error from Incident:', error.message || error);
             return [];
         }
     }

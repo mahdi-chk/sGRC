@@ -38,6 +38,8 @@ import { OrganigrammeManagementComponent } from './dashboard/components/organigr
 import { AuditStatisticsComponent } from './dashboard/roles/top-management/audit-statistics/audit-statistics.component';
 import { AlertesMonitoringComponent } from './risks/alertes-monitoring/alertes-monitoring.component';
 import { TreatmentPlansComponent } from './risks/treatment-plans/treatment-plans.component';
+import { IncidentsComponent } from './modules/incidents/incidents.component';
+import { IncidentsModule } from './modules/incidents/incidents.module';
 
 import { UserRole } from './core/models/user-role.enum';
 
@@ -62,6 +64,7 @@ const routes: Routes = [
       { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
+      { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
       // Routes spécifiques par rôle (Strictement 1:1)
       { path: 'super-admin', component: SuperAdminDashboardComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'admin-si', component: AdminSiDashboardComponent, data: { expectedRoles: [UserRole.ADMIN_SI] } },
@@ -108,6 +111,7 @@ const routes: Routes = [
     FormsModule,
     SharedModule,
     AuditingModule,
+    IncidentsModule,
     RouterModule.forRoot(routes) // Initialisation du module de routage
   ],
   providers: [

@@ -9,6 +9,7 @@ import sequelize from '../../database';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
+import { Incident } from '../incidents/incident.model';
 
 /**
  * Niveaux de sévérité d'un risque / Cotation générique
@@ -123,6 +124,8 @@ export class Risk extends Model {
     public aiAnalysisTendance!: string | null;
     public aiAnalysisSuggestion!: string | null;
     public aiAnalysisDate!: Date | null;
+    public incidentId!: number | null; // Traçabilité: incident d'origine
+
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 
@@ -315,6 +318,14 @@ Risk.init(
             type: DataTypes.DATE,
             allowNull: true,
         },
+        incidentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'incidents',
+                key: 'id',
+            },
+        },
     },
     {
         sequelize,
@@ -445,3 +456,7 @@ Department.hasMany(Risk, { foreignKey: 'departementId', as: 'risks' });
 User.hasMany(Risk, { foreignKey: 'riskManagerId', as: 'managedRisks' });
 User.hasMany(Risk, { foreignKey: 'riskAgentId', as: 'assignedRisks' });
 Organigramme.hasMany(Risk, { foreignKey: 'responsableTraitementId', as: 'treatableRisks' });
+
+// Association avec l'incident d'origine (Traçabilité)
+Risk.belongsTo(Incident, { foreignKey: 'incidentId', as: 'incidentSource' });
+Incident.hasMany(Risk, { foreignKey: 'incidentId', as: 'risquesGeneres' });

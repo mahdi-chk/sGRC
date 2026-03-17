@@ -1,1 +1,249 @@
-<p>Incidents module works!</p>
+<div class="incidents-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="btn-secondary mr-3" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i> Retour
+            </button>
+            <div>
+                <h1><i class="fas fa-exclamation-triangle"></i> Gestion des Incidents</h1>
+                <p>Déclarer de nouveaux incidents et suivre leur statut d'avancement.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-primary" (click)="openCreateModal()">
+                <i class="fas fa-plus"></i> Déclarer un Incident
+            </button>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <!-- Incidents Table -->
+        <div class="risks-card">
+            <table class="risks-table">
+                <thead>
+                    <tr>
+                        <th>Titre</th>
+                        <th>Domaine</th>
+                        <th>Niveau</th>
+                        <th>Date de survenance</th>
+                        <th>Statut</th>
+                        <th>Déclaré par</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let incident of incidents">
+                        <td class="td-title"><strong>{{ incident.titre }}</strong></td>
+                        <td>{{ incident.domaine || 'Non Défini' }}</td>
+                        <td>
+                            <span class="badge" [ngClass]="getNiveauClass(incident.niveauRisque)">
+                                {{ incident.niveauRisque || '-' }}
+                            </span>
+                        </td>
+                        <td>{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</td>
+                        <td>
+                            <span class="badge" [ngClass]="getStatusClass(incident.statut)">{{ incident.statut }}</span>
+                        </td>
+                        <td>
+                            {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}
+                        </td>
+                        <td class="actions-cell">
+                            <button class="action-btn btn-view" (click)="openDetailsModal(incident)" title="Voir détails">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="action-btn btn-edit" (click)="openEditModal(incident)" title="Éditer l'incident">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="incidents.length === 0">
+                        <td colspan="5" class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aucun incident n'est enregistré pour le moment.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Modal -->
+    <app-modal *ngIf="showCreateModal" title="Déclarer un Nouvel Incident" (close)="showCreateModal = false">
+        <div #projected modal-body class="modal-form">
+            <form [formGroup]="incidentForm" (ngSubmit)="submitIncident()">
+                <div class="form-group mb-3">
+                    <label>Titre de l'incident <span class="text-danger">*</span></label>
+                    <input type="text" formControlName="titre" class="finput" placeholder="Ex: Panne de serveur principal">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label>Description <span class="text-danger">*</span></label>
+                    <textarea formControlName="description" class="finput" rows="4" placeholder="Détails de l'incident..."></textarea>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Domaine (Optionnel)</label>
+                    <input type="text" formControlName="domaine" class="finput" placeholder="Ex: Informatique, Ressources Humaines...">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Département concerné (Optionnel)</label>
+                    <select formControlName="departementId" class="finput">
+                        <option [value]="null">Sélectionnez un département...</option>
+                        <option *ngFor="let d of departments" [value]="d.id">{{ d.nom }}</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Date de survenance <span class="text-danger">*</span></label>
+                    <input type="date" formControlName="dateSurvenance" class="finput">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Pièce jointe (Optionnelle)</label>
+                    <div class="file-upload-box">
+                        <input type="file" (change)="onFileSelected($event)" class="file-input" accept=".pdf,.docx,.jpg,.jpeg,.png">
+                        <div class="file-upload-label">
+                            <i class="fas fa-upload"></i> {{ selectedFile ? selectedFile.name : 'Choisir un fichier (PDF, Word, Images)' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-footer">
+                    <button type="button" class="btn-cancel" (click)="showCreateModal = false">Annuler</button>
+                    <button type="submit" class="btn-save" [disabled]="incidentForm.invalid || isSubmitting">
+                        <i class="fas fa-save" *ngIf="!isSubmitting"></i>
+                        <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </app-modal>
+
+    <!-- Details Modal -->
+    <app-modal *ngIf="showDetailsModal" title="Détails de l'incident" (close)="showDetailsModal = false">
+        <div #projected modal-body *ngIf="selectedIncident" class="modal-form">
+            <div class="details-grid">
+                <div class="detail-block full">
+                    <span class="detail-label">Titre</span>
+                    <p class="detail-value title">{{ selectedIncident.titre }}</p>
+                </div>
+                <div class="detail-block full">
+                    <span class="detail-label">Description</span>
+                    <p class="detail-value" style="white-space: pre-wrap;">{{ selectedIncident.description }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Date de survenance</span>
+                    <p class="detail-value">{{ selectedIncident.dateSurvenance | date:'dd/MM/yyyy' }}</p>
+                </div>
+                <div class="detail-block">
+                    <span class="detail-label">Statut</span>
+                    <p class="detail-value"><span class="badge" [ngClass]="getStatusClass(selectedIncident.statut)">{{ selectedIncident.statut }}</span></p>
+                </div>
+                
+                <!-- Champs Optionnels (Souvent issus des Fiches Incidents automatiques) -->
+                <ng-container *ngIf="selectedIncident.domaine || selectedIncident.niveauRisque || selectedIncident.planActionTraitement">
+                    <div class="detail-block full hr-divider"></div>
+                    
+                    <div class="detail-block" *ngIf="selectedIncident.domaine">
+                        <span class="detail-label">Domaine</span>
+                        <p class="detail-value">{{ selectedIncident.domaine }}</p>
+                    </div>
+                    
+                    <div class="detail-block" *ngIf="selectedIncident.niveauRisque">
+                        <span class="detail-label">Niveau d'Impact Global</span>
+                        <p class="detail-value">
+                            <span class="badge" [ngClass]="getNiveauClass(selectedIncident.niveauRisque)">
+                                {{ selectedIncident.niveauRisque }}
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="detail-block" *ngIf="selectedIncident.macroProcessus">
+                        <span class="detail-label">Macro-Processus</span>
+                        <p class="detail-value">{{ selectedIncident.macroProcessus }}</p>
+                    </div>
+
+                    <div class="detail-block" *ngIf="selectedIncident.processus">
+                        <span class="detail-label">Processus</span>
+                        <p class="detail-value">{{ selectedIncident.processus }}</p>
+                    </div>
+
+                    <div class="detail-block full" *ngIf="selectedIncident.planActionTraitement">
+                        <span class="detail-label">Plan d'Action / Remédiation Initiale</span>
+                        <p class="detail-value" style="white-space: pre-wrap; background: #f9fbfc; padding: 10px; border-radius: 6px; border: 1px solid #e1e8ed;">{{ selectedIncident.planActionTraitement }}</p>
+                    </div>
+                    
+                    <div class="detail-block" *ngIf="selectedIncident.dateEcheance">
+                        <span class="detail-label">Date limite du plan</span>
+                        <p class="detail-value">{{ selectedIncident.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                    </div>
+                </ng-container>
+
+                <div class="detail-block full" *ngIf="selectedIncident.pieceJointe">
+                    <span class="detail-label">Pièce Jointe</span>
+                    <a [href]="environment.serverUrl + '/' + selectedIncident.pieceJointe + authQueryToken"
+                        target="_blank" class="doc-link">
+                        <i class="fas fa-download"></i> Télécharger le document
+                    </a>
+                </div>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showDetailsModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Edit Modal (Reuses the Form structure) -->
+    <app-modal *ngIf="showEditModal" title="Éditer l'incident" (close)="showEditModal = false">
+        <div #projected modal-body class="modal-form">
+            <form [formGroup]="incidentForm" (ngSubmit)="updateIncident()">
+                <div class="form-group mb-3">
+                    <label>Titre de l'incident <span class="text-danger">*</span></label>
+                    <input type="text" formControlName="titre" class="finput">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label>Description <span class="text-danger">*</span></label>
+                    <textarea formControlName="description" class="finput" rows="4"></textarea>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Domaine</label>
+                    <input type="text" formControlName="domaine" class="finput">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Département concerné</label>
+                    <select formControlName="departementId" class="finput">
+                        <option [value]="null">Sélectionnez un département...</option>
+                        <option *ngFor="let d of departments" [value]="d.id">{{ d.nom }}</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Date de survenance <span class="text-danger">*</span></label>
+                    <input type="date" formControlName="dateSurvenance" class="finput">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Statut <span class="text-danger">*</span></label>
+                    <select formControlName="statut" class="finput">
+                        <option value="Nouveau">Nouveau</option>
+                        <option value="En cours">En cours</option>
+                        <option value="Traité">Traité</option>
+                        <option value="Clos">Clos</option>
+                    </select>
+                </div>
+
+                <div class="form-footer">
+                    <button type="button" class="btn-cancel" (click)="showEditModal = false">Annuler</button>
+                    <button type="submit" class="btn-save" [disabled]="incidentForm.invalid || isSubmitting">
+                        <i class="fas fa-save" *ngIf="!isSubmitting"></i>
+                        <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i> Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </app-modal>
+</div>

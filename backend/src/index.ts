@@ -200,6 +200,7 @@ sequelize.sync().then(async () => {
     await addColumn('cotationRisqueNet', 'NVARCHAR(50) NULL');
     await addColumn('niveauCotationRisqueNet', 'INT NULL');
     await addColumn('planActionTraitement', 'NVARCHAR(MAX) NULL');
+    await addColumn('incidentId', 'INT NULL');
 
     // Ajout manuel de la colonne 'deletedAt' pour le Soft Delete (Paranoid) des utilisateurs
     try {
@@ -209,6 +210,26 @@ sequelize.sync().then(async () => {
       `);
     } catch (e) {
       console.error('Failed to add deletedAt to users:', e);
+    }
+
+    // Mise à jour de la table incidents pour inclure les nouveaux attributs
+    try {
+      const addIncidentColumn = async (colName: string, type: string) => {
+        await sequelize.query(`
+          IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[incidents]') AND name = '${colName}')
+          ALTER TABLE [incidents] ADD ${colName} ${type};
+        `);
+      };
+
+      await addIncidentColumn('departementId', 'INT NULL');
+      await addIncidentColumn('domaine', 'NVARCHAR(255) NULL');
+      await addIncidentColumn('macroProcessus', 'NVARCHAR(255) NULL');
+      await addIncidentColumn('processus', 'NVARCHAR(255) NULL');
+      await addIncidentColumn('planActionTraitement', 'NVARCHAR(MAX) NULL');
+      await addIncidentColumn('dateEcheance', 'DATETIMEOFFSET NULL');
+      await addIncidentColumn('niveauRisque', 'NVARCHAR(50) NULL');
+    } catch (e) {
+      console.error('Failed to add new columns to incidents:', e);
     }
 
     // Mise à jour de la table notifications pour inclure auditMissionId

@@ -40,6 +40,7 @@ import { AlertesMonitoringComponent } from './risks/alertes-monitoring/alertes-m
 import { TreatmentPlansComponent } from './risks/treatment-plans/treatment-plans.component';
 import { IncidentsComponent } from './modules/incidents/incidents.component';
 import { IncidentsModule } from './modules/incidents/incidents.module';
+import { RagManagerComponent } from './dashboard/components/rag-manager/rag-manager.component';
 
 import { UserRole } from './core/models/user-role.enum';
 
@@ -75,7 +76,8 @@ const routes: Routes = [
       { path: 'top-management', component: TopManagementDashboardComponent, data: { expectedRoles: [UserRole.TOP_MANAGEMENT] } },
       { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
-      { path: 'organigramme', component: OrganigrammeManagementComponent, data: { expectedRoles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN] } }
+      { path: 'organigramme', component: OrganigrammeManagementComponent, data: { expectedRoles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN] } },
+      { path: 'rag-manager', component: RagManagerComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER] } }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -103,7 +105,8 @@ const routes: Routes = [
     OrganigrammeManagementComponent,
     AuditStatisticsComponent,
     AlertesMonitoringComponent,
-    TreatmentPlansComponent
+    TreatmentPlansComponent,
+    RagManagerComponent
   ],
   imports: [
     BrowserModule,

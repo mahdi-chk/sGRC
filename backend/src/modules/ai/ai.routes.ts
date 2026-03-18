@@ -1,4 +1,6 @@
 import { Router, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { AIService } from './ai.service';
 import { RAGEngine } from './rag.engine';
 import { authenticateToken, AuthRequest, authorizeRoles } from '../../middleware/auth.middleware';
@@ -82,6 +84,92 @@ router.post('/index', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, Us
     try {
         const result = await RAGEngine.indexDocuments();
         res.json(result);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Gestion des documents RAG
+ */
+const uploadRagDoc = secureUpload(['pdf', 'docx'], 'file', 15 * 1024 * 1024);
+
+router.get('/docs', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER), async (req: AuthRequest, res: Response) => {
+    try {
+        const docsPath = await RAGEngine.getNormesPath();
+        
+        const getAllDocs = (dir: string, fileList: any[] = [], currentSubDir: string = '') => {
+            if (!fs.existsSync(dir)) return fileList;
+            const items = fs.readdirSync(dir);
+            for (const item of items) {
+                const itemPath = path.join(dir, item);
+                const stat = fs.statSync(itemPath);
+                if (stat.isDirectory()) {
+                    getAllDocs(itemPath, fileList, path.join(currentSubDir, item));
+                } else if (item.toLowerCase().endsWith('.pdf') || item.toLowerCase().endsWith('.docx')) {
+                    fileList.push({
+                        name: item,
+                        relativePath: path.join(currentSubDir, item).replace(/\\/g, '/'),
+                        size: stat.size,
+                        uploadedAt: stat.mtime
+                    });
+                }
+            }
+            return fileList;
+        };
+        
+        res.json(getAllDocs(docsPath));
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/docs/upload', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), uploadRagDoc, async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Fichier requis' });
+        }
+
+        const docsPath = await RAGEngine.getNormesPath();
+        if (!fs.existsSync(docsPath)) {
+            fs.mkdirSync(docsPath, { recursive: true });
+        }
+
+        const safeName = req.file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        let finalPath = path.join(docsPath, safeName);
+
+        if (fs.existsSync(finalPath)) {
+            const ext = path.extname(safeName);
+            const base = path.basename(safeName, ext);
+            finalPath = path.join(docsPath, `${base}_${Date.now()}${ext}`);
+        }
+
+        await fs.promises.writeFile(finalPath, req.file.buffer);
+        await RAGEngine.indexDocuments();
+
+        res.json({ message: 'Fichier uploadé et indexé avec succès', file: path.basename(finalPath) });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/docs/file', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req: AuthRequest, res: Response) => {
+    try {
+        const filePathParam = req.query.path as string;
+        if (!filePathParam || filePathParam.includes('..')) {
+            return res.status(400).json({ error: 'Chemin invalide' });
+        }
+        
+        const docsPath = await RAGEngine.getNormesPath();
+        const finalPath = path.resolve(docsPath, filePathParam);
+
+        if (fs.existsSync(finalPath)) {
+            await fs.promises.unlink(finalPath);
+            await RAGEngine.indexDocuments();
+            res.json({ message: 'Fichier supprimé et index mis à jour' });
+        } else {
+            res.status(404).json({ error: 'Fichier non trouvé' });
+        }
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }

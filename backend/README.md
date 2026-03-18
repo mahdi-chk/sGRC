@@ -18,7 +18,7 @@ Advanced API servicing the Governance, Risk, and Compliance (GRC) platform.
 
 ### 🤖 Intelligent AI Sidekick
 - **Document Processing**: Automatic parsing and vectorization of PDF reports.
-- **Contextual RAG**: High-precision retrieval for answering complex regulatory questions.
+- **Contextual RAG & Dynamic Config**: High-precision retrieval with dynamic tuning of context and generation parameters.
 - **OCR Integration**: Able to process image-based documents and historical scans.
 
 ### 🛡️ Secure Session Management

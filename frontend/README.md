@@ -21,6 +21,7 @@ Tailored interfaces with specific KPIs and tools for:
 
 ### 🤖 AI Sidekick UI
 - **Interactive Chat**: Directly accessible on the main dashboard.
+- **RAG Manager**: Specialized components (`rag-config`, `rag-manager`) for real-time control of AI intelligence settings.
 - **RAG Integration**: Real-time querying of corporate documentation.
 
 ### 🛡️ Security & Activity

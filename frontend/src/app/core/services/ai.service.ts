@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpRequest } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
@@ -59,5 +59,23 @@ export class AIService {
 
     indexNormes(): Observable<{ success: boolean, count: number }> {
         return this.http.post<{ success: boolean, count: number }>(`${this.apiUrl}/index`, {});
+    }
+    getRagDocuments(): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrl}/docs`);
+    }
+
+    uploadRagDocument(file: File): Observable<HttpEvent<any>> {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const req = new HttpRequest('POST', `${this.apiUrl}/docs/upload`, formData, {
+            reportProgress: true
+        });
+        
+        return this.http.request(req);
+    }
+
+    deleteRagDocument(relativePath: string): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/docs/file?path=${encodeURIComponent(relativePath)}`);
     }
 }

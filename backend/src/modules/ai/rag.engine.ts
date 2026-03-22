@@ -119,23 +119,16 @@ export class RAGEngine {
     }
 
     private static async parsePdf(filePath: string): Promise<string> {
-        const { PdfReader } = require('pdfreader');
-        return new Promise((resolve) => {
-            let text = '';
-            try {
-                new PdfReader().parseFileItems(filePath, (err: any, item: any) => {
-                    if (err) {
-                        console.warn(`[Avertissement] Le PDF ${path.basename(filePath)} est illisible ou protégé (ignoré).`);
-                        resolve(''); // Return empty text on error instead of throwing a massive scary stack trace
-                    }
-                    else if (!item) resolve(text);
-                    else if (item.text) text += item.text + ' ';
-                });
-            } catch (err) {
-                console.warn(`[Avertissement] Le PDF ${path.basename(filePath)} a causé une erreur fatale (ignoré).`);
-                resolve('');
-            }
-        });
+        const fs = require('fs');
+        const pdf = require('pdf-parse');
+        try {
+            const dataBuffer = fs.readFileSync(filePath);
+            const data = await pdf(dataBuffer);
+            return data.text || '';
+        } catch (err: any) {
+            console.warn(`[Avertissement] Le PDF ${path.basename(filePath)} est illisible, corrompu ou protégé (ignoré).`);
+            return '';
+        }
     }
 
     static async searchContext(query: string, role: UserRole, k: number = 3): Promise<string[]> {

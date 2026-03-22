@@ -26,6 +26,7 @@ export class AuditMission extends Model {
     public auditSeniorId!: number;
     public auditeurId!: number | null;
     public riskId!: number;
+    public checklistTemplateId!: number | null;
     public rapport!: string | null;
     public recommandations!: string | null;
     public readonly createdAt!: Date;
@@ -87,6 +88,14 @@ AuditMission.init(
                 key: 'id',
             },
         },
+        checklistTemplateId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'audit_checklist_templates',
+                key: 'id',
+            },
+        },
         rapport: {
             type: DataTypes.TEXT,
             allowNull: true,
@@ -109,7 +118,10 @@ AuditMission.init(
 AuditMission.belongsTo(User, { foreignKey: 'auditSeniorId', as: 'auditSenior' });
 AuditMission.belongsTo(User, { foreignKey: 'auditeurId', as: 'auditeur' });
 AuditMission.belongsTo(Risk, { foreignKey: 'riskId', as: 'risk' });
+import { AuditChecklistTemplate } from './audit-checklist-template.model';
+AuditMission.belongsTo(AuditChecklistTemplate, { foreignKey: 'checklistTemplateId', as: 'checklistTemplate' });
 
 User.hasMany(AuditMission, { foreignKey: 'auditSeniorId', as: 'seniorMissions' });
 User.hasMany(AuditMission, { foreignKey: 'auditeurId', as: 'assignedMissions' });
 Risk.hasMany(AuditMission, { foreignKey: 'riskId', as: 'auditMissions' });
+AuditChecklistTemplate.hasMany(AuditMission, { foreignKey: 'checklistTemplateId', as: 'missions' });

@@ -1,0 +1,80 @@
+.evidence-stats-row {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.stat-mini-card {
+    background: white;
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    border: 1px solid #edf2f7;
+    display: flex;
+    flex-direction: column;
+    .label { font-size: 0.8rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .value { font-size: 1.5rem; font-weight: 800; color: #004a99; }
+}
+
+.search-bar.premium {
+    background: #f1f5f9;
+    padding: 10px 20px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 400px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    &:focus-within { background: white; border-color: #004a99; box-shadow: 0 0 0 4px rgba(0,74,153,0.1); }
+    input { border: none; background: none; width: 100%; outline: none; font-size: 0.95rem; color: #1e293b; }
+    i { color: #94a3b8; }
+}
+
+.explorer-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    th { text-align: left; padding: 15px; border-bottom: 2px solid #f1f5f9; color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; }
+    td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tr:hover td { background: #f8fafc; }
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    .file-icon { color: #004a99; font-size: 1.2rem; }
+    .file-name { font-weight: 700; color: #334155; &:hover { color: #004a99; text-decoration: underline; } }
+}
+
+.mission-tag {
+    background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+}
+
+.uploader-info {
+    display: flex; align-items: center; gap: 8px; color: #475569; font-weight: 500;
+    i { color: #94a3b8; }
+}
+
+.actions-cell {
+    display: flex;
+    gap: 10px;
+    .action-btn {
+        width: 36px; height: 36px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        &.download { background: #f0f7ff; color: #004a99; &:hover { background: #004a99; color: white; } }
+        &.delete { background: #fff1f2; color: #ef4444; &:hover { background: #ef4444; color: white; } }
+    }
+}
+
+.loading-state, .empty-explorer {
+    text-align: center; padding: 60px; color: #94a3b8;
+    i { font-size: 3rem; margin-bottom: 20px; }
+}

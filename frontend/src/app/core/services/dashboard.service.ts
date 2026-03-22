@@ -91,7 +91,19 @@ export class DashboardService {
                 { title: 'Traçabilité des Preuves' },
                 { title: 'Rapports et Suivi' }
             ],
-            roles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+            roles: [UserRole.AUDIT_SENIOR]
+        },
+        {
+            key: 'audit-auditeur',
+            title: 'Audit',
+            desc: 'Réalisez vos missions, remplissez les checklists et soumettez vos rapports.',
+            submodules: [
+                { title: 'Mes Missions' },
+                { title: 'Ma Checklist' },
+                { title: 'Mes Preuves' },
+                { title: 'Soumettre Rapport' }
+            ],
+            roles: [UserRole.AUDITEUR]
         },
         {
             key: 'incidents',
@@ -178,6 +190,35 @@ export class DashboardService {
             this.router.navigate(['/dashboard/strategic-evaluation']);
         } else if (s.title === 'Cartographie Dynamique') {
             this.router.navigate(['/dashboard/statistics']);
+        } else if (
+            s.title === 'Check-Lists Paramétrables' || 
+            s.title === 'Traçabilité des Preuves' || 
+            s.title === 'Gestion des Missions' ||
+            s.title === 'Rapports et Suivi' ||
+            s.title === 'Planification Pluriannuelle'
+        ) {
+            const isSenior = currentUser?.role === UserRole.AUDIT_SENIOR || currentUser?.role === UserRole.SUPER_ADMIN;
+            
+            // Redirections spécifiques
+            if (s.title === 'Check-Lists Paramétrables' && isSenior) {
+                this.router.navigate(['/dashboard/audit-checklists']);
+            } else if (s.title === 'Planification Pluriannuelle' && isSenior) {
+                this.router.navigate(['/dashboard/audit-planning']);
+            } else if (s.title === 'Traçabilité des Preuves' && isSenior) {
+                this.router.navigate(['/dashboard/audit-evidence-explorer']);
+            } else if (s.title === 'Rapports et Suivi' && isSenior) {
+                this.router.navigate(['/dashboard/audit-report-review']);
+            } else {
+                this.router.navigate(isSenior ? ['/dashboard/auditing'] : ['/dashboard/auditor-missions']);
+            }
+        } else if (s.title === 'Mes Missions') {
+            this.router.navigate(['/dashboard/auditor-missions']);
+        } else if (s.title === 'Ma Checklist') {
+            this.router.navigate(['/dashboard/auditor-checklist']);
+        } else if (s.title === 'Mes Preuves') {
+            this.router.navigate(['/dashboard/auditor-evidence']);
+        } else if (s.title === 'Soumettre Rapport') {
+            this.router.navigate(['/dashboard/auditor-report']);
         } else if (s.title === 'Alertes et Monitoring') {
             this.router.navigate(['/dashboard/alertes-monitoring']);
         } else if (s.title === 'Plans de Traitement') {

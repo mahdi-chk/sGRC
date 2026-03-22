@@ -29,10 +29,7 @@ import { RiskManagementComponent } from './risks/risk-management.component';
 import { AssignedRisksComponent } from './dashboard/roles/risk-agent/assigned-risks/assigned-risks.component';
 import { PlanningComponent } from './modules/planning/planning.component';
 import { RiskStatisticsComponent } from './dashboard/roles/top-management/risk-statistics/risk-statistics.component';
-import { AuditingModule } from './modules/auditing/auditing.module';
-import { AuditingComponent } from './modules/auditing/auditing.component';
 import { StrategicEvaluationComponent } from './modules/evaluation/strategic-evaluation.component';
-import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
 import { SharedModule } from './shared/shared.module';
 import { OrganigrammeManagementComponent } from './dashboard/components/organigramme-management/organigramme-management.component';
 import { AuditStatisticsComponent } from './dashboard/roles/top-management/audit-statistics/audit-statistics.component';
@@ -41,6 +38,18 @@ import { TreatmentPlansComponent } from './risks/treatment-plans/treatment-plans
 import { IncidentsComponent } from './modules/incidents/incidents.component';
 import { IncidentsModule } from './modules/incidents/incidents.module';
 import { RagManagerComponent } from './dashboard/components/rag-manager/rag-manager.component';
+
+// Module Audit (déclare AuditingComponent, PlanificationComponent, AuditChecklistsComponent, AuditorMissionsComponent)
+import { AuditingModule } from './modules/auditing/auditing.module';
+import { AuditingComponent } from './modules/auditing/auditing.component';
+import { PlanificationComponent } from './modules/auditing/planification/planification.component';
+import { AuditChecklistsComponent } from './modules/auditing/audit-checklists/audit-checklists.component';
+import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
+import { AuditorChecklistComponent } from './modules/auditing/auditor-checklist/auditor-checklist.component';
+import { AuditorEvidenceComponent } from './modules/auditing/auditor-evidence/auditor-evidence.component';
+import { AuditorReportComponent } from './modules/auditing/auditor-report/auditor-report.component';
+import { AuditEvidenceExplorerComponent } from './modules/auditing/senior/audit-evidence-explorer.component';
+import { AuditReportReviewComponent } from './modules/auditing/senior/audit-report-review.component';
 
 import { UserRole } from './core/models/user-role.enum';
 
@@ -52,8 +61,8 @@ const routes: Routes = [
   {
     path: 'dashboard',
     component: DashboardComponent,
-    canActivate: [AuthGuard], // Protection racine
-    canActivateChild: [AuthGuard], // Protection des sous-routes (RBAC)
+    canActivate: [AuthGuard],
+    canActivateChild: [AuthGuard],
     children: [
       { path: '', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] } },
@@ -66,7 +75,17 @@ const routes: Routes = [
       { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
-      // Routes spécifiques par rôle (Strictement 1:1)
+      // Routes Audit (composants exportés par AuditingModule)
+      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-checklists', component: AuditChecklistsComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
+      { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
+      { path: 'auditor-checklist', component: AuditorChecklistComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
+      { path: 'auditor-evidence', component: AuditorEvidenceComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
+      { path: 'auditor-report', component: AuditorReportComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-evidence-explorer', component: AuditEvidenceExplorerComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-report-review', component: AuditReportReviewComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
+      // Routes spécifiques par rôle
       { path: 'super-admin', component: SuperAdminDashboardComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'admin-si', component: AdminSiDashboardComponent, data: { expectedRoles: [UserRole.ADMIN_SI] } },
       { path: 'auditeur', component: AuditeurDashboardComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
@@ -74,14 +93,12 @@ const routes: Routes = [
       { path: 'risk-manager', component: RiskManagerDashboardComponent, data: { expectedRoles: [UserRole.RISK_MANAGER] } },
       { path: 'risk-agent', component: RiskAgentDashboardComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'top-management', component: TopManagementDashboardComponent, data: { expectedRoles: [UserRole.TOP_MANAGEMENT] } },
-      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
       { path: 'organigramme', component: OrganigrammeManagementComponent, data: { expectedRoles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN] } },
       { path: 'rag-manager', component: RagManagerComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER] } }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { path: '**', redirectTo: '/dashboard' } // Redirection par défaut vers le dashboard
+  { path: '**', redirectTo: '/dashboard' }
 ];
 
 @NgModule({
@@ -115,10 +132,9 @@ const routes: Routes = [
     SharedModule,
     AuditingModule,
     IncidentsModule,
-    RouterModule.forRoot(routes) // Initialisation du module de routage
+    RouterModule.forRoot(routes)
   ],
   providers: [
-    // Intercepteur HTTP pour injecter le token JWT dans chaque requête
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]

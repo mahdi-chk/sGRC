@@ -5,8 +5,30 @@ import { Risk } from '../risk/risk.model';
 import { AIService } from '../ai/ai.service';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
+import { secureUpload } from '../../middleware/file.middleware';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
+
+/**
+ * Middleware d'upload sécurisé pour les preuves d'audit
+ */
+const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'], 'evidenceFile', 15 * 1024 * 1024);
+
+/**
+ * Helper to save buffer to storage
+ */
+const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
+    const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const fullPath = path.join('src/storage', subDir, fileName);
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(fullPath, file.buffer);
+    return fullPath;
+};
 
 router.use(authenticateToken);
 
@@ -89,6 +111,18 @@ router.put('/missions/:id/assign', authorizeRoles(UserRole.AUDIT_SENIOR, UserRol
 });
 
 /**
+ * MODIFIER UNE MISSION
+ */
+router.put('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+    try {
+        const mission = await AuditingService.updateMission(parseInt(req.params.id as string), req.body);
+        res.json(mission);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la modification', error: error.message });
+    }
+});
+
+/**
  * SOUMETTRE UN RAPPORT (Auditeur)
  */
 router.put('/missions/:id/report', authorizeRoles(UserRole.AUDITEUR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
@@ -113,6 +147,68 @@ router.delete('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SU
 });
 
 /**
+ * --- ROUTES CHECKLISTS TEMPLATES ---
+ */
+
+router.get('/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const templates = await AuditingService.getChecklistTemplates();
+        res.json(templates);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors de la récupération des modèles de checklists', error: error.message });
+    }
+});
+
+router.post('/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res) => {
+    try {
+        const template = await AuditingService.createChecklistTemplate(req.user!.id, req.body);
+        res.status(201).json(template);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la création du modèle de checklist', error: error.message });
+    }
+});
+
+router.delete('/checklists/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+    try {
+        const result = await AuditingService.deleteChecklistTemplate(parseInt(req.params.id as string));
+        res.json(result);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression du modèle', error: error.message });
+    }
+});
+
+/**
+ * --- ROUTES MISSION CHECKLISTS ---
+ */
+
+router.get('/missions/:id/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const items = await AuditingService.getMissionChecklistItems(parseInt(req.params.id as string));
+        res.json(items);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur', error: error.message });
+    }
+});
+
+router.post('/missions/:id/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+    try {
+        const items = await AuditingService.assignTemplateToMission(parseInt(req.params.id as string), req.body.templateId);
+        res.status(201).json(items);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de l\'assignation du modèle', error: error.message });
+    }
+});
+
+router.put('/missions/:id/checklists/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const item = await AuditingService.toggleMissionChecklistItem(parseInt(req.params.id as string), parseInt(req.params.itemId as string), req.body.estFait);
+        res.json(item);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la modification', error: error.message });
+    }
+});
+
+/**
  * RESET UNE MISSION
  */
 router.put('/missions/:id/reset', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
@@ -121,6 +217,65 @@ router.put('/missions/:id/reset', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole
         res.json(mission);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la réinitialisation', error: error.message });
+    }
+});
+
+/**
+ * --- ROUTES TRAÇABILITÉ DES PREUVES ---
+ */
+
+router.get('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const evidence = await AuditingService.getMissionEvidence(parseInt(req.params.id as string));
+        res.json(evidence);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur', error: error.message });
+    }
+});
+
+/**
+ * RÉCUPÉRER TOUTES LES PREUVES (Global Explorer)
+ */
+router.get('/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+    try {
+        const evidence = await AuditingService.getAllEvidence();
+        res.json(evidence);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur', error: error.message });
+    }
+});
+
+/**
+ * RÉCUPÉRER LES RAPPORTS À RÉVISER
+ */
+router.get('/reports', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+    try {
+        const reports = await AuditingService.getMissionsWithReports();
+        res.json(reports);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur', error: error.message });
+    }
+});
+
+router.post('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), uploadEvidence, async (req: AuthRequest, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun fichier fourni' });
+        }
+        const filePath = saveToStorage(req.file, 'evidence');
+        const evidence = await AuditingService.addMissionEvidence(parseInt(req.params.id as string), req.file.originalname, filePath, req.user!.id);
+        res.status(201).json(evidence);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de l\'ajout de la preuve', error: error.message });
+    }
+});
+
+router.delete('/missions/:id/evidence/:evidenceId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const result = await AuditingService.deleteMissionEvidence(parseInt(req.params.evidenceId as string));
+        res.json(result);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression de la preuve', error: error.message });
     }
 });
 

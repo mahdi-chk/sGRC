@@ -11,7 +11,7 @@
                 <p>Planifiez vos missions annuelles et suivez les rapports d'audit.</p>
             </div>
         </div>
-        <div class="header-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+        <div class="header-actions">
             <div class="export-dropdown">
                 <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
                     <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
@@ -25,27 +25,13 @@
                     </button>
                 </div>
             </div>
-            <button class="btn-ai-plan" (click)="generatePlan()" *ngIf="isSeniorAuditor" [disabled]="isGeneratingPlan">
-                <i class="fas" [class.fa-magic]="!isGeneratingPlan" [class.fa-spinner]="isGeneratingPlan"
-                    [class.fa-spin]="isGeneratingPlan"></i>
-                {{ isGeneratingPlan ? 'Analyse IA...' : 'Suggestion Plan Annuel' }}
-            </button>
         </div>
     </div>
 
-    <!-- Tabs Navigation -->
-    <div class="tabs-nav">
-        <button [class.active]="activeTab === 'missions'" (click)="activeTab = 'missions'">
-            <i class="fas fa-list-tasks"></i> Liste des Missions
-        </button>
-        <button [class.active]="activeTab === 'plan'" (click)="activeTab = 'plan'" *ngIf="isSeniorAuditor">
-            <i class="fas fa-calendar-alt"></i> Plan Suggéré (IA)
-            <span class="badge-count" *ngIf="suggestedPlan.length > 0">{{ suggestedPlan.length }}</span>
-        </button>
-    </div>
 
-    <!-- Missions Tab Content -->
-    <div class="tab-content" *ngIf="activeTab === 'missions'">
+
+    <!-- Missions List Content -->
+    <div class="tab-content">
         <div class="missions-card">
             <div class="table-loading" *ngIf="isLoadingMissions">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement des missions...
@@ -91,12 +77,28 @@
                                 <i class="fas fa-eye"></i>
                             </button>
                             <button class="action-btn btn-assign" *ngIf="isSeniorAuditor && !mission.auditeur"
-                                (click)="openAssignModal(mission)" title="Assigner">
+                                (click)="openAssignModal(mission)" title="Assigner Auditeur">
                                 <i class="fas fa-user-plus"></i>
+                            </button>
+                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.statut !== 'Terminé'"
+                                (click)="openAssignChecklistModal(mission)" title="Assigner Checklist">
+                                <i class="fas fa-tasks" style="color:#004a99"></i>
+                            </button>
+                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.checklistTemplateId"
+                                (click)="openChecklistModal(mission)" title="Voir Checklist">
+                                <i class="fas fa-list-check" style="color:#10b981"></i>
                             </button>
                             <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === 'En cours'"
                                 (click)="openReportModal(mission)" title="Faire le rapport">
                                 <i class="fas fa-file-signature"></i>
+                            </button>
+                            <button class="action-btn btn-edit" *ngIf="isSeniorAuditor"
+                                (click)="openEditModal(mission)" title="Modifier la mission">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn btn-evidence"
+                                (click)="openEvidenceModal(mission)" title="Preuves">
+                                <i class="fas fa-paperclip"></i>
                             </button>
                             <!-- New Actions for Senior Auditor -->
                             <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.statut === 'Terminé'"
@@ -120,47 +122,7 @@
         </div>
     </div>
 
-    <!-- Plan Suggéré Tab Content -->
-    <div class="tab-content" *ngIf="activeTab === 'plan'">
-        <div class="plan-header">
-            <h3>Suggestions IA pour le Plan Annuel</h3>
-            <div class="plan-actions">
-                <button class="btn-cancel" (click)="suggestedPlan = []; activeTab = 'missions'">Effacer</button>
-                <button class="btn-save" (click)="createMissions()" [disabled]="isCreatingMissions">
-                    <i class="fas fa-check-circle"></i> Valider et Créer Missions
-                </button>
-            </div>
-        </div>
 
-        <div class="suggested-plan-grid">
-            <div *ngFor="let suggestion of suggestedPlan" class="suggestion-card"
-                [class.selected]="suggestion.selected">
-                <div class="card-check" (click)="suggestion.selected = !suggestion.selected">
-                    <i class="fas" [class.fa-check-square]="suggestion.selected"
-                        [class.fa-square]="!suggestion.selected"></i>
-                </div>
-                <div class="card-body">
-                    <div class="card-top">
-                        <h4>{{ suggestion.titre }}</h4>
-                        <span class="risk-ref">Risque #{{ suggestion.riskId }}</span>
-                    </div>
-                    <p class="obj"><strong>Objectif:</strong> {{ suggestion.objectifs }}</p>
-                    <p class="resp"><strong>Responsabilités:</strong> {{ suggestion.responsabilites }}</p>
-                    <div class="card-footer">
-                        <span><i class="fas fa-hourglass-half"></i> Délai suggéré: {{ suggestion.delaiSuggestion }}
-                            jours</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="empty-plan" *ngIf="suggestedPlan.length === 0">
-                <i class="fas fa-robot"></i>
-                <h3>Aucun plan suggéré</h3>
-                <p>Cliquez sur "Suggestion Plan Annuel" pour laisser l'IA analyser vos risques et proposer des missions
-                    d'audit prioritaires.</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Assign Modal -->
     <app-modal *ngIf="showAssignModal" title="Assigner un Auditeur" (close)="showAssignModal = false">
@@ -178,6 +140,27 @@
                 <button class="btn-save" (click)="assignMission(auditeurSelect.value)"
                     [disabled]="!auditeurSelect.value || isAssigning">
                     {{ isAssigning ? 'Assignation...' : 'Assigner' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Assign Checklist Modal -->
+    <app-modal *ngIf="showAssignChecklistModal" title="Assigner une Checklist" (close)="showAssignChecklistModal = false">
+        <div #projected modal-body class="modal-form">
+            <p>Choisissez un modèle de checklist pour la mission : <br><strong>{{ selectedMission?.titre }}</strong></p>
+            <div class="form-group">
+                <label>Modèle de Checklist</label>
+                <select #checklistSelect class="finput" [ngModel]="selectedMission?.checklistTemplateId">
+                    <option value="">Sélectionner un modèle...</option>
+                    <option *ngFor="let t of checklistTemplates" [value]="t.id">{{ t.titre }}</option>
+                </select>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showAssignChecklistModal = false">Annuler</button>
+                <button class="btn-save" (click)="assignChecklistToMission(checklistSelect.value)"
+                    [disabled]="!checklistSelect.value">
+                    Assigner
                 </button>
             </div>
         </div>
@@ -247,6 +230,100 @@
             </div>
             <div class="form-footer">
                 <button class="btn-save" (click)="showDetailModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Evidence Modal -->
+    <app-modal *ngIf="showEvidenceModal" title="Traçabilité des Preuves" (close)="showEvidenceModal = false">
+        <div #projected modal-body class="modal-form">
+            <div *ngIf="isLoadingMissions" class="table-loading">
+                <i class="fas fa-circle-notch fa-spin"></i> Chargement des preuves...
+            </div>
+            
+            <div *ngIf="!isLoadingMissions && currentEvidences.length === 0" class="empty-state">
+                <p>Aucune preuve téléversée pour cette mission.</p>
+            </div>
+
+            <ul class="evidence-list" *ngIf="!isLoadingMissions && currentEvidences.length > 0">
+                <li *ngFor="let ev of currentEvidences" class="evidence-item">
+                    <div class="ev-info" (click)="downloadEvidence(ev.path)" style="cursor: pointer; display: flex; align-items: center; gap: 10px; flex-grow: 1;">
+                        <i class="fas fa-file-alt" style="color: #004a99; font-size: 1.2rem;"></i>
+                        <span class="ev-name" style="font-weight: 500; color: #334155;">{{ ev.filename }}</span>
+                        <small class="ev-date" style="color: #94a3b8;">{{ ev.createdAt | date:'dd/MM/yyyy HH:mm' }} par {{ ev.uploader?.prenom }} {{ ev.uploader?.nom }}</small>
+                    </div>
+                    <!-- Seul le super admin ou celui qui l'a uploadé devrait pouvoir supprimer, mais en tant que Senior on l'autorise -->
+                    <button class="icon-btn delete" *ngIf="isSeniorAuditor" (click)="deleteEvidence(ev.id)" title="Supprimer" style="color: #ef4444; background: none; border: none; cursor: pointer; padding: 5px;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </li>
+            </ul>
+            <div class="form-footer" style="margin-top: 20px;">
+                <button class="btn-save" (click)="showEvidenceModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Visualiser Checklist Modal (Read-Only pour Senior) -->
+    <app-modal *ngIf="showChecklistModal" title="Avancement de la Checklist" (close)="showChecklistModal = false">
+        <div #projected modal-body class="modal-form">
+            <div *ngIf="isLoadingMissions" class="table-loading">
+                <i class="fas fa-circle-notch fa-spin"></i> Chargement...
+            </div>
+            
+            <div *ngIf="!isLoadingMissions && currentChecklistItems.length === 0" class="empty-state">
+                <p>Aucun élément dans cette checklist.</p>
+            </div>
+
+            <ul class="checklist-items" *ngIf="!isLoadingMissions && currentChecklistItems.length > 0" style="list-style: none; padding: 0;">
+                <li *ngFor="let item of currentChecklistItems" style="padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px;">
+                    <i [ngClass]="item.estFait ? 'fas fa-check-square' : 'far fa-square'" [style.color]="item.estFait ? '#10b981' : '#94a3b8'" style="font-size: 1.2rem;"></i>
+                    <span [style.textDecoration]="item.estFait ? 'line-through' : 'none'" [style.color]="item.estFait ? '#64748b' : '#334155'">{{ item.texte }}</span>
+                </li>
+            </ul>
+
+            <div class="form-footer" style="margin-top: 20px;">
+                <button class="btn-save" (click)="showChecklistModal = false">Fermer</button>
+            </div>
+        </div>
+    </app-modal>
+
+    <!-- Edit Modal -->
+    <app-modal *ngIf="showEditModal" title="Modifier la Mission" (close)="showEditModal = false">
+        <div #projected modal-body class="modal-form" *ngIf="selectedMission">
+            <div class="form-group full">
+                <label>Titre de la Mission <span class="req">*</span></label>
+                <input type="text" [(ngModel)]="selectedMission.titre" class="finput" placeholder="Titre...">
+            </div>
+            <div class="form-group full">
+                <label>Objectifs <span class="req">*</span></label>
+                <textarea [(ngModel)]="selectedMission.objectifs" class="finput" rows="3" placeholder="Objectifs..."></textarea>
+            </div>
+            <div class="form-group full">
+                <label>Responsabilités <span class="req">*</span></label>
+                <textarea [(ngModel)]="selectedMission.responsabilites" class="finput" rows="2" placeholder="Responsabilités..."></textarea>
+            </div>
+            <div class="detail-grid">
+                <div class="form-group">
+                    <label>Échéance <span class="req">*</span></label>
+                    <input type="date" [(ngModel)]="selectedMission.delai" class="finput">
+                </div>
+                <div class="form-group">
+                    <label>Statut</label>
+                    <select [(ngModel)]="selectedMission.statut" class="finput">
+                        <option value="À venir">À venir</option>
+                        <option value="En cours">En cours</option>
+                        <option value="Terminé">Terminé</option>
+                        <option value="En retard">En retard</option>
+                        <option value="Annulé">Annulé</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showEditModal = false">Annuler</button>
+                <button class="btn-save" (click)="updateMission()">
+                    Sauvegarder les modifications
+                </button>
             </div>
         </div>
     </app-modal>

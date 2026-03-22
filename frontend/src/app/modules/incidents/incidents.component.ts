@@ -15,7 +15,6 @@ export class IncidentsComponent implements OnInit {
     incidents: Incident[] = [];
     departments: any[] = [];
     environment = environment;
-    authQueryToken: string = '';
 
     // Modals state
     showCreateModal = false;
@@ -45,7 +44,11 @@ export class IncidentsComponent implements OnInit {
             dateSurvenance: ['', Validators.required],
             statut: [IncidentStatus.NOUVEAU, Validators.required]
         });
-        this.authQueryToken = `?token=${this.authService.getToken()}`;
+    }
+
+    get authQueryToken(): string {
+        const token = this.authService.getToken();
+        return token ? `?token=${token}` : '';
     }
 
     ngOnInit(): void {

@@ -284,13 +284,18 @@
     border-color: #c7d2fe;
 }
 
-.btn-assign {
-    color: #10b981;
-}
-
 .btn-assign:hover {
     background: #ecfdf5;
     border-color: #a7f3d0;
+}
+
+.btn-edit {
+    color: #3b82f6;
+}
+
+.btn-edit:hover {
+    background: #eff6ff;
+    border-color: #bfdbfe;
 }
 
 .btn-report {

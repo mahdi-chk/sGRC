@@ -1,0 +1,93 @@
+<div class="audit-page auditor-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-paperclip"></i> Mes Preuves</h1>
+                <p>Gérez les documents de preuve pour vos missions d'audit.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dual-layout">
+        <!-- Sidebar: Mission List -->
+        <div class="sidebar-list card">
+            <div class="list-header">
+                <h3>Missions Assignées</h3>
+            </div>
+            <ul class="item-list">
+                <li *ngFor="let mission of missions" 
+                    [class.active]="selectedMission?.id === mission.id"
+                    (click)="selectMission(mission)">
+                    <div class="item-icon"><i class="fas fa-file-contract"></i></div>
+                    <div class="item-info">
+                        <strong>{{ mission.titre }}</strong>
+                        <span class="status-tag" [class]="mission.statut.toLowerCase()">{{ mission.statut }}</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content card">
+            <div *ngIf="selectedMission; else selectPrompt">
+                <div class="content-header">
+                    <h2>Preuves : {{ selectedMission.titre }}</h2>
+                    <div class="upload-zone">
+                        <label class="custom-file-upload">
+                            <input type="file" (change)="onFileSelected($event)" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png">
+                            <i class="fas fa-cloud-upload-alt"></i> 
+                            {{ selectedFile ? selectedFile.name : 'Choisir un fichier...' }}
+                        </label>
+                        <button class="btn-primary" (click)="uploadEvidence()" [disabled]="!selectedFile || isUploading">
+                            {{ isUploading ? 'Envoi...' : 'Ajouter la Preuve' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="loading-overlay" *ngIf="isLoading">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                </div>
+
+                <div class="evidence-container" *ngIf="!isLoading">
+                    <div class="empty-evidence" *ngIf="evidences.length === 0">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Aucune preuve téléversée pour cette mission.</p>
+                    </div>
+
+                    <div class="evidence-grid" *ngIf="evidences.length > 0">
+                        <div *ngFor="let ev of evidences" class="evidence-card">
+                            <div class="ev-preview" (click)="downloadEvidence(ev.path)">
+                                <i class="fas fa-file-pdf" *ngIf="ev.filename.endsWith('.pdf')"></i>
+                                <i class="fas fa-file-excel" *ngIf="ev.filename.endsWith('.xlsx')"></i>
+                                <i class="fas fa-file-word" *ngIf="ev.filename.endsWith('.docx')"></i>
+                                <i class="fas fa-file-image" *ngIf="ev.filename.match('.(jpg|jpeg|png)$')"></i>
+                                <i class="fas fa-file-alt" *ngIf="!ev.filename.match('.(pdf|xlsx|docx|jpg|jpeg|png)$')"></i>
+                            </div>
+                            <div class="ev-details">
+                                <span class="ev-name" [title]="ev.filename">{{ ev.filename }}</span>
+                                <span class="ev-date">{{ ev.createdAt | date:'dd/MM/yyyy' }}</span>
+                                <div class="ev-actions">
+                                    <button class="icon-btn download" (click)="downloadEvidence(ev.path)" title="Télécharger">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="icon-btn delete" (click)="deleteEvidence(ev.id)" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <ng-template #selectPrompt>
+                <div class="select-prompt">
+                    <i class="fas fa-folder-open"></i>
+                    <p>Sélectionnez une mission pour gérer ses preuves.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>

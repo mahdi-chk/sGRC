@@ -1,0 +1,80 @@
+<div class="audit-page auditor-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-tasks"></i> Mes Check-Lists</h1>
+                <p>Complétez les points de contrôle pour vos missions d'audit.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dual-layout">
+        <!-- Sidebar: Mission List -->
+        <div class="sidebar-list card">
+            <div class="list-header">
+                <h3>Missions Assignées</h3>
+            </div>
+            <div class="loading-state" *ngIf="isLoading && missions.length === 0">
+                <i class="fas fa-circle-notch fa-spin"></i>
+            </div>
+            <ul class="item-list">
+                <li *ngFor="let mission of missions" 
+                    [class.active]="selectedMission?.id === mission.id"
+                    (click)="selectMission(mission)">
+                    <div class="item-icon"><i class="fas fa-briefcase"></i></div>
+                    <div class="item-info">
+                        <strong>{{ mission.titre }}</strong>
+                        <span class="status-tag" [class]="mission.statut.toLowerCase()">{{ mission.statut }}</span>
+                    </div>
+                    <i class="fas fa-chevron-right scroll-icon"></i>
+                </li>
+            </ul>
+            <div class="empty-list" *ngIf="!isLoading && missions.length === 0">
+                <p>Aucune mission assignée.</p>
+            </div>
+        </div>
+
+        <!-- Main Content: Checklist Items -->
+        <div class="main-content card">
+            <div *ngIf="selectedMission; else selectPrompt">
+                <div class="content-header">
+                    <h2>Checklist : {{ selectedMission.titre }}</h2>
+                    <span class="mission-date">Échéance : {{ selectedMission.delai | date:'dd/MM/yyyy' }}</span>
+                </div>
+
+                <div class="loading-overlay" *ngIf="isLoading">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                </div>
+
+                <div class="checklist-container" *ngIf="!isLoading">
+                    <div class="empty-checklist" *ngIf="checklistItems.length === 0">
+                        <i class="fas fa-list-ul"></i>
+                        <p>Aucun point de contrôle défini pour cette mission.</p>
+                    </div>
+
+                    <ul class="checklist-items" *ngIf="checklistItems.length > 0">
+                        <li *ngFor="let item of checklistItems" class="checklist-item" [class.completed]="item.estFait">
+                            <label class="checkbox-container">
+                                <input type="checkbox" [checked]="item.estFait" (change)="toggleChecklistItem(item, $event.target.checked)">
+                                <span class="checkmark"></span>
+                                <div class="item-content">
+                                    <span class="item-text">{{ item.texte }}</span>
+                                    <small *ngIf="item.estFait" class="done-tag">Complété</small>
+                                </div>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <ng-template #selectPrompt>
+                <div class="select-prompt">
+                    <i class="fas fa-mouse-pointer"></i>
+                    <p>Veuillez sélectionner une mission dans la liste pour afficher sa checklist.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>

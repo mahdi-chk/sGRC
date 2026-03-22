@@ -1,0 +1,75 @@
+<div class="audit-page auditor-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-file-signature"></i> Rapports et Suivi</h1>
+                <p>Rédigez vos conclusions d'audit et soumettez vos rapports finaux.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dual-layout">
+        <!-- Sidebar: Mission List -->
+        <div class="sidebar-list card">
+            <div class="list-header">
+                <h3>Missions Assignées</h3>
+            </div>
+            <ul class="item-list">
+                <li *ngFor="let mission of missions" 
+                    [class.active]="selectedMission?.id === mission.id"
+                    (click)="selectMission(mission)">
+                    <div class="item-icon"><i class="fas fa-file-invoice"></i></div>
+                    <div class="item-info">
+                        <strong>{{ mission.titre }}</strong>
+                        <span class="status-tag" [class]="mission.statut.toLowerCase()">{{ mission.statut }}</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content: Report Form -->
+        <div class="main-content card">
+            <div *ngIf="selectedMission; else selectPrompt">
+                <div class="content-header">
+                    <h2>Rédaction du Rapport : {{ selectedMission.titre }}</h2>
+                    <span class="mission-meta">Assigné par : {{ selectedMission.auditSenior?.prenom }} {{ selectedMission.auditSenior?.nom }}</span>
+                </div>
+
+                <div class="report-form-container">
+                    <div class="form-section">
+                        <label><i class="fas fa-align-left"></i> Résultats de l'Audit (Rapport) <span class="req">*</span></label>
+                        <textarea [(ngModel)]="reportData.rapport" rows="10" 
+                            placeholder="Décrivez vos constatations, les écarts identifiés et les points forts..."
+                            class="finput"></textarea>
+                    </div>
+
+                    <div class="form-section">
+                        <label><i class="fas fa-lightbulb"></i> Recommandations <span class="req">*</span></label>
+                        <textarea [(ngModel)]="reportData.recommandations" rows="5" 
+                            placeholder="Proposez des actions correctives pour remédier aux faiblesses identifiées..."
+                            class="finput"></textarea>
+                    </div>
+
+                    <div class="form-actions-bar">
+                        <div class="status-info" *ngIf="selectedMission.statut === 'Terminé'">
+                            <i class="fas fa-check-circle"></i> Ce rapport a déjà été soumis.
+                        </div>
+                        <button class="btn-primary large" (click)="submitReport()" 
+                            [disabled]="isLoading || !reportData.rapport || !reportData.recommandations">
+                            <i class="fas fa-paper-plane"></i> {{ isLoading ? 'Envoi...' : 'Soumettre le Rapport Final' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <ng-template #selectPrompt>
+                <div class="select-prompt">
+                    <i class="fas fa-pen-nib"></i>
+                    <p>Sélectionnez une mission pour commencer la rédaction du rapport.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>

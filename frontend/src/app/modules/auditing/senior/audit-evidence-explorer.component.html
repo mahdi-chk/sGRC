@@ -1,0 +1,81 @@
+<div class="audit-page senior-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-search-plus"></i> Explorateur de Preuves</h1>
+                <p>Consultez et gérez l'ensemble des preuves déposées par les auditeurs.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="search-bar premium">
+                <i class="fas fa-search"></i>
+                <input type="text" [(ngModel)]="searchTerm" (input)="onSearch()" placeholder="Rechercher par fichier, mission, auditeur...">
+            </div>
+        </div>
+    </div>
+
+    <div class="evidence-stats-row">
+        <div class="stat-mini-card">
+            <span class="label">Total Preuves</span>
+            <span class="value">{{ allEvidences.length }}</span>
+        </div>
+        <div class="stat-mini-card">
+            <span class="label">Filtres actifs</span>
+            <span class="value">{{ filteredEvidences.length }}</span>
+        </div>
+    </div>
+
+    <div class="explorer-card card">
+        <div class="loading-state" *ngIf="isLoading">
+            <i class="fas fa-circle-notch fa-spin"></i> Chargement de la base documentaire...
+        </div>
+
+        <div class="empty-explorer" *ngIf="!isLoading && filteredEvidences.length === 0">
+            <i class="fas fa-folder-open"></i>
+            <p>Aucune preuve ne correspond à votre recherche.</p>
+        </div>
+
+        <table class="premium-table" *ngIf="!isLoading && filteredEvidences.length > 0">
+            <thead>
+                <tr>
+                    <th>Fichier</th>
+                    <th>Mission d'Audit</th>
+                    <th>Déposé par</th>
+                    <th>Date de dépôt</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let ev of filteredEvidences">
+                    <td>
+                        <div class="file-info" (click)="downloadEvidence(ev.path)">
+                            <i class="fas fa-file-alt file-icon"></i>
+                            <span class="file-name">{{ ev.filename }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="mission-tag">{{ ev.mission?.titre || 'Mission #' + ev.missionId }}</span>
+                    </td>
+                    <td>
+                        <div class="uploader-info">
+                            <i class="fas fa-user-circle"></i>
+                            {{ ev.uploader?.prenom }} {{ ev.uploader?.nom }}
+                        </div>
+                    </td>
+                    <td>{{ ev.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td class="actions-cell">
+                        <button class="action-btn download" (click)="downloadEvidence(ev.path)" title="Télécharger">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="action-btn delete" (click)="deleteEvidence(ev)" title="Supprimer">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

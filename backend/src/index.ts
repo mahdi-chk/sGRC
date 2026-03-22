@@ -242,6 +242,16 @@ sequelize.sync().then(async () => {
       console.error('Failed to add auditMissionId to notifications:', e);
     }
 
+    // Mise à jour de la table audit_missions pour inclure checklistTemplateId
+    try {
+      await sequelize.query(`
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[audit_missions]') AND name = 'checklistTemplateId')
+            ALTER TABLE [audit_missions] ADD checklistTemplateId INT NULL;
+        `);
+    } catch (e) {
+      console.error('Failed to add checklistTemplateId to audit_missions:', e);
+    }
+
     // Convertir les colonnes existantes pour supporter les fuseaux horaires (offsets)
     await updateColumnType('aiAnalysisDate', 'DATETIMEOFFSET NULL');
     await updateColumnType('dateEcheance', 'DATETIMEOFFSET NOT NULL');

@@ -66,9 +66,11 @@ export class AuditeurDashboardComponent implements OnInit {
     }
 
     onOpenModule(m: any, s: any) {
-        if (m.key === 'audit') {
-            this.goToMissions();
-            return;
+        if (m.key === 'audit' || m.key === 'audit-auditeur') {
+            if (s.title === 'Mes Missions') {
+                this.goToMissions();
+                return;
+            }
         }
         this.dashboardService.openSubmoduleModal(m, s);
         this.openModule.emit({ m, s });

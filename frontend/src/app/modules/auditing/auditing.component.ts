@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditMission, AuditMissionStatus } from '../../core/services/auditing.service';
+import { AuditingService, AuditMission, AuditMissionStatus, AuditChecklistTemplate, AuditEvidence } from '../../core/services/auditing.service';
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { AuditMissionChecklistItem } from '../../core/services/auditing.service';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -14,25 +15,30 @@ import autoTable from 'jspdf-autotable';
   styleUrls: ['./auditing.component.scss']
 })
 export class AuditingComponent implements OnInit {
-  activeTab: 'missions' | 'plan' = 'missions';
   missions: AuditMission[] = [];
-  suggestedPlan: any[] = [];
   allUsers: any[] = [];
   auditors: any[] = [];
+  checklistTemplates: AuditChecklistTemplate[] = [];
   showExportMenu = false;
 
   // UI States
   isLoadingMissions = false;
-  isGeneratingPlan = false;
   isCreatingMissions = false;
   isAssigning = false;
   isReporting = false;
 
   // Modals
   showAssignModal = false;
+  showAssignChecklistModal = false;
   showReportModal = false;
   showDetailModal = false;
+  showEvidenceModal = false;
+  showChecklistModal = false;
+  showEditModal = false;
   selectedMission: AuditMission | null = null;
+  currentEvidences: AuditEvidence[] = [];
+  currentChecklistItems: AuditMissionChecklistItem[] = [];
+  backendUrl = environment.apiUrl.replace('/api', '');
 
   // Report Form
   reportData = {
@@ -53,6 +59,14 @@ export class AuditingComponent implements OnInit {
     }
     this.loadMissions();
     this.loadUsers();
+    this.loadTemplates();
+  }
+
+  loadTemplates() {
+    this.auditingService.getChecklistTemplates().subscribe({
+      next: (data) => this.checklistTemplates = data,
+      error: (err) => console.error(err)
+    });
   }
 
   get isSeniorAuditor(): boolean {
@@ -86,42 +100,7 @@ export class AuditingComponent implements OnInit {
     });
   }
 
-  generatePlan() {
-    this.isGeneratingPlan = true;
-    this.suggestedPlan = [];
-    this.auditingService.suggestPlan().subscribe({
-      next: (plan) => {
-        this.suggestedPlan = plan.map(p => ({ ...p, selected: true }));
-        this.isGeneratingPlan = false;
-        this.activeTab = 'plan';
-      },
-      error: (err) => {
-        console.error(err);
-        this.isGeneratingPlan = false;
-        alert('Erreur lors de la suggestion du plan d\'audit.');
-      }
-    });
-  }
 
-  createMissions() {
-    const selected = this.suggestedPlan.filter(p => p.selected);
-    if (selected.length === 0) return;
-
-    this.isCreatingMissions = true;
-    this.auditingService.createMissionsFromPlan(selected).subscribe({
-      next: () => {
-        this.isCreatingMissions = false;
-        this.suggestedPlan = [];
-        this.activeTab = 'missions';
-        this.loadMissions();
-      },
-      error: (err) => {
-        console.error(err);
-        this.isCreatingMissions = false;
-        alert('Erreur lors de la création des missions.');
-      }
-    });
-  }
 
   openDetailModal(mission: AuditMission) {
     this.selectedMission = mission;
@@ -131,6 +110,29 @@ export class AuditingComponent implements OnInit {
   openAssignModal(mission: AuditMission) {
     this.selectedMission = mission;
     this.showAssignModal = true;
+  }
+
+  openEditModal(mission: AuditMission) {
+    this.selectedMission = JSON.parse(JSON.stringify(mission));
+    if (this.selectedMission?.delai) {
+      // Format date to YYYY-MM-DD for input type="date"
+      this.selectedMission.delai = new Date(this.selectedMission.delai).toISOString().split('T')[0] as any;
+    }
+    this.showEditModal = true;
+  }
+
+  updateMission() {
+    if (!this.selectedMission) return;
+    this.auditingService.updateMission(this.selectedMission.id, this.selectedMission).subscribe({
+      next: () => {
+        this.showEditModal = false;
+        this.loadMissions();
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Erreur lors de la modification.');
+      }
+    });
   }
 
   assignMission(auditeurId: string) {
@@ -145,6 +147,89 @@ export class AuditingComponent implements OnInit {
       error: (err) => {
         console.error(err);
         this.isAssigning = false;
+      }
+    });
+  }
+
+  // --- EVIDENCE MANAGEMENT ---
+  openEvidenceModal(mission: AuditMission) {
+    this.selectedMission = mission;
+    this.isLoadingMissions = true; // Use this to show a loading state
+    this.auditingService.getMissionEvidence(mission.id).subscribe({
+      next: (data) => {
+        this.currentEvidences = data;
+        this.isLoadingMissions = false;
+        this.showEvidenceModal = true;
+      },
+      error: (err) => {
+        console.error(err);
+        this.isLoadingMissions = false;
+      }
+    });
+  }
+
+  downloadEvidence(path: string) {
+    const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
+    const normalizedPath = path.replace(/\\/g, '/');
+    const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
+    
+    // Get token for authorization (backend allows token in query string)
+    const token = sessionStorage.getItem('sgrc_token');
+    const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
+    
+    window.open(urlWithToken, '_blank');
+  }
+
+  deleteEvidence(evidenceId: number) {
+    if (!this.selectedMission || !confirm('Voulez-vous vraiment supprimer cette preuve ?')) return;
+    this.auditingService.deleteMissionEvidence(this.selectedMission.id, evidenceId).subscribe({
+      next: () => {
+        this.currentEvidences = this.currentEvidences.filter(e => e.id !== evidenceId);
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Erreur lors de la suppression.');
+      }
+    });
+  }
+
+  openAssignChecklistModal(mission: AuditMission) {
+    this.selectedMission = mission;
+    // To support automatic pre-selection in HTML, we will bind [value] or [(ngModel)] to selectedMission.checklistTemplateId
+    this.showAssignChecklistModal = true;
+  }
+
+  assignChecklistToMission(templateIdStr: string) {
+    const templateId = parseInt(templateIdStr, 10);
+    if (!this.selectedMission || isNaN(templateId)) return;
+
+    this.auditingService.assignTemplateToMission(this.selectedMission.id, templateId).subscribe({
+      next: () => {
+        if (this.selectedMission) this.selectedMission.checklistTemplateId = templateId; // Local update
+        this.showAssignChecklistModal = false;
+        alert('Checklist assignée avec succès');
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Erreur lors de l\'assignation de la checklist');
+      }
+    });
+  }
+
+  // --- VIEW CHECKLIST (SENIOR) ---
+  openChecklistModal(mission: AuditMission) {
+    this.selectedMission = mission;
+    this.isLoadingMissions = true; 
+    this.auditingService.getMissionChecklistItems(mission.id).subscribe({
+      next: (data) => {
+        this.currentChecklistItems = data;
+        this.isLoadingMissions = false;
+        this.showChecklistModal = true;
+      },
+      error: (err) => {
+        console.error(err);
+        this.isLoadingMissions = false;
+        alert('Erreur lors du chargement de la checklist');
       }
     });
   }

@@ -1,0 +1,68 @@
+<div class="audit-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-magic"></i> Planification Suggérée (IA)</h1>
+                <p>Utilisez notre moteur d'intelligence artificielle pour générer des suggestions de missions basées sur vos risques.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-ai-plan" (click)="generatePlan()" [disabled]="isGeneratingPlan">
+                <i class="fas" [class.fa-magic]="!isGeneratingPlan" [class.fa-spinner]="isGeneratingPlan"
+                    [class.fa-spin]="isGeneratingPlan"></i>
+                {{ isGeneratingPlan ? 'Analyse IA...' : 'Nouvelle Suggestion' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- suggested Plan Content -->
+    <div class="plan-content" *ngIf="suggestedPlan.length > 0">
+        <div class="plan-header-row">
+            <h3>Suggestions IA pour le Plan Annuel</h3>
+            <div class="plan-actions">
+                <button class="btn-cancel" (click)="suggestedPlan = []">Effacer</button>
+                <button class="btn-save" (click)="createMissions()" [disabled]="isCreatingMissions">
+                    <i class="fas fa-check-circle"></i> Valider et Créer Missions
+                </button>
+            </div>
+        </div>
+
+        <div class="suggested-plan-grid">
+            <div *ngFor="let suggestion of suggestedPlan" class="suggestion-card"
+                [class.selected]="suggestion.selected">
+                <div class="card-check" (click)="suggestion.selected = !suggestion.selected">
+                    <i class="fas" [class.fa-check-square]="suggestion.selected"
+                        [class.fa-square]="!suggestion.selected"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-top">
+                        <h4>{{ suggestion.titre }}</h4>
+                        <span class="risk-ref">Risque #{{ suggestion.riskId }}</span>
+                    </div>
+                    <p class="obj"><strong>Objectif:</strong> {{ suggestion.objectifs }}</p>
+                    <p class="resp"><strong>Responsabilités:</strong> {{ suggestion.responsabilites }}</p>
+                    <div class="card-footer">
+                        <i class="far fa-calendar-alt"></i> Délai suggéré: {{ suggestion.delaiSuggestion || 30 }} jours
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="empty-state-ai" *ngIf="suggestedPlan.length === 0 && !isGeneratingPlan">
+        <i class="fas fa-robot"></i>
+        <h3>Besoin d'aide pour planifier ?</h3>
+        <p>Cliquez sur le bouton "Nouvelle Suggestion" pour laisser l'IA analyser vos risques et proposer des missions d'audit prioritaires.</p>
+        <button class="btn-primary-ghost" (click)="generatePlan()">Générer des suggestions</button>
+    </div>
+
+    <div class="loading-ai" *ngIf="isGeneratingPlan">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <p>L'IA analyse les risques en profondeur... Veuillez patienter.</p>
+    </div>
+
+</div>

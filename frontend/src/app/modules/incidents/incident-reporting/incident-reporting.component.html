@@ -1,0 +1,76 @@
+<div class="incident-page reporting-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-pie"></i> Reporting Consolidé</h1>
+                <p>Visualisez les indicateurs clés de performance (KPI) et l'évolution des incidents sur l'année.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-primary"><i class="fas fa-file-export"></i> Exporter Rapport Annuel</button>
+        </div>
+    </div>
+
+    <div class="reporting-container">
+        <!-- KPI Row -->
+        <div class="kpi-grid">
+            <div class="kpi-card shadow-sm blue">
+                <div class="kpi-icon"><i class="fas fa-list-ul"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Total Incidents</span>
+                    <span class="kpi-value">{{ totalIncidents }}</span>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm yellow">
+                <div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">En cours / Ouverts</span>
+                    <span class="kpi-value">{{ openIncidents }}</span>
+                    <small>{{ getPercent(openIncidents) }}% du volume total</small>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm green">
+                <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Taux de Résolution</span>
+                    <span class="kpi-value">{{ getPercent(resolvedIncidents) }}%</span>
+                    <small>{{ resolvedIncidents }} incidents traités</small>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm red">
+                <div class="kpi-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Incidents Critiques</span>
+                    <span class="kpi-value">{{ criticalIncidents }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid mt-4">
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-chart-bar"></i> Volume par Domaine</h3>
+                <div class="dummy-chart">
+                    <!-- Simuler un graphique à barres -->
+                    <div class="bar-row" *ngFor="let d of ['IT', 'RH', 'Finance', 'Opérations']">
+                        <span class="label">{{ d }}</span>
+                        <div class="bar-container"><div class="bar" [style.width.%]="40 + (d.length * 5)"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-history"></i> Délais de Traitement Moyens</h3>
+                <div class="dummy-stats">
+                    <div class="stat-circle">
+                        <span class="val">4.2</span>
+                        <span class="lab">Jours</span>
+                    </div>
+                    <p>Temps moyen entre la déclaration et la clôture définitive.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

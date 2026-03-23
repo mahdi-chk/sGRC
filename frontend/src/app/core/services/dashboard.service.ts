@@ -223,6 +223,14 @@ export class DashboardService {
             this.router.navigate(['/dashboard/alertes-monitoring']);
         } else if (s.title === 'Plans de Traitement') {
             this.router.navigate(['/dashboard/treatment-plans']);
+        } else if (s.title === 'Enregistrement Structuré') {
+            this.router.navigate(['/dashboard/incident-registration']);
+        } else if (s.title === 'Workflow de Traitement') {
+            this.router.navigate(['/dashboard/incident-workflow']);
+        } else if (s.title === 'Liens et Analyse') {
+            this.router.navigate(['/dashboard/incident-analysis']);
+        } else if (s.title === 'Reporting Consolidé') {
+            this.router.navigate(['/dashboard/incident-reporting']);
         } else {
             this.openModalSource.next({ m, s });
         }

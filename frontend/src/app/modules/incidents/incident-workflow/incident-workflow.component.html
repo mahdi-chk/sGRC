@@ -1,0 +1,72 @@
+<div class="incident-page workflow-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-tasks"></i> Workflow de Traitement</h1>
+                <p>Suivez le cycle de vie des incidents, de la détection à la clôture.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Rechercher un incident...">
+            </div>
+            <div class="filter-box">
+                <select [(ngModel)]="statusFilter" (change)="applyFilters()">
+                    <option value="All">Tous les statuts</option>
+                    <option value="Nouveau">Nouveau</option>
+                    <option value="En cours">En cours</option>
+                    <option value="Traité">Traité</option>
+                    <option value="Clos">Clos</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="workflow-container">
+        <div class="loading-state" *ngIf="isLoading">
+            <i class="fas fa-circle-notch fa-spin"></i> Synchronisation du workflow...
+        </div>
+
+        <div class="incident-grid" *ngIf="!isLoading">
+            <div class="incident-card card shadow-sm" *ngFor="let incident of filteredIncidents">
+                <div class="card-header">
+                    <span class="status-badge" [ngClass]="getStatusClass(incident.statut)">{{ incident.statut }}</span>
+                    <span class="date">{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</span>
+                </div>
+                <div class="card-body">
+                    <h3>{{ incident.titre }}</h3>
+                    <p class="description">{{ incident.description | slice:0:100 }}{{ incident.description.length > 100 ? '...' : '' }}</p>
+                    <div class="meta">
+                        <span><i class="fas fa-building"></i> {{ incident.departement?.nom || 'Non spécifié' }}</span>
+                        <span><i class="fas fa-user-edit"></i> {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="status-actions">
+                        <button *ngIf="incident.statut === 'Nouveau'" (click)="updateStatus(incident, 'En cours')" class="btn-action start">
+                            <i class="fas fa-play"></i> Prise en charge
+                        </button>
+                        <button *ngIf="incident.statut === 'En cours'" (click)="updateStatus(incident, 'Traité')" class="btn-action resolve">
+                            <i class="fas fa-check"></i> Marquer comme Traité
+                        </button>
+                        <button *ngIf="incident.statut === 'Traité'" (click)="updateStatus(incident, 'Clos')" class="btn-action close">
+                            <i class="fas fa-lock"></i> Clôturer
+                        </button>
+                    </div>
+                    <button class="btn-details" (click)="selectedIncident = incident">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-state" *ngIf="!isLoading && filteredIncidents.length === 0">
+            <i class="fas fa-clipboard-check"></i>
+            <p>Aucun incident à traiter pour ces critères.</p>
+        </div>
+    </div>
+</div>

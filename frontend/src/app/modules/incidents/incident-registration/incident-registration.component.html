@@ -1,0 +1,88 @@
+<div class="incident-page registration-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-plus-circle"></i> Déclaration d'Incident</h1>
+                <p>Enregistrez un nouvel incident de manière structurée pour assurer son traitement.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="registration-container card shadow-premium">
+        <form [formGroup]="incidentForm" (ngSubmit)="submitIncident()" class="premium-form">
+            <div class="form-grid">
+                <!-- Section: Informations Générales -->
+                <div class="form-section full">
+                    <h3 class="section-title"><i class="fas fa-info-circle"></i> Informations Générales</h3>
+                    <div class="field">
+                        <label>Titre de l'incident <span class="required">*</span></label>
+                        <input type="text" formControlName="titre" placeholder="Ex: Panne de climatisation salle serveur" class="premium-input">
+                        <small class="hint">Soyez concis et explicite.</small>
+                    </div>
+                    <div class="field">
+                        <label>Description Détaillée <span class="required">*</span></label>
+                        <textarea formControlName="description" rows="5" placeholder="Décrivez les faits, les premiers impacts constatés..." class="premium-input"></textarea>
+                    </div>
+                </div>
+
+                <!-- Section: Contexte -->
+                <div class="form-section">
+                    <h3 class="section-title"><i class="fas fa-map-marker-alt"></i> Contexte & Localisation</h3>
+                    <div class="field">
+                        <label>Domaine / Nature <span class="required">*</span></label>
+                        <select formControlName="domaine" class="premium-input">
+                            <option value="">Sélectionnez un domaine...</option>
+                            <option value="Informatique">Informatique (IT)</option>
+                            <option value="Ressources Humaines">Ressources Humaines</option>
+                            <option value="Opérations">Opérations</option>
+                            <option value="Logistique">Logistique / Infrastructures</option>
+                            <option value="Juridique">Juridique / Compliance</option>
+                            <option value="Sécurité">Sécurité Physique</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Département Concerné <span class="required">*</span></label>
+                        <select formControlName="departementId" class="premium-input">
+                            <option [value]="null">Sélectionnez un département...</option>
+                            <option *ngFor="let d of departments" [value]="d.id">{{ d.nom }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Section: Timing & Preuves -->
+                <div class="form-section">
+                    <h3 class="section-title"><i class="fas fa-calendar-alt"></i> Temporalité & Preuves</h3>
+                    <div class="field">
+                        <label>Date de survenance <span class="required">*</span></label>
+                        <input type="date" formControlName="dateSurvenance" class="premium-input">
+                    </div>
+                    <div class="field">
+                        <label>Pièce Jointe / Photo (Optionnel)</label>
+                        <div class="premium-file-upload" [class.has-file]="selectedFile">
+                            <input type="file" (change)="onFileSelected($event)" id="fileInput" hidden>
+                            <label for="fileInput">
+                                <i class="fas" [class.fa-file-upload]="!selectedFile" [class.fa-file-check]="selectedFile"></i>
+                                <span>{{ selectedFile ? selectedFile.name : 'Cliquez pour ajouter un document' }}</span>
+                            </label>
+                            <button type="button" *ngIf="selectedFile" class="clear-file" (click)="selectedFile = null">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn-outline" (click)="goBack()">Annuler</button>
+                <button type="submit" class="btn-primary" [disabled]="incidentForm.invalid || isSubmitting">
+                    <i class="fas fa-check-circle" *ngIf="!isSubmitting"></i>
+                    <i class="fas fa-circle-notch fa-spin" *ngIf="isSubmitting"></i>
+                    Confirmer la Déclaration
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

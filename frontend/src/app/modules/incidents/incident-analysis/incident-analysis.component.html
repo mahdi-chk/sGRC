@@ -1,0 +1,87 @@
+<div class="incident-page analysis-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-microscope"></i> Liens et Analyse</h1>
+                <p>Analysez les causes profondes et liez les incidents aux risques identifiés dans la cartographie.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dual-layout">
+        <div class="sidebar card">
+            <div class="sidebar-header">
+                <h3>Files d'Incidents</h3>
+            </div>
+            <ul class="item-list">
+                <li *ngFor="let i of incidents" [class.active]="selectedIncident?.id === i.id" (click)="selectIncident(i)">
+                    <div class="item-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="item-info">
+                        <strong>{{ i.titre }}</strong>
+                        <small>{{ i.dateSurvenance | date:'shortDate' }} | {{ i.statut }}</small>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content card">
+            <div *ngIf="selectedIncident; else selectPrompt">
+                <div class="analysis-section">
+                    <h2>Analyse de l'Incident : {{ selectedIncident.titre }}</h2>
+                    <p class="description">{{ selectedIncident.description }}</p>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-card shadow-sm">
+                        <h3><i class="fas fa-link"></i> Corrélation avec les Risques</h3>
+                        <p>Lier cet incident à un risque existant pour enrichir la cartographie.</p>
+                        <select class="premium-select" (change)="linkToRisk(+$any($event.target).value)">
+                            <option [value]="null">Sélectionner un risque...</option>
+                            <option *ngFor="let r of risks" [value]="r.id" [selected]="selectedIncident.riskId === r.id">
+                                {{ r.titre }} (Score: {{ r.criticite }})
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="analysis-card shadow-sm">
+                        <h3><i class="fas fa-chart-line"></i> Impact Financier & Opérationnel</h3>
+                        <div class="impact-fields">
+                            <div class="i-field">
+                                <label>Coût estimé (EUR)</label>
+                                <input type="number" placeholder="0.00" class="premium-input">
+                            </div>
+                            <div class="i-field">
+                                <label>Gravité Constatée</label>
+                                <select class="premium-select">
+                                    <option>Faible</option>
+                                    <option>Mineure</option>
+                                    <option>Majeure</option>
+                                    <option>Critique</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="root-cause-section mt-4">
+                    <h3><i class="fas fa-search"></i> Analyse des Causes Profondes (5 Pourquoi)</h3>
+                    <div class="why-list">
+                        <div class="why-item" *ngFor="let n of [1,2,3,4,5]">
+                            <span class="num">{{ n }}</span>
+                            <input type="text" class="premium-input" [placeholder]="'Pourquoi ? (Étape ' + n + ')'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <ng-template #selectPrompt>
+                <div class="select-prompt">
+                    <i class="fas fa-search"></i>
+                    <p>Veuillez sélectionner un incident pour approfondir l'analyse.</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+</div>

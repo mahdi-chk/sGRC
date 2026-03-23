@@ -1,0 +1,54 @@
+.incident-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.incident-card {
+    background: white; border-radius: 16px; display: flex; flex-direction: column; transition: all 0.3s;
+    &:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
+    
+    .card-header {
+        padding: 15px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;
+        .date { font-size: 0.8rem; color: #94a3b8; font-weight: 500; }
+    }
+
+    .card-body {
+        padding: 20px; flex-grow: 1;
+        h3 { margin: 0 0 12px 0; font-size: 1.1rem; color: #1e293b; font-weight: 700; line-height: 1.4; }
+        .description { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; line-height: 1.5; }
+        .meta { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: #475569; i { width: 20px; color: #94a3b8; } }
+    }
+
+    .card-footer {
+        padding: 15px 20px; border-top: 1px solid #f1f5f9; background: #fafafa; display: flex; justify-content: space-between; align-items: center;
+        border-radius: 0 0 16px 16px;
+    }
+}
+
+.status-badge {
+    padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    &.status-new { background: #eff6ff; color: #3b82f6; }
+    &.status-progress { background: #fefce8; color: #ca8a04; }
+    &.status-resolved { background: #f0fdf4; color: #16a34a; }
+    &.status-closed { background: #f1f5f9; color: #64748b; }
+}
+
+.btn-action {
+    padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+    &.start { background: #004a99; color: white; &:hover { background: #003366; } }
+    &.resolve { background: #10b981; color: white; &:hover { background: #059669; } }
+    &.close { background: #64748b; color: white; &:hover { background: #475569; } }
+}
+
+.btn-details {
+    width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e2e8f0; background: white; color: #94a3b8; cursor: pointer; transition: all 0.2s;
+    &:hover { background: #f1f5f9; color: #004a99; border-color: #004a99; }
+}
+
+.search-box, .filter-box {
+    background: #f1f5f9; padding: 8px 15px; border-radius: 10px; display: flex; align-items: center; gap: 10px;
+    input, select { background: none; border: none; outline: none; font-size: 0.9rem; color: #475569; font-weight: 500; }
+    i { color: #94a3b8; }
+}

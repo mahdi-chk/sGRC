@@ -47,7 +47,6 @@ Notification.init(
         },
         isRead: {
             type: DataTypes.BOOLEAN,
-            defaultValue: false,
         },
         riskId: {
             type: DataTypes.INTEGER,

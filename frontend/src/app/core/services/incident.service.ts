@@ -30,6 +30,7 @@ export interface Incident {
     planActionTraitement?: string;
     dateEcheance?: Date | string;
     niveauRisque?: string;
+    riskId?: number;
 }
 
 @Injectable({

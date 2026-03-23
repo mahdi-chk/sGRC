@@ -16,11 +16,16 @@ Department.init(
         nom: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
         },
     },
     {
         sequelize,
         tableName: 'departments',
+        indexes: [
+            {
+                unique: true,
+                fields: ['nom'],
+            },
+        ],
     }
 );

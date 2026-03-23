@@ -115,7 +115,7 @@ export class DashboardService {
                 { title: 'Liens et Analyse' },
                 { title: 'Reporting Consolidé' }
             ],
-            roles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+            roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT]
         },
         {
             key: 'plans-actions',
@@ -127,7 +127,7 @@ export class DashboardService {
                 { title: 'Notifications' },
                 { title: 'Indicateurs' }
             ],
-            roles: [UserRole.AUDIT_SENIOR]
+            roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR]
         },
         {
             key: 'reporting',
@@ -231,6 +231,14 @@ export class DashboardService {
             this.router.navigate(['/dashboard/incident-analysis']);
         } else if (s.title === 'Reporting Consolidé') {
             this.router.navigate(['/dashboard/incident-reporting']);
+        } else if (s.title === 'Tableaux de Bord') {
+            this.router.navigate(['/dashboard/reporting/dashboard']);
+        } else if (s.title === 'KPI Personnalisables') {
+            this.router.navigate(['/dashboard/reporting/kpis']);
+        } else if (s.title === 'Vision Multi-Entités') {
+            this.router.navigate(['/dashboard/reporting/multi-entity']);
+        } else if (s.title === 'Exports') {
+            this.router.navigate(['/dashboard/reporting/exports']);
         } else {
             this.openModalSource.next({ m, s });
         }

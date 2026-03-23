@@ -3,6 +3,7 @@ import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IncidentService, Incident, IncidentStatus } from '../../core/services/incident.service';
 import { OrganigrammeService } from '../../core/services/organigramme.service';
+import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -14,6 +15,7 @@ import { environment } from '../../../environments/environment';
 export class IncidentsComponent implements OnInit {
     incidents: Incident[] = [];
     departments: any[] = [];
+    risks: Risk[] = [];
     environment = environment;
 
     // Modals state
@@ -33,6 +35,7 @@ export class IncidentsComponent implements OnInit {
         private fb: FormBuilder,
         private incidentService: IncidentService,
         private organigrammeService: OrganigrammeService,
+        private riskService: RiskService,
         private authService: AuthService,
         private location: Location
     ) {
@@ -42,7 +45,8 @@ export class IncidentsComponent implements OnInit {
             domaine: ['', []],
             departementId: [null, []],
             dateSurvenance: ['', Validators.required],
-            statut: [IncidentStatus.NOUVEAU, Validators.required]
+            statut: [IncidentStatus.NOUVEAU, Validators.required],
+            riskId: [null]
         });
     }
 
@@ -54,6 +58,7 @@ export class IncidentsComponent implements OnInit {
     ngOnInit(): void {
         this.loadIncidents();
         this.loadDepartments();
+        this.loadRisks();
     }
 
     loadIncidents() {
@@ -65,6 +70,10 @@ export class IncidentsComponent implements OnInit {
 
     loadDepartments() {
         this.organigrammeService.getAll().subscribe(d => this.departments = d);
+    }
+
+    loadRisks() {
+        this.riskService.getRisks().subscribe(r => this.risks = r);
     }
 
     goBack() {
@@ -130,7 +139,8 @@ export class IncidentsComponent implements OnInit {
             domaine: incident.domaine || '',
             departementId: incident.departementId || null,
             dateSurvenance: formattedDate,
-            statut: incident.statut
+            statut: incident.statut,
+            riskId: incident.riskId || null
         });
         
         this.showEditModal = true;
@@ -179,5 +189,11 @@ export class IncidentsComponent implements OnInit {
             case 'Faible': return 'badge-success';
             default: return 'bg-gray-100 text-gray-800';
         }
+    }
+
+    getRiskTitle(riskId: number | null): string {
+        if (!riskId) return 'Non défini';
+        const risk = this.risks.find(r => r.id === riskId);
+        return risk ? risk.titre : `Risque #${riskId}`;
     }
 }

@@ -1,0 +1,57 @@
+<div class="role-dashboard reporting-dashboard multi-entity-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-project-diagram"></i> Vision Multi-Entités</h1>
+                <p>Analyse comparative de la performance et des risques par département.</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-refresh" (click)="loadEntities()" [disabled]="isLoading">
+                <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
+            </button>
+        </div>
+    </div>
+
+    <div *ngIf="isLoading" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div *ngIf="!isLoading" class="entity-grid">
+        <div class="module-card premium table-card">
+            <h3><i class="fas fa-table"></i> Comparatif des Départements</h3>
+            <table class="premium-table">
+                <thead>
+                    <tr>
+                        <th>Département</th>
+                        <th>Nombre de Risques</th>
+                        <th>Risques Critiques</th>
+                        <th>Taux de Traitement</th>
+                        <th>Score Global</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let entity of entities">
+                        <td class="entity-name">{{ entity.name }}</td>
+                        <td><span class="badge count">{{ entity.riskCount }}</span></td>
+                        <td><span class="badge critical" [class.zero]="entity.criticalRiskCount === 0">{{ entity.criticalRiskCount }}</span></td>
+                        <td>
+                            <div class="mini-progress">
+                                <div class="bar" [style.width.%]="entity.treatmentRate"></div>
+                                <span>{{ entity.treatmentRate | number:'1.0-0' }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="score-indicator" [ngClass]="entity.treatmentRate > 70 ? 'high' : (entity.treatmentRate > 40 ? 'medium' : 'low')">
+                                <i class="fas fa-star"></i> {{ (entity.treatmentRate / 20) | number:'1.1-1' }}/5
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

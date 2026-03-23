@@ -100,6 +100,14 @@
                 </div>
 
                 <div class="form-group mb-3">
+                    <label>Lien avec un Risque (Optionnel)</label>
+                    <select formControlName="riskId" class="finput">
+                      <option [value]="null">Aucun lien direct</option>
+                      <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} ({{ r.niveauRisque }})</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
                     <label>Pièce jointe (Optionnelle)</label>
                     <div class="file-upload-box">
                         <input type="file" (change)="onFileSelected($event)" class="file-input" accept=".pdf,.docx,.jpg,.jpeg,.png">
@@ -178,6 +186,14 @@
                         <span class="detail-label">Date limite du plan</span>
                         <p class="detail-value">{{ selectedIncident.dateEcheance | date:'dd/MM/yyyy' }}</p>
                     </div>
+
+                    <div class="detail-block full" *ngIf="selectedIncident.riskId">
+                        <span class="detail-label">Risque Associé</span>
+                        <p class="detail-value text-primary font-weight-bold">
+                            <i class="fas fa-link mr-2"></i>
+                            {{ getRiskTitle(selectedIncident.riskId) }}
+                        </p>
+                    </div>
                 </ng-container>
 
                 <div class="detail-block full" *ngIf="selectedIncident.pieceJointe">
@@ -224,6 +240,14 @@
                 <div class="form-group mb-3">
                     <label>Date de survenance <span class="text-danger">*</span></label>
                     <input type="date" formControlName="dateSurvenance" class="finput">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Lien avec un Risque (Optionnel)</label>
+                    <select formControlName="riskId" class="finput">
+                      <option [value]="null">Aucun lien direct</option>
+                      <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} ({{ r.niveauRisque }})</option>
+                    </select>
                 </div>
 
                 <div class="form-group mb-3">

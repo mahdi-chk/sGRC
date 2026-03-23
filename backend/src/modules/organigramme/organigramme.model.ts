@@ -20,11 +20,16 @@ Organigramme.init(
         nom: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
         },
     },
     {
         sequelize,
         tableName: 'organigramme',
+        indexes: [
+            {
+                unique: true,
+                fields: ['nom'],
+            },
+        ],
     }
 );

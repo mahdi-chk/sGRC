@@ -1,0 +1,40 @@
+<div class="role-dashboard reporting-dashboard kpi-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-tachometer-alt"></i> Indicateurs de Performance (KPI)</h1>
+                <p>Suivi en temps réel des objectifs de conformité et de gestion des risques.</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-refresh" (click)="loadKpis()" [disabled]="isLoading">
+                <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
+            </button>
+        </div>
+    </div>
+
+    <div *ngIf="isLoading" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div *ngIf="!isLoading" class="kpi-grid">
+        <div *ngFor="let kpi of kpis" class="kpi-detail-card premium">
+            <div class="kpi-header">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <div class="kpi-trend positive"><i class="fas fa-caret-up"></i></div>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value-large">{{ kpi.value }}{{ kpi.unit }}</span>
+                <div class="kpi-progress-bar">
+                    <div class="fill" [style.width.%]="kpi.unit === '%' ? kpi.value : 100"></div>
+                </div>
+            </div>
+            <div class="kpi-footer">
+                <span class="kpi-meta">Mise à jour: Aujourd'hui</span>
+            </div>
+        </div>
+    </div>
+</div>

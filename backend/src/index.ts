@@ -159,8 +159,41 @@ app.use('/api/organigramme', organigrammeRoutes);
  */
 
 // Synchronisation avec la base de données SQL
-sequelize.sync().then(async () => {
-  console.log('SQL Database synced');
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('SQL Database connection established.');
+
+    // --- PRE-SYNC CLEANUP pour MSSQL (Résolution du conflit de FK sur responsableTraitementId) ---
+    try {
+      // 1. S'assurer que la table organigramme existe
+      await sequelize.query(`
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'organigramme')
+        CREATE TABLE [organigramme] (id INT PRIMARY KEY IDENTITY(1,1), nom NVARCHAR(255) NOT NULL UNIQUE);
+      `);
+
+      // 2. Créer une entrée par défaut si vide
+      await sequelize.query(`
+        IF NOT EXISTS (SELECT TOP 1 * FROM [organigramme])
+        INSERT INTO [organigramme] (nom) VALUES ('Direction Générale');
+      `);
+
+      // 3. Mettre à jour les risques orphelins (qui pointent vers des ID inexistants dans organigramme)
+      // On récupère le premier ID valide
+      await sequelize.query(`
+        UPDATE [risks]
+        SET [responsableTraitementId] = (SELECT TOP 1 id FROM [organigramme])
+        WHERE [responsableTraitementId] NOT IN (SELECT id FROM [organigramme])
+        OR [responsableTraitementId] IS NULL;
+      `);
+      
+      console.log('Pre-sync cleanup: Organigramme seeded and risks orphaned references fixed.');
+    } catch (e: any) {
+      console.log('Pre-sync cleanup skipped or failed (likely tables do not exist yet):', e.message);
+    }
+
+    await sequelize.sync();
+    console.log('SQL Database synced');
 
   // Ajout manuel des colonnes pour MSSQL (car alter:true échoue sur les contraintes UNIQUE)
   try {
@@ -176,6 +209,25 @@ sequelize.sync().then(async () => {
         await sequelize.query(`ALTER TABLE [risks] ALTER COLUMN [${colName}] ${newType};`);
       } catch (e) {
         // Ignorer si la colonne n'existe pas ou erreur d'alter
+      }
+    };
+
+    const addDefaultConstraint = async (tableName: string, colName: string, defaultValue: string) => {
+      try {
+        // Supprimer l'ancienne contrainte si elle existe (MSSQL nécessite un nom de contrainte spécifique)
+        await sequelize.query(`
+          DECLARE @ConstraintName nvarchar(200)
+          SELECT @ConstraintName = Name FROM sys.default_constraints
+          WHERE PARENT_OBJECT_ID = OBJECT_ID('[${tableName}]')
+          AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = '${colName}' AND object_id = OBJECT_ID('[${tableName}]'))
+          
+          IF @ConstraintName IS NOT NULL
+          EXEC('ALTER TABLE [${tableName}] DROP CONSTRAINT ' + @ConstraintName)
+          
+          ALTER TABLE [${tableName}] ADD CONSTRAINT DF_${tableName}_${colName} DEFAULT '${defaultValue}' FOR [${colName}]
+        `);
+      } catch (e) {
+        console.error(`Failed to add default constraint for ${tableName}.${colName}:`, e);
       }
     };
 
@@ -260,6 +312,16 @@ sequelize.sync().then(async () => {
     await updateColumnType('createdAt', 'DATETIMEOFFSET NOT NULL');
     await updateColumnType('updatedAt', 'DATETIMEOFFSET NOT NULL');
 
+    // Ajout manuel des contraintes par défaut (car Sequelize génère un ALTER COLUMN ... DEFAULT invalide sur MSSQL)
+    await addDefaultConstraint('users', 'role', 'Auditeur');
+    await addDefaultConstraint('incidents', 'statut', 'Nouveau');
+    await addDefaultConstraint('risks', 'niveauRisque', 'Faible');
+    await addDefaultConstraint('risks', 'statut', 'Ouvert');
+    await addDefaultConstraint('risks', 'frequenceTraitement', 'Aucun');
+    await addDefaultConstraint('notifications', 'isRead', '0'); // Bit 0 pour false
+    await addDefaultConstraint('audit_missions', 'statut', 'À venir');
+    await addDefaultConstraint('audit_mission_checklist_items', 'estFait', '0'); // Bit 0 pour false
+
     console.log('AI Analysis columns checked/added and date types updated to DATETIMEOFFSET');
   } catch (err) {
     console.error('Failed to update database schema manually:', err);
@@ -287,6 +349,9 @@ sequelize.sync().then(async () => {
       console.error('Failed to start periodic reminder service:', e);
     }
   });
-}).catch((err: Error) => {
-  console.error('Failed to sync database:', err);
-});
+  } catch (err) {
+    console.error('Failed to sync database:', err);
+  }
+};
+
+startServer();

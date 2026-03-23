@@ -36,7 +36,6 @@ User.init(
         mail: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
         },
         telephone: {
             type: DataTypes.STRING,
@@ -65,13 +64,18 @@ User.init(
         role: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: UserRole.AUDITEUR,
         },
     },
     {
         sequelize,
         tableName: 'users',
         paranoid: true, // Active le Soft Delete (ajoute deletedAt) pour le RGPD
+        indexes: [
+            {
+                unique: true,
+                fields: ['mail'],
+            },
+        ],
     }
 );
 

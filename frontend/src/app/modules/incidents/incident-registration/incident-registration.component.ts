@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IncidentService, IncidentStatus } from '../../../core/services/incident.service';
 import { OrganigrammeService } from '../../../core/services/organigramme.service';
+import { RiskService, Risk } from '../../../core/services/risk.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -12,6 +13,7 @@ import { Router } from '@angular/router';
 export class IncidentRegistrationComponent implements OnInit {
   incidentForm: FormGroup;
   departments: any[] = [];
+  risks: Risk[] = [];
   selectedFile: File | null = null;
   isSubmitting = false;
 
@@ -19,6 +21,7 @@ export class IncidentRegistrationComponent implements OnInit {
     private fb: FormBuilder,
     private incidentService: IncidentService,
     private organigrammeService: OrganigrammeService,
+    private riskService: RiskService,
     private router: Router
   ) {
     this.incidentForm = this.fb.group({
@@ -27,16 +30,22 @@ export class IncidentRegistrationComponent implements OnInit {
       domaine: ['', Validators.required],
       departementId: [null, Validators.required],
       dateSurvenance: [new Date().toISOString().split('T')[0], Validators.required],
-      statut: [IncidentStatus.NOUVEAU]
+      statut: [IncidentStatus.NOUVEAU],
+      riskId: [null]
     });
   }
 
   ngOnInit(): void {
     this.loadDepartments();
+    this.loadRisks();
   }
 
   loadDepartments() {
     this.organigrammeService.getAll().subscribe(d => this.departments = d);
+  }
+
+  loadRisks() {
+    this.riskService.getRisks().subscribe(r => this.risks = r);
   }
 
   onFileSelected(event: any) {
@@ -46,7 +55,10 @@ export class IncidentRegistrationComponent implements OnInit {
   }
 
   submitIncident() {
-    if (this.incidentForm.invalid) return;
+    if (this.incidentForm.invalid) {
+      this.incidentForm.markAllAsTouched();
+      return;
+    }
 
     this.isSubmitting = true;
     const formData = new FormData();

@@ -34,7 +34,6 @@ AuditMissionChecklistItem.init(
         estFait: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
-            defaultValue: false,
         },
     },
     {

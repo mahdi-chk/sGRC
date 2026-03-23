@@ -82,7 +82,7 @@ const routes: Routes = [
       { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
       { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
       { path: 'incident-analysis', component: IncidentAnalysisComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
-      { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
       // Routes Audit (composants exportés par AuditingModule)
       { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
@@ -102,7 +102,12 @@ const routes: Routes = [
       { path: 'risk-agent', component: RiskAgentDashboardComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'top-management', component: TopManagementDashboardComponent, data: { expectedRoles: [UserRole.TOP_MANAGEMENT] } },
       { path: 'organigramme', component: OrganigrammeManagementComponent, data: { expectedRoles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN] } },
-      { path: 'rag-manager', component: RagManagerComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER] } }
+      { path: 'rag-manager', component: RagManagerComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER] } },
+      {
+        path: 'reporting',
+        loadChildren: () => import('./modules/reporting/reporting.module').then(m => m.ReportingModule),
+        data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] }
+      }
     ]
   },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },

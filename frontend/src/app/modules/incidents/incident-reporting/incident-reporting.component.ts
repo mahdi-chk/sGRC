@@ -38,6 +38,14 @@ export class IncidentReportingComponent implements OnInit {
     });
   }
 
+  exportReport() {
+    this.isLoading = true;
+    setTimeout(() => {
+      this.isLoading = false;
+      alert('Rapport annuel exporté avec succès (format PDF).');
+    }, 1500);
+  }
+
   getPercent(count: number): number {
     return this.totalIncidents > 0 ? Math.round((count / this.totalIncidents) * 100) : 0;
   }

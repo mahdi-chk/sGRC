@@ -1,0 +1,49 @@
+<div class="role-dashboard reporting-dashboard export-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-file-export"></i> Centre d'Exports</h1>
+                <p>Générez et téléchargez des rapports détaillés pour la direction et les audits.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="export-container">
+        <div class="module-card premium export-config mb-4">
+            <h3><i class="fas fa-cog"></i> Configuration de l'Export</h3>
+            <div class="config-row">
+                <div class="config-item">
+                    <label>Format de sortie</label>
+                    <div class="format-toggle">
+                        <button [class.active]="selectedFormat === 'xlsx'" (click)="selectedFormat = 'xlsx'">
+                            <i class="fas fa-file-excel"></i> Excel (.xlsx)
+                        </button>
+                        <button [class.active]="selectedFormat === 'pdf'" (click)="selectedFormat = 'pdf'">
+                            <i class="fas fa-file-pdf"></i> PDF (.pdf)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-grid">
+            <div *ngFor="let report of reports" class="report-card premium">
+                <div class="report-icon">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div class="report-info">
+                    <h4>{{ report.title }}</h4>
+                    <p>{{ report.desc }}</p>
+                </div>
+                <button class="btn-download" (click)="generateReport(report.id)" [disabled]="isExporting">
+                    <i class="fas fa-download" *ngIf="!isExporting"></i>
+                    <i class="fas fa-spinner fa-spin" *ngIf="isExporting"></i>
+                    Générer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

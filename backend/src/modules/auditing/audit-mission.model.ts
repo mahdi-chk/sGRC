@@ -59,7 +59,6 @@ AuditMission.init(
         statut: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: AuditMissionStatus.A_VENIR,
             validate: {
                 isIn: [Object.values(AuditMissionStatus)],
             },

@@ -172,7 +172,6 @@ Risk.init(
         niveauRisque: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: RiskLevel.LOW,
             validate: {
                 isIn: [Object.values(RiskLevel)],
             },
@@ -272,7 +271,6 @@ Risk.init(
         statut: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: RiskStatus.OPEN,
             validate: {
                 isIn: [Object.values(RiskStatus)],
             },
@@ -285,7 +283,6 @@ Risk.init(
         frequenceTraitement: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: PeriodicFrequency.NONE,
             validate: {
                 isIn: [Object.values(PeriodicFrequency)],
             },

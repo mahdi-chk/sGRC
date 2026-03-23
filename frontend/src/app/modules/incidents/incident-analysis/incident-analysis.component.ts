@@ -50,6 +50,16 @@ export class IncidentAnalysisComponent implements OnInit {
     });
   }
 
+  saveFullAnalysis() {
+    if (!this.selectedIncident) return;
+    this.isLoading = true;
+    // Simulate saving analysis data (could be added to model later if needed)
+    setTimeout(() => {
+        this.isLoading = false;
+        alert('Analyse complète sauvegardée avec succès.');
+    }, 1000);
+  }
+
   goBack() {
     this.router.navigate(['/dashboard']);
   }

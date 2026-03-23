@@ -31,6 +31,7 @@ export class Incident extends Model {
     public planActionTraitement!: string | null;
     public dateEcheance!: Date | null;
     public niveauRisque!: string | null;
+    public riskId!: number | null;
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -61,7 +62,6 @@ Incident.init(
         statut: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: IncidentStatus.NOUVEAU,
             validate: {
                 isIn: [Object.values(IncidentStatus)],
             },
@@ -105,6 +105,14 @@ Incident.init(
         niveauRisque: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        riskId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'risks',
+                key: 'id',
+            },
         },
     },
     {

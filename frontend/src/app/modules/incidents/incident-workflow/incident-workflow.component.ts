@@ -54,8 +54,12 @@ export class IncidentWorkflowComponent implements OnInit {
         const idx = this.incidents.findIndex(i => i.id === res.id);
         if (idx !== -1) this.incidents[idx] = res;
         this.applyFilters();
+        alert(`Statut mis à jour : ${newStatus}`);
       },
-      error: (err) => console.error(err)
+      error: (err) => {
+        console.error(err);
+        alert('Erreur lors de la mise à jour du statut.');
+      }
     });
   }
 

@@ -1,0 +1,126 @@
+<div class="role-dashboard reporting-dashboard dashboard-view-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-line"></i> Tableaux de Bord Consolidés</h1>
+                <p>Vue d'ensemble transverse des risques, incidents et audits.</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-refresh" (click)="loadStats()" [disabled]="isLoading">
+                <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
+            </button>
+        </div>
+    </div>
+
+    <div *ngIf="isLoading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Chargement des données...</p>
+    </div>
+
+    <div *ngIf="!isLoading && stats" class="dashboard-content">
+        <!-- KPI TOP ROW -->
+        <div class="kpi-row mb-4">
+            <div class="kpi-card kpi-risks">
+                <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-value">{{ stats.risks.total }}</span>
+                    <span class="kpi-label">Risques Identifiés</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-incidents">
+                <div class="kpi-icon"><i class="fas fa-fire"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-value">{{ stats.incidents.total }}</span>
+                    <span class="kpi-label">Incidents Déclarés</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-audits">
+                <div class="kpi-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-value">{{ stats.audits.total }}</span>
+                    <span class="kpi-label">Missions d'Audit</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Distribution des Risques -->
+            <div class="module-card premium chart-card">
+                <h3><i class="fas fa-signal"></i> Sévérité des Risques</h3>
+                <div class="chart-container donut-wrapper">
+                    <div class="donut-chart" 
+                        [style.--p_low]="getPercent(stats.risks.byLevel[0]?.count || 0, stats.risks.total)"
+                        [style.--p_med]="getPercent(stats.risks.byLevel[1]?.count || 0, stats.risks.total)"
+                        [style.--p_high]="getPercent(stats.risks.byLevel[2]?.count || 0, stats.risks.total)"
+                        [style.--p_crit]="getPercent(stats.risks.byLevel[3]?.count || 0, stats.risks.total)">
+                        <div class="donut-inner">
+                            <span class="total">{{ stats.risks.total }}</span>
+                            <span class="sub">Total</span>
+                        </div>
+                    </div>
+                    <div class="chart-legend">
+                        <div *ngFor="let level of stats.risks.byLevel" class="legend-item" [ngClass]="level.niveauRisque.toLowerCase()">
+                            <span class="dot"></span> {{ level.niveauRisque }} ({{ level.count }})
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- État des Incidents -->
+            <div class="module-card premium chart-card">
+                <h3><i class="fas fa-tasks"></i> Statut des Incidents</h3>
+                <div class="chart-container bar-wrapper">
+                    <div class="bar-chart">
+                        <div class="bar-group" *ngFor="let status of stats.incidents.byStatus">
+                            <div class="bar-label">{{ status.statut }}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill" [style.width.%]="getPercent(status.count, stats.incidents.total)"
+                                    [ngClass]="status.statut.toLowerCase().replace('é', 'e').replace(' ', '-')">
+                                    <span class="bar-value">{{ status.count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Derniers Risques -->
+            <div class="module-card premium list-card">
+                <h3><i class="fas fa-history"></i> Risques Récents</h3>
+                <div class="item-list">
+                    <div *ngFor="let risk of stats.risks.recent" class="list-item">
+                        <div class="item-icon" [ngClass]="risk.niveauRisque.toLowerCase()">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="item-details">
+                            <span class="item-title">{{ risk.titre }}</span>
+                            <span class="item-meta">{{ risk.domaine }} • {{ risk.statut }}</span>
+                        </div>
+                        <span class="item-date">{{ risk.createdAt | date:'dd/MM' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Derniers Incidents -->
+            <div class="module-card premium list-card">
+                <h3><i class="fas fa-bolt"></i> Incidents Récents</h3>
+                <div class="item-list">
+                    <div *ngFor="let incident of stats.incidents.recent" class="list-item">
+                        <div class="item-icon warning">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="item-details">
+                            <span class="item-title">{{ incident.titre }}</span>
+                            <span class="item-meta">{{ incident.statut }}</span>
+                        </div>
+                        <span class="item-date">{{ incident.createdAt | date:'dd/MM' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

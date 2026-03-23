@@ -1,0 +1,135 @@
+.export-page {
+  .export-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .export-config {
+    padding: 24px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+
+    .config-row {
+      display: flex;
+      gap: 40px;
+      margin-top: 20px;
+    }
+
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+      }
+    }
+
+    .format-toggle {
+      display: flex;
+      gap: 12px;
+
+      button {
+        padding: 12px 24px;
+        border-radius: 12px;
+        border: 2px solid #f1f5f9;
+        background: white;
+        font-weight: 700;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        i { font-size: 18px; }
+
+        &.active {
+          border-color: #3b82f6;
+          color: #3b82f6;
+          background: #eff6ff;
+        }
+
+        &:hover:not(.active) {
+          border-color: #e2e8f0;
+          background: #f8fafc;
+        }
+      }
+    }
+  }
+
+  .report-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .report-card {
+    display: flex;
+    align-items: center;
+    padding: 24px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+
+    .report-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: #f1f5f9;
+      color: #3b82f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 24px;
+    }
+
+    .report-info {
+      flex: 1;
+
+      h4 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 4px 0;
+      }
+
+      p {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0;
+      }
+    }
+
+    .btn-download {
+      padding: 12px 24px;
+      background: #1e293b;
+      color: white;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+
+      &:hover:not(:disabled) {
+        background: #334155;
+        transform: translateY(-2px);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+}

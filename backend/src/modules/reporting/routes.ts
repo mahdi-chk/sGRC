@@ -1,8 +1,13 @@
 import { Router } from 'express';
+import { ReportingController } from './reporting.controller';
+import { authenticateToken } from '../../middleware/auth.middleware';
 
 const router = Router();
 
-router.get('/', (req, res) => res.json({ message: 'Reporting GET' }));
-router.post('/', (req, res) => res.json({ message: 'Reporting POST', body: req.body }));
+// Toutes les routes de reporting nécessitent une authentification
+router.get('/stats', authenticateToken, ReportingController.getDashboardStats);
+router.get('/kpis', authenticateToken, ReportingController.getKpis);
+router.get('/multi-entity', authenticateToken, ReportingController.getMultiEntityData);
+router.post('/export', authenticateToken, ReportingController.generateExport);
 
 export default router;

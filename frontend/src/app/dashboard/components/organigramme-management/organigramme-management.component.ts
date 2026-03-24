@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { OrganigrammeService } from '../../../core/services/organigramme.service';
 import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 @Component({

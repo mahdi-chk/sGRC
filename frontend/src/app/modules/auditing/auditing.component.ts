@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuditMissionChecklistItem } from '../../core/services/auditing.service';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 @Component({

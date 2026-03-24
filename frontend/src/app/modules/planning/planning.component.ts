@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuditingService, AuditMission } from '../../core/services/auditing.service';
 import { forkJoin, of } from 'rxjs';
@@ -31,8 +32,13 @@ export class PlanningComponent implements OnInit {
 
     constructor(
         private riskService: RiskService,
-        private auditingService: AuditingService
+        private auditingService: AuditingService,
+        private router: Router
     ) { }
+
+    goBack(): void {
+        this.router.navigate(['/dashboard']);
+    }
 
     ngOnInit(): void {
         this.loadRisks();

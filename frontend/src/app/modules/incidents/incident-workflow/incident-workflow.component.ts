@@ -11,6 +11,7 @@ export class IncidentWorkflowComponent implements OnInit {
   incidents: Incident[] = [];
   filteredIncidents: Incident[] = [];
   selectedIncident: Incident | null = null;
+  showDetailsModal = false;
   isLoading = false;
   searchTerm = '';
   statusFilter = 'All';
@@ -63,6 +64,16 @@ export class IncidentWorkflowComponent implements OnInit {
     });
   }
 
+  openDetailsModal(incident: Incident) {
+    this.selectedIncident = incident;
+    this.showDetailsModal = true;
+  }
+
+  closeDetailsModal() {
+    this.showDetailsModal = false;
+    this.selectedIncident = null;
+  }
+
   getStatusClass(status: string): string {
     switch (status) {
       case 'Nouveau': return 'status-new';
@@ -70,6 +81,23 @@ export class IncidentWorkflowComponent implements OnInit {
       case 'Traité': return 'status-resolved';
       case 'Clos': return 'status-closed';
       default: return '';
+    }
+  }
+
+  getImpactClass(level?: string): string {
+    switch (level) {
+      case 'Critique':
+        return 'impact-critical';
+      case 'Significatif':
+      case 'Élevé':
+        return 'impact-high';
+      case 'Modéré':
+      case 'Moyen':
+        return 'impact-medium';
+      case 'Faible':
+        return 'impact-low';
+      default:
+        return '';
     }
   }
 

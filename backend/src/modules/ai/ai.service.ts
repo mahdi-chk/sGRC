@@ -288,6 +288,59 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
         }
     }
 
+    static async generateIncidentDraftFromText(text: string, _role: UserRole): Promise<any> {
+        const normalizedText = this.limitText(this.cleanText(text), 4000);
+        if (!normalizedText || normalizedText.length < 10) {
+            return {};
+        }
+
+        try {
+            const metadata = await AIDataService.fetchSystemMetadata();
+            const systemPrompt = `Tu es un assistant GRC specialise dans la qualification d'incidents.
+            A partir du texte fourni, extrais un brouillon d'incident exploitable pour un formulaire sGRC.
+
+            IMPORTANT :
+            - Tout le contenu doit etre en FRANCAIS.
+            - Reponds UNIQUEMENT avec un objet JSON valide.
+            - Si une information est absente, renvoie null.
+            - Si le texte semble provenir d'un OCR bruite, d'un scan ou d'une fiche manuscrite, laisse le champ a null au lieu de deviner.
+            - N'invente pas de departement hors de la liste fournie.
+            - Le champ "titre" doit etre court et explicite.
+            - Le champ "description" doit etre une synthese fidele des faits.
+            - Ignore les intitulés de formulaire, placeholders et valeurs comme "A definir", "N/A", "non renseigne".
+            - Le champ "domaine" doit etre choisi parmi ["Informatique", "Ressources Humaines", "Opérations", "Logistique", "Juridique", "Sécurité"] quand possible.
+            - Le champ "dateSurvenance" doit etre au format YYYY-MM-DD.
+
+            ${metadata}
+
+            Retourne EXACTEMENT ces champs :
+            titre, description, domaine, departement, dateSurvenance, macroProcessus, processus, planActionTraitement, niveauRisque.`;
+
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
+                model: MODEL_NAME,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: normalizedText }
+                ],
+                stream: false,
+                format: 'json',
+                options: {
+                    temperature: 0.2,
+                    num_predict: 600,
+                    num_ctx: 4096
+                }
+            });
+
+            const content = response.data.message.content;
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error: any) {
+            console.error('AI Incident Draft Generation Error:', error.message || error);
+            return this.buildIncidentDraftFallback(normalizedText);
+        }
+    }
+
     /**
      * GÉNÉRATION DE RISQUES INTELLIGENTE DEPUIS UN INCIDENT (AVEC HISTORIQUE)
      */
@@ -544,6 +597,125 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
         return text.substring(0, maxChars) + '... [Texte tronqué]';
     }
 
+    private static buildIncidentDraftFallback(text: string): any {
+        const normalizedText = this.cleanText(text);
+        const firstSentence = normalizedText
+            .split(/[.!?]/)
+            .find(sentence => sentence.trim().length > 15)?.trim();
+
+        return {
+            titre: this.limitText(firstSentence || normalizedText, 120),
+            description: this.limitText(normalizedText, 1500),
+            domaine: null,
+            departement: null,
+            dateSurvenance: null,
+            macroProcessus: null,
+            processus: null,
+            planActionTraitement: null,
+            niveauRisque: null
+        };
+    }
+
+    private static getImageDimensions(buffer: Buffer): { width: number; height: number } | null {
+        if (buffer.length < 24) return null;
+
+        // PNG
+        if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+            return {
+                width: buffer.readUInt32BE(16),
+                height: buffer.readUInt32BE(20)
+            };
+        }
+
+        // JPEG
+        if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+            let offset = 2;
+            while (offset < buffer.length) {
+                if (buffer[offset] !== 0xff) {
+                    offset++;
+                    continue;
+                }
+
+                const marker = buffer[offset + 1];
+                const blockLength = buffer.readUInt16BE(offset + 2);
+                const isStartOfFrame = [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker);
+
+                if (isStartOfFrame) {
+                    return {
+                        height: buffer.readUInt16BE(offset + 5),
+                        width: buffer.readUInt16BE(offset + 7)
+                    };
+                }
+
+                offset += 2 + blockLength;
+            }
+        }
+
+        return null;
+    }
+
+    private static async recognizeRectangle(
+        worker: any,
+        image: Buffer,
+        rectangle: { left: number; top: number; width: number; height: number },
+        extraParams?: Record<string, string>
+    ): Promise<string> {
+        await worker.setParameters({
+            preserve_interword_spaces: '1',
+            tessedit_pageseg_mode: '11',
+            ...extraParams
+        } as any);
+
+        const result = await worker.recognize(image, { rectangle });
+        return (result.data.text || '').trim();
+    }
+
+    private static async extractIncidentFormRegions(worker: any, image: Buffer): Promise<string[]> {
+        const dimensions = this.getImageDimensions(image);
+        if (!dimensions) return [];
+
+        const { width, height } = dimensions;
+        const rect = (left: number, top: number, rectWidth: number, rectHeight: number) => ({
+            left: Math.max(0, Math.round(width * left)),
+            top: Math.max(0, Math.round(height * top)),
+            width: Math.max(1, Math.round(width * rectWidth)),
+            height: Math.max(1, Math.round(height * rectHeight))
+        });
+
+        const regions = [
+            rect(0.34, 0.235, 0.12, 0.05), // direction
+            rect(0.60, 0.235, 0.14, 0.05), // statut
+            rect(0.28, 0.275, 0.22, 0.05), // departement
+            rect(0.29, 0.315, 0.14, 0.05), // service
+            rect(0.62, 0.315, 0.10, 0.04), // cree le
+            rect(0.76, 0.315, 0.10, 0.04), // valide le
+            rect(0.90, 0.315, 0.08, 0.04), // clos le
+            rect(0.43, 0.365, 0.18, 0.045), // libelle
+            rect(0.43, 0.398, 0.18, 0.05), // description
+            rect(0.43, 0.438, 0.18, 0.05), // survenu le
+            rect(0.66, 0.47, 0.12, 0.16) // block a definir / right side values
+        ];
+
+        const results = await Promise.all([
+            this.recognizeRectangle(worker, image, regions[0]),
+            this.recognizeRectangle(worker, image, regions[1]),
+            this.recognizeRectangle(worker, image, regions[2]),
+            this.recognizeRectangle(worker, image, regions[3]),
+            this.recognizeRectangle(worker, image, regions[4], { tessedit_char_whitelist: '0123456789/.- ' }),
+            this.recognizeRectangle(worker, image, regions[5], { tessedit_char_whitelist: '0123456789/.- ' }),
+            this.recognizeRectangle(worker, image, regions[6], { tessedit_char_whitelist: '0123456789/.- ' }),
+            this.recognizeRectangle(worker, image, regions[7]),
+            this.recognizeRectangle(worker, image, regions[8]),
+            this.recognizeRectangle(worker, image, regions[9], { tessedit_char_whitelist: '0123456789/.- ' }),
+            this.recognizeRectangle(worker, image, regions[10]),
+        ]);
+
+        return results
+            .flatMap(text => text.split(/\r?\n/))
+            .map(line => line.replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+    }
+
     /**
      * Extrait le texte d'un fichier (PDF, Word, Image)
      */
@@ -565,11 +737,53 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             extractedText = result.value;
         } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
             const worker = await createWorker('fra');
-            const { data: { text } } = await worker.recognize(file.buffer);
+            const ocrChunks: string[] = [];
+
+            const collectOcrPass = async (params: Record<string, string>) => {
+                await worker.setParameters({
+                    preserve_interword_spaces: '1',
+                    ...params
+                } as any);
+                const result = await worker.recognize(file.buffer);
+                const text = (result.data.text || '').trim();
+                if (text) {
+                    ocrChunks.push(text);
+                }
+            };
+
+            await collectOcrPass({ tessedit_pageseg_mode: '6' });
+            await collectOcrPass({ tessedit_pageseg_mode: '11' });
+            await collectOcrPass({ tessedit_pageseg_mode: '4' });
+            await collectOcrPass({
+                tessedit_pageseg_mode: '11',
+                tessedit_char_whitelist: '0123456789/.- '
+            });
+            await collectOcrPass({
+                tessedit_pageseg_mode: '11',
+                tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZAAAAEEEEIIOOUUUaaaaeeeeiioouuu -/'
+            });
+
+            const regionTexts = await this.extractIncidentFormRegions(worker, file.buffer);
+            ocrChunks.push(...regionTexts);
+
             await worker.terminate();
-            extractedText = text;
+            extractedText = ocrChunks
+                .flatMap(chunk => chunk.split(/\r?\n/))
+                .map(line => line.replace(/\s+/g, ' ').trim())
+                .filter(Boolean)
+                .filter((line, index, all) => all.findIndex(item => item.toLowerCase() === line.toLowerCase()) === index)
+                .join('\n');
         } else {
             throw new Error('Format de fichier non supporté pour l\'extraction de texte');
+        }
+
+        if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
+            const normalizedOcrText = extractedText
+                .split(/\r?\n/)
+                .map(line => line.replace(/\s+/g, ' ').trim())
+                .filter(Boolean)
+                .join('\n');
+            return this.limitText(normalizedOcrText);
         }
 
         return this.limitText(this.cleanText(extractedText));

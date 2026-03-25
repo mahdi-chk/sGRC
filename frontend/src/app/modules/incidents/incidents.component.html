@@ -6,18 +6,17 @@
             </button>
             <div>
                 <h1><i class="fas fa-exclamation-triangle"></i> Gestion des Incidents</h1>
-                <p>Déclarer de nouveaux incidents et suivre leur statut d'avancement.</p>
+                <p>Declarer de nouveaux incidents et suivre leur statut d'avancement.</p>
             </div>
         </div>
         <div class="header-actions">
             <button class="btn-primary" (click)="openCreateModal()">
-                <i class="fas fa-plus"></i> Déclarer un Incident
+                <i class="fas fa-plus"></i> Declarer un Incident
             </button>
         </div>
     </div>
 
     <div class="content-container">
-        <!-- Incidents Table -->
         <div class="risks-card">
             <table class="risks-table">
                 <thead>
@@ -27,14 +26,14 @@
                         <th>Niveau</th>
                         <th>Date de survenance</th>
                         <th>Statut</th>
-                        <th>Déclaré par</th>
+                        <th>Declare par</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr *ngFor="let incident of incidents">
                         <td class="td-title"><strong>{{ incident.titre }}</strong></td>
-                        <td>{{ incident.domaine || 'Non Défini' }}</td>
+                        <td>{{ incident.domaine || 'Non defini' }}</td>
                         <td>
                             <span class="badge" [ngClass]="getNiveauClass(incident.niveauRisque)">
                                 {{ incident.niveauRisque || '-' }}
@@ -48,10 +47,10 @@
                             {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}
                         </td>
                         <td class="actions-cell">
-                            <button class="action-btn btn-view" (click)="openDetailsModal(incident)" title="Voir détails">
+                            <button class="action-btn btn-view" (click)="openDetailsModal(incident)" title="Voir details">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="action-btn btn-edit" (click)="openEditModal(incident)" title="Éditer l'incident">
+                            <button class="action-btn btn-edit" (click)="openEditModal(incident)" title="Editer l'incident">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>
@@ -59,7 +58,7 @@
                     <tr *ngIf="incidents.length === 0">
                         <td colspan="5" class="empty-state">
                             <i class="fas fa-inbox"></i>
-                            <p>Aucun incident n'est enregistré pour le moment.</p>
+                            <p>Aucun incident n'est enregistre pour le moment.</p>
                         </td>
                     </tr>
                 </tbody>
@@ -67,18 +66,44 @@
         </div>
     </div>
 
-    <!-- Create Modal -->
-    <app-modal *ngIf="showCreateModal" title="Déclarer un Nouvel Incident" (close)="showCreateModal = false">
+    <app-modal *ngIf="showCreateModal" title="Declarer un Nouvel Incident" (close)="showCreateModal = false">
         <div #projected modal-body class="modal-form">
             <form [formGroup]="incidentForm" (ngSubmit)="submitIncident()">
+                <div class="import-box mb-3">
+                    <div class="import-box-copy">
+                        <strong>Creer depuis un document</strong>
+                        <span>Importez un Excel, PDF ou une image. Pour une fiche manuscrite, utilisez le scan photo pour un OCR plus prudent.</span>
+                    </div>
+                    <div class="import-box-actions">
+                        <input type="file" id="incidentCreateImportInput" hidden accept=".xls,.xlsx,.xlsm,.pdf,.jpg,.jpeg,.png" (change)="onImportFileSelected($event)">
+                        <input type="file" id="incidentCreateScanInput" hidden accept="image/*" capture="environment" (change)="onImportFileSelected($event)">
+                        <label for="incidentCreateImportInput" class="btn-secondary import-trigger" [class.loading]="isImporting">
+                            <i class="fas" [class.fa-file-import]="!isImporting" [class.fa-circle-notch]="isImporting" [class.fa-spin]="isImporting"></i>
+                            <span>{{ isImporting ? 'Analyse...' : 'Importer un document' }}</span>
+                        </label>
+                        <label for="incidentCreateScanInput" class="btn-secondary import-trigger scan-trigger" [class.loading]="isImporting">
+                            <i class="fas" [class.fa-camera]="!isImporting" [class.fa-circle-notch]="isImporting" [class.fa-spin]="isImporting"></i>
+                            <span>{{ isImporting ? 'Analyse...' : 'Scanner une fiche manuscrite' }}</span>
+                        </label>
+                    </div>
+                    <p class="import-feedback" *ngIf="importMessage">{{ importMessage }}</p>
+                    <div class="import-warning-list" *ngIf="importWarnings.length">
+                        <p *ngFor="let warning of importWarnings">{{ warning }}</p>
+                    </div>
+                    <div class="import-preview" *ngIf="importPreview">
+                        <strong>Apercu OCR</strong>
+                        <p>{{ importPreview }}</p>
+                    </div>
+                </div>
+
                 <div class="form-group mb-3">
                     <label>Titre de l'incident <span class="text-danger">*</span></label>
                     <input type="text" formControlName="titre" class="finput" placeholder="Ex: Panne de serveur principal">
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label>Description <span class="text-danger">*</span></label>
-                    <textarea formControlName="description" class="finput" rows="4" placeholder="Détails de l'incident..."></textarea>
+                    <textarea formControlName="description" class="finput" rows="4" placeholder="Details de l'incident..."></textarea>
                 </div>
 
                 <div class="form-group mb-3">
@@ -87,10 +112,23 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label>Département concerné (Optionnel)</label>
+                    <label>Departement concerne (Optionnel)</label>
                     <select formControlName="departementId" class="finput">
-                        <option [value]="null">Sélectionnez un département...</option>
+                        <option [value]="null">Selectionnez un departement...</option>
                         <option *ngFor="let d of departments" [value]="d.id">{{ d.nom }}</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Niveau (Optionnel)</label>
+                    <select formControlName="niveauRisque" class="finput">
+                        <option value="">Selectionnez un niveau...</option>
+                        <option value="Faible">Faible</option>
+                        <option value="Moyen">Moyen</option>
+                        <option value="Élevé">Élevé</option>
+                        <option value="Critique">Critique</option>
+                        <option value="Significatif">Significatif</option>
+                        <option value="Limité">Limité</option>
                     </select>
                 </div>
 
@@ -102,17 +140,17 @@
                 <div class="form-group mb-3">
                     <label>Lien avec un Risque (Optionnel)</label>
                     <select formControlName="riskId" class="finput">
-                      <option [value]="null">Aucun lien direct</option>
-                      <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} ({{ r.niveauRisque }})</option>
+                        <option [value]="null">Aucun lien direct</option>
+                        <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} ({{ r.niveauRisque }})</option>
                     </select>
                 </div>
 
                 <div class="form-group mb-3">
-                    <label>Pièce jointe (Optionnelle)</label>
+                    <label>Piece jointe (Optionnelle)</label>
                     <div class="file-upload-box">
-                        <input type="file" (change)="onFileSelected($event)" class="file-input" accept=".pdf,.docx,.jpg,.jpeg,.png">
+                        <input type="file" (change)="onFileSelected($event)" class="file-input" accept=".xls,.xlsx,.xlsm,.pdf,.docx,.jpg,.jpeg,.png">
                         <div class="file-upload-label">
-                            <i class="fas fa-upload"></i> {{ selectedFile ? selectedFile.name : 'Choisir un fichier (PDF, Word, Images)' }}
+                            <i class="fas fa-upload"></i> {{ selectedFile ? selectedFile.name : 'Choisir un fichier (Excel, PDF, Word, Images)' }}
                         </div>
                     </div>
                 </div>
@@ -128,8 +166,7 @@
         </div>
     </app-modal>
 
-    <!-- Details Modal -->
-    <app-modal *ngIf="showDetailsModal" title="Détails de l'incident" (close)="showDetailsModal = false">
+    <app-modal *ngIf="showDetailsModal" title="Details de l'incident" (close)="showDetailsModal = false">
         <div #projected modal-body *ngIf="selectedIncident" class="modal-form">
             <div class="details-grid">
                 <div class="detail-block full">
@@ -148,16 +185,15 @@
                     <span class="detail-label">Statut</span>
                     <p class="detail-value"><span class="badge" [ngClass]="getStatusClass(selectedIncident.statut)">{{ selectedIncident.statut }}</span></p>
                 </div>
-                
-                <!-- Champs Optionnels (Souvent issus des Fiches Incidents automatiques) -->
+
                 <ng-container *ngIf="selectedIncident.domaine || selectedIncident.niveauRisque || selectedIncident.planActionTraitement">
                     <div class="detail-block full hr-divider"></div>
-                    
+
                     <div class="detail-block" *ngIf="selectedIncident.domaine">
                         <span class="detail-label">Domaine</span>
                         <p class="detail-value">{{ selectedIncident.domaine }}</p>
                     </div>
-                    
+
                     <div class="detail-block" *ngIf="selectedIncident.niveauRisque">
                         <span class="detail-label">Niveau d'Impact Global</span>
                         <p class="detail-value">
@@ -178,17 +214,17 @@
                     </div>
 
                     <div class="detail-block full" *ngIf="selectedIncident.planActionTraitement">
-                        <span class="detail-label">Plan d'Action / Remédiation Initiale</span>
+                        <span class="detail-label">Plan d'Action / Remediation Initiale</span>
                         <p class="detail-value" style="white-space: pre-wrap; background: #f9fbfc; padding: 10px; border-radius: 6px; border: 1px solid #e1e8ed;">{{ selectedIncident.planActionTraitement }}</p>
                     </div>
-                    
+
                     <div class="detail-block" *ngIf="selectedIncident.dateEcheance">
                         <span class="detail-label">Date limite du plan</span>
                         <p class="detail-value">{{ selectedIncident.dateEcheance | date:'dd/MM/yyyy' }}</p>
                     </div>
 
                     <div class="detail-block full" *ngIf="selectedIncident.riskId">
-                        <span class="detail-label">Risque Associé</span>
+                        <span class="detail-label">Risque Associe</span>
                         <p class="detail-value text-primary font-weight-bold">
                             <i class="fas fa-link mr-2"></i>
                             {{ getRiskTitle(selectedIncident.riskId) }}
@@ -197,10 +233,10 @@
                 </ng-container>
 
                 <div class="detail-block full" *ngIf="selectedIncident.pieceJointe">
-                    <span class="detail-label">Pièce Jointe</span>
+                    <span class="detail-label">Piece Jointe</span>
                     <a [href]="environment.serverUrl + '/' + selectedIncident.pieceJointe + authQueryToken"
                         target="_blank" class="doc-link">
-                        <i class="fas fa-download"></i> Télécharger le document
+                        <i class="fas fa-download"></i> Telecharger le document
                     </a>
                 </div>
             </div>
@@ -210,15 +246,14 @@
         </div>
     </app-modal>
 
-    <!-- Edit Modal (Reuses the Form structure) -->
-    <app-modal *ngIf="showEditModal" title="Éditer l'incident" (close)="showEditModal = false">
+    <app-modal *ngIf="showEditModal" title="Editer l'incident" (close)="showEditModal = false">
         <div #projected modal-body class="modal-form">
             <form [formGroup]="incidentForm" (ngSubmit)="updateIncident()">
                 <div class="form-group mb-3">
                     <label>Titre de l'incident <span class="text-danger">*</span></label>
                     <input type="text" formControlName="titre" class="finput">
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label>Description <span class="text-danger">*</span></label>
                     <textarea formControlName="description" class="finput" rows="4"></textarea>
@@ -230,10 +265,23 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label>Département concerné</label>
+                    <label>Departement concerne</label>
                     <select formControlName="departementId" class="finput">
-                        <option [value]="null">Sélectionnez un département...</option>
+                        <option [value]="null">Selectionnez un departement...</option>
                         <option *ngFor="let d of departments" [value]="d.id">{{ d.nom }}</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Niveau</label>
+                    <select formControlName="niveauRisque" class="finput">
+                        <option value="">Selectionnez un niveau...</option>
+                        <option value="Faible">Faible</option>
+                        <option value="Moyen">Moyen</option>
+                        <option value="Élevé">Élevé</option>
+                        <option value="Critique">Critique</option>
+                        <option value="Significatif">Significatif</option>
+                        <option value="Limité">Limité</option>
                     </select>
                 </div>
 
@@ -245,8 +293,8 @@
                 <div class="form-group mb-3">
                     <label>Lien avec un Risque (Optionnel)</label>
                     <select formControlName="riskId" class="finput">
-                      <option [value]="null">Aucun lien direct</option>
-                      <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} ({{ r.niveauRisque }})</option>
+                        <option [value]="null">Aucun lien direct</option>
+                        <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} ({{ r.niveauRisque }})</option>
                     </select>
                 </div>
 
@@ -255,7 +303,7 @@
                     <select formControlName="statut" class="finput">
                         <option value="Nouveau">Nouveau</option>
                         <option value="En cours">En cours</option>
-                        <option value="Traité">Traité</option>
+                        <option value="TraitÃ©">TraitÃ©</option>
                         <option value="Clos">Clos</option>
                     </select>
                 </div>
@@ -264,7 +312,7 @@
                     <button type="button" class="btn-cancel" (click)="showEditModal = false">Annuler</button>
                     <button type="submit" class="btn-save" [disabled]="incidentForm.invalid || isSubmitting">
                         <i class="fas fa-save" *ngIf="!isSubmitting"></i>
-                        <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i> Mettre à jour
+                        <i class="fas fa-spinner fa-spin" *ngIf="isSubmitting"></i> Mettre a jour
                     </button>
                 </div>
             </form>

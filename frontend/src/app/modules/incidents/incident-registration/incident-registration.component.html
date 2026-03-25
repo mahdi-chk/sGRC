@@ -5,77 +5,105 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-plus-circle"></i> Déclaration d'Incident</h1>
-                <p>Enregistrez un nouvel incident de manière structurée pour assurer son traitement.</p>
+                <h1><i class="fas fa-plus-circle"></i> Declaration d'Incident</h1>
+                <p>Enregistrez un nouvel incident de maniere structuree pour assurer son traitement.</p>
             </div>
         </div>
     </div>
 
     <div class="registration-container card shadow-premium animate-fade-in">
+        <div class="import-panel">
+            <div class="import-copy">
+                <h3><i class="fas fa-file-import"></i> Creer depuis un document</h3>
+                <p>Importez une fiche incident Excel, un PDF ou une image. Pour une fiche manuscrite, utilisez le scan photo pour un OCR plus prudent.</p>
+                <small>Formats acceptes: `.xls`, `.xlsx`, `.xlsm`, `.pdf`, `.jpg`, `.jpeg`, `.png`.</small>
+            </div>
+            <div class="import-actions">
+                <input type="file" id="incidentImportInput" hidden accept=".xls,.xlsx,.xlsm,.pdf,.jpg,.jpeg,.png" (change)="onImportFileSelected($event)">
+                <input type="file" id="incidentScanInput" hidden accept="image/*" capture="environment" (change)="onImportFileSelected($event)">
+                <label for="incidentImportInput" class="btn-import" [class.loading]="isImporting">
+                    <i class="fas" [class.fa-file-import]="!isImporting" [class.fa-circle-notch]="isImporting" [class.fa-spin]="isImporting"></i>
+                    <span>{{ isImporting ? 'Analyse en cours...' : 'Importer un document' }}</span>
+                </label>
+                <label for="incidentScanInput" class="btn-import btn-scan" [class.loading]="isImporting">
+                    <i class="fas" [class.fa-camera]="!isImporting" [class.fa-circle-notch]="isImporting" [class.fa-spin]="isImporting"></i>
+                    <span>{{ isImporting ? 'Analyse en cours...' : 'Scanner une fiche manuscrite' }}</span>
+                </label>
+            </div>
+            <p class="import-message" *ngIf="importMessage">{{ importMessage }}</p>
+            <div class="import-warning-list" *ngIf="importWarnings.length">
+                <p *ngFor="let warning of importWarnings">{{ warning }}</p>
+            </div>
+            <div class="import-preview" *ngIf="importPreview">
+                <strong>Apercu OCR</strong>
+                <p>{{ importPreview }}</p>
+            </div>
+        </div>
         <form [formGroup]="incidentForm" (ngSubmit)="submitIncident()" class="premium-form">
             <div class="form-grid">
-                <!-- Section: Informations Générales -->
                 <div class="form-section full">
-                    <h3 class="section-title"><i class="fas fa-info-circle"></i> Informations Générales</h3>
+                    <h3 class="section-title"><i class="fas fa-info-circle"></i> Informations Generales</h3>
                     <div class="field">
                         <label>Titre de l'incident <span class="required">*</span></label>
                         <input type="text" formControlName="titre" placeholder="Ex: Panne de climatisation salle serveur" class="premium-input" [class.error]="incidentForm.get('titre')?.invalid && incidentForm.get('titre')?.touched">
-                        <small class="error-msg" *ngIf="incidentForm.get('titre')?.invalid && incidentForm.get('titre')?.touched">Le titre est requis (min 5 caractères).</small>
+                        <small class="error-msg" *ngIf="incidentForm.get('titre')?.invalid && incidentForm.get('titre')?.touched">Le titre est requis (min 5 caracteres).</small>
                         <small class="hint" *ngIf="!incidentForm.get('titre')?.touched">Soyez concis et explicite.</small>
                     </div>
                     <div class="field">
-                        <label>Description Détaillée <span class="required">*</span></label>
-                        <textarea formControlName="description" rows="5" placeholder="Décrivez les faits, les premiers impacts constatés..." class="premium-input" [class.error]="incidentForm.get('description')?.invalid && incidentForm.get('description')?.touched"></textarea>
-                        <small class="error-msg" *ngIf="incidentForm.get('description')?.invalid && incidentForm.get('description')?.touched">Une description détaillée est requise (min 10 caractères).</small>
+                        <label>Description Detaillee <span class="required">*</span></label>
+                        <textarea formControlName="description" rows="5" placeholder="Decrivez les faits, les premiers impacts constates..." class="premium-input" [class.error]="incidentForm.get('description')?.invalid && incidentForm.get('description')?.touched"></textarea>
+                        <small class="error-msg" *ngIf="incidentForm.get('description')?.invalid && incidentForm.get('description')?.touched">Une description detaillee est requise (min 10 caracteres).</small>
                     </div>
                 </div>
 
-                <!-- Section: Contexte -->
                 <div class="form-section">
                     <h3 class="section-title"><i class="fas fa-map-marker-alt"></i> Contexte & Localisation</h3>
                     <div class="field">
                         <label>Domaine / Nature <span class="required">*</span></label>
-                        <select formControlName="domaine" class="premium-input" [class.error]="incidentForm.get('domaine')?.invalid && incidentForm.get('domaine')?.touched">
-                            <option value="">Sélectionnez un domaine...</option>
-                            <option value="Informatique">Informatique (IT)</option>
-                            <option value="Ressources Humaines">Ressources Humaines</option>
-                            <option value="Opérations">Opérations</option>
-                            <option value="Logistique">Logistique / Infrastructures</option>
-                            <option value="Juridique">Juridique / Compliance</option>
-                            <option value="Sécurité">Sécurité Physique</option>
-                        </select>
+                        <input type="text" formControlName="domaine" class="premium-input" placeholder="Ex: Informatique, Logistique, Juridique..." [class.error]="incidentForm.get('domaine')?.invalid && incidentForm.get('domaine')?.touched">
                         <small class="error-msg" *ngIf="incidentForm.get('domaine')?.invalid && incidentForm.get('domaine')?.touched">Le domaine est requis.</small>
                     </div>
                     <div class="field">
-                        <label>Département Concerné <span class="required">*</span></label>
+                        <label>Departement Concerne <span class="required">*</span></label>
                         <select formControlName="departementId" class="premium-input" [class.error]="incidentForm.get('departementId')?.invalid && incidentForm.get('departementId')?.touched">
-                            <option [value]="null">Sélectionnez un département...</option>
+                            <option [value]="null">Selectionnez un departement...</option>
                             <option *ngFor="let d of departments" [value]="d.id">{{ d.nom }}</option>
                         </select>
-                        <small class="error-msg" *ngIf="incidentForm.get('departementId')?.invalid && incidentForm.get('departementId')?.touched">Le département est requis.</small>
+                        <small class="error-msg" *ngIf="incidentForm.get('departementId')?.invalid && incidentForm.get('departementId')?.touched">Le departement est requis.</small>
+                    </div>
+                    <div class="field">
+                        <label>Niveau (Optionnel)</label>
+                        <select formControlName="niveauRisque" class="premium-input">
+                            <option value="">Selectionnez un niveau...</option>
+                            <option value="Faible">Faible</option>
+                            <option value="Moyen">Moyen</option>
+                            <option value="Élevé">Élevé</option>
+                            <option value="Critique">Critique</option>
+                            <option value="Significatif">Significatif</option>
+                            <option value="Limité">Limité</option>
+                        </select>
                     </div>
 
                     <div class="field mt-3">
                         <label>Lien avec un Risque (Optionnel)</label>
                         <select formControlName="riskId" class="premium-input">
                             <option [value]="null">Aucun lien direct</option>
-                            <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} (Criticité: {{ r.niveauRisque }})</option>
+                            <option *ngFor="let r of risks" [value]="r.id">{{ r.titre }} (Criticite: {{ r.niveauRisque }})</option>
                         </select>
-                        <small class="hint">Associer l'incident à un risque de la cartographie pour une meilleure analyse.</small>
+                        <small class="hint">Associer l'incident a un risque de la cartographie pour une meilleure analyse.</small>
                     </div>
                 </div>
 
-                <!-- Section: Timing & Preuves -->
                 <div class="form-section">
-                    <h3 class="section-title"><i class="fas fa-calendar-alt"></i> Temporalité & Preuves</h3>
+                    <h3 class="section-title"><i class="fas fa-calendar-alt"></i> Temporalite & Preuves</h3>
                     <div class="field">
                         <label>Date de survenance <span class="required">*</span></label>
                         <input type="date" formControlName="dateSurvenance" class="premium-input">
                     </div>
                     <div class="field">
-                        <label>Pièce Jointe / Photo (Optionnel)</label>
+                        <label>Piece Jointe / Photo (Optionnel)</label>
                         <div class="premium-file-upload" [class.has-file]="selectedFile">
-                            <input type="file" (change)="onFileSelected($event)" id="fileInput" hidden>
+                            <input type="file" (change)="onFileSelected($event)" id="fileInput" hidden accept=".xls,.xlsx,.xlsm,.pdf,.jpg,.jpeg,.png,.docx">
                             <label for="fileInput">
                                 <i class="fas" [class.fa-file-upload]="!selectedFile" [class.fa-file-check]="selectedFile"></i>
                                 <span>{{ selectedFile ? selectedFile.name : 'Cliquez pour ajouter un document' }}</span>
@@ -84,6 +112,7 @@
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
+                        <small class="hint">Le fichier importe est conserve comme piece jointe si vous confirmez la declaration.</small>
                     </div>
                 </div>
             </div>
@@ -92,7 +121,7 @@
                 <button type="button" class="btn-outline" (click)="goBack()">Annuler</button>
                 <button type="submit" class="btn-primary" [class.loading]="isSubmitting">
                     <span class="btn-content" *ngIf="!isSubmitting">
-                        <i class="fas fa-check-circle"></i> Confirmer la Déclaration
+                        <i class="fas fa-check-circle"></i> Confirmer la Declaration
                     </span>
                     <span class="btn-content" *ngIf="isSubmitting">
                         <i class="fas fa-circle-notch fa-spin"></i> Traitement en cours...

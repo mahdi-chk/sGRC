@@ -497,7 +497,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         }
         
         // Clos par? If treated, we can put the agent or manager.
-        if (risk.statut === 'Traité' || risk.statut === 'Clôturé') {
+        if (risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED) {
             const closer = risk.riskAgent || risk.riskManager;
             if (closer) sheet.cell("H4").value(`${closer.prenom} ${closer.nom}`);
         }
@@ -509,7 +509,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
 
         sheet.cell("D5").value(formatDate(risk.createdAt)); // Créé le
         sheet.cell("F5").value(formatDate(risk.updatedAt)); // Validé le
-        if (risk.statut === 'Clôturé') {
+        if (risk.statut === RiskStatus.CLOSED) {
             sheet.cell("H5").value(formatDate(risk.updatedAt)); // Clos le
         }
 
@@ -549,10 +549,99 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
             sheet.cell("B75").value("Plan de traitement initial"); // Réf
             sheet.cell("B76").value(risk.planActionTraitement); // Description
             sheet.cell("B77").value(formatDate(risk.dateEcheance)); // Date cible
-            sheet.cell("B78").value(risk.statut === 'Traité' ? 'Réalisé' : 'En cours'); // État
+            sheet.cell("B78").value(risk.statut === RiskStatus.TREATED ? 'Réalisé' : 'En cours'); // État
         }
 
         // Génération du buffer
+        const writeEnhanced = (cellRef: string, value: any) => {
+            if (value !== null && value !== undefined && value !== '') {
+                sheet.cell(cellRef).value(value);
+            }
+        };
+        const markEnhanced = (cellRef: string, condition: boolean) => {
+            if (condition) {
+                sheet.cell(cellRef).value('X');
+            }
+        };
+        const deptName = risk.departement?.nom || '';
+        const ownerName = risk.responsableTraitement?.nom || deptName || 'A definir';
+        const level = risk.niveauRisque || '';
+        const impact = risk.impact || level || '';
+        const probability = risk.probabilite || '';
+        const appContext = [risk.domaine, risk.macroProcessus, risk.processus].filter(Boolean).join(' / ');
+        const detailedSummary = [
+            risk.explication ? `Description initiale: ${risk.explication}` : '',
+            probability ? `Probabilite: ${probability}` : '',
+            impact ? `Impact: ${impact}` : '',
+            risk.dmrExistant ? `DMR existant: ${risk.dmrExistant}` : '',
+            risk.aiAnalysisSuggestion ? `Suggestion IA: ${risk.aiAnalysisSuggestion}` : ''
+        ].filter(Boolean).join('\n');
+        const qualitativeContext = `${risk.domaine || ''} ${risk.explication || ''} ${risk.aiAnalysisImpact || ''} ${risk.processus || ''}`.toLowerCase();
+
+        // Corrections de mapping: le template courant décale la section descriptive d'une ligne.
+        sheet.cell("B8").value(risk.titre || '');
+        sheet.cell("B9").value(risk.explication || '');
+        sheet.cell("B10").value(formatDate(risk.createdAt));
+        sheet.cell("B11").value(formatDate(risk.createdAt));
+        sheet.cell("B12").value(risk.domaine || 'A definir');
+        sheet.cell("B13").value(risk.macroProcessus || 'A definir');
+        sheet.cell("B14").value(risk.processus || 'A definir');
+        sheet.cell("B15").value(risk.processus || risk.macroProcessus || 'A definir');
+        sheet.cell("B16").value(risk.titre || 'A definir');
+        sheet.cell("B17").value(risk.incidentId ? `Incident source #${risk.incidentId}` : `Risque #${risk.id}`);
+        sheet.cell("B18").value(risk.impact ? `Evenement ${risk.impact.toLowerCase()} a investiguer` : 'Cause a analyser');
+        sheet.cell("B19").value(risk.responsableTraitement?.nom || risk.departement?.nom || 'A definir');
+        sheet.cell("B20").value(detailedSummary || 'Causes principales a confirmer');
+        sheet.cell("B21").value(appContext || 'A definir');
+        sheet.cell("B22").value([level ? `Niveau: ${level}` : '', impact ? `Impact: ${impact}` : '', probability ? `Probabilite: ${probability}` : ''].filter(Boolean).join(' | '));
+
+        // Nettoie les cellules qui polluaient les sections financieres / commentaires / actions.
+        ["B23", "B24", "B25", "B26", "B27", "B33", "B45", "B46", "B60", "B73", "B75", "B76", "B77", "B78", "B79", "B80"].forEach((cellRef) => {
+            sheet.cell(cellRef).value('');
+        });
+
+        writeEnhanced("B3", "Direction Générale");
+        writeEnhanced("B4", deptName);
+        writeEnhanced("B5", "Gestion des risques");
+        writeEnhanced("D4", risk.riskManager ? `${risk.riskManager.prenom} ${risk.riskManager.nom}` : '');
+        writeEnhanced("F4", risk.riskAgent ? `${risk.riskAgent.prenom} ${risk.riskAgent.nom}` : '');
+        writeEnhanced("B13", risk.domaine || 'A definir');
+        writeEnhanced("B14", risk.macroProcessus || 'A definir');
+        writeEnhanced("B15", risk.processus || 'A definir');
+        writeEnhanced("B16", risk.processus || risk.macroProcessus || 'A definir');
+        writeEnhanced("B17", risk.titre || 'A definir');
+        writeEnhanced("B18", risk.incidentId ? `Incident source #${risk.incidentId}` : `Risque #${risk.id}`);
+        writeEnhanced("B19", impact ? `Evenement ${impact.toLowerCase()} a investiguer` : 'Cause a analyser');
+        writeEnhanced("B20", ownerName);
+        writeEnhanced("B21", detailedSummary || 'Causes principales a confirmer');
+        writeEnhanced("B22", appContext || 'A definir');
+        writeEnhanced("B23", [level ? `Niveau: ${level}` : '', impact ? `Impact: ${impact}` : '', probability ? `Probabilite: ${probability}` : ''].filter(Boolean).join(' | '));
+        writeEnhanced("B24", risk.niveauCotationRisqueNet || risk.niveauCotationRisqueBrut || 0);
+        writeEnhanced("B25", risk.cotationImpact || 0);
+        writeEnhanced("B26", risk.cotationProbabilite || 0);
+        writeEnhanced("B27", risk.niveauCotationRisqueNet || risk.niveauCotationRisqueBrut || 0);
+        writeEnhanced("B33", risk.aiAnalysisImpact || impact || '');
+        writeEnhanced("B45", risk.aiAnalysisSuggestion || risk.planActionTraitement || '');
+        writeEnhanced("B46", risk.dmrExistant || '');
+        writeEnhanced("B60", risk.aiAnalysisTendance || '');
+        writeEnhanced("B73", risk.aiAnalysisSuggestion || risk.explication || '');
+        markEnhanced("G63", /manque|gagner|perte/.test(qualitativeContext));
+        markEnhanced("G64", /reglement|penalit|agr[eé]ment|conform/.test(qualitativeContext));
+        markEnhanced("G65", /jurid|assign|civil|penal/.test(qualitativeContext));
+        markEnhanced("G66", /humain|social|sante|securite/.test(qualitativeContext));
+        markEnhanced("G67", /client|insatisf|service/.test(qualitativeContext));
+        markEnhanced("G68", /critique|eleve|élevé|image|media/.test(`${level} ${qualitativeContext}`));
+        markEnhanced("G69", /credit/.test(qualitativeContext));
+        markEnhanced("G70", /interruption|process|indispo|arr[eê]t/.test(qualitativeContext));
+        markEnhanced("G71", /marche|volatil/.test(qualitativeContext));
+        markEnhanced("G72", !sheet.cell("G63").value() && !sheet.cell("G64").value() && !sheet.cell("G65").value() && !sheet.cell("G66").value() && !sheet.cell("G67").value() && !sheet.cell("G68").value() && !sheet.cell("G69").value() && !sheet.cell("G70").value() && !sheet.cell("G71").value());
+        writeEnhanced("B75", `PA-${risk.id}`);
+        writeEnhanced("B76", risk.planActionTraitement || risk.dmrExistant || 'A definir');
+        writeEnhanced("B77", formatDate(risk.dateEcheance || risk.prochaineEcheance));
+        writeEnhanced("B78", risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED ? 'Realise' : 'En cours');
+        writeEnhanced("B79", risk.aiAnalysisSuggestion || risk.aiAnalysisTendance || '');
+        writeEnhanced("B80", risk.pieceJustificative ? path.basename(risk.pieceJustificative) : 'Aucun document');
+
         const buffer = await workbook.outputAsync();
 
         // --- AUTOMATISATION : CRÉATION DE L'INCIDENT ---

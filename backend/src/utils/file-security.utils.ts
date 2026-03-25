@@ -16,7 +16,9 @@ const MAGIC_BYTES: Record<string, string[]> = {
     jpeg: ['ffd8ff'],
     png: ['89504e47'],
     docx: ['504b0304'],
+    xls: ['d0cf11e0'],
     xlsx: ['504b0304'],
+    xlsm: ['504b0304'],
 };
 
 /**

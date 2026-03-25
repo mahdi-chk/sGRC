@@ -226,6 +226,99 @@
     color: #475569;
 }
 
+.import-box {
+    display: grid;
+    grid-template-columns: 1.5fr auto;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+}
+
+.import-box-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.import-box-copy strong {
+    color: #0f172a;
+}
+
+.import-box-copy span {
+    font-size: 0.84rem;
+    color: #64748b;
+}
+
+.import-box-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.import-trigger.loading {
+    opacity: 0.8;
+    cursor: wait;
+}
+
+.scan-trigger {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+
+.scan-trigger:hover {
+    background: #1e293b;
+    border-color: #1e293b;
+    color: #fff;
+}
+
+.import-feedback {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 0.84rem;
+    color: #0f766e;
+    font-weight: 600;
+}
+
+.import-warning-list,
+.import-preview {
+    grid-column: 1 / -1;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.import-warning-list {
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+}
+
+.import-warning-list p,
+.import-preview p {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.import-warning-list p + p {
+    margin-top: 6px;
+}
+
+.import-preview {
+    background: #fff;
+    border: 1px solid #dbeafe;
+}
+
+.import-preview strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #0f172a;
+}
+
 .text-danger {
     color: #ef4444;
 }
@@ -514,4 +607,15 @@
 
 .risk-card-body p:last-child {
     margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .import-box {
+        grid-template-columns: 1fr;
+    }
+
+    .import-trigger {
+        width: 100%;
+        justify-content: center;
+    }
 }

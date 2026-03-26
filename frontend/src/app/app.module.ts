@@ -81,8 +81,8 @@ const routes: Routes = [
       { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
       { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
       { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
-      { path: 'incident-analysis', component: IncidentAnalysisComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
-      { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
+      { path: 'incident-analysis', component: IncidentAnalysisComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       // Routes Audit (composants exportés par AuditingModule)
       { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },

@@ -1379,29 +1379,38 @@
 }
 /* ===== RISK MATRIX HEATMAP ===== */
 .risk-matrix-card {
-  max-width: 600px;
+  max-width: 1120px;
   margin: 0 auto 2rem;
   overflow: visible !important;
   
   .matrix-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding: 0 5px;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding: 0 6px;
 
-    h3 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b; }
+    h3 { margin: 0; font-size: 1.2rem; font-weight: 700; color: #1e293b; }
+  }
+
+  .matrix-subtitle {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 0.92rem;
+    line-height: 1.5;
   }
 
   .matrix-legend {
     display: flex;
-    gap: 6px;
+    gap: 8px;
+    flex-wrap: wrap;
 
     .legend-chip {
-      font-size: 0.65rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 5px 10px;
+      border-radius: 999px;
       text-transform: uppercase;
       
       &.green { background: #d1fae5; color: #065f46; }
@@ -1410,17 +1419,83 @@
       &.red { background: #fee2e2; color: #991b1b; }
     }
   }
+
+  .matrix-insights {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .insight-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 88px;
+
+    .insight-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    strong {
+      font-size: 1.05rem;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+
+    small {
+      color: #64748b;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    &.highlight {
+      border-color: rgba(59, 130, 246, 0.22);
+      box-shadow: 0 10px 22px rgba(59, 130, 246, 0.08);
+    }
+
+    &.critical {
+      border-color: rgba(239, 68, 68, 0.18);
+      box-shadow: 0 10px 22px rgba(239, 68, 68, 0.08);
+    }
+  }
+
+  .matrix-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .footer-note {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
 }
 
 .risk-matrix-container {
   display: grid;
-  grid-template-columns: 30px 1fr;
-  grid-template-rows: auto 30px;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 10px;
   background: white;
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
 }
 
 .risk-matrix-y-axis {
@@ -1428,35 +1503,44 @@
   grid-column: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  writing-mode: vertical-lr;
-  rotate: 180deg;
-  font-size: 0.75rem;
+  justify-content: flex-start;
+  writing-mode: initial;
+  rotate: 0deg;
+  font-size: 0.82rem;
   font-weight: 800;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 1px;
   white-space: nowrap;
   
-  i { margin-bottom: 6px; color: #3b82f6; }
+  i { margin-right: 6px; color: #3b82f6; }
 }
 
 .risk-matrix-body {
-  grid-row: 1;
-  grid-column: 2;
-  overflow: hidden;
+  grid-row: 2;
+  grid-column: 1;
+  overflow-x: auto;
 }
 
 .risk-matrix-table {
   width: 100%;
+  min-width: 780px;
   table-layout: fixed;
   border-spacing: 4px;
   border-collapse: separate;
 
+  .col-axis {
+    width: 130px;
+  }
+
+  .col-impact {
+    width: calc((100% - 130px) / 4);
+  }
+
   th, td {
     padding: 0;
-    height: 48px;
-    border-radius: 6px;
+    height: 66px;
+    border-radius: 8px;
     vertical-align: middle;
   }
 
@@ -1464,45 +1548,102 @@
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     text-align: center;
     border: 1px solid #e2e8f0;
+    padding: 8px 6px;
+    line-height: 1.2;
     
-    .score { display: block; font-size: 0.6rem; color: #94a3b8; margin-top: 1px; }
+    .score { display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
   }
 
   .prob-label {
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.84rem;
     text-align: center;
     border: 1px solid #e2e8f0;
-    width: 90px;
+    width: 130px;
+    padding: 8px 6px;
+    line-height: 1.25;
     
-    .score { display: block; font-size: 0.6rem; color: #94a3b8; }
+    .score { display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; }
   }
 
-  .axis-corner { border: none; background: transparent; width: 90px; }
+  .axis-corner { border: none; background: transparent; width: 130px; }
+
+  .total-label,
+  .total-cell {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    padding: 8px 6px;
+  }
+
+  .total-label {
+    background: #e0f2fe;
+    border-color: #bae6fd;
+    color: #0f766e;
+  }
 
   .cell {
-    cursor: pointer;
     text-align: center;
     border: 2px solid transparent;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
     
     &:hover {
-      transform: scale(1.05);
+      transform: scale(1.03);
       z-index: 10;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.15);
       border-color: rgba(255,255,255,0.4);
     }
 
+    &.is-clickable {
+      cursor: pointer;
+
+      &::after {
+        content: 'Voir';
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        font-size: 0.62rem;
+        font-weight: 800;
+        padding: 3px 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        color: rgba(255, 255, 255, 0.95);
+      }
+    }
+
+    .cell-content {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 4px;
+    }
+
     .cell-value {
-      font-size: 1.1rem;
+      font-size: 1.35rem;
       font-weight: 900;
       color: white;
       text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .cell-meta {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.92);
+      letter-spacing: 0.03em;
     }
 
     /* Heatmap Colors */
@@ -1513,21 +1654,209 @@
     &.cell-orange { background-color: #f97316; .cell-value { color: white; } }
     &.cell-red { background-color: #ef4444; .cell-value { color: white; } }
     &.cell-darkred { background-color: #b91c1c; .cell-value { color: white; } }
+    &.cell-lightgreen .cell-meta,
+    &.cell-lightyellow .cell-meta {
+      color: #475569;
+    }
+  }
+
+  .totals-row {
+    th, td {
+      height: 46px;
+    }
   }
 }
 
+.matrix-risk-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.matrix-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-item {
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 12px;
+
+  .summary-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  strong {
+    font-size: 1rem;
+    color: #0f172a;
+  }
+}
+
+.matrix-risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.matrix-risk-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  background: white;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+.risk-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+  }
+}
+
+.risk-level-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+
+  &.critical {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  &.high {
+    background: #ffedd5;
+    color: #9a3412;
+  }
+
+  &.medium {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.low {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &.default {
+    background: #e2e8f0;
+    color: #475569;
+  }
+}
+
+.risk-item-desc {
+  margin: 0 0 12px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.risk-item-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  color: #334155;
+  font-size: 0.88rem;
+}
+
+.empty-matrix-detail {
+  padding: 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+}
+
 .risk-matrix-x-axis {
-  grid-row: 2;
-  grid-column: 2;
+  grid-row: 3;
+  grid-column: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
+  justify-content: flex-start;
+  font-size: 0.82rem;
   font-weight: 800;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 1px;
   
   i { margin-right: 6px; color: #3b82f6; }
+}
+
+@media (max-width: 1100px) {
+  .risk-matrix-card {
+    .matrix-insights {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .matrix-footer {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .risk-matrix-card {
+    max-width: 100%;
+
+    .matrix-header {
+      flex-direction: column;
+    }
+
+    .matrix-insights {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .risk-matrix-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .risk-matrix-y-axis,
+  .risk-matrix-x-axis {
+    writing-mode: initial;
+    rotate: 0deg;
+  }
+
+  .risk-matrix-y-axis {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .risk-matrix-body {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .risk-matrix-x-axis {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .matrix-detail-summary,
+  .risk-item-meta {
+    grid-template-columns: 1fr;
+  }
 }
 

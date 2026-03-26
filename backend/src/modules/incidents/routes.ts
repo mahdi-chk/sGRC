@@ -36,7 +36,7 @@ const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
 
 // Appliquer l'authentification et l'autorisation par défaut à toutes les routes de ce module
 router.use(authenticateToken);
-router.use(authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR));
+router.use(authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT));
 
 const EXCEL_CELL_MAPPING: Record<string, string> = {
     titre: 'B9',

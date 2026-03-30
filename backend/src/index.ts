@@ -235,6 +235,28 @@ const startServer = async () => {
       }
     };
 
+    const ensureSoftDeleteColumns = async (tableName: string) => {
+      try {
+        await sequelize.query(`
+          IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[${tableName}]') AND name = 'is_deleted')
+          ALTER TABLE [${tableName}] ADD [is_deleted] BIT NULL;
+
+          IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[${tableName}]') AND name = 'deleted_at')
+          ALTER TABLE [${tableName}] ADD [deleted_at] DATETIMEOFFSET NULL;
+
+          IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[${tableName}]') AND name = 'is_deleted')
+          BEGIN
+            EXEC('UPDATE [${tableName}] SET [is_deleted] = 0 WHERE [is_deleted] IS NULL');
+            EXEC('ALTER TABLE [${tableName}] ALTER COLUMN [is_deleted] BIT NOT NULL');
+          END
+        `);
+
+        await addDefaultConstraint(tableName, 'is_deleted', '0');
+      } catch (e) {
+        console.error(`Failed to add soft delete columns to ${tableName}:`, e);
+      }
+    };
+
     await addColumn('aiAnalysisScore', 'INT NULL');
     await addColumn('aiAnalysisImpact', 'NVARCHAR(MAX) NULL');
     await addColumn('aiAnalysisTendance', 'NVARCHAR(255) NULL');
@@ -258,14 +280,24 @@ const startServer = async () => {
     await addColumn('planActionTraitement', 'NVARCHAR(MAX) NULL');
     await addColumn('incidentId', 'INT NULL');
 
-    // Ajout manuel de la colonne 'deletedAt' pour le Soft Delete (Paranoid) des utilisateurs
-    try {
-      await sequelize.query(`
-        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[users]') AND name = 'deletedAt')
-        ALTER TABLE [users] ADD deletedAt DATETIMEOFFSET NULL;
-      `);
-    } catch (e) {
-      console.error('Failed to add deletedAt to users:', e);
+    const softDeleteTables = [
+      'users',
+      'departments',
+      'organigramme',
+      'system_settings',
+      'risks',
+      'risk_comments',
+      'notifications',
+      'incidents',
+      'audit_missions',
+      'audit_checklist_templates',
+      'audit_checklist_template_items',
+      'audit_mission_checklist_items',
+      'audit_evidences',
+    ];
+
+    for (const tableName of softDeleteTables) {
+      await ensureSoftDeleteColumns(tableName);
     }
 
     // Mise à jour de la table incidents pour inclure les nouveaux attributs

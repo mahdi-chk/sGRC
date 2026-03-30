@@ -41,6 +41,7 @@
                         <select
                             class="premium-select"
                             [ngModel]="selectedRiskId"
+                            [disabled]="isReadOnlyRole || isLoading"
                             (ngModelChange)="onRiskSelectionChange($event)">
                             <option [ngValue]="null">Selectionner un risque...</option>
                             <option *ngFor="let r of risks" [ngValue]="r.id">
@@ -54,11 +55,11 @@
                         <div class="impact-fields">
                             <div class="i-field">
                                 <label>Cout estime (MAD)</label>
-                                <input type="number" placeholder="0.00" class="premium-input" [(ngModel)]="estimatedCost">
+                                <input type="number" placeholder="0.00" class="premium-input" [(ngModel)]="estimatedCost" [disabled]="isReadOnlyRole">
                             </div>
                             <div class="i-field">
                                 <label>Gravite Constatee</label>
-                                <select class="premium-select" [(ngModel)]="observedSeverity">
+                                <select class="premium-select" [(ngModel)]="observedSeverity" [disabled]="isReadOnlyRole">
                                     <option value="">Selectionner...</option>
                                     <option value="Faible">Faible</option>
                                     <option value="Moyen">Moyen</option>
@@ -77,17 +78,18 @@
                     <div class="why-list">
                         <div class="why-item" *ngFor="let n of [1,2,3,4,5]">
                             <span class="num">{{ n }}</span>
-                            <input
+                                <input
                                 type="text"
                                 class="premium-input"
                                 [placeholder]="'Pourquoi ? (Etape ' + n + ')'"
-                                [(ngModel)]="rootCauses[n - 1]">
+                                [(ngModel)]="rootCauses[n - 1]"
+                                [disabled]="isReadOnlyRole">
                         </div>
                     </div>
                 </div>
 
                 <div class="analysis-actions">
-                    <button class="btn-save-analysis" (click)="saveFullAnalysis()" [disabled]="isLoading">
+                    <button class="btn-save-analysis" *ngIf="!isReadOnlyRole" (click)="saveFullAnalysis()" [disabled]="isLoading">
                         <i class="fas" [class.fa-save]="!isLoading" [class.fa-circle-notch]="isLoading" [class.fa-spin]="isLoading"></i>
                         Sauvegarder l'Analyse Complete
                     </button>

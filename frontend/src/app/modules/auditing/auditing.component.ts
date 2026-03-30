@@ -94,7 +94,7 @@ export class AuditingComponent implements OnInit {
   }
 
   loadUsers() {
-    this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe(users => {
+    this.http.get<any[]>(`${environment.apiUrl}/users/assignable/auditors`).subscribe(users => {
       this.allUsers = users;
       this.auditors = users.filter(u => u.role === UserRole.AUDITEUR);
     });

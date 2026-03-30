@@ -1,12 +1,15 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { AuditMission } from './audit-mission.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 export class AuditMissionChecklistItem extends Model {
     public id!: number;
     public missionId!: number;
     public texte!: string;
     public estFait!: boolean;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -35,10 +38,12 @@ AuditMissionChecklistItem.init(
             type: DataTypes.BOOLEAN,
             allowNull: false,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'audit_mission_checklist_items',
+        ...softDeleteModelOptions,
     }
 );
 

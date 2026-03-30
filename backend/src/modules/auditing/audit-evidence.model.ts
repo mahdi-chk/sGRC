@@ -2,6 +2,7 @@ import { Model, DataTypes } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { AuditMission } from './audit-mission.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 export class AuditEvidence extends Model {
     public id!: number;
@@ -9,6 +10,8 @@ export class AuditEvidence extends Model {
     public filename!: string;
     public path!: string;
     public uploadedById!: number;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -42,10 +45,12 @@ AuditEvidence.init({
             model: 'users',
             key: 'id'
         }
-    }
+    },
+    ...softDeleteAttributes
 }, {
     sequelize,
-    tableName: 'audit_evidences'
+    tableName: 'audit_evidences',
+    ...softDeleteModelOptions
 });
 
 AuditMission.hasMany(AuditEvidence, { foreignKey: 'missionId', as: 'evidences' });

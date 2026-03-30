@@ -14,6 +14,7 @@ import { AuditChecklistTemplate, AuditChecklistTemplateItem } from './audit-chec
 import { AuditMissionChecklistItem } from './audit-mission-checklist.model';
 import { AuditEvidence } from './audit-evidence.model';
 import fs from 'fs';
+import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 
 export class AuditingService {
     /**
@@ -44,7 +45,9 @@ export class AuditingService {
                 ...data,
                 auditSeniorId: seniorId,
                 statut: AuditMissionStatus.A_VENIR,
-                delai: new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000)
+                delai: new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000),
+                is_deleted: false,
+                deleted_at: null,
             });
             missions.push(mission);
         }
@@ -88,8 +91,14 @@ export class AuditingService {
     /**
      * Mettre à jour le rapport d'audit.
      */
-    static async submitReport(missionId: number, auditeurId: number, reportData: { rapport: string, recommandations: string }) {
+    static async submitReport(
+        missionId: number,
+        actorId: number,
+        actorRole: UserRole,
+        reportData: { rapport: string, recommandations: string }
+    ) {
         const mission = await AuditMission.findByPk(missionId);
+        const auditeurId = actorRole === UserRole.SUPER_ADMIN ? mission?.auditeurId ?? actorId : actorId;
         if (!mission) throw new Error('Mission non trouvée');
         if (mission.auditeurId !== auditeurId) throw new Error('Action non autorisée');
 
@@ -101,8 +110,8 @@ export class AuditingService {
         // Notifications & Emails
         try {
             const senior = await User.findByPk(mission.auditSeniorId);
-            const auditeur = await User.findByPk(auditeurId);
-            if (senior && auditeur) {
+            const actor = await User.findByPk(actorId);
+            if (senior && actor) {
                 // Internal notification
                 await Notification.create({
                     userId: senior.id,
@@ -114,7 +123,7 @@ export class AuditingService {
                 // Email notification
                 await emailService.sendAuditReportSubmittedEmail(
                     { mail: senior.mail, nom: senior.nom, prenom: senior.prenom },
-                    { titre: mission.titre, auditeurNom: `${auditeur.prenom} ${auditeur.nom}` }
+                    { titre: mission.titre, auditeurNom: `${actor.prenom} ${actor.nom}` }
                 );
             }
         } catch (error) {
@@ -140,8 +149,43 @@ export class AuditingService {
     static async deleteMission(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        await mission.destroy();
+
+        await softDeleteInstance(mission);
+        await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
+            where: {
+                missionId,
+                is_deleted: false
+            }
+        });
+        await AuditEvidence.update(getSoftDeleteValues(), {
+            where: {
+                missionId,
+                is_deleted: false
+            }
+        });
+
         return { message: 'Mission supprimée avec succès' };
+    }
+
+    static async restoreMission(missionId: number) {
+        const mission = await AuditMission.scope('withDeleted').findByPk(missionId);
+        if (!mission || !mission.is_deleted) throw new Error('Mission non trouvée');
+
+        await restoreSoftDeletedInstance(mission);
+        await AuditMissionChecklistItem.scope('withDeleted').update(getRestoreValues(), {
+            where: {
+                missionId,
+                is_deleted: true
+            }
+        });
+        await AuditEvidence.scope('withDeleted').update(getRestoreValues(), {
+            where: {
+                missionId,
+                is_deleted: true
+            }
+        });
+
+        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk'] });
     }
 
     /**
@@ -159,7 +203,12 @@ export class AuditingService {
         });
         
         // Supprimer aussi les checklists instanciées
-        await AuditMissionChecklistItem.destroy({ where: { missionId } });
+        await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
+            where: {
+                missionId,
+                is_deleted: false
+            }
+        });
         
         return mission;
     }
@@ -194,8 +243,33 @@ export class AuditingService {
     static async deleteChecklistTemplate(templateId: number) {
         const template = await AuditChecklistTemplate.findByPk(templateId);
         if (!template) throw new Error('Template non trouvé');
-        await template.destroy();
+
+        await softDeleteInstance(template);
+        await AuditChecklistTemplateItem.update(getSoftDeleteValues(), {
+            where: {
+                templateId,
+                is_deleted: false
+            }
+        });
+
         return { message: 'Template supprimé avec succès' };
+    }
+
+    static async restoreChecklistTemplate(templateId: number) {
+        const template = await AuditChecklistTemplate.scope('withDeleted').findByPk(templateId);
+        if (!template || !template.is_deleted) throw new Error('Template non trouvé');
+
+        await restoreSoftDeletedInstance(template);
+        await AuditChecklistTemplateItem.scope('withDeleted').update(getRestoreValues(), {
+            where: {
+                templateId,
+                is_deleted: true
+            }
+        });
+
+        return await AuditChecklistTemplate.findByPk(template.id, {
+            include: [{ model: AuditChecklistTemplateItem, as: 'items' }]
+        });
     }
 
     /**
@@ -203,6 +277,9 @@ export class AuditingService {
      */
 
     static async getMissionChecklistItems(missionId: number) {
+        const mission = await AuditMission.findByPk(missionId);
+        if (!mission) throw new Error('Mission non trouvée');
+
         return await AuditMissionChecklistItem.findAll({
             where: { missionId },
             order: [['createdAt', 'ASC']]
@@ -254,6 +331,9 @@ export class AuditingService {
      */
 
     static async getMissionEvidence(missionId: number) {
+        const mission = await AuditMission.findByPk(missionId);
+        if (!mission) throw new Error('Mission non trouvée');
+
         return await AuditEvidence.findAll({
             where: { missionId },
             include: [{ model: User, as: 'uploader', attributes: ['id', 'prenom', 'nom'] }],
@@ -309,12 +389,21 @@ export class AuditingService {
             throw new Error('Preuve non trouvée');
         }
 
-        // Supprimer le fichier physiquement
-        if (fs.existsSync(evidence.path)) {
-            fs.unlinkSync(evidence.path);
-        }
-
-        await evidence.destroy();
+        await softDeleteInstance(evidence);
         return { message: 'Preuve supprimée avec succès' };
     }
+
+    static async restoreMissionEvidence(evidenceId: number) {
+        const evidence = await AuditEvidence.scope('withDeleted').findByPk(evidenceId);
+        if (!evidence || !evidence.is_deleted) {
+            throw new Error('Preuve non trouvée');
+        }
+
+        await restoreSoftDeletedInstance(evidence);
+
+        return await AuditEvidence.findByPk(evidence.id, {
+            include: [{ model: User, as: 'uploader', attributes: ['id', 'prenom', 'nom'] }]
+        });
+    }
 }
+

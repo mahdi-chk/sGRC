@@ -7,6 +7,7 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { Risk } from './risk.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 /**
  * Classe représentant un Commentaire ou une Preuve de traitement.
@@ -17,6 +18,8 @@ export class Comment extends Model {
     public riskId!: number;
     public userId!: number;
     public pieceJointe!: string | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -56,10 +59,12 @@ Comment.init(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'risk_comments',
+        ...softDeleteModelOptions,
     }
 );
 

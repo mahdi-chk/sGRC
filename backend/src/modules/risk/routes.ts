@@ -13,6 +13,7 @@ import { Comment } from './comment.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
 import { Incident } from '../incidents/incident.model';
+import { Organigramme } from '../organigramme/organigramme.model';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
 import { emailService } from '../../utils/email.service';
@@ -21,6 +22,7 @@ import { AIService } from '../ai/ai.service';
 // @ts-ignore
 import XlsxPopulate from 'xlsx-populate';
 import fs from 'fs';
+import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 
 const router = Router();
 
@@ -50,6 +52,23 @@ const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     return fullPath;
 };
 
+const riskListIncludes = [
+    { model: User, as: 'riskManager', required: false },
+    { model: User, as: 'riskAgent', required: false },
+    { model: Organigramme, as: 'responsableTraitement', required: false },
+    { model: Department, as: 'departement', required: false },
+];
+
+const sortRisksForDisplay = (risks: Risk[]) =>
+    [...risks].sort((first, second) => {
+        const assignmentDelta = Number(Boolean(first.riskAgentId)) - Number(Boolean(second.riskAgentId));
+        if (assignmentDelta !== 0) {
+            return assignmentDelta;
+        }
+
+        return new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
+    });
+
 // Appliquer l'authentification à toutes les routes de ce module
 router.use(authenticateToken);
 
@@ -75,7 +94,9 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
             ...cleanedBody,
             riskManagerId: req.user!.id,
             pieceJustificative: req.file ? saveToStorage(req.file, 'risks') : null,
-            statut: RiskStatus.OPEN
+            statut: RiskStatus.OPEN,
+            is_deleted: false,
+            deleted_at: null,
         };
 
         const risk = await Risk.create(riskData);
@@ -94,7 +115,7 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
  * RÉCUPÉRER TOUS LES RISQUES
  * Filtre les résultats en fonction du rôle de l'utilisateur.
  */
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { role, id } = req.user!;
         let risks;
@@ -102,32 +123,27 @@ router.get('/', async (req: AuthRequest, res) => {
         // Logique de filtrage par rôle
         if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.AUDIT_SENIOR) {
             // Accès total
-            risks = await Risk.findAll({ include: ['riskAgent', 'responsableTraitement', 'departement'] });
+            risks = await Risk.findAll({ include: riskListIncludes as any });
         } else if (role === UserRole.RISK_MANAGER) {
             // Risques créés par lui ou dont il est responsable
             risks = await Risk.findAll({
-                where: {
-                    [Op.or]: [
-                        { riskManagerId: id },
-                        { responsableTraitementId: id }
-                    ]
-                },
-                include: ['riskAgent', 'responsableTraitement', 'departement']
+                where: { riskManagerId: id },
+                include: riskListIncludes as any
             });
         } else if (role === UserRole.RISK_AGENT) {
             // Risques qui lui sont assignés pour traitement
             risks = await Risk.findAll({
                 where: { riskAgentId: id },
-                include: ['riskManager', 'responsableTraitement', 'departement']
+                include: riskListIncludes as any
             });
         } else {
             // Autres rôles (ex: Responsable de département)
             risks = await Risk.findAll({
-                where: { responsableTraitementId: id },
-                include: ['riskManager', 'riskAgent', 'departement']
+                where: { riskManagerId: id },
+                include: riskListIncludes as any
             });
         }
-        res.json(risks);
+        res.json(sortRisksForDisplay(risks));
     } catch (error: any) {
         res.status(500).json({ message: 'Erreur lors de la récupération des risques', error: error.message });
     }
@@ -354,6 +370,11 @@ router.post('/:id/comments', uploadSecureComment, async (req: AuthRequest, res) 
 router.get('/:id/comments', async (req, res) => {
     try {
         const { id } = req.params;
+        const risk = await Risk.findByPk(parseInt(id as string));
+        if (!risk) {
+            return res.status(404).json({ message: 'Risque non trouvé' });
+        }
+
         const comments = await Comment.findAll({
             where: { riskId: id },
             include: ['user'],
@@ -378,11 +399,45 @@ router.delete('/:id', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN
             return res.status(404).json({ message: 'Risque non trouvé' });
         }
 
-        await risk.destroy();
+        await softDeleteInstance(risk);
+        await Comment.update(getSoftDeleteValues(), {
+            where: {
+                riskId: risk.id,
+                is_deleted: false
+            }
+        });
         res.status(204).send();
     } catch (error: any) {
         console.error('Erreur suppression risque:', error);
         res.status(500).json({ message: 'Erreur lors de la suppression du risque', error: error.message });
+    }
+});
+
+router.patch('/:id/restore', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+    try {
+        const { id } = req.params;
+        const risk = await Risk.scope('withDeleted').findByPk(parseInt(id as string));
+
+        if (!risk || !risk.is_deleted) {
+            return res.status(404).json({ message: 'Risque non trouvé' });
+        }
+
+        await restoreSoftDeletedInstance(risk);
+        await Comment.scope('withDeleted').update(getRestoreValues(), {
+            where: {
+                riskId: risk.id,
+                is_deleted: true
+            }
+        });
+
+        const restoredRisk = await Risk.findByPk(risk.id, {
+            include: ['riskAgent', 'responsableTraitement', 'departement']
+        });
+
+        res.json(restoredRisk);
+    } catch (error: any) {
+        console.error('Erreur restauration risque:', error);
+        res.status(500).json({ message: 'Erreur lors de la restauration du risque', error: error.message });
     }
 });
 
@@ -456,7 +511,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         }
 
         const templatePath = path.resolve(__dirname, '../../../assets/templates/Fiche_incident.xlsm');
-        
+
         if (!fs.existsSync(templatePath)) {
             return res.status(404).json({ message: 'Template non trouvé sur le serveur' });
         }
@@ -470,7 +525,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         }
 
         // Population des champs (basé sur l'analyse visuelle et structurelle)
-        
+
         // N° Incident (E2)
         sheet.cell("E2").value(risk.id);
 
@@ -486,16 +541,16 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         // C3: *Statut :, C4: *Créé par :, C5: *Créé le :
         // E4: *Validé par :, E5: *Validé le :
         // G4: Clos par :, G5: Clos le :
-        
+
         sheet.cell("D3").value(risk.statut); // Statut
-        
+
         if (risk.riskManager) {
             sheet.cell("D4").value(`${risk.riskManager.prenom} ${risk.riskManager.nom}`); // Créé par
         }
         if (risk.riskAgent) {
             sheet.cell("F4").value(`${risk.riskAgent.prenom} ${risk.riskAgent.nom}`); // Validé par
         }
-        
+
         // Clos par? If treated, we can put the agent or manager.
         if (risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED) {
             const closer = risk.riskAgent || risk.riskManager;
@@ -523,7 +578,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         if (risk.domaine) sheet.cell("B13").value(risk.domaine);
         if (risk.macroProcessus) sheet.cell("B14").value(risk.macroProcessus);
         if (risk.processus) sheet.cell("B15").value(risk.processus);
-        
+
         sheet.cell("B16").value("Activité standard"); // Activité
         sheet.cell("B17").value(risk.titre); // Intitulé du risque opé
 
@@ -543,7 +598,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
             sheet.cell("G66").value("X"); // Risque d'image row index changed in analysis
             sheet.cell("G68").value("X"); // Interruption de processus
         }
-        
+
         // --- SECTION 6: SUIVI DES ACTIONS ---
         if (risk.planActionTraitement) {
             sheet.cell("B75").value("Plan de traitement initial"); // Réf

@@ -4,6 +4,7 @@ import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware
 import { UserRole } from '../users/user.roles';
 import multer from 'multer';
 import * as xlsx from 'xlsx';
+import { restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 
 import { secureUpload } from '../../middleware/file.middleware';
 
@@ -37,6 +38,18 @@ router.post('/', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), async (re
     try {
         const { nom } = req.body;
         if (!nom) return res.status(400).json({ message: 'Le nom est requis' });
+
+        const existingItem = await Organigramme.scope('withDeleted').findOne({ where: { nom } });
+        if (existingItem) {
+            if (existingItem.is_deleted) {
+                existingItem.nom = nom;
+                await restoreSoftDeletedInstance(existingItem);
+                await existingItem.save();
+                return res.status(200).json(existingItem);
+            }
+
+            return res.status(409).json({ message: 'Cet élément existe déjà' });
+        }
 
         const item = await Organigramme.create({ nom });
         res.status(201).json(item);
@@ -74,8 +87,20 @@ router.delete('/:id', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), asyn
         const item = await Organigramme.findByPk(req.params.id as string);
         if (!item) return res.status(404).json({ message: 'Élément non trouvé' });
 
-        await item.destroy();
+        await softDeleteInstance(item);
         res.json({ message: 'Élément supprimé' });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.patch('/:id/restore', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), async (req: AuthRequest, res: Response) => {
+    try {
+        const item = await Organigramme.scope('withDeleted').findByPk(req.params.id as string);
+        if (!item || !item.is_deleted) return res.status(404).json({ message: 'Élément non trouvé' });
+
+        await restoreSoftDeletedInstance(item);
+        res.json(item);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -105,16 +130,26 @@ router.post('/import', authenticateToken, authorizeRoles(UserRole.ADMIN_SI), upl
         if (names.length === 0) return res.status(400).json({ message: 'Aucune donnée trouvée dans le fichier' });
 
         let createdCount = 0;
+        let restoredCount = 0;
         for (const name of names) {
             try {
-                const [item, created] = await Organigramme.findOrCreate({ where: { nom: name } });
-                if (created) createdCount++;
+                const existingItem = await Organigramme.scope('withDeleted').findOne({ where: { nom: name } });
+                if (existingItem) {
+                    if (existingItem.is_deleted) {
+                        await restoreSoftDeletedInstance(existingItem);
+                        restoredCount++;
+                    }
+                    continue;
+                }
+
+                await Organigramme.create({ nom: name });
+                createdCount++;
             } catch (e) {
                 // Skip errors (e.g. duplicates)
             }
         }
 
-        res.json({ message: `${createdCount} éléments importés avec succès` });
+        res.json({ message: `${createdCount} éléments importés avec succès, ${restoredCount} restaurés` });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

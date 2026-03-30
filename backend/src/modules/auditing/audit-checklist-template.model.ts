@@ -1,12 +1,15 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 export class AuditChecklistTemplate extends Model {
     public id!: number;
     public titre!: string;
     public description!: string | null;
     public createdById!: number;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -34,10 +37,12 @@ AuditChecklistTemplate.init(
                 key: 'id',
             },
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'audit_checklist_templates',
+        ...softDeleteModelOptions,
     }
 );
 
@@ -45,6 +50,8 @@ export class AuditChecklistTemplateItem extends Model {
     public id!: number;
     public templateId!: number;
     public texte!: string;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -69,10 +76,12 @@ AuditChecklistTemplateItem.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'audit_checklist_template_items',
+        ...softDeleteModelOptions,
     }
 );
 

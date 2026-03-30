@@ -1,6 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 export enum NotificationType {
     RISK_ASSIGNED = 'RISK_ASSIGNED',
@@ -19,6 +20,8 @@ export class Notification extends Model {
     public isRead!: boolean;
     public riskId!: number | null;
     public auditMissionId!: number | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -64,11 +67,13 @@ Notification.init(
                 model: 'audit_missions',
                 key: 'id',
             }
-        }
+        },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'notifications',
+        ...softDeleteModelOptions,
     }
 );
 

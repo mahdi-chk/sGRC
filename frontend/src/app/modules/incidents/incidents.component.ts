@@ -6,6 +6,7 @@ import { Department, DepartmentService } from '../../core/services/department.se
 import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
+import { UserRole } from '../../core/models/user-role.enum';
 
 @Component({
   selector: 'app-incidents',
@@ -60,6 +61,14 @@ export class IncidentsComponent implements OnInit {
         return token ? `?token=${token}` : '';
     }
 
+    get currentUserRole(): UserRole | null {
+        return this.authService.getUserRole();
+    }
+
+    get isReadOnlyRole(): boolean {
+        return this.currentUserRole === UserRole.TOP_MANAGEMENT;
+    }
+
     ngOnInit(): void {
         this.loadIncidents();
         this.loadDepartments();
@@ -86,6 +95,10 @@ export class IncidentsComponent implements OnInit {
     }
 
     openCreateModal() {
+        if (this.isReadOnlyRole) {
+            return;
+        }
+
         this.incidentForm.reset({ statut: IncidentStatus.NOUVEAU });
         this.selectedFile = null;
         this.importMessage = '';
@@ -177,7 +190,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     submitIncident() {
-        if (this.incidentForm.invalid) return;
+        if (this.isReadOnlyRole || this.incidentForm.invalid) return;
 
         this.isSubmitting = true;
         const formData = new FormData();
@@ -207,6 +220,10 @@ export class IncidentsComponent implements OnInit {
     }
 
     openEditModal(incident: Incident) {
+        if (this.isReadOnlyRole) {
+            return;
+        }
+
         this.selectedIncident = incident;
         const formattedDate = typeof incident.dateSurvenance === 'string' 
             ? incident.dateSurvenance.split('T')[0] 
@@ -227,7 +244,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     updateIncident() {
-        if (this.incidentForm.invalid || !this.selectedIncident) return;
+        if (this.isReadOnlyRole || this.incidentForm.invalid || !this.selectedIncident) return;
 
         this.isSubmitting = true;
         const data = this.incidentForm.getRawValue();

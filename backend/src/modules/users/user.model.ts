@@ -1,6 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { Department } from '../departments/department.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 import { UserRole } from './user.roles';
 
@@ -15,6 +16,8 @@ export class User extends Model {
     public password_hash!: string;
     public password_salt!: string;
     public role!: UserRole;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly departement?: Department;
 }
 
@@ -65,11 +68,12 @@ User.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'users',
-        paranoid: true, // Active le Soft Delete (ajoute deletedAt) pour le RGPD
+        ...softDeleteModelOptions,
         indexes: [
             {
                 unique: true,

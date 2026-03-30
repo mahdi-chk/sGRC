@@ -6,7 +6,7 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-tasks"></i> Mon Espace d'Audit</h1>
+                <h1><i class="fas fa-tasks"></i> {{ isSuperAdmin ? "Pilotage des Missions d'Audit" : "Mon Espace d'Audit" }}</h1>
                 <p>Consultez vos missions et gérez vos rapports en toute simplicité.</p>
             </div>
         </div>
@@ -47,7 +47,7 @@
     <!-- Missions Table -->
     <div class="missions-card">
         <div class="table-loading" *ngIf="isLoading">
-            <i class="fas fa-circle-notch fa-spin"></i> Chargement de vos missions...
+            <i class="fas fa-circle-notch fa-spin"></i> {{ isSuperAdmin ? 'Chargement des missions...' : 'Chargement de vos missions...' }}
         </div>
 
         <table class="audit-table" *ngIf="!isLoading">

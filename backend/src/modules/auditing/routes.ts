@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuditMission, AuditMissionStatus } from './audit-mission.model';
 import { AuditingService } from './auditing.service';
 import { Risk } from '../risk/risk.model';
+import { User } from '../users/user.model';
 import { AIService } from '../ai/ai.service';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
@@ -29,6 +30,22 @@ const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     fs.writeFileSync(fullPath, file.buffer);
     return fullPath;
 };
+
+const missionListIncludes = [
+    { model: User, as: 'auditSenior', required: false },
+    { model: User, as: 'auditeur', required: false },
+    { model: Risk, as: 'risk', required: false },
+];
+
+const sortMissionsForDisplay = (missions: AuditMission[]) =>
+    [...missions].sort((first, second) => {
+        const assignmentDelta = Number(Boolean(first.auditeurId)) - Number(Boolean(second.auditeurId));
+        if (assignmentDelta !== 0) {
+            return assignmentDelta;
+        }
+
+        return new Date(first.delai).getTime() - new Date(second.delai).getTime();
+    });
 
 router.use(authenticateToken);
 
@@ -65,19 +82,20 @@ router.get('/missions', async (req: AuthRequest, res) => {
         const { role, id } = req.user!;
         let missions;
 
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.ADMIN_SI || role === UserRole.RISK_MANAGER) {
-            missions = await AuditMission.findAll({ include: ['auditSenior', 'auditeur', 'risk'] });
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
+            missions = await AuditMission.findAll({ include: missionListIncludes as any });
         } else if (role === UserRole.AUDIT_SENIOR) {
             missions = await AuditMission.findAll({
                 where: { auditSeniorId: id },
-                include: ['auditeur', 'risk']
+                include: missionListIncludes as any
             });
         } else if (role === UserRole.AUDITEUR) {
             missions = await AuditMission.findAll({
                 where: { auditeurId: id },
-                include: ['auditSenior', 'risk']
+                include: missionListIncludes as any
             });
         } else if (role === UserRole.RISK_AGENT) {
+            return res.status(403).json({ message: 'Acces non autorise' });
             missions = await AuditMission.findAll({
                 include: [
                     {
@@ -91,7 +109,7 @@ router.get('/missions', async (req: AuthRequest, res) => {
         } else {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
-        res.json(missions);
+        res.json(sortMissionsForDisplay(missions));
     } catch (error: any) {
         res.status(500).json({ message: 'Erreur lors de la récupération des missions', error: error.message });
     }
@@ -127,7 +145,12 @@ router.put('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER
  */
 router.put('/missions/:id/report', authorizeRoles(UserRole.AUDITEUR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
     try {
-        const mission = await AuditingService.submitReport(parseInt(req.params.id as string), req.user!.id, req.body);
+        const mission = await AuditingService.submitReport(
+            parseInt(req.params.id as string),
+            req.user!.id,
+            req.user!.role,
+            req.body
+        );
         res.json(mission);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la soumission du rapport', error: error.message });
@@ -143,6 +166,15 @@ router.delete('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SU
         res.json(result);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la suppression', error: error.message });
+    }
+});
+
+router.patch('/missions/:id/restore', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+    try {
+        const mission = await AuditingService.restoreMission(parseInt(req.params.id as string));
+        res.json(mission);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la restauration', error: error.message });
     }
 });
 
@@ -174,6 +206,15 @@ router.delete('/checklists/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.A
         res.json(result);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la suppression du modèle', error: error.message });
+    }
+});
+
+router.patch('/checklists/:id/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+    try {
+        const template = await AuditingService.restoreChecklistTemplate(parseInt(req.params.id as string));
+        res.json(template);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la restauration du modèle', error: error.message });
     }
 });
 
@@ -276,6 +317,15 @@ router.delete('/missions/:id/evidence/:evidenceId', authorizeRoles(UserRole.SUPE
         res.json(result);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la suppression de la preuve', error: error.message });
+    }
+});
+
+router.patch('/missions/:id/evidence/:evidenceId/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const result = await AuditingService.restoreMissionEvidence(parseInt(req.params.evidenceId as string));
+        res.json(result);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la restauration de la preuve', error: error.message });
     }
 });
 

@@ -36,7 +36,6 @@ const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
 
 // Appliquer l'authentification et l'autorisation par défaut à toutes les routes de ce module
 router.use(authenticateToken);
-router.use(authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT));
 
 const EXCEL_CELL_MAPPING: Record<string, string> = {
     titre: 'B9',
@@ -493,7 +492,7 @@ const resolveDepartementId = async (departementName: string | null): Promise<num
     return partialMatch ? partialMatch.id : null;
 };
 
-router.post('/import-draft', uploadIncidentImport, async (req: AuthRequest, res: Response) => {
+router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Fichier requis pour l import.' });
@@ -556,7 +555,7 @@ router.post('/import-draft', uploadIncidentImport, async (req: AuthRequest, res:
 /**
  * CRÉER UN INCIDENT
  */
-router.post('/', uploadSecurePiece, async (req: AuthRequest, res: Response) => {
+router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
     try {
         const cleanedBody = { ...req.body };
         for (const key in cleanedBody) {
@@ -587,7 +586,7 @@ router.post('/', uploadSecurePiece, async (req: AuthRequest, res: Response) => {
 /**
  * RÉCUPÉRER TOUS LES INCIDENTS
  */
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT), async (req: AuthRequest, res: Response) => {
     try {
         // Optionnellement: restriction par rôle, mais ici on expose tout pour l'historique
         const incidents = await Incident.findAll({
@@ -603,7 +602,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 /**
  * GÉNÉRER DES RISQUES PAR IA À PARTIR D'UN INCIDENT
  */
-router.post('/:id/generate-risks', async (req: AuthRequest, res: Response) => {
+router.post('/:id/generate-risks', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
         const incident = await Incident.findByPk(parseInt(id, 10));
@@ -655,7 +654,7 @@ router.post('/:id/generate-risks', async (req: AuthRequest, res: Response) => {
 /**
  * METTRE À JOUR UN INCIDENT (ÉDITER)
  */
-router.put('/:id', async (req: AuthRequest, res: Response) => {
+router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
         const incident = await Incident.findByPk(parseInt(id, 10));

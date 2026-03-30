@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditMission } from '../../../core/services/auditing.service';
+import { AuditingService, AuditMission, AuditMissionStatus } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
+import { UserRole } from '../../../core/models/user-role.enum';
 
 @Component({
   selector: 'app-auditor-checklist',
@@ -12,6 +13,7 @@ export class AuditorChecklistComponent implements OnInit {
   selectedMission: AuditMission | null = null;
   checklistItems: any[] = [];
   isLoading = false;
+  currentUserRole: UserRole | null = null;
 
   constructor(
     private auditingService: AuditingService,
@@ -31,10 +33,14 @@ export class AuditorChecklistComponent implements OnInit {
     }
     const currentUser = JSON.parse(userStr);
     const userId = Number(currentUser.id);
+    this.currentUserRole = currentUser.role || null;
 
     this.auditingService.getMissions().subscribe({
       next: (data) => {
-        this.missions = data.filter(m => Number(m.auditeurId) === userId && m.statut !== 'Annulé');
+        this.missions = data.filter(m => Number(m.auditeurId) === userId && m.statut !== AuditMissionStatus.ANNULE);
+        if (this.isSuperAdmin) {
+          this.missions = data.filter(m => m.statut !== AuditMissionStatus.ANNULE);
+        }
         this.isLoading = false;
         // Auto-select first mission if available
         if (this.missions.length > 0) {
@@ -81,4 +87,9 @@ export class AuditorChecklistComponent implements OnInit {
   goBack() {
     this.router.navigate(['/dashboard']);
   }
+
+  get isSuperAdmin(): boolean {
+    return this.currentUserRole === UserRole.SUPER_ADMIN;
+  }
 }
+

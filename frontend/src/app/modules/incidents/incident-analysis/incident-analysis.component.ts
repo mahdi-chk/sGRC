@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Incident, IncidentService } from '../../../core/services/incident.service';
 import { Risk, RiskService } from '../../../core/services/risk.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { UserRole } from '../../../core/models/user-role.enum';
 
 @Component({
   selector: 'app-incident-analysis',
@@ -21,8 +23,13 @@ export class IncidentAnalysisComponent implements OnInit {
   constructor(
     private incidentService: IncidentService,
     private riskService: RiskService,
+    private authService: AuthService,
     private router: Router
   ) {}
+
+  get isReadOnlyRole(): boolean {
+    return this.authService.getUserRole() === UserRole.TOP_MANAGEMENT;
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -68,6 +75,10 @@ export class IncidentAnalysisComponent implements OnInit {
   }
 
   onRiskSelectionChange(riskId: number | null): void {
+    if (this.isReadOnlyRole) {
+      return;
+    }
+
     this.selectedRiskId = riskId;
     this.linkToRisk(riskId);
   }
@@ -93,7 +104,7 @@ export class IncidentAnalysisComponent implements OnInit {
   }
 
   saveFullAnalysis(): void {
-    if (!this.selectedIncident) return;
+    if (!this.selectedIncident || this.isReadOnlyRole) return;
 
     this.isLoading = true;
     const payload = {

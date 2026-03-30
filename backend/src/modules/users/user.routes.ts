@@ -6,9 +6,11 @@ import { hashPassword } from '../../utils/security';
 import { authenticateToken, authorizeRoles } from '../../middleware/auth.middleware';
 import { UserRole } from './user.roles';
 import { emailService } from '../../utils/email.service';
+import { restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 
 const router = Router();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const publicUserAttributes: string[] = ['id', 'nom', 'prenom', 'mail', 'telephone', 'poste', 'role', 'departementId'];
 
 const sanitizeString = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
@@ -81,10 +83,34 @@ router.get('/roles', (req, res) => {
     res.json(roles);
 });
 
-router.get('/', async (req, res) => {
+router.get('/assignable/auditors', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+    try {
+        const auditors = await User.findAll({
+            where: { role: UserRole.AUDITEUR },
+            attributes: publicUserAttributes
+        });
+        res.json(auditors);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching auditors', error });
+    }
+});
+
+router.get('/assignable/risk-agents', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER), async (req, res) => {
+    try {
+        const riskAgents = await User.findAll({
+            where: { role: UserRole.RISK_AGENT },
+            attributes: publicUserAttributes
+        });
+        res.json(riskAgents);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching risk agents', error });
+    }
+});
+
+router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const users = await User.findAll({
-            attributes: ['id', 'nom', 'prenom', 'mail', 'telephone', 'poste', 'role', 'departementId']
+            attributes: publicUserAttributes
         });
         res.json(users);
     } catch (error) {
@@ -117,14 +143,13 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async 
         userData.password_salt = salt;
         delete userData.password;
 
-        const deletedUser = await User.findOne({
+        const deletedUser = await User.scope('withDeleted').findOne({
             where: { mail: userData.mail },
-            paranoid: false
         });
 
         let user: User;
-        if (deletedUser && (deletedUser as any).deletedAt) {
-            await deletedUser.restore();
+        if (deletedUser && deletedUser.is_deleted) {
+            await restoreSoftDeletedInstance(deletedUser);
             user = await deletedUser.update(userData);
         } else {
             user = await User.create(userData);
@@ -162,12 +187,11 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), asyn
             return res.status(400).json({ message: 'Le departement selectionne est introuvable.' });
         }
 
-        const existingUser = await User.findOne({
+        const existingUser = await User.scope('withDeleted').findOne({
             where: {
                 mail: userData.mail,
                 id: { [Op.ne]: Number(id) }
-            },
-            paranoid: false
+            }
         });
         if (existingUser) {
             return res.status(409).json({ message: 'Cette adresse email est deja utilisee.' });
@@ -200,15 +224,36 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), asyn
 router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const { id } = req.params;
-        const deleted = await User.destroy({ where: { id } });
-        if (deleted) {
-            return res.json({ message: 'User deleted successfully' });
+        const user = await User.findByPk(id as string);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
 
-        return res.status(404).json({ message: 'User not found' });
+        await softDeleteInstance(user);
+        return res.json({ message: 'User deleted successfully' });
     } catch (error: any) {
         console.error('User Deletion Error:', error.message);
         return res.status(400).json({ message: 'Erreur inattendue lors de la suppression de l\'utilisateur.' });
+    }
+});
+
+router.patch('/:id/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
+    try {
+        const user = await User.scope('withDeleted').findByPk(req.params.id as string);
+        if (!user || !user.is_deleted) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        await restoreSoftDeletedInstance(user);
+
+        const restoredUser = await User.findByPk(req.params.id as string);
+        const userResponse = restoredUser?.toJSON() || {};
+        delete userResponse.password_hash;
+        delete userResponse.password_salt;
+        return res.json(userResponse);
+    } catch (error: any) {
+        console.error('User Restore Error:', error.message);
+        return res.status(400).json({ message: 'Erreur inattendue lors de la restauration de l\'utilisateur.' });
     }
 });
 

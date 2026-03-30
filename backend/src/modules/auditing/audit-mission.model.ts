@@ -7,6 +7,7 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { Risk } from '../risk/risk.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 export enum AuditMissionStatus {
     A_VENIR = 'À venir',
@@ -29,6 +30,8 @@ export class AuditMission extends Model {
     public checklistTemplateId!: number | null;
     public rapport!: string | null;
     public recommandations!: string | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -103,10 +106,12 @@ AuditMission.init(
             type: DataTypes.TEXT,
             allowNull: true,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'audit_missions',
+        ...softDeleteModelOptions,
     }
 );
 

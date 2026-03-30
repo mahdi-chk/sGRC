@@ -6,6 +6,7 @@
 import { DataTypes, Model } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 export enum IncidentStatus {
     NOUVEAU = 'Nouveau',
@@ -32,6 +33,8 @@ export class Incident extends Model {
     public dateEcheance!: Date | null;
     public niveauRisque!: string | null;
     public riskId!: number | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -114,10 +117,12 @@ Incident.init(
                 key: 'id',
             },
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'incidents',
+        ...softDeleteModelOptions,
     }
 );
 

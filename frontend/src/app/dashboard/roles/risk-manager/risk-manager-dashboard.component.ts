@@ -129,7 +129,7 @@ export class RiskManagerDashboardComponent implements OnInit {
 
     loadInitialData() {
         this.http.get<any[]>(`${environment.apiUrl}/departments`).subscribe(data => this.departments = data);
-        this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe(users => {
+        this.http.get<any[]>(`${environment.apiUrl}/users/assignable/risk-agents`).subscribe(users => {
             this.allUsers = users;
             // Initially, filteredAgents will be empty or all Agents depending on dept selection
             this.updateFilteredAgents();

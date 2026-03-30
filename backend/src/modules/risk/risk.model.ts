@@ -10,6 +10,7 @@ import { Organigramme } from '../organigramme/organigramme.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
 import { Incident } from '../incidents/incident.model';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 
 /**
  * Niveaux de sévérité d'un risque / Cotation générique
@@ -125,6 +126,8 @@ export class Risk extends Model {
     public aiAnalysisSuggestion!: string | null;
     public aiAnalysisDate!: Date | null;
     public incidentId!: number | null; // Traçabilité: incident d'origine
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -323,10 +326,12 @@ Risk.init(
                 key: 'id',
             },
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'risks',
+        ...softDeleteModelOptions,
         hooks: {
             beforeValidate: (risk: Risk) => {
                 // Normalisation de la fréquence (ex: "trimestriel" -> "Trimestriel")

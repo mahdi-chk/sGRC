@@ -66,14 +66,13 @@ export class DashboardComponent {
         UserRole.RISK_MANAGER,
         UserRole.RISK_AGENT,
         UserRole.AUDIT_SENIOR,
-        UserRole.AUDITEUR,
         UserRole.TOP_MANAGEMENT
       ]
     },
     {
       label: 'Incident',
       route: '/dashboard/incidents',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
     },
     { label: 'Contrôle' },
     { label: 'Action' }

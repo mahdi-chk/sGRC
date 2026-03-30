@@ -123,7 +123,11 @@ export class RiskManagementComponent implements OnInit {
     loadInitialData() {
         this.http.get<any[]>(`${environment.apiUrl}/departments`).subscribe(data => this.departments = data);
         this.organigrammeService.getAll().subscribe(data => this.organigrammeItems = data);
-        this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe(users => {
+        if (!this.isRiskManager) {
+            return;
+        }
+
+        this.http.get<any[]>(`${environment.apiUrl}/users/assignable/risk-agents`).subscribe(users => {
             this.allUsers = users;
             this.riskAgents = users.filter(u => u.role === UserRole.RISK_AGENT);
             this.updateFilteredAgents();

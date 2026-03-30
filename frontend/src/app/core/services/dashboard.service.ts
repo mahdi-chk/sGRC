@@ -52,7 +52,7 @@ export class DashboardService {
                 { title: 'Plans de Traitement' },
                 { title: 'Alertes et Monitoring' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
+            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
         },
         {
             key: 'controls',
@@ -91,7 +91,7 @@ export class DashboardService {
                 { title: 'Traçabilité des Preuves' },
                 { title: 'Rapports et Suivi' }
             ],
-            roles: [UserRole.AUDIT_SENIOR]
+            roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
         },
         {
             key: 'audit-auditeur',
@@ -103,7 +103,7 @@ export class DashboardService {
                 { title: 'Mes Preuves' },
                 { title: 'Soumettre Rapport' }
             ],
-            roles: [UserRole.AUDITEUR]
+            roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
         },
         {
             key: 'incidents',
@@ -115,7 +115,7 @@ export class DashboardService {
                 { title: 'Liens et Analyse' },
                 { title: 'Reporting Consolidé' }
             ],
-            roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT]
+            roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
         },
         {
             key: 'plans-actions',
@@ -171,9 +171,29 @@ export class DashboardService {
 
         if (roleStr === UserRole.SUPER_ADMIN) return this.modules;
 
-        return this.modules.filter(m =>
+        const filteredModules = this.modules.filter(m =>
             m.roles && m.roles.some(r => r.toString() === roleStr)
-        );
+        ).map(module => ({
+            ...module,
+            submodules: [...module.submodules]
+        }));
+
+        if (roleStr === UserRole.TOP_MANAGEMENT) {
+            return filteredModules.map(module => {
+                if (module.key !== 'incidents') {
+                    return module;
+                }
+
+                return {
+                    ...module,
+                    submodules: module.submodules.filter(submodule =>
+                        submodule.title === 'Liens et Analyse' || submodule.title === 'Reporting ConsolidÃ©'
+                    )
+                };
+            });
+        }
+
+        return filteredModules;
     }
 
     openSubmoduleModal(m: any, s: any) {

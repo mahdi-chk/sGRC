@@ -13,6 +13,7 @@ export class AuditorMissionsComponent implements OnInit {
     missions: AuditMission[] = [];
     filteredMissions: AuditMission[] = [];
     isLoading = false;
+    currentUserRole: UserRole | null = null;
 
     // Stats
     totalAssigned = 0;
@@ -53,11 +54,13 @@ export class AuditorMissionsComponent implements OnInit {
         }
         const currentUser = JSON.parse(userStr);
         const userId = Number(currentUser.id);
+        this.currentUserRole = currentUser.role || null;
 
         this.auditingService.getMissions().subscribe({
             next: (data) => {
-                // The backend usually filters, but frontend filtering provides an extra layer of safety
-                this.missions = data.filter(m => Number(m.auditeurId) === userId);
+                this.missions = this.isSuperAdmin
+                    ? data
+                    : data.filter(m => Number(m.auditeurId) === userId);
                 this.calculateStats();
                 this.isLoading = false;
             },
@@ -211,5 +214,9 @@ export class AuditorMissionsComponent implements OnInit {
 
     goBack() {
         this.router.navigate(['/dashboard']);
+    }
+
+    get isSuperAdmin(): boolean {
+        return this.currentUserRole === UserRole.SUPER_ADMIN;
     }
 }

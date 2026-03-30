@@ -10,7 +10,7 @@
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn-primary" (click)="openCreateModal()">
+            <button class="btn-primary" *ngIf="!isReadOnlyRole" (click)="openCreateModal()">
                 <i class="fas fa-plus"></i> Declarer un Incident
             </button>
         </div>
@@ -50,7 +50,7 @@
                             <button class="action-btn btn-view" (click)="openDetailsModal(incident)" title="Voir details">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="action-btn btn-edit" (click)="openEditModal(incident)" title="Editer l'incident">
+                            <button class="action-btn btn-edit" *ngIf="!isReadOnlyRole" (click)="openEditModal(incident)" title="Editer l'incident">
                                 <i class="fas fa-edit"></i>
                             </button>
                         </td>

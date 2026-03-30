@@ -7,7 +7,9 @@
     "start": "ts-node src/index.ts",
     "dev": "nodemon --legacy-watch --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo"
   },
   "dependencies": {
     "@types/multer": "^2.1.0",
@@ -44,6 +46,7 @@
     "jest": "^26.6.3",
     "nodemon": "^3.1.13",
     "prettier": "^2.2.1",
+    "sequelize-cli": "^6.6.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
   },

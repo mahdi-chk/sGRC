@@ -1,16 +1,19 @@
-import axios, { AxiosInstance } from 'axios';
+﻿import axios, { AxiosInstance } from 'axios';
 import { execFile } from 'child_process';
 import fs from 'fs';
 import http from 'http';
 import os from 'os';
 import path from 'path';
+import { Op } from 'sequelize';
 import { RAGEngine } from './rag.engine';
 import { AIDataService } from './ai.data.service';
+import { AIPromptBuilder } from './ai-prompt-builder';
 import { UserRole } from '../users/user.roles';
 import { Response } from 'express';
 import * as mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
 import { Incident } from '../incidents/incident.model';
+import { appLogger } from '../../utils/app-logger';
 
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || 'http://localhost:11434/api/chat';
 const MODEL_NAME = process.env.OLLAMA_MODEL || 'llama3';
@@ -38,22 +41,21 @@ interface UserSession {
     lastAccess: number;
 }
 
-const PLATFORM_CONTEXT = `
-CONTEXTE DE LA PLATEFORME sGRC :
-La plateforme sGRC est organisée en plusieurs modules clés :
-1. GOUVERNANCE : Gestion documentaire (ISO), workflows d'approbation et indicateurs de maturité (COBIT/ISO).
-2. GESTION DES RISQUES : Registre des risques, évaluation paramétrable, cartographie dynamique et plans de traitement (ISO 27005).
-3. CONTRÔLES INTERNES : Référentiel des contrôles, planification automatisée, collecte de preuves et suivi des non-conformités.
-4. CONFORMITÉ : Mapping des exigences réglementaires (ISO 27001, 27002), auto-évaluations et suivi des écarts.
-5. AUDIT : Planification pluriannuelle, gestion des missions, check-lists et rapports (ISO 19011).
-6. INCIDENTS : Enregistrement structuré, workflow de traitement et reporting consolidé.
-7. PLANS D'ACTIONS : Gestion centralisée des actions correctives et préventives.
-8. REPORTING & DASHBOARDS : KPI personnalisables et vision multi-entités.
-`;
-
 export class AIService {
     private static sessions = new Map<string, UserSession>();
     private static TTL = 30 * 60 * 1000; // 30 minutes
+
+    private static maskSessionId(sessionId: string): string {
+        if (!sessionId) {
+            return 'n/a';
+        }
+
+        if (sessionId.length <= 8) {
+            return sessionId;
+        }
+
+        return `${sessionId.slice(0, 4)}...${sessionId.slice(-4)}`;
+    }
 
     static {
         // Cleanup old sessions every 10 minutes
@@ -67,52 +69,143 @@ export class AIService {
         }, 10 * 60 * 1000);
     }
 
+    private static getAssistantProfileContextName(role: UserRole): string {
+        if (role === UserRole.RISK_MANAGER || role === UserRole.RISK_AGENT) {
+            return 'assistant_role_risk';
+        }
+
+        if (role === UserRole.AUDIT_SENIOR || role === UserRole.AUDITEUR) {
+            return 'assistant_role_audit';
+        }
+
+        if (role === UserRole.TOP_MANAGEMENT) {
+            return 'assistant_role_management';
+        }
+
+        if (role === UserRole.SUPER_ADMIN) {
+            return 'assistant_role_super_admin';
+        }
+
+        return 'assistant_role_admin_si';
+    }
+
+    private static async buildAssistantSessionPrompt(role: UserRole): Promise<string> {
+        const metadata = await AIDataService.fetchSystemMetadata();
+        const assistantRolePrompt = await AIPromptBuilder.buildPrompt({
+            name: this.getAssistantProfileContextName(role),
+        });
+
+        return AIPromptBuilder.buildPrompt({
+            name: 'assistant_chat',
+            businessPayload: {
+                metadata,
+                assistantRolePrompt,
+            },
+        });
+    }
+
+    private static formatStandardsContext(contextChunks: string[]): string {
+        if (!contextChunks.length) {
+            return '';
+        }
+
+        return `CONTEXTE ISSU DES NORMES INDEXEES :\n${contextChunks.join('\n\n')}`;
+    }
+
+    private static buildIncidentHistoryContext(incidents: Incident[]): string {
+        if (!incidents.length) {
+            return '';
+        }
+
+        return incidents
+            .map((incident) => [
+                `[Incident - ${incident.dateSurvenance.toLocaleDateString()}]`,
+                `Titre: ${incident.titre}`,
+                `Description: ${incident.description}`,
+            ].join('\n'))
+            .join('\n\n');
+    }
+
+    private static buildCurrentIncidentContext(incident: Incident, pieceJointeTexte: string): string {
+        const sections = [
+            `Titre: ${incident.titre}`,
+            `Description: ${incident.description}`,
+        ];
+
+        if (pieceJointeTexte) {
+            sections.push(`Extraits de la piece jointe: ${this.limitText(pieceJointeTexte, 2000)}`);
+        }
+
+        return sections.join('\n');
+    }
+
+    private static async buildRiskAnalysisPrompt(options: {
+        userInput: string;
+        metadata: string;
+        standardsContext?: string;
+        historicalIncidents?: string;
+        currentIncident?: string;
+    }): Promise<string> {
+        return AIPromptBuilder.buildPrompt({
+            name: 'risk_analysis',
+            businessPayload: {
+                metadata: options.metadata,
+                standardsContext: options.standardsContext,
+                historicalIncidents: options.historicalIncidents,
+                currentIncident: options.currentIncident,
+            },
+            userInput: options.userInput,
+        });
+    }
+
+    private static async buildIncidentAnalysisPrompt(text: string, metadata: string): Promise<string> {
+        return AIPromptBuilder.buildPrompt({
+            name: 'incident_analysis',
+            businessPayload: { metadata },
+            userInput: text,
+        });
+    }
+
+    private static async buildRiskEvaluationPrompt(risksText: string, standardsContext: string): Promise<string> {
+        return AIPromptBuilder.buildPrompt({
+            name: 'risk_evaluation',
+            businessPayload: {
+                standardsContext,
+            },
+            userInput: risksText,
+        });
+    }
+
+    private static async buildAuditPlanPrompt(riskMapping: string, standardsContext: string): Promise<string> {
+        return AIPromptBuilder.buildPrompt({
+            name: 'audit_plan_generation',
+            businessPayload: {
+                standardsContext,
+            },
+            userInput: riskMapping,
+        });
+    }
+
     private static async getSession(userId: number, sessionId: string, role: UserRole): Promise<UserSession> {
+        return this.getOrCreateDynamicSession(userId, sessionId, role);
+    }
+
+    private static async getOrCreateDynamicSession(userId: number, sessionId: string, role: UserRole): Promise<UserSession> {
         const sessionKey = `${userId}-${sessionId}`;
         if (!this.sessions.has(sessionKey)) {
-            let roleContext = '';
-            const metadata = await AIDataService.fetchSystemMetadata();
-
-            if (role === UserRole.RISK_MANAGER || role === UserRole.RISK_AGENT) {
-                roleContext = `
-TU AGIS POUR : Profil 'GESTION DES RISQUES'.
-MODULES AUTORISÉS : Registre des Risques, Évaluation, Cartographie, Traitement et Contrôles Internes.
-RECOURS AUX NORMES : Principalement ISO 27005 (Gestion des Risques).
-RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur l'Audit Interne, les Missions d'Audit ou les spécificités de l'ISO 27001/27002 qui relèvent de l'Audit. Refuse poliment ces questions en expliquant qu'elles sortent de ton périmètre opérationnel.
-`;
-            } else if (role === UserRole.AUDIT_SENIOR || role === UserRole.AUDITEUR) {
-                roleContext = `
-TU AGIS POUR : Profil 'AUDIT & CONFORMITÉ'.
-MODULES AUTORISÉS : Audit, Conformité, Incidents, Plans d'Actions.
-RECOURS AUX NORMES : ISO 27001 (SMSI), ISO 27002 (Mesures de sécurité), COBIT.
-RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion opérationnelle quotidienne des risques (ISO 27005) ou la maintenance de la cartographie des risques qui relèvent de la Gestion des Risques. Refuse poliment ces questions.
-`;
-            } else if (role === UserRole.TOP_MANAGEMENT) {
-                roleContext = "TU AGIS POUR : Profil 'DIRECTION'. Tu as une vue d'ensemble sur la Gouvernance, le Reporting et la Supervision sGRC.";
-            } else if (role === UserRole.SUPER_ADMIN) {
-                roleContext = "TU AGIS POUR : Profil 'SUPER ADMINISTRATEUR'. Tu es le maître absolu du système sGRC avec un accès illimité à tous les modules, données, et configurations du système.";
-            } else {
-                roleContext = "TU AGIS POUR : Profil 'ADMINISTRATEUR SI'. Tu as accès à la gestion des utilisateurs et à la configuration technique du système.";
-            }
+            const sessionPrompt = await this.buildAssistantSessionPrompt(role);
 
             this.sessions.set(sessionKey, {
                 messages: [
                     {
                         role: 'system',
-                        content: `Tu es l'Assistant Expert de la plateforme sGRC. Réponds en français. 
-                        
-                        ${PLATFORM_CONTEXT}
-                        
-                        ${metadata}
-                        
-                        ${roleContext}
-                        
-                        CONSIGNE GÉNÉRALE : Si l'utilisateur pose une question hors de ses modules autorisés, explique-lui son périmètre et redirige-le vers les bonnes pratiques de son propre rôle.`
+                        content: sessionPrompt
                     }
                 ],
                 lastAccess: Date.now()
             });
         }
+
         const session = this.sessions.get(sessionKey)!;
         session.lastAccess = Date.now();
         return session;
@@ -121,7 +214,13 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
     static async generateResponse(prompt: string, role: UserRole, sessionId: string, userId: number, res?: Response): Promise<string | void> {
         activeRequests++;
         const requestId = Math.floor(Math.random() * 10000);
-        console.log(`[AI] Request #${requestId} START (active: ${activeRequests}) sessionId=${sessionId} userId=${userId}`);
+        appLogger.info('AI', 'Request started', {
+            requestId,
+            activeRequests,
+            sessionId: this.maskSessionId(sessionId),
+            userId,
+            stream: !!res,
+        });
 
         try {
             const session = await this.getSession(userId, sessionId, role);
@@ -145,7 +244,10 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 
             const isStreaming = !!res;
 
-            console.log(`[AI] Request #${requestId} sending to Ollama (stream=${isStreaming})...`);
+            appLogger.debug('AI', 'Sending request to Ollama', {
+                requestId,
+                stream: isStreaming,
+            });
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
@@ -168,7 +270,7 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 res!.setHeader('X-Accel-Buffering', 'no');
                 res!.flushHeaders();
 
-                console.log(`[AI] Request #${requestId} Ollama responded, streaming data...`);
+                appLogger.debug('AI', 'Streaming response opened', { requestId });
 
                 let fullContent = '';
                 response.data.on('data', (chunk: Buffer) => {
@@ -187,7 +289,10 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                                 res!.write('data: [DONE]\n\n');
                                 res!.end();
                                 activeRequests--;
-                                console.log(`[AI] Request #${requestId} DONE (active: ${activeRequests})`);
+                                appLogger.info('AI', 'Streaming request completed', {
+                                    requestId,
+                                    activeRequests,
+                                });
                             }
                         } catch (e) {
                             // Incomplete JSON chunk
@@ -197,7 +302,11 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 
                 response.data.on('error', (err: Error) => {
                     activeRequests--;
-                    console.error(`[AI] Request #${requestId} STREAM ERROR:`, err.message);
+                    appLogger.error('AI', 'Streaming request failed', {
+                        requestId,
+                        activeRequests,
+                        error: err.message,
+                    });
                     if (!res!.writableEnded) res!.end();
                 });
 
@@ -210,55 +319,74 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 const aiMsg = response.data.message.content;
                 session.messages.push({ role: 'assistant', content: aiMsg });
                 activeRequests--;
-                console.log(`[AI] Request #${requestId} DONE (active: ${activeRequests})`);
+                appLogger.info('AI', 'Request completed', {
+                    requestId,
+                    activeRequests,
+                    responseLength: aiMsg.length,
+                });
                 return aiMsg;
             }
         } catch (error: any) {
             activeRequests--;
-            console.error(`[AI] Request #${requestId} ERROR:`, error.message || error);
+            appLogger.error('AI', 'Request failed', {
+                requestId,
+                activeRequests,
+                error: error.message || error,
+            });
             throw new Error(error.message || 'Could not get response from AI');
         }
     }
 
     static async generateRisksFromSituation(situation: string, role: UserRole): Promise<any[]> {
+        return this.generateRisksFromSituationDynamic(situation, role);
+    }
+
+    static async generateIncidentDraftFromText(text: string, _role: UserRole): Promise<any> {
+        return this.generateIncidentDraftFromTextDynamic(text);
+    }
+
+    /**
+     * GÃ‰NÃ‰RATION DE RISQUES INTELLIGENTE DEPUIS UN INCIDENT (AVEC HISTORIQUE)
+     */
+    static async generateRisksFromIncident(incident: Incident, pieceJointeTexte: string, role: UserRole): Promise<any[]> {
+        return this.generateRisksFromIncidentDynamic(incident, pieceJointeTexte, role);
+    }
+
+    /**
+     * Ã‰VALUATION DES RISQUES PAR IA
+     * Analyse la prioritÃ©, l'impact et les tendances pour une liste de risques.
+     */
+    static async generateRisksFromSituationDynamic(situation: string, role: UserRole): Promise<any[]> {
         try {
             const isIndexed = await RAGEngine.checkIndexStatus();
-            let contextText = '';
+            let standardsContext = '';
 
             if (isIndexed) {
                 const contextChunks = await RAGEngine.searchContext(situation, role, 5);
-                console.log(`[AI-RAG] Found ${contextChunks.length} fragments for role ${role}`);
+                appLogger.debug('AI-RAG', 'Context fragments loaded', {
+                    role,
+                    count: contextChunks.length,
+                });
                 if (contextChunks.length > 0) {
-                    contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES :\n${contextChunks.join('\n\n')}\n\n`;
+                    standardsContext = this.formatStandardsContext(contextChunks);
                 }
             }
 
-            console.log(`[AI] Generating risks for situation: "${situation.substring(0, 50)}..." (Role: ${role})`);
+            appLogger.info('AI', 'Generating risks from situation', {
+                role,
+                preview: this.limitText(this.cleanText(situation), 80),
+            });
             const metadata = await AIDataService.fetchSystemMetadata();
-
-            const systemPrompt = `Tu es un expert en gestion des risques GRC. 
-            À partir de la situation fournie par l'utilisateur${contextText ? ' et du contexte des normes ci-après' : ''}, génère une liste de 3 à 5 risques potentiels.${contextText ? contextText : ''}
-            
-            IMPORTANT : Tout le contenu doit être en FRANÇAIS.
-            
-            ${metadata}
-            
-            CONSIGNE : Pour chaque risque, choisis OBLIGATOIREMENT un département parmi ceux listés ci-dessus.
-            Génère les champs suivants selon la nomenclature stricte :
-            - probabilite: Choisir parmi ["Rare", "Possible", "Probable", "Permanent"]
-            - impact: Choisir parmi ["Limité", "Moyen", "Significatif", "Critique"]
-            - niveauMaitrise: Choisir parmi ["Faible", "Limité", "Moyen", "Elevé"]
-            - frequenceTraitement: Choisir parmi ["Quotidien", "Hebdomadaire", "Bimensuel", "Mensuel", "Trimestriel", "Semestriel", "Annuel", "Aucun"]
-            - planActionTraitement: Donne les étapes nécessaires pour traiter et atténuer ce risque.
-
-            Pour chaque risque, fournis EXACTEMENT ces champs : titre, explication, domaine, macroProcessus, processus, probabilite, impact, niveauMaitrise, dmrExistant, planActionTraitement, departement, responsableSuggestion, delaiSuggestion (nombre), frequenceTraitement.
-            Réponds UNIQUEMENT avec un tableau JSON valide.`;
+            const finalPrompt = await this.buildRiskAnalysisPrompt({
+                userInput: situation,
+                metadata,
+                standardsContext,
+            });
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: situation }
+                    { role: 'user', content: finalPrompt }
                 ],
                 stream: false,
                 format: 'json',
@@ -270,7 +398,9 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             });
 
             const content = response.data.message.content;
-            console.log(`[AI] Received response length: ${content.length} chars`);
+            appLogger.debug('AI', 'Risk generation raw response received', {
+                responseLength: content.length,
+            });
             const jsonMatch = content.match(/\[[\s\S]*\]/);
             let risks: any[] = [];
 
@@ -281,17 +411,17 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 risks = Array.isArray(parsed) ? parsed : [parsed];
             }
 
-            return risks.map(r => ({
-                ...r,
-                delaiSuggestion: r.delaiSuggestion ? parseInt(r.delaiSuggestion.toString()) : 30
+            return risks.map(risk => ({
+                ...risk,
+                delaiSuggestion: risk.delaiSuggestion ? parseInt(risk.delaiSuggestion.toString(), 10) : 30
             }));
         } catch (error: any) {
-            console.error('AI Risk Generation Error:', error.message || error);
+            appLogger.error('AI', 'Risk generation failed', error.message || error);
             return [];
         }
     }
 
-    static async generateIncidentDraftFromText(text: string, _role: UserRole): Promise<any> {
+    static async generateIncidentDraftFromTextDynamic(text: string): Promise<any> {
         const normalizedText = this.limitText(this.cleanText(text), 4000);
         if (!normalizedText || normalizedText.length < 10) {
             return {};
@@ -299,31 +429,12 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
 
         try {
             const metadata = await AIDataService.fetchSystemMetadata();
-            const systemPrompt = `Tu es un assistant GRC specialise dans la qualification d'incidents.
-            A partir du texte fourni, extrais un brouillon d'incident exploitable pour un formulaire sGRC.
-
-            IMPORTANT :
-            - Tout le contenu doit etre en FRANCAIS.
-            - Reponds UNIQUEMENT avec un objet JSON valide.
-            - Si une information est absente, renvoie null.
-            - Si le texte semble provenir d'un OCR bruite, d'un scan ou d'une fiche manuscrite, laisse le champ a null au lieu de deviner.
-            - N'invente pas de departement hors de la liste fournie.
-            - Le champ "titre" doit etre court et explicite.
-            - Le champ "description" doit etre une synthese fidele des faits.
-            - Ignore les intitulés de formulaire, placeholders et valeurs comme "A definir", "N/A", "non renseigne".
-            - Le champ "domaine" doit etre choisi parmi ["Informatique", "Ressources Humaines", "Opérations", "Logistique", "Juridique", "Sécurité"] quand possible.
-            - Le champ "dateSurvenance" doit etre au format YYYY-MM-DD.
-
-            ${metadata}
-
-            Retourne EXACTEMENT ces champs :
-            titre, description, domaine, departement, dateSurvenance, macroProcessus, processus, planActionTraitement, niveauRisque.`;
+            const finalPrompt = await this.buildIncidentAnalysisPrompt(normalizedText, metadata);
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: normalizedText }
+                    { role: 'user', content: finalPrompt }
                 ],
                 stream: false,
                 format: 'json',
@@ -339,73 +450,36 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (error: any) {
-            console.error('AI Incident Draft Generation Error:', error.message || error);
+            appLogger.error('AI', 'Incident draft generation failed', error.message || error);
             return this.buildIncidentDraftFallback(normalizedText);
         }
     }
 
-    /**
-     * GÉNÉRATION DE RISQUES INTELLIGENTE DEPUIS UN INCIDENT (AVEC HISTORIQUE)
-     */
-    static async generateRisksFromIncident(incident: Incident, pieceJointeTexte: string, role: UserRole): Promise<any[]> {
+    static async generateRisksFromIncidentDynamic(incident: Incident, pieceJointeTexte: string, role: UserRole): Promise<any[]> {
         try {
-            console.log(`[AI] Generating risks for incident #${incident.id} (Role: ${role})`);
-            
-            // 1. Récupération des 5 incidents les plus récents (hors celui en cours)
+            appLogger.info('AI', 'Generating risks from incident', {
+                incidentId: incident.id,
+                role,
+            });
+
             const recentIncidents = await Incident.findAll({
-                where: incident.id ? { id: { [require('sequelize').Op.ne]: incident.id } } : undefined,
+                where: incident.id ? { id: { [Op.ne]: incident.id } } : undefined,
                 order: [['dateSurvenance', 'DESC']],
                 limit: 5
             });
 
-            // Structuration du contexte historique
-            let historiqueContext = '';
-            if (recentIncidents.length > 0) {
-                historiqueContext = `\n--- CONTEXTE HISTORIQUE DES INCIDENTS (5 derniers incidents pour identifier des schémas récurrents) ---\n`;
-                recentIncidents.forEach((inc, index) => {
-                    historiqueContext += `[Incident - ${inc.dateSurvenance.toLocaleDateString()}] Titre: ${inc.titre}\nDescription: ${inc.description}\n\n`;
-                });
-            }
-
-            // Récupérations des métadonnées (Départements, etc.)
             const metadata = await AIDataService.fetchSystemMetadata();
-
-            // Structuration de l'incident actuel
-            let incidentActuelContext = `\n--- INCIDENT ACTUEL ---\nTitre: ${incident.titre}\nDescription: ${incident.description}\n`;
-            if (pieceJointeTexte) {
-                incidentActuelContext += `Extraits de la pièce jointe: ${this.limitText(pieceJointeTexte, 2000)}\n`;
-            }
-
-            const systemPrompt = `Tu es un expert en gestion des risques GRC. 
-            À partir des informations de l'incident actuel et du contexte historique des incidents passés, génère une liste de 3 à 5 risques potentiels pertinents.
-            
-            IMPORTANT : Tout le contenu doit être en FRANÇAIS.
-            
-            RÈGLES STRICTES :
-            - Identifie les risques potentiels directement liés ou induits par l'incident actuel.
-            - Base-toi sur les incidents similaires du contexte historique pour affiner tes propositions.
-            - Évite les duplications avec l'historique (ne propose pas exactement les mêmes risques si le contexte est différent).
-            
-            ${metadata}
-            
-            CONSIGNE : Pour chaque risque, choisis OBLIGATOIREMENT un département parmi ceux listés ci-dessus.
-            Génère les champs suivants selon la nomenclature stricte :
-            - probabilite: Choisir parmi ["Rare", "Possible", "Probable", "Permanent"]
-            - impact: Choisir parmi ["Limité", "Moyen", "Significatif", "Critique"]
-            - niveauMaitrise: Choisir parmi ["Faible", "Limité", "Moyen", "Elevé"]
-            - frequenceTraitement: Choisir parmi ["Quotidien", "Hebdomadaire", "Bimensuel", "Mensuel", "Trimestriel", "Semestriel", "Annuel", "Aucun"]
-            - planActionTraitement: Donne les étapes nécessaires pour traiter et atténuer ce risque.
-
-            Pour chaque risque, fournis EXACTEMENT ces champs : titre, explication, domaine, macroProcessus, processus, probabilite, impact, niveauMaitrise, dmrExistant, planActionTraitement, departement, responsableSuggestion, delaiSuggestion (nombre), frequenceTraitement.
-            Réponds UNIQUEMENT avec un tableau JSON valide.`;
-
-            const fullPrompt = `${historiqueContext}${incidentActuelContext}`;
+            const finalPrompt = await this.buildRiskAnalysisPrompt({
+                userInput: 'Genere des risques potentiels pertinents a partir de l incident actuel et de l historique fourni.',
+                metadata,
+                historicalIncidents: this.buildIncidentHistoryContext(recentIncidents),
+                currentIncident: this.buildCurrentIncidentContext(incident, pieceJointeTexte),
+            });
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: fullPrompt }
+                    { role: 'user', content: finalPrompt }
                 ],
                 stream: false,
                 format: 'json',
@@ -417,7 +491,10 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             });
 
             const content = response.data.message.content;
-            console.log(`[AI] Received response length: ${content.length} chars`);
+            appLogger.debug('AI', 'Incident risk raw response received', {
+                incidentId: incident.id,
+                responseLength: content.length,
+            });
             const jsonMatch = content.match(/\[[\s\S]*\]/);
             let risks: any[] = [];
 
@@ -428,60 +505,41 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 risks = Array.isArray(parsed) ? parsed : [parsed];
             }
 
-            return risks.map(r => ({
-                ...r,
-                delaiSuggestion: r.delaiSuggestion ? parseInt(r.delaiSuggestion.toString()) : 30
+            return risks.map(risk => ({
+                ...risk,
+                delaiSuggestion: risk.delaiSuggestion ? parseInt(risk.delaiSuggestion.toString(), 10) : 30
             }));
         } catch (error: any) {
-            console.error('AI Risk Generation Error from Incident:', error.message || error);
+            appLogger.error('AI', 'Incident risk generation failed', {
+                incidentId: incident.id,
+                error: error.message || error,
+            });
             return [];
         }
     }
 
-    /**
-     * ÉVALUATION DES RISQUES PAR IA
-     * Analyse la priorité, l'impact et les tendances pour une liste de risques.
-     */
     static async evaluateRisks(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
         if (!risks || risks.length === 0) return [];
 
         try {
             const risksText = risks.map(r => `- [${r.id}] ${r.titre} (Niveau: ${r.niveauRisque}, Domaine: ${r.domaine})`).join('\n');
             const isIndexed = await RAGEngine.checkIndexStatus();
-            let contextText = '';
+            let standardsContext = '';
 
             if (isIndexed) {
                 const query = risks.map(r => r.titre).join(' ');
                 const contextChunks = await RAGEngine.searchContext(query, role, 5);
                 if (contextChunks.length > 0) {
-                    contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES :\n${contextChunks.join('\n\n')}\n\n`;
+                    standardsContext = this.formatStandardsContext(contextChunks);
                 }
             }
 
-            const systemPrompt = `Tu es un Auditeur Senior expert GRC. Analyse la liste de risques suivante et fournis une évaluation stratégique détaillée.${contextText ? ' Utilise les normes fournies en contexte pour affiner ton évaluation.' : ''}
-            
-            IMPORTANT : Tout le contenu doit être en FRANÇAIS.
-            
-            ${contextText || ''}
-            Considère ces échelles strictes :
-            - Impact : 1 (Limité), 4 (Moyen), 16 (Significatif), 64 (Critique)
-            - Probabilité : 1 (Rare), 2 (Possible), 4 (Probable), 8 (Permanent)
-            - DMR (Maîtrise) : 4 (Faible), 3 (Limité), 2 (Moyen), 1 (Elevé)
-
-            Pour chaque risque, évalue : 
-            1. priorite (score de 1 à 10 global pour l'audit)
-            2. impact (le type textuel de l'impact, ex: "Critique")
-            3. probabilite (ex: "Possible")
-            4. tendance (ex: "En hausse", "Stable")
-            5. suggestion (Suggestion d'action ou de contrôle d'audit)
-            
-            Réponds UNIQUEMENT avec un tableau JSON. Exemple : [ { "riskId": 1, "priorite": 8, "impact": "Critique", "probabilite": "Possible", "tendance": "Stable", "suggestion": "..." } ]`;
+            const evaluationPrompt = await this.buildRiskEvaluationPrompt(risksText, standardsContext);
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: `Liste des risques à évaluer :\n${risksText}` }
+                    { role: 'user', content: evaluationPrompt }
                 ],
                 stream: false,
                 format: 'json',
@@ -504,52 +562,44 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 evaluation = Array.isArray(parsed) ? parsed : [parsed];
             }
 
-            // Normalisation des données pour Sequelize (Conversion string -> number pour priorite)
+            // Normalisation des donnÃ©es pour Sequelize (Conversion string -> number pour priorite)
             return evaluation.map(item => ({
                 ...item,
                 priorite: item.priorite ? parseInt(item.priorite.toString()) : 0
             }));
         } catch (error: any) {
-            console.error('AI Risk Evaluation Error:', error.message || error);
+            appLogger.error('AI', 'Risk evaluation failed', error.message || error);
             // Retourne une liste vide au lieu de crasher le process parent
             return [];
         }
     }
 
     /**
-     * GÉNÉRATION DU PLAN D'AUDIT ANNUEL PAR IA
-     * Suggère des missions d'audit basées sur les risques identifiés.
+     * GÃ‰NÃ‰RATION DU PLAN D'AUDIT ANNUEL PAR IA
+     * SuggÃ¨re des missions d'audit basÃ©es sur les risques identifiÃ©s.
      */
     static async generateAuditPlan(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
         if (!risks || risks.length === 0) return [];
 
         try {
-            const risksText = risks.map(r => `- ${r.titre} (Niveau: ${r.niveauRisque}, Domaine: ${r.domaine})`).join('\n');
             const isIndexed = await RAGEngine.checkIndexStatus();
-            let contextText = '';
+            let standardsContext = '';
 
             if (isIndexed) {
-                const query = `Procédures d'audit pour : ${risks.map(r => r.domaine).join(', ')}`;
+                const query = `ProcÃ©dures d'audit pour : ${risks.map(r => r.domaine).join(', ')}`;
                 const contextChunks = await RAGEngine.searchContext(query, role, 5);
                 if (contextChunks.length > 0) {
-                    contextText = `\nCONTEXTE ISSU DES NORMES INDEXÉES :\n${contextChunks.join('\n\n')}\n\n`;
+                    standardsContext = this.formatStandardsContext(contextChunks);
                 }
             }
 
-            const systemPrompt = `Tu es un Auditeur Senior expert GRC. À partir des risques et des normes, génère un plan d'audit annuel.${contextText ? ' Appuie-toi sur le contexte des normes fourni.' : ''}
-            
-            IMPORTANT : Tout le contenu doit être en FRANÇAIS.
-            
-            ${contextText || ''}
-            Réponds UNIQUEMENT avec un tableau JSON. Exemple : [ { "titre": "...", "objectifs": "...", "responsabilites": "...", "delaiSuggestion": 45, "riskId": 1 } ]`;
-
             const riskMapping = risks.map(r => `${r.id}: ${r.titre}`).join('\n');
+            const auditPlanPrompt = await this.buildAuditPlanPrompt(riskMapping, standardsContext);
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: `Génère des missions d'audit pour ces risques :\n${riskMapping}` }
+                    { role: 'user', content: auditPlanPrompt }
                 ],
                 stream: false,
                 format: 'json',
@@ -577,27 +627,27 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 riskId: item.riskId ? parseInt(item.riskId.toString()) : 0
             }));
         } catch (error: any) {
-            console.error('AI Audit Plan Generation Error:', error.message || error);
+            appLogger.error('AI', 'Audit plan generation failed', error.message || error);
             return [];
         }
     }
     /**
      * Nettoie le texte en supprimant les espaces multiples, les sauts de ligne excessifs
-     * et les caractères non imprimables.
+     * et les caractÃ¨res non imprimables.
      */
     static cleanText(text: string): string {
         return text
-            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Supprime les caractères non imprimables
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Supprime les caractÃ¨res non imprimables
             .replace(/\s+/g, ' ') // Remplace les espaces multiples/tabulations/sauts de ligne par un seul espace
             .trim();
     }
 
     /**
-     * Limite la taille du texte pour ne pas dépasser le contexte de l'IA.
+     * Limite la taille du texte pour ne pas dÃ©passer le contexte de l'IA.
      */
     static limitText(text: string, maxChars: number = 4000): string {
         if (text.length <= maxChars) return text;
-        return text.substring(0, maxChars) + '... [Texte tronqué]';
+        return text.substring(0, maxChars) + '... [Texte tronquÃ©]';
     }
 
     private static hasEnoughExtractedText(text: string): boolean {
@@ -999,7 +1049,7 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
         } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
             extractedText = await this.extractTextFromImageBuffer(file.buffer, true);
         } else {
-            throw new Error('Format de fichier non supporté pour l\'extraction de texte');
+            throw new Error('Format de fichier non supportÃ© pour l\'extraction de texte');
         }
 
         if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
@@ -1014,3 +1064,4 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
         return this.limitText(this.cleanText(extractedText));
     }
 }
+

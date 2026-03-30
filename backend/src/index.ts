@@ -11,6 +11,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import sequelize from './database';
 import { authenticateToken } from './middleware/auth.middleware';
+import { AIContextService } from './modules/ai/ai-context.service';
+import { appLogger } from './utils/app-logger';
 
 // Configuration des variables d'environnement
 dotenv.config();
@@ -76,7 +78,7 @@ try {
   const risk = require('./modules/risk').router;
   app.use('/api/risk', risk);
 } catch (e) {
-  console.error('Failed to load risk module:', e);
+  appLogger.error('Boot', 'Failed to load risk module', e);
 }
 
 // Module Contrôles
@@ -120,7 +122,7 @@ try {
   const notifications = require('./modules/notifications').router;
   app.use('/api/notifications', notifications);
 } catch (e) {
-  console.error('Failed to load notifications module:', e);
+  appLogger.error('Boot', 'Failed to load notifications module', e);
 }
 
 // Module Supervision
@@ -154,6 +156,10 @@ app.use('/api/settings', settingRoutes);
 import aiRoutes from './modules/ai/ai.routes';
 app.use('/api/assistant', aiRoutes);
 
+// Contextes IA administrables
+import aiContextRoutes from './modules/ai/ai-contexts.routes';
+app.use('/api/ai-contexts', aiContextRoutes);
+
 // Organigramme
 import organigrammeRoutes from './modules/organigramme/organigramme.routes';
 app.use('/api/organigramme', organigrammeRoutes);
@@ -166,7 +172,7 @@ app.use('/api/organigramme', organigrammeRoutes);
 const startServer = async () => {
   try {
     await sequelize.authenticate();
-    console.log('SQL Database connection established.');
+    appLogger.info('Boot', 'SQL database connection established');
 
     // --- PRE-SYNC CLEANUP pour MSSQL (Résolution du conflit de FK sur responsableTraitementId) ---
     try {
@@ -191,13 +197,21 @@ const startServer = async () => {
         OR [responsableTraitementId] IS NULL;
       `);
       
-      console.log('Pre-sync cleanup: Organigramme seeded and risks orphaned references fixed.');
+      appLogger.info('Boot', 'Pre-sync cleanup completed');
     } catch (e: any) {
-      console.log('Pre-sync cleanup skipped or failed (likely tables do not exist yet):', e.message);
+      appLogger.warn('Boot', 'Pre-sync cleanup skipped or failed', e.message);
     }
 
     await sequelize.sync();
-    console.log('SQL Database synced');
+    appLogger.info('Boot', 'SQL database synced');
+    try {
+      const seededContexts = await AIContextService.ensureDefaultContexts();
+      if (seededContexts > 0) {
+        appLogger.info('Boot', 'AI contexts seeded', { added: seededContexts });
+      }
+    } catch (e: any) {
+      appLogger.error('Boot', 'Failed to seed AI contexts', e.message || e);
+    }
 
   // Ajout manuel des colonnes pour MSSQL (car alter:true échoue sur les contraintes UNIQUE)
   try {
@@ -231,7 +245,7 @@ const startServer = async () => {
           ALTER TABLE [${tableName}] ADD CONSTRAINT DF_${tableName}_${colName} DEFAULT '${defaultValue}' FOR [${colName}]
         `);
       } catch (e) {
-        console.error(`Failed to add default constraint for ${tableName}.${colName}:`, e);
+        appLogger.error('Boot', `Failed to add default constraint for ${tableName}.${colName}`, e);
       }
     };
 
@@ -253,7 +267,7 @@ const startServer = async () => {
 
         await addDefaultConstraint(tableName, 'is_deleted', '0');
       } catch (e) {
-        console.error(`Failed to add soft delete columns to ${tableName}:`, e);
+        appLogger.error('Boot', `Failed to add soft delete columns to ${tableName}`, e);
       }
     };
 
@@ -317,7 +331,7 @@ const startServer = async () => {
       await addIncidentColumn('dateEcheance', 'DATETIMEOFFSET NULL');
       await addIncidentColumn('niveauRisque', 'NVARCHAR(50) NULL');
     } catch (e) {
-      console.error('Failed to add new columns to incidents:', e);
+      appLogger.error('Boot', 'Failed to add new columns to incidents', e);
     }
 
     // Mise à jour de la table notifications pour inclure auditMissionId
@@ -327,7 +341,7 @@ const startServer = async () => {
             ALTER TABLE [notifications] ADD auditMissionId INT NULL;
         `);
     } catch (e) {
-      console.error('Failed to add auditMissionId to notifications:', e);
+      appLogger.error('Boot', 'Failed to add auditMissionId to notifications', e);
     }
 
     // Mise à jour de la table audit_missions pour inclure checklistTemplateId
@@ -337,7 +351,7 @@ const startServer = async () => {
             ALTER TABLE [audit_missions] ADD checklistTemplateId INT NULL;
         `);
     } catch (e) {
-      console.error('Failed to add checklistTemplateId to audit_missions:', e);
+      appLogger.error('Boot', 'Failed to add checklistTemplateId to audit_missions', e);
     }
 
     // Convertir les colonnes existantes pour supporter les fuseaux horaires (offsets)
@@ -358,16 +372,16 @@ const startServer = async () => {
     await addDefaultConstraint('audit_missions', 'statut', 'À venir');
     await addDefaultConstraint('audit_mission_checklist_items', 'estFait', '0'); // Bit 0 pour false
 
-    console.log('AI Analysis columns checked/added and date types updated to DATETIMEOFFSET');
+    appLogger.info('Boot', 'Manual schema checks completed');
   } catch (err) {
-    console.error('Failed to update database schema manually:', err);
+    appLogger.error('Boot', 'Failed to update database schema manually', err);
   }
 
   // Port d'écoute du serveur
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, async () => {
     // eslint-disable-next-line no-console
-    console.log(`Backend listening on port ${PORT}`);
+    appLogger.info('Boot', 'Backend listening', { port: PORT });
 
     // Démarrage du planificateur de rappels périodiques
     try {
@@ -379,14 +393,14 @@ const startServer = async () => {
         setInterval(() => {
           PeriodicReminderService.checkPeriodicRisks();
         }, 24 * 60 * 60 * 1000);
-        console.log('Periodic reminder service started');
+        appLogger.info('Boot', 'Periodic reminder service started');
       }
     } catch (e) {
-      console.error('Failed to start periodic reminder service:', e);
+      appLogger.error('Boot', 'Failed to start periodic reminder service', e);
     }
   });
   } catch (err) {
-    console.error('Failed to sync database:', err);
+    appLogger.error('Boot', 'Failed to sync database', err);
   }
 };
 

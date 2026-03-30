@@ -1,12 +1,15 @@
 import axios, { AxiosInstance } from 'axios';
+import { execFile } from 'child_process';
+import fs from 'fs';
 import http from 'http';
+import os from 'os';
+import path from 'path';
 import { RAGEngine } from './rag.engine';
 import { AIDataService } from './ai.data.service';
 import { UserRole } from '../users/user.roles';
 import { Response } from 'express';
 import * as mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
-import { PdfReader } from 'pdfreader';
 import { Incident } from '../incidents/incident.model';
 
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || 'http://localhost:11434/api/chat';
@@ -597,6 +600,14 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
         return text.substring(0, maxChars) + '... [Texte tronqué]';
     }
 
+    private static hasEnoughExtractedText(text: string): boolean {
+        const normalized = this.cleanText(text);
+        if (normalized.length >= 80) return true;
+
+        const words = normalized.split(/\s+/).filter(word => word.length > 1);
+        return normalized.length >= 40 && words.length >= 6;
+    }
+
     private static buildIncidentDraftFallback(text: string): any {
         const normalizedText = this.cleanText(text);
         const firstSentence = normalizedText
@@ -716,35 +727,17 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
             .filter(Boolean);
     }
 
-    /**
-     * Extrait le texte d'un fichier (PDF, Word, Image)
-     */
-    static async extractTextFromFile(file: Express.Multer.File): Promise<string> {
-        const extension = file.originalname.split('.').pop()?.toLowerCase();
-        let extractedText = '';
+    private static async extractTextFromImageBuffer(imageBuffer: Buffer, includeStructuredRegions: boolean): Promise<string> {
+        const worker = await createWorker('fra');
+        const ocrChunks: string[] = [];
 
-        if (extension === 'pdf') {
-            extractedText = await new Promise((resolve, reject) => {
-                let text = '';
-                new PdfReader().parseBuffer(file.buffer, (err: any, item: any) => {
-                    if (err) reject(err);
-                    else if (!item) resolve(text);
-                    else if (item.text) text += item.text + ' ';
-                });
-            });
-        } else if (extension === 'docx') {
-            const result = await mammoth.extractRawText({ buffer: file.buffer });
-            extractedText = result.value;
-        } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
-            const worker = await createWorker('fra');
-            const ocrChunks: string[] = [];
-
+        try {
             const collectOcrPass = async (params: Record<string, string>) => {
                 await worker.setParameters({
                     preserve_interword_spaces: '1',
                     ...params
                 } as any);
-                const result = await worker.recognize(file.buffer);
+                const result = await worker.recognize(imageBuffer);
                 const text = (result.data.text || '').trim();
                 if (text) {
                     ocrChunks.push(text);
@@ -763,16 +756,248 @@ RESTRICTIONS STRICTES : Tu ne dois PAS répondre aux questions sur la gestion op
                 tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZAAAAEEEEIIOOUUUaaaaeeeeiioouuu -/'
             });
 
-            const regionTexts = await this.extractIncidentFormRegions(worker, file.buffer);
-            ocrChunks.push(...regionTexts);
-
+            if (includeStructuredRegions) {
+                const regionTexts = await this.extractIncidentFormRegions(worker, imageBuffer);
+                ocrChunks.push(...regionTexts);
+            }
+        } finally {
             await worker.terminate();
-            extractedText = ocrChunks
-                .flatMap(chunk => chunk.split(/\r?\n/))
-                .map(line => line.replace(/\s+/g, ' ').trim())
-                .filter(Boolean)
-                .filter((line, index, all) => all.findIndex(item => item.toLowerCase() === line.toLowerCase()) === index)
-                .join('\n');
+        }
+
+        return ocrChunks
+            .flatMap(chunk => chunk.split(/\r?\n/))
+            .map(line => line.replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .filter((line, index, all) => all.findIndex(item => item.toLowerCase() === line.toLowerCase()) === index)
+            .join('\n');
+    }
+
+    private static execFileAsync(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+        return new Promise((resolve, reject) => {
+            execFile(command, args, { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }, (error, stdout = '', stderr = '') => {
+                if (error) {
+                    return reject(error);
+                }
+                resolve({ stdout, stderr });
+            });
+        });
+    }
+
+    private static async commandExists(command: string): Promise<boolean> {
+        const whereCommand = process.platform === 'win32' ? 'where' : 'which';
+
+        return new Promise((resolve) => {
+            execFile(whereCommand, [command], (error) => {
+                resolve(!error);
+            });
+        });
+    }
+
+    private static async findExecutableRecursive(rootDir: string, executableName: string, maxDepth: number): Promise<string | null> {
+        if (!rootDir || maxDepth < 0 || !fs.existsSync(rootDir)) {
+            return null;
+        }
+
+        const entries = await fs.promises.readdir(rootDir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(rootDir, entry.name);
+
+            if (entry.isFile() && entry.name.toLowerCase() === executableName.toLowerCase()) {
+                return fullPath;
+            }
+
+            if (entry.isDirectory() && maxDepth > 0) {
+                const found = await this.findExecutableRecursive(fullPath, executableName, maxDepth - 1);
+                if (found) {
+                    return found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static async resolvePopplerExecutable(executableBaseName: 'pdftoppm' | 'pdftotext'): Promise<string> {
+        const executableName = process.platform === 'win32' ? `${executableBaseName}.exe` : executableBaseName;
+        const envPath = process.env.PDFTOPPM_PATH;
+        if (envPath && fs.existsSync(envPath)) {
+            const envStat = await fs.promises.stat(envPath);
+            if (envStat.isDirectory()) {
+                const candidateFromDir = path.join(envPath, executableName);
+                if (fs.existsSync(candidateFromDir)) {
+                    return candidateFromDir;
+                }
+            } else {
+                const envDir = path.dirname(envPath);
+                const siblingExecutable = path.join(envDir, executableName);
+                if (fs.existsSync(siblingExecutable)) {
+                    return siblingExecutable;
+                }
+
+                if (path.basename(envPath).toLowerCase() === executableName.toLowerCase()) {
+                    return envPath;
+                }
+            }
+        }
+
+        if (await this.commandExists(executableBaseName)) {
+            return executableBaseName;
+        }
+
+        const candidatePaths = [
+            `C:\\ProgramData\\chocolatey\\bin\\${executableName}`,
+            `C:\\ProgramData\\chocolatey\\lib\\popplerutils\\tools\\bin\\${executableName}`,
+            `C:\\ProgramData\\chocolatey\\lib\\poppler-utils\\tools\\bin\\${executableName}`,
+            `C:\\ProgramData\\chocolatey\\lib\\poppler\\tools\\bin\\${executableName}`,
+            `C:\\Program Files\\poppler\\Library\\bin\\${executableName}`,
+            `C:\\Program Files\\poppler\\bin\\${executableName}`,
+            `C:\\poppler-25.12.0\\Library\\bin\\${executableName}`
+        ];
+
+        for (const candidatePath of candidatePaths) {
+            if (fs.existsSync(candidatePath)) {
+                return candidatePath;
+            }
+        }
+
+        const chocolateyLibDir = 'C:\\ProgramData\\chocolatey\\lib';
+        const discoveredPath = await this.findExecutableRecursive(chocolateyLibDir, executableName, 5);
+        if (discoveredPath) {
+            return discoveredPath;
+        }
+
+        throw new Error(`OCR PDF indisponible sur ce serveur: ${executableBaseName} est introuvable. Configure PDFTOPPM_PATH ou installe un binaire Poppler contenant ${executableName}.`);
+    }
+
+    private static async extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
+        const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'sgrc-pdf-text-'));
+        const inputPdfPath = path.join(tempDir, 'input.pdf');
+
+        try {
+            await fs.promises.writeFile(inputPdfPath, buffer);
+            const pdftotextPath = await this.resolvePopplerExecutable('pdftotext');
+            const { stdout } = await this.execFileAsync(pdftotextPath, ['-layout', inputPdfPath, '-']);
+            return stdout || '';
+        } finally {
+            await fs.promises.rm(tempDir, { recursive: true, force: true });
+        }
+    }
+
+    private static async extractTextFromPdfWithOcr(buffer: Buffer): Promise<string> {
+        const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'sgrc-pdf-ocr-'));
+        const inputPdfPath = path.join(tempDir, 'input.pdf');
+        const outputPrefix = path.join(tempDir, 'page');
+
+        try {
+            await fs.promises.writeFile(inputPdfPath, buffer);
+            const pdftoppmPath = await this.resolvePopplerExecutable('pdftoppm');
+
+            await this.execFileAsync(pdftoppmPath, [
+                '-png',
+                '-r',
+                '200',
+                '-f',
+                '1',
+                '-l',
+                '3',
+                inputPdfPath,
+                outputPrefix
+            ]);
+
+            const generatedFiles = (await fs.promises.readdir(tempDir))
+                .filter(fileName => /^page-\d+\.png$/i.test(fileName))
+                .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+
+            if (generatedFiles.length === 0) {
+                throw new Error('Aucune image OCR n a ete generee pour ce PDF.');
+            }
+
+            const ocrTexts: string[] = [];
+            for (const generatedFile of generatedFiles) {
+                const pageBuffer = await fs.promises.readFile(path.join(tempDir, generatedFile));
+                const pageText = await this.extractTextFromImageBuffer(pageBuffer, false);
+                if (pageText) {
+                    ocrTexts.push(pageText);
+                }
+            }
+
+            return ocrTexts.join('\n');
+        } catch (error: any) {
+            if (error?.code === 'ENOENT') {
+                const toolMissingError = new Error('OCR PDF indisponible sur ce serveur: l outil pdftoppm est requis pour convertir les pages scannees en images.');
+                (toolMissingError as any).statusCode = 400;
+                (toolMissingError as any).cause = error;
+                throw toolMissingError;
+            }
+
+            if (error?.message?.includes('pdftoppm est introuvable') || error?.message?.includes('pdftotext est introuvable')) {
+                (error as any).statusCode = 400;
+            }
+
+            throw error;
+        } finally {
+            await fs.promises.rm(tempDir, { recursive: true, force: true });
+        }
+    }
+
+    /**
+     * Extrait le texte d'un fichier (PDF, Word, Image)
+     */
+    static async extractTextFromFile(file: Express.Multer.File): Promise<string> {
+        const extension = file.originalname.split('.').pop()?.toLowerCase();
+        let extractedText = '';
+
+        if (extension === 'pdf') {
+            let nativePdfText = '';
+            let nativePdfError: any = null;
+
+            try {
+                nativePdfText = await this.extractTextFromPdfBuffer(file.buffer);
+            } catch (error: any) {
+                nativePdfError = error;
+            }
+
+            const normalizedNativeText = this.cleanText(nativePdfText);
+            if (this.hasEnoughExtractedText(normalizedNativeText)) {
+                extractedText = normalizedNativeText;
+            } else {
+                try {
+                    const ocrPdfText = await this.extractTextFromPdfWithOcr(file.buffer);
+                    const normalizedOcrText = ocrPdfText
+                        .split(/\r?\n/)
+                        .map(line => line.replace(/\s+/g, ' ').trim())
+                        .filter(Boolean)
+                        .join('\n');
+
+                    if (this.hasEnoughExtractedText(normalizedOcrText)) {
+                        return this.limitText(normalizedOcrText);
+                    }
+
+                    extractedText = normalizedNativeText || normalizedOcrText;
+                } catch (ocrError: any) {
+                    const extractionError = new Error(
+                        nativePdfError
+                            ? 'Impossible de lire ce PDF. Le parseur PDF a echoue et le fallback OCR n a pas pu extraire un texte exploitable.'
+                            : 'Le PDF ne contient pas assez de texte exploitable et le fallback OCR n a rien pu extraire.'
+                    );
+                    (extractionError as any).statusCode = ocrError?.statusCode || 400;
+                    (extractionError as any).cause = ocrError;
+                    throw extractionError;
+                }
+            }
+
+            if (!this.hasEnoughExtractedText(extractedText)) {
+                const extractionError = new Error('Le PDF ne contient pas assez de texte exploitable, meme apres tentative d OCR.');
+                (extractionError as any).statusCode = 400;
+                (extractionError as any).cause = nativePdfError;
+                throw extractionError;
+            }
+        } else if (extension === 'docx') {
+            const result = await mammoth.extractRawText({ buffer: file.buffer });
+            extractedText = result.value;
+        } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
+            extractedText = await this.extractTextFromImageBuffer(file.buffer, true);
         } else {
             throw new Error('Format de fichier non supporté pour l\'extraction de texte');
         }

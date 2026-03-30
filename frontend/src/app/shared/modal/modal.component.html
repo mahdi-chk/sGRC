@@ -2,7 +2,7 @@
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h3>{{ title }}</h3>
-      <button class="close" (click)="onClose()">✕</button>
+      <button type="button" class="close" (click)="onClose()">x</button>
     </div>
     <div class="modal-body">
       <ng-content select="[modal-body]"></ng-content>

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Op } from 'sequelize';
 import { Notification } from './notification.model';
 import { authenticateToken, AuthRequest } from '../../middleware/auth.middleware';
 
@@ -36,6 +37,35 @@ router.put('/:id/read', async (req: AuthRequest, res) => {
         res.json(notification);
     } catch (error: any) {
         res.status(400).json({ message: 'Error marking notification as read', error: error.message });
+    }
+});
+
+// Mark selected notifications as read
+router.put('/read-selected', async (req: AuthRequest, res) => {
+    try {
+        const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+        const numericIds = ids
+            .map((id: any) => Number(id))
+            .filter((id: number) => Number.isInteger(id) && id > 0);
+
+        if (numericIds.length === 0) {
+            return res.status(400).json({ message: 'No valid notification ids provided' });
+        }
+
+        const [updatedCount] = await Notification.update(
+            { isRead: true },
+            {
+                where: {
+                    userId: req.user!.id,
+                    id: { [Op.in]: numericIds },
+                    isRead: false
+                }
+            }
+        );
+
+        res.json({ message: 'Selected notifications marked as read', updatedCount });
+    } catch (error: any) {
+        res.status(400).json({ message: 'Error marking selected notifications as read', error: error.message });
     }
 });
 

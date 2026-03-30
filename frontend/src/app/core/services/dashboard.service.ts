@@ -180,7 +180,9 @@ export class DashboardService {
         const currentUser = this.authService.getCurrentUser();
         const isRiskAgent = currentUser?.role === UserRole.RISK_AGENT;
 
-        if (s.title === 'Registre des Risques') {
+        if (m.key === 'gouvernance' && s.title === 'Gestion Documentaire') {
+            this.router.navigate(['/dashboard/resources']);
+        } else if (s.title === 'Registre des Risques') {
             if (isRiskAgent) {
                 this.router.navigate(['/dashboard/assigned-risks']);
             } else {

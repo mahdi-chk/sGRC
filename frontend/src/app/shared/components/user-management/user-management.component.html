@@ -1,7 +1,7 @@
 <div class="user-management-container">
   <div class="header-actions">
     <div class="header-left">
-      <button class="back-btn" (click)="goBack()">
+      <button type="button" class="back-btn" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>
       </button>
       <h2>Gestion des Utilisateurs</h2>
@@ -11,7 +11,7 @@
         <i class="fas fa-search search-icon"></i>
         <input type="text" [(ngModel)]="userSearchTerm" placeholder="Rechercher par nom, mail..." />
       </div>
-      <button class="btn-primary" (click)="openUserModal()">
+      <button type="button" class="btn-primary" (click)="openUserModal()">
         <i class="fas fa-user-plus"></i> Nouvel Utilisateur
       </button>
     </div>
@@ -22,39 +22,38 @@
       <label><i class="fas fa-filter"></i> Filtrer par :</label>
       <div class="select-filter-wrapper">
         <select [(ngModel)]="selectedRoleFilter">
-          <option value="">Tous les rôles</option>
+          <option value="">Tous les roles</option>
           <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
         </select>
       </div>
       <div class="select-filter-wrapper">
         <select [(ngModel)]="selectedDeptFilter">
-          <option value="0">Tous les départements</option>
+          <option value="0">Tous les departements</option>
           <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
         </select>
       </div>
-      <button class="btn-text-link" (click)="resetFilters()"
+      <button type="button" class="btn-text-link" (click)="resetFilters()"
         *ngIf="userSearchTerm || selectedRoleFilter || selectedDeptFilter !== 0">
-        <i class="fas fa-times"></i> Réinitialiser
+        <i class="fas fa-times"></i> Reinitialiser
       </button>
     </div>
 
-    <!-- Export Button aligned to the right -->
     <div class="export-dropdown" style="margin-left: auto;">
-      <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
+      <button type="button" class="btn-export" (click)="showExportMenu = !showExportMenu" title="Telecharger le rapport">
         <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
       </button>
       <div class="dropdown-menu" [class.show]="showExportMenu">
-        <button (click)="exportToXLSX()">
+        <button type="button" (click)="exportToXLSX()">
           <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
         </button>
-        <button (click)="exportToPDF()">
+        <button type="button" (click)="exportToPDF()">
           <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
         </button>
       </div>
     </div>
 
     <div class="user-count" style="margin-left: 15px;">
-      <strong>{{ filteredUsers.length }}</strong> utilisateur(s) trouvé(s)
+      <strong>{{ filteredUsers.length }}</strong> utilisateur(s) trouve(s)
     </div>
   </div>
 
@@ -77,10 +76,10 @@
         </div>
       </div>
       <div class="user-actions">
-        <button class="btn-icon edit-btn" (click)="openUserModal(user); $event.stopPropagation()" title="Modifier">
+        <button type="button" class="btn-icon edit-btn" (click)="openUserModal(user); $event.stopPropagation()" title="Modifier">
           <i class="fas fa-edit"></i>
         </button>
-        <button class="btn-icon delete-btn" (click)="deleteUser($event, user)" title="Supprimer">
+        <button type="button" class="btn-icon delete-btn" (click)="deleteUser($event, user)" title="Supprimer">
           <i class="fas fa-trash-alt"></i>
         </button>
       </div>
@@ -88,11 +87,10 @@
 
     <div class="no-users" *ngIf="filteredUsers.length === 0">
       <i class="fas fa-users-slash"></i>
-      <p>Aucun utilisateur trouvé correspondant à vos critères.</p>
+      <p>Aucun utilisateur trouve correspondant a vos criteres.</p>
     </div>
   </div>
 
-  <!-- Modal for Create/Edit -->
   <app-modal *ngIf="modalVisible" [title]="editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'"
     (close)="closeUserModal()">
     <div #projected modal-body class="modal-form">
@@ -100,10 +98,10 @@
         <div class="section-title"><i class="fas fa-user-circle"></i> Informations Personnelles</div>
         <div class="form-grid">
           <div class="form-row">
-            <label>Prénom <span class="required">*</span></label>
+            <label>Prenom <span class="required">*</span></label>
             <div class="input-icon-wrapper">
               <i class="fas fa-id-card icon"></i>
-              <input type="text" [(ngModel)]="userForm.prenom" placeholder="Prénom"
+              <input type="text" [(ngModel)]="userForm.prenom" placeholder="Prenom"
                 [class.input-error]="validationErrors.prenom">
             </div>
             <span class="error" *ngIf="validationErrors.prenom">{{ validationErrors.prenom }}</span>
@@ -127,10 +125,10 @@
             <span class="error" *ngIf="validationErrors.mail">{{ validationErrors.mail }}</span>
           </div>
           <div class="form-row">
-            <label>Téléphone <span class="required">*</span></label>
+            <label>Telephone <span class="required">*</span></label>
             <div class="input-icon-wrapper">
               <i class="fas fa-phone icon"></i>
-              <input type="text" [(ngModel)]="userForm.telephone" placeholder="Téléphone"
+              <input type="text" [(ngModel)]="userForm.telephone" placeholder="Telephone"
                 [class.input-error]="validationErrors.telephone">
             </div>
             <span class="error" *ngIf="validationErrors.telephone">{{ validationErrors.telephone }}</span>
@@ -139,25 +137,25 @@
       </div>
 
       <div class="form-section">
-        <div class="section-title"><i class="fas fa-briefcase"></i> Rôle et Affectation</div>
+        <div class="section-title"><i class="fas fa-briefcase"></i> Role et Affectation</div>
         <div class="form-grid">
           <div class="form-row">
-            <label>Rôle <span class="required">*</span></label>
+            <label>Role <span class="required">*</span></label>
             <div class="select-wrapper">
               <i class="fas fa-user-tag icon"></i>
               <select [(ngModel)]="userForm.role" [class.input-error]="validationErrors.role">
-                <option value="">Sélectionner un rôle</option>
+                <option value="">Selectionner un role</option>
                 <option *ngFor="let role of postes" [value]="role">{{ role }}</option>
               </select>
             </div>
             <span class="error" *ngIf="validationErrors.role">{{ validationErrors.role }}</span>
           </div>
           <div class="form-row">
-            <label>Département <span class="required">*</span></label>
+            <label>Departement <span class="required">*</span></label>
             <div class="select-wrapper">
               <i class="fas fa-building icon"></i>
               <select [(ngModel)]="userForm.departementId" [class.input-error]="validationErrors.departementId">
-                <option value="0">Sélectionner un département</option>
+                <option value="0">Selectionner un departement</option>
                 <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
               </select>
             </div>
@@ -167,7 +165,7 @@
       </div>
 
       <div class="form-section">
-        <div class="section-title"><i class="fas fa-lock"></i> Sécurité</div>
+        <div class="section-title"><i class="fas fa-lock"></i> Securite</div>
         <div class="form-grid">
           <div class="form-row">
             <label>Mot de passe {{ editingUser ? '(Optionnel)' : '*' }}</label>
@@ -175,7 +173,7 @@
               <i class="fas fa-key icon"></i>
               <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password"
                 placeholder="Mot de passe" [class.input-error]="validationErrors.password">
-              <button class="btn-toggle" (click)="togglePasswordVisibility()"><i class="fas"
+              <button type="button" class="btn-toggle" (click)="togglePasswordVisibility()"><i class="fas"
                   [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i></button>
             </div>
             <span class="error" *ngIf="validationErrors.password">{{ validationErrors.password }}</span>
@@ -186,7 +184,7 @@
               <i class="fas fa-check-circle icon"></i>
               <input [type]="showConfirmPassword ? 'text' : 'password'" [(ngModel)]="userForm.confirmPassword"
                 placeholder="Confirmer" [class.input-error]="validationErrors.confirmPassword">
-              <button class="btn-toggle" (click)="toggleConfirmPasswordVisibility()"><i class="fas"
+              <button type="button" class="btn-toggle" (click)="toggleConfirmPasswordVisibility()"><i class="fas"
                   [class.fa-eye]="!showConfirmPassword" [class.fa-eye-slash]="showConfirmPassword"></i></button>
             </div>
             <span class="error" *ngIf="validationErrors.confirmPassword">{{ validationErrors.confirmPassword }}</span>
@@ -196,9 +194,10 @@
       </div>
 
       <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-        <button class="btn-outline" (click)="closeUserModal()">Annuler</button>
-        <button class="btn-primary" (click)="saveUser()">{{ editingUser ? 'Mettre à jour' : 'Créer l\'utilisateur'
-          }}</button>
+        <button type="button" class="btn-outline" (click)="closeUserModal()" [disabled]="isSaving">Annuler</button>
+        <button type="button" class="btn-primary" (click)="saveUser()" [disabled]="isSaving">
+          {{ isSaving ? 'En cours...' : (editingUser ? 'Mettre a jour' : 'Creer l\'utilisateur') }}
+        </button>
       </div>
     </div>
   </app-modal>
@@ -206,7 +205,7 @@
   <div class="status-message" *ngIf="status"
     style="position: fixed; bottom: 20px; right: 20px; background: #004a99; color: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000;">
     {{ status }}
-    <button (click)="status = null"
+    <button type="button" (click)="status = null"
       style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer;"><i
         class="fas fa-times"></i></button>
   </div>

@@ -54,6 +54,8 @@ import { IncidentRegistrationComponent } from './modules/incidents/incident-regi
 import { IncidentWorkflowComponent } from './modules/incidents/incident-workflow/incident-workflow.component';
 import { IncidentAnalysisComponent } from './modules/incidents/incident-analysis/incident-analysis.component';
 import { IncidentReportingComponent } from './modules/incidents/incident-reporting/incident-reporting.component';
+import { GovernanceComponent } from './modules/governance/governance.component';
+import { GovernanceModule } from './modules/governance/governance.module';
 
 import { UserRole } from './core/models/user-role.enum';
 
@@ -70,7 +72,20 @@ const routes: Routes = [
     children: [
       { path: '', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] } },
-      { path: 'risks', component: RiskManagementComponent },
+      {
+        path: 'risks',
+        component: RiskManagementComponent,
+        data: {
+          expectedRoles: [
+            UserRole.SUPER_ADMIN,
+            UserRole.RISK_MANAGER,
+            UserRole.RISK_AGENT,
+            UserRole.AUDIT_SENIOR,
+            UserRole.AUDITEUR,
+            UserRole.TOP_MANAGEMENT
+          ]
+        }
+      },
       { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.RISK_MANAGER, UserRole.RISK_AGENT] } },
       { path: 'assigned-risks', component: AssignedRisksComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'planning', component: PlanningComponent },
@@ -83,6 +98,7 @@ const routes: Routes = [
       { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR] } },
       { path: 'incident-analysis', component: IncidentAnalysisComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      { path: 'resources', component: GovernanceComponent },
       // Routes Audit (composants exportés par AuditingModule)
       { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
@@ -145,6 +161,7 @@ const routes: Routes = [
     SharedModule,
     AuditingModule,
     IncidentsModule,
+    GovernanceModule,
     RouterModule.forRoot(routes)
   ],
   providers: [

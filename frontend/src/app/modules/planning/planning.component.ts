@@ -25,8 +25,8 @@ export class PlanningComponent implements OnInit {
     missions: AuditMission[] = [];
     selectedDay: CalendarDay | null = null;
     monthNames = [
-        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+        'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'
     ];
     dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
@@ -132,10 +132,44 @@ export class PlanningComponent implements OnInit {
         this.selectedDay = null;
     }
 
+    goToToday(): void {
+        const today = new Date();
+        this.currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        this.generateCalendar();
+        this.selectedDay = this.days.find(day => day.date && this.isSameDay(day.date, today)) || null;
+    }
+
     selectDay(day: CalendarDay): void {
         if (day.date) {
             this.selectedDay = day;
         }
+    }
+
+    getMissionStatusClass(status: string): string {
+        return `status-${this.slugify(status)}`;
+    }
+
+    getRiskLevelClass(level: string): string {
+        return `level-${this.slugify(level)}`;
+    }
+
+    getRiskStatusClass(status: string): string {
+        return `status-${this.slugify(status)}`;
+    }
+
+    private slugify(value: string): string {
+        return (value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    private isSameDay(first: Date, second: Date): boolean {
+        return first.getFullYear() === second.getFullYear()
+            && first.getMonth() === second.getMonth()
+            && first.getDate() === second.getDate();
     }
 
     get currentMonthName(): string {

@@ -14,7 +14,7 @@ export class SuperAdminDashboardComponent {
     @Input() filteredModules: any[] = [];
     @Output() openModule = new EventEmitter<any>();
     @Output() openUserManagement = new EventEmitter<void>();
-    @Output() openRiskManagement = new EventEmitter<void>();
+
     @Output() toggleAssistant = new EventEmitter<void>();
 
     constructor(private router: Router, private dashboardService: DashboardService, private authService: AuthService) {
@@ -25,10 +25,11 @@ export class SuperAdminDashboardComponent {
         });
     }
 
-    onOpenRiskManagement() {
-        this.router.navigate(['/dashboard/risks']);
-        this.openRiskManagement.emit();
+    get visibleModules(): any[] {
+        return this.filteredModules.filter(module => module.key !== 'audit-auditeur');
     }
+
+
 
     onOpenOrganigramme() {
         this.router.navigate(['/dashboard/organigramme']);

@@ -26,7 +26,6 @@ export interface User {
     styleUrls: ['./user-management.component.scss']
 })
 export class UserManagementComponent implements OnInit {
-    // Modal state
     modalVisible = false;
     userSearchTerm = '';
     editingUser: User | null = null;
@@ -38,10 +37,14 @@ export class UserManagementComponent implements OnInit {
 
     showPassword = false;
     showConfirmPassword = false;
+    isSaving = false;
 
     postes: string[] = [];
     departements: any[] = [];
     UserRole = UserRole;
+
+    selectedRoleFilter = '';
+    selectedDeptFilter = 0;
 
     constructor(
         private http: HttpClient,
@@ -56,6 +59,11 @@ export class UserManagementComponent implements OnInit {
 
     goBack() {
         this.router.navigate(['/dashboard']);
+    }
+
+    private extractErrorMessage(prefix: string, err: any): string {
+        const apiMessage = err?.error?.message;
+        return apiMessage ? `${prefix}: ${apiMessage}` : `${prefix}: ${err.status || err.message}`;
     }
 
     private emptyUser(): User {
@@ -94,9 +102,10 @@ export class UserManagementComponent implements OnInit {
 
     openUserModal(user?: User) {
         this.modalVisible = true;
+        this.isSaving = false;
         if (user) {
             this.editingUser = user;
-            this.userForm = { ...user };
+            this.userForm = { ...user, password: '', confirmPassword: '' };
         } else {
             this.editingUser = null;
             this.userForm = this.emptyUser();
@@ -107,6 +116,7 @@ export class UserManagementComponent implements OnInit {
 
     closeUserModal() {
         this.modalVisible = false;
+        this.isSaving = false;
         this.userSearchTerm = '';
         this.validationErrors = {};
     }
@@ -114,34 +124,37 @@ export class UserManagementComponent implements OnInit {
     validateUser(): boolean {
         this.validationErrors = {};
         let isValid = true;
+        const nom = this.userForm.nom?.trim();
+        const prenom = this.userForm.prenom?.trim();
+        const mail = this.userForm.mail?.trim();
+        const telephone = this.userForm.telephone?.trim();
 
-        if (!this.userForm.nom) { this.validationErrors.nom = 'Le nom est obligatoire'; isValid = false; }
-        if (!this.userForm.prenom) { this.validationErrors.prenom = 'Le prénom est obligatoire'; isValid = false; }
+        if (!nom) { this.validationErrors.nom = 'Le nom est obligatoire'; isValid = false; }
+        if (!prenom) { this.validationErrors.prenom = 'Le prenom est obligatoire'; isValid = false; }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!this.userForm.mail) {
+        if (!mail) {
             this.validationErrors.mail = 'L\'email est obligatoire';
             isValid = false;
-        } else if (!emailRegex.test(this.userForm.mail)) {
+        } else if (!emailRegex.test(mail)) {
             this.validationErrors.mail = 'Format d\'email invalide';
             isValid = false;
         }
 
         const phoneRegex = /^[0-9+\s-]{8,}$/;
-        if (!this.userForm.telephone) {
-            this.validationErrors.telephone = 'Le téléphone est obligatoire';
+        if (!telephone) {
+            this.validationErrors.telephone = 'Le telephone est obligatoire';
             isValid = false;
-        } else if (!phoneRegex.test(this.userForm.telephone)) {
-            this.validationErrors.telephone = 'Format de téléphone invalide (min 8 chiffres)';
+        } else if (!phoneRegex.test(telephone)) {
+            this.validationErrors.telephone = 'Format de telephone invalide (min 8 chiffres)';
             isValid = false;
         }
 
-        // Password validation: mandatory for creation, optional for edit
         if (!this.editingUser && !this.userForm.password) {
             this.validationErrors.password = 'Le mot de passe est obligatoire pour un nouvel utilisateur';
             isValid = false;
         } else if (this.userForm.password && this.userForm.password.length < 6) {
-            this.validationErrors.password = 'Le mot de passe doit faire au moins 6 caractères';
+            this.validationErrors.password = 'Le mot de passe doit faire au moins 6 caracteres';
             isValid = false;
         }
 
@@ -150,9 +163,9 @@ export class UserManagementComponent implements OnInit {
             isValid = false;
         }
 
-        if (!this.userForm.role) { this.validationErrors.role = 'Le rôle est obligatoire'; isValid = false; }
-        if (!this.userForm.departementId || this.userForm.departementId === 0) {
-            this.validationErrors.departementId = 'Le département est obligatoire';
+        if (!this.userForm.role) { this.validationErrors.role = 'Le role est obligatoire'; isValid = false; }
+        if (!this.userForm.departementId || Number(this.userForm.departementId) === 0) {
+            this.validationErrors.departementId = 'Le departement est obligatoire';
             isValid = false;
         }
 
@@ -160,20 +173,24 @@ export class UserManagementComponent implements OnInit {
     }
 
     saveUser() {
+        if (this.isSaving) return;
         if (!this.validateUser()) return;
+        this.isSaving = true;
 
-        // Préparation du payload
-        const payload = { ...this.userForm };
+        const payload: User = {
+            ...this.userForm,
+            nom: this.userForm.nom.trim(),
+            prenom: this.userForm.prenom.trim(),
+            mail: this.userForm.mail.trim().toLowerCase(),
+            telephone: this.userForm.telephone.trim(),
+            departementId: Number(this.userForm.departementId),
+            poste: (this.userForm.poste || this.userForm.role || '').trim()
+        };
 
-        // Assurer que departementId est un nombre (important pour MSSQL)
-        payload.departementId = Number(payload.departementId);
-
-        // Assurer que 'poste' est envoyé car requis par le modèle Sequelize
         if (!payload.poste) {
             payload.poste = payload.role;
         }
 
-        // Retirer le mot de passe s'il est vide (cas d'une mise à jour sans changement de MDP)
         if (!payload.password) {
             delete payload.password;
         }
@@ -182,36 +199,43 @@ export class UserManagementComponent implements OnInit {
         if (this.editingUser) {
             this.http.put(`${environment.apiUrl}/users/${this.editingUser.id}`, payload).subscribe(
                 () => {
-                    this.status = 'Utilisateur modifié';
+                    this.isSaving = false;
+                    this.status = 'Utilisateur modifie';
                     this.loadUsers();
                     this.closeUserModal();
                 },
-                (err: any) => this.status = 'Error updating user: ' + (err.status || err.message)
+                (err: any) => {
+                    this.isSaving = false;
+                    this.status = this.extractErrorMessage('Erreur lors de la mise a jour', err);
+                }
             );
         } else {
             this.http.post(`${environment.apiUrl}/users`, payload).subscribe(
                 () => {
-                    this.status = 'Utilisateur créé';
+                    this.isSaving = false;
+                    this.status = 'Utilisateur cree';
                     this.loadUsers();
                     this.closeUserModal();
                 },
-                (err: any) => this.status = 'Error creating user: ' + (err.status || err.message)
+                (err: any) => {
+                    this.isSaving = false;
+                    this.status = this.extractErrorMessage('Erreur lors de la creation', err);
+                }
             );
         }
     }
 
     resetPassword(user: User) {
-        // TODO: Implement explicit reset if backend supports it, for now edit works as reset
         this.openUserModal(user);
-        this.status = "Pour réinitialiser le mot de passe, modifiez l'utilisateur et entrez un nouveau mot de passe.";
+        this.status = 'Pour reinitialiser le mot de passe, modifiez l\'utilisateur et entrez un nouveau mot de passe.';
     }
 
     deleteUser(event: Event, user: User) {
         event.stopPropagation();
-        if (confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${user.prenom} ${user.nom} ?`)) {
+        if (confirm(`Etes-vous sur de vouloir supprimer l'utilisateur ${user.prenom} ${user.nom} ?`)) {
             this.http.delete(`${environment.apiUrl}/users/${user.id}`).subscribe(
                 () => {
-                    this.status = 'Utilisateur supprimé';
+                    this.status = 'Utilisateur supprime';
                     this.loadUsers();
                 },
                 (err: any) => this.status = 'Error deleting user: ' + (err.status || err.message)
@@ -219,16 +243,12 @@ export class UserManagementComponent implements OnInit {
         }
     }
 
-    selectedRoleFilter = '';
-    selectedDeptFilter = 0;
-
     get filteredUsers() {
         return this.users.filter(u => {
             const matchesSearch = !this.userSearchTerm ||
                 `${u.nom} ${u.prenom} ${u.mail}`.toLowerCase().includes(this.userSearchTerm.toLowerCase());
 
             const matchesRole = !this.selectedRoleFilter || u.role === this.selectedRoleFilter;
-
             const matchesDept = !this.selectedDeptFilter || u.departementId === Number(this.selectedDeptFilter);
 
             return matchesSearch && matchesRole && matchesDept;
@@ -256,11 +276,11 @@ export class UserManagementComponent implements OnInit {
     exportToXLSX() {
         const dataToExport = this.filteredUsers.map(u => ({
             'Nom': u.nom,
-            'Prénom': u.prenom,
+            'Prenom': u.prenom,
             'Email': u.mail,
-            'Téléphone': u.telephone,
-            'Rôle': u.role,
-            'Département': this.departements.find(d => d.id === u.departementId)?.nom || 'N/A'
+            'Telephone': u.telephone,
+            'Role': u.role,
+            'Departement': this.departements.find(d => d.id === u.departementId)?.nom || 'N/A'
         }));
 
         const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -273,16 +293,15 @@ export class UserManagementComponent implements OnInit {
     exportToPDF() {
         const doc = new jsPDF();
 
-        // Add title
         doc.setFontSize(18);
         doc.setTextColor(0, 74, 153);
         doc.text('Rapport de Gestion des Utilisateurs', 14, 22);
 
         doc.setFontSize(11);
         doc.setTextColor(100);
-        doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
+        doc.text(`Genere le : ${new Date().toLocaleString()}`, 14, 30);
 
-        const columns = ['Nom', 'Prénom', 'Email', 'Téléphone', 'Rôle', 'Département'];
+        const columns = ['Nom', 'Prenom', 'Email', 'Telephone', 'Role', 'Departement'];
         const rows = this.filteredUsers.map(u => [
             u.nom,
             u.prenom,

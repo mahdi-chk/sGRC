@@ -1,24 +1,86 @@
 import { Router } from 'express';
+import { ForeignKeyConstraintError, Op, UniqueConstraintError, ValidationError } from 'sequelize';
 import { User } from './user.model';
+import { Department } from '../departments/department.model';
 import { hashPassword } from '../../utils/security';
 import { authenticateToken, authorizeRoles } from '../../middleware/auth.middleware';
 import { UserRole } from './user.roles';
 import { emailService } from '../../utils/email.service';
 
 const router = Router();
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Apply authentication to all user routes
+const sanitizeString = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+
+const normalizeUserPayload = (payload: any) => {
+    const role = sanitizeString(payload.role);
+    const poste = sanitizeString(payload.poste) || role;
+    const normalized: any = {
+        nom: sanitizeString(payload.nom),
+        prenom: sanitizeString(payload.prenom),
+        mail: sanitizeString(payload.mail).toLowerCase(),
+        telephone: sanitizeString(payload.telephone),
+        poste,
+        role,
+        departementId: Number(payload.departementId),
+    };
+
+    if (typeof payload.password === 'string' && payload.password.length > 0) {
+        normalized.password = payload.password;
+    }
+
+    return normalized;
+};
+
+const validateUserPayload = (payload: any, requirePassword: boolean) => {
+    if (!payload.nom) return 'Le nom est obligatoire.';
+    if (!payload.prenom) return 'Le prenom est obligatoire.';
+    if (!payload.mail) return 'L\'email est obligatoire.';
+    if (!emailRegex.test(payload.mail)) return 'Le format de l\'email est invalide.';
+    if (!payload.telephone) return 'Le telephone est obligatoire.';
+    if (!payload.role || !Object.values(UserRole).includes(payload.role)) return 'Le role selectionne est invalide.';
+    if (!Number.isInteger(payload.departementId) || payload.departementId <= 0) return 'Le departement selectionne est invalide.';
+    if (!payload.poste) return 'Le poste est obligatoire.';
+    if (requirePassword && !payload.password) return 'Le mot de passe est obligatoire pour un nouvel utilisateur.';
+    if (payload.password && payload.password.length < 6) return 'Le mot de passe doit contenir au moins 6 caracteres.';
+    return null;
+};
+
+const getUserRouteError = (error: any) => {
+    if (error instanceof UniqueConstraintError) {
+        return { status: 409, message: 'Cette adresse email est deja utilisee.' };
+    }
+
+    if (error instanceof ForeignKeyConstraintError) {
+        return { status: 400, message: 'Le departement selectionne est introuvable.' };
+    }
+
+    if (error instanceof ValidationError) {
+        const message = error.errors.map(entry => entry.message).filter(Boolean)[0];
+        return { status: 400, message: message || 'Les donnees utilisateur sont invalides.' };
+    }
+
+    return {
+        status: 400,
+        message: error?.message || 'Erreur lors de la sauvegarde de l\'utilisateur.'
+    };
+};
+
+const sendWelcomeEmailInBackground = (user: { mail: string; nom: string; prenom: string }) => {
+    Promise.resolve()
+        .then(() => emailService.sendWelcomeEmail(user))
+        .catch((emailError) => {
+            console.error('Failed to send welcome email:', emailError);
+        });
+};
+
 router.use(authenticateToken);
-// We no longer apply authorizeRoles(UserRole.ADMIN_SI) globally here 
-// to allow other roles (like Risk Manager) to fetch users for assignment.
 
-// Get all roles
 router.get('/roles', (req, res) => {
     const roles = Object.values(UserRole);
     res.json(roles);
 });
 
-// Get all users (Accessible to anyone authenticated, or restricted to specific roles if needed)
 router.get('/', async (req, res) => {
     try {
         const users = await User.findAll({
@@ -30,80 +92,123 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Create user (Admin SI only)
 router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
-        const userData = { ...req.body };
-        if (userData.password) {
-            const { hash, salt } = hashPassword(userData.password);
-            userData.password_hash = hash;
-            userData.password_salt = salt;
-            delete userData.password;
+        const userData = normalizeUserPayload(req.body);
+        const validationMessage = validateUserPayload(userData, true);
+        if (validationMessage) {
+            return res.status(400).json({ message: validationMessage });
         }
-        const user = await User.create(userData);
 
-        try {
-            const { mail, nom, prenom } = user;
-            await emailService.sendWelcomeEmail({ mail, nom, prenom });
-        } catch (emailError) {
-            console.error('Failed to send welcome email:', emailError);
+        const department = await Department.findByPk(userData.departementId);
+        if (!department) {
+            return res.status(400).json({ message: 'Le departement selectionne est introuvable.' });
+        }
+
+        const activeUser = await User.findOne({
+            where: { mail: userData.mail }
+        });
+        if (activeUser) {
+            return res.status(409).json({ message: 'Cette adresse email est deja utilisee.' });
+        }
+
+        const { hash, salt } = hashPassword(userData.password);
+        userData.password_hash = hash;
+        userData.password_salt = salt;
+        delete userData.password;
+
+        const deletedUser = await User.findOne({
+            where: { mail: userData.mail },
+            paranoid: false
+        });
+
+        let user: User;
+        if (deletedUser && (deletedUser as any).deletedAt) {
+            await deletedUser.restore();
+            user = await deletedUser.update(userData);
+        } else {
+            user = await User.create(userData);
         }
 
         const userResponse = user.toJSON();
         delete userResponse.password_hash;
         delete userResponse.password_salt;
 
-        res.status(201).json(userResponse);
+        sendWelcomeEmailInBackground({
+            mail: user.mail,
+            nom: user.nom,
+            prenom: user.prenom
+        });
+
+        return res.status(201).json(userResponse);
     } catch (error: any) {
         console.error('User Creation Error:', error.message);
-        res.status(400).json({
-            message: 'Erreur lors de la création de l\'utilisateur. Vérifiez les données fournies.'
-        });
+        const { status, message } = getUserRouteError(error);
+        return res.status(status).json({ message });
     }
 });
 
-// Update user (Admin SI only)
 router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const { id } = req.params;
-        const userData = { ...req.body };
+        const userData = normalizeUserPayload(req.body);
+        const validationMessage = validateUserPayload(userData, false);
+        if (validationMessage) {
+            return res.status(400).json({ message: validationMessage });
+        }
+
+        const department = await Department.findByPk(userData.departementId);
+        if (!department) {
+            return res.status(400).json({ message: 'Le departement selectionne est introuvable.' });
+        }
+
+        const existingUser = await User.findOne({
+            where: {
+                mail: userData.mail,
+                id: { [Op.ne]: Number(id) }
+            },
+            paranoid: false
+        });
+        if (existingUser) {
+            return res.status(409).json({ message: 'Cette adresse email est deja utilisee.' });
+        }
+
         if (userData.password) {
             const { hash, salt } = hashPassword(userData.password);
             userData.password_hash = hash;
             userData.password_salt = salt;
             delete userData.password;
         }
+
         const [updated] = await User.update(userData, { where: { id } });
-        if (updated) {
-            const updatedUser = await User.findByPk(id as string);
-            const userResponse = updatedUser?.toJSON() || {};
-            delete userResponse.password_hash;
-            delete userResponse.password_salt;
-            res.json(userResponse);
-        } else {
-            res.status(404).json({ message: 'User not found' });
+        if (!updated) {
+            return res.status(404).json({ message: 'User not found' });
         }
+
+        const updatedUser = await User.findByPk(id as string);
+        const userResponse = updatedUser?.toJSON() || {};
+        delete userResponse.password_hash;
+        delete userResponse.password_salt;
+        return res.json(userResponse);
     } catch (error: any) {
         console.error('User Update Error:', error.message);
-        res.status(400).json({
-            message: 'Erreur lors de la mise à jour de l\'utilisateur. Vérifiez les données fournies.'
-        });
+        const { status, message } = getUserRouteError(error);
+        return res.status(status).json({ message });
     }
 });
 
-// Delete user (Admin SI only)
 router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req, res) => {
     try {
         const { id } = req.params;
         const deleted = await User.destroy({ where: { id } });
         if (deleted) {
-            res.json({ message: 'User deleted successfully' });
-        } else {
-            res.status(404).json({ message: 'User not found' });
+            return res.json({ message: 'User deleted successfully' });
         }
+
+        return res.status(404).json({ message: 'User not found' });
     } catch (error: any) {
         console.error('User Deletion Error:', error.message);
-        res.status(400).json({ message: 'Erreur inattendue lors de la suppression de l\'utilisateur.' });
+        return res.status(400).json({ message: 'Erreur inattendue lors de la suppression de l\'utilisateur.' });
     }
 });
 

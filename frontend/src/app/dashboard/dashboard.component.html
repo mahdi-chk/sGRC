@@ -16,7 +16,7 @@
       <button class="icon-btn" (click)="toggleAiAssistant()" title="Assistant GRC">
         <i class="fas fa-robot"></i>
       </button>
-      <div class="notif-container">
+      <div class="notif-container" #notifContainer>
         <button class="icon-btn notif-btn" title="Notifications" (click)="toggleNotifDropdown()">
           <i class="fas fa-bell"></i>
           <span class="notif-dot" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
@@ -72,12 +72,14 @@
 
   <!-- Sub Navigation -->
   <nav class="sub-nav">
-    <a href="javascript:void(0)">Organisation</a>
-    <a href="javascript:void(0)">Ressource</a>
-    <a href="javascript:void(0)">Risque</a>
-    <a routerLink="/dashboard/incidents" routerLinkActive="active">Incident</a>
-    <a href="javascript:void(0)">Contrôle</a>
-    <a href="javascript:void(0)">Action</a>
+    <ng-container *ngFor="let item of visibleSubNavItems">
+      <a *ngIf="item.route; else staticNavItem" [routerLink]="item.route" routerLinkActive="active">
+        {{ item.label }}
+      </a>
+      <ng-template #staticNavItem>
+        <a href="javascript:void(0)">{{ item.label }}</a>
+      </ng-template>
+    </ng-container>
   </nav>
 
   <!-- Content Area -->

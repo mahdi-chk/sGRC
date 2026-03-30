@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../core/services/auth.service';
 import { DashboardService } from '../core/services/dashboard.service';
@@ -22,12 +22,20 @@ interface ModuleItem {
   roles: UserRole[];
 }
 
+interface NavItem {
+  label: string;
+  route?: string;
+  roles?: UserRole[];
+}
+
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent {
+  @ViewChild('notifContainer') notifContainer?: ElementRef<HTMLElement>;
+
   expanded = new Set<string>();
   status: string | null = null;
 
@@ -43,6 +51,33 @@ export class DashboardComponent {
   dashboardTitle: string = '';
   dashboardDesc: string = '';
   UserRole = UserRole; // Make enum available to template
+  subNavItems: NavItem[] = [
+    {
+      label: 'Organisation',
+      route: '/dashboard/organigramme',
+      roles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN]
+    },
+    { label: 'Ressource', route: '/dashboard/resources' },
+    {
+      label: 'Risque',
+      route: '/dashboard/risks',
+      roles: [
+        UserRole.SUPER_ADMIN,
+        UserRole.RISK_MANAGER,
+        UserRole.RISK_AGENT,
+        UserRole.AUDIT_SENIOR,
+        UserRole.AUDITEUR,
+        UserRole.TOP_MANAGEMENT
+      ]
+    },
+    {
+      label: 'Incident',
+      route: '/dashboard/incidents',
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+    },
+    { label: 'Contrôle' },
+    { label: 'Action' }
+  ];
 
 
   form: any = { name: '', description: '', config: '{}' };
@@ -69,25 +104,25 @@ export class DashboardComponent {
     });
 
     this.notificationService.notifications$.subscribe(notifs => {
-      if (this.currentUserRole === UserRole.RISK_AGENT) {
-        // Filter notifications to only show risk-related notifications for this agent
-        this.notifications = notifs.filter(n =>
-          n.type === NotificationType.RISK_ASSIGNED ||
-          n.type === NotificationType.STATUS_CHANGED ||
-          n.type === NotificationType.COMMENT_ADDED
-        );
-      } else {
-        this.notifications = notifs;
-      }
-    });
-
-    this.notificationService.unreadCount$.subscribe(count => {
-      this.unreadCount = count;
+      this.notifications = this.getVisibleNotifications(notifs);
+      this.unreadCount = this.notifications.filter(n => !n.isRead).length;
     });
   }
 
   toggleNotifDropdown() {
     this.showNotifDropdown = !this.showNotifDropdown;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (!this.showNotifDropdown || !this.notifContainer) {
+      return;
+    }
+
+    const target = event.target as Node | null;
+    if (target && !this.notifContainer.nativeElement.contains(target)) {
+      this.showNotifDropdown = false;
+    }
   }
 
   markAsRead(n: Notification) {
@@ -97,7 +132,45 @@ export class DashboardComponent {
   }
 
   markAllAsRead() {
+    const visibleUnreadIds = this.notifications
+      .filter(n => !n.isRead)
+      .map(n => n.id);
+
+    if (visibleUnreadIds.length === 0) {
+      return;
+    }
+
+    if (this.currentUserRole === UserRole.RISK_AGENT) {
+      this.notificationService.markManyAsRead(visibleUnreadIds).subscribe();
+      return;
+    }
+
     this.notificationService.markAllAsRead().subscribe();
+  }
+
+  private getVisibleNotifications(notifs: Notification[]): Notification[] {
+    if (this.currentUserRole === UserRole.RISK_AGENT) {
+      return notifs.filter(n =>
+        n.type === NotificationType.RISK_ASSIGNED ||
+        n.type === NotificationType.STATUS_CHANGED ||
+        n.type === NotificationType.COMMENT_ADDED ||
+        n.type === NotificationType.REMINDER
+      );
+    }
+
+    return notifs;
+  }
+
+  get visibleSubNavItems(): NavItem[] {
+    return this.subNavItems.filter(item => this.canAccess(item.roles));
+  }
+
+  canAccess(roles?: UserRole[]): boolean {
+    if (!roles || roles.length === 0) {
+      return true;
+    }
+
+    return !!this.currentUserRole && roles.includes(this.currentUserRole);
   }
 
   setDashboardInfo() {

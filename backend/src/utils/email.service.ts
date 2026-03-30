@@ -111,6 +111,42 @@ class EmailService {
         }
     }
 
+    async sendRiskReminderEmail(
+        recipient: { mail: string; nom: string; prenom: string },
+        risk: { titre: string; prochaineEcheance?: Date | null },
+        message: string
+    ) {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+
+        const deadline = risk.prochaineEcheance
+            ? new Date(risk.prochaineEcheance).toLocaleDateString('fr-FR')
+            : 'non definie';
+
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: recipient.mail,
+            subject: `Rappel risque : ${risk.titre}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${recipient.prenom},</h2>
+                    <p>${message}</p>
+                    <p><strong>Risque :</strong> ${risk.titre}</p>
+                    <p><strong>Prochaine echeance :</strong> ${deadline}</p>
+                    <p>Veuillez vous connecter a la plateforme pour verifier le suivi du risque.</p>
+                    <br>
+                    <p>Cordialement,<br>L'equipe GRC</p>
+                </div>
+            `,
+        };
+
+        try {
+            return await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Error sending risk reminder email:', error);
+            return null;
+        }
+    }
+
     async sendAuditMissionAssignedEmail(auditeur: { mail: string; nom: string; prenom: string }, mission: { titre: string; id: number }) {
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
 

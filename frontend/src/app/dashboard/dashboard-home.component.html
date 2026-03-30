@@ -26,7 +26,7 @@
         title="Dashboard Super Admin"
         description="Accès complet à toutes les fonctionnalités et modules de la plateforme."
         (openModule)="onOpenModule($event)" (openUserManagement)="showUserManagementView()"
-        (openRiskManagement)="showRiskManagementView()" (toggleAssistant)="onToggleAiAssistant()">
+        (toggleAssistant)="onToggleAiAssistant()">
     </app-super-admin-dashboard>
 
     <app-top-management-dashboard *ngSwitchCase="UserRole.TOP_MANAGEMENT" [filteredModules]="filteredModules"

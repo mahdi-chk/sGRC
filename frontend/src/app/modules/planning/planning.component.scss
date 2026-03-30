@@ -1,10 +1,11 @@
 .planning-wrapper {
     display: flex;
+    flex-direction: column;
     gap: 20px;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    padding: 20px;
+    border-radius: 18px;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+    padding: 24px;
     margin: 20px;
     min-height: 500px;
     animation: fadeIn 0.4s ease-out;
@@ -22,49 +23,144 @@
     }
 }
 
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 22px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(0, 74, 153, 0.08), rgba(0, 74, 153, 0.02));
+    border: 1px solid rgba(0, 74, 153, 0.1);
+}
+
+.header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
+    h1 {
+        margin: 0 0 6px;
+        font-size: 1.45rem;
+        color: var(--micepp-blue-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    p {
+        margin: 0;
+        color: var(--micepp-text-muted);
+        font-size: 0.98rem;
+        line-height: 1.5;
+    }
+}
+
+.back-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 12px;
+    background: white;
+    color: var(--micepp-blue);
+    box-shadow: 0 8px 18px rgba(0, 74, 153, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 22px rgba(0, 74, 153, 0.18);
+    }
+}
+
+.planning-content {
+    display: flex;
+    gap: 24px;
+    min-height: 0;
+}
+
 .calendar-section {
-    flex: 0 0 350px;
-    border-right: 1px solid var(--micepp-border);
-    padding-right: 20px;
+    flex: 0 0 370px;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid var(--micepp-border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.calendar-header {
+    margin-bottom: 18px;
 }
 
 .calendar-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     background: var(--micepp-gray-light);
-    padding: 8px 12px;
-    border-radius: 8px;
-    margin-bottom: 16px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    flex-wrap: wrap;
+
+    .calendar-nav-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex: 1;
+        min-width: 220px;
+    }
 
     .nav-btn {
         background: none;
         border: none;
         color: var(--micepp-blue);
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s;
+        transition: background 0.2s ease, transform 0.2s ease;
+        cursor: pointer;
 
         &:hover {
             background: rgba(0, 74, 153, 0.1);
+            transform: scale(1.04);
         }
     }
 
     .current-period {
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 1rem;
         color: var(--micepp-blue-dark);
+    }
+}
+
+.today-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: var(--micepp-blue);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+    &:hover {
+        background: var(--micepp-blue-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(0, 74, 153, 0.2);
     }
 }
 
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 6px;
 }
 
 .day-name {
@@ -79,25 +175,27 @@
 .calendar-day {
     aspect-ratio: 1;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     position: relative;
-    transition: all 0.2s;
-    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    background: white;
 
     &:hover:not(.not-current) {
-        background: var(--micepp-gray-light);
+        background: rgba(0, 74, 153, 0.06);
         color: var(--micepp-blue);
+        border-color: rgba(0, 74, 153, 0.1);
     }
 
     &.today {
         font-weight: 800;
         color: var(--micepp-blue);
-        background: rgba(0, 74, 153, 0.05);
+        background: rgba(0, 74, 153, 0.08);
 
         .day-number {
             border-bottom: 2px solid var(--micepp-blue);
@@ -105,254 +203,338 @@
     }
 
     &.not-current {
-        color: #ccc;
+        color: #c9d1db;
         cursor: default;
         pointer-events: none;
+        background: #f8fafc;
     }
 
-    &.has-risks {
-        color: var(--micepp-gold);
+    &.has-risks,
+    &.has-missions {
         font-weight: 700;
-    }
-
-    .indicators {
-        display: flex;
-        gap: 2px;
-        position: absolute;
-        bottom: 4px;
     }
 
     &.selected {
         background: var(--micepp-blue) !important;
         color: white !important;
-        box-shadow: 0 4px 10px rgba(0, 74, 153, 0.3);
+        box-shadow: 0 10px 22px rgba(0, 74, 153, 0.25);
 
         .day-number {
             border-bottom-color: white;
         }
 
-        .risk-indicator-dot {
-            background: white;
-        }
-
+        .risk-indicator-dot,
         .mission-indicator-dot {
             background: white;
         }
     }
+
+    .indicators {
+        display: flex;
+        gap: 4px;
+        position: absolute;
+        bottom: 7px;
+    }
+}
+
+.day-number {
+    line-height: 1;
+    padding-bottom: 2px;
+}
+
+.risk-indicator-dot,
+.mission-indicator-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
 }
 
 .risk-indicator-dot {
-    width: 6px;
-    height: 6px;
     background: var(--micepp-gold);
-    border-radius: 50%;
 }
 
 .mission-indicator-dot {
-    width: 6px;
-    height: 6px;
     background: var(--micepp-blue);
-    border-radius: 50%;
 }
 
 .details-section {
     flex: 1;
     display: flex;
     flex-direction: column;
+    padding: 6px 2px 6px 0;
     overflow-y: auto;
-    max-height: 500px;
+    max-height: 580px;
 }
 
 .details-header {
     margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--micepp-gray-light);
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--micepp-border);
 
     h3 {
         margin: 0;
-        font-size: 1.1rem;
+        font-size: 1.2rem;
+        color: var(--micepp-blue-dark);
     }
+}
 
-    .risk-count,
-    .mission-count {
-        font-size: 0.8rem;
-        color: var(--micepp-text-muted);
+.stats-mini {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.risk-count,
+.mission-count {
+    font-size: 0.82rem;
+    color: var(--micepp-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #f8fafc;
+}
+
+.details-content {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.detail-block {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.detail-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h4 {
+        margin: 0;
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 10px;
+        font-size: 1rem;
+        color: var(--micepp-blue-dark);
     }
 
-    .stats-mini {
-        display: flex;
-        gap: 15px;
-        margin-top: 5px;
+    span {
+        min-width: 30px;
+        height: 30px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: rgba(0, 74, 153, 0.08);
+        color: var(--micepp-blue);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.mission-card,
+.risk-card {
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.07);
     }
 }
 
 .mission-card {
-    background: rgba(0, 74, 153, 0.03);
-    border: 1px solid rgba(0, 74, 153, 0.1);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 12px;
+    background: linear-gradient(180deg, rgba(0, 74, 153, 0.05), rgba(0, 74, 153, 0.02));
+    border: 1px solid rgba(0, 74, 153, 0.12);
     border-left: 4px solid var(--micepp-blue);
-    transition: transform 0.2s, box-shadow 0.2s;
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
 }
 
-.mission-card-header {
+.mission-card-header,
+.risk-card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 10px;
-    gap: 10px;
+    margin-bottom: 12px;
+    gap: 12px;
 }
 
-.mission-title {
+.mission-title,
+.risk-title {
     font-weight: 700;
     font-size: 1rem;
     color: var(--micepp-blue-dark);
+    line-height: 1.4;
+}
+
+.mission-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: rgba(0, 74, 153, 0.09);
+    color: var(--micepp-blue-dark);
+}
+
+.meta-chip-muted {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+}
+
+.meta-chip-risk {
+    background: rgba(217, 119, 6, 0.14);
+    color: #9a6700;
+}
+
+.mission-detail,
+.risk-detail {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: #475569;
 }
 
 .mission-detail {
-    font-size: 0.85rem;
-    color: var(--micepp-text-muted);
-    line-height: 1.4;
     margin-bottom: 12px;
+
+    p {
+        margin: 6px 0 0;
+    }
+
+    &.secondary {
+        padding-top: 10px;
+        border-top: 1px dashed rgba(0, 74, 153, 0.12);
+    }
+}
+
+.detail-label {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--micepp-blue);
 }
 
 .mission-meta {
+    margin-top: 14px;
+
     .tag {
-        font-size: 0.7rem;
+        font-size: 0.72rem;
         font-weight: 700;
         background: var(--micepp-blue);
         color: white;
-        padding: 2px 8px;
-        border-radius: 4px;
+        padding: 5px 10px;
+        border-radius: 999px;
     }
 }
 
-.status-badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
+.status-badge,
+.risk-badge {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
     font-weight: 700;
     color: white;
     white-space: nowrap;
+}
 
-    &.status-à-venir {
-        background: #9c27b0;
+.status-badge {
+    &.status-a-venir {
+        background: #7c3aed;
     }
 
     &.status-en-cours {
-        background: #2196f3;
+        background: #2563eb;
     }
 
-    &.status-terminé {
-        background: #4caf50;
+    &.status-termine {
+        background: #16a34a;
     }
 
     &.status-en-retard {
-        background: #f44336;
+        background: #dc2626;
     }
 
-    &.status-annulé {
-        background: #607d8b;
+    &.status-annule {
+        background: #64748b;
     }
 }
 
 .risk-card {
     background: white;
     border: 1px solid var(--micepp-border);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 12px;
-    transition: transform 0.2s, box-shadow 0.2s;
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-}
-
-.risk-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-    gap: 10px;
-}
-
-.risk-title {
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--micepp-blue-dark);
 }
 
 .risk-badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: white;
-    white-space: nowrap;
-
     &.level-faible {
-        background: #4caf50;
+        background: #22c55e;
     }
 
     &.level-moyen {
-        background: #ff9800;
+        background: #f59e0b;
     }
 
-    &.level-élevé {
-        background: #f44336;
+    &.level-eleve {
+        background: #ef4444;
     }
 
     &.level-critique {
-        background: #b71c1c;
+        background: #991b1b;
+    }
+
+    &.level-limite {
+        background: #0f766e;
     }
 }
 
 .risk-detail {
-    font-size: 0.85rem;
-    color: var(--micepp-text-muted);
-    line-height: 1.4;
     margin-bottom: 12px;
 }
 
 .risk-meta {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
+    gap: 8px;
+    font-size: 0.78rem;
     font-weight: 600;
-    color: #888;
+    color: #64748b;
 }
 
 .status-indicator {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
 
     &.status-ouvert {
-        background: #2196f3;
+        background: #2563eb;
     }
 
     &.status-en-cours {
-        background: #ffc107;
+        background: #f59e0b;
     }
 
-    &.status-traité {
-        background: #8bc34a;
+    &.status-traite {
+        background: #84cc16;
     }
 
-    &.status-clôturé {
-        background: #9e9e9e;
+    &.status-cloture {
+        background: #94a3b8;
     }
 }
 
@@ -362,15 +544,82 @@
     align-items: center;
     justify-content: center;
     flex: 1;
-    color: #ccc;
-    gap: 15px;
+    color: #94a3b8;
+    gap: 14px;
+    text-align: center;
 
     i {
         font-size: 3rem;
+        color: #cbd5e1;
     }
 
     p {
         margin: 0;
         font-weight: 600;
+    }
+}
+
+@media (max-width: 1100px) {
+    .planning-content {
+        flex-direction: column;
+    }
+
+    .calendar-section {
+        flex-basis: auto;
+    }
+
+    .details-section {
+        max-height: none;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .planning-wrapper {
+        margin: 12px;
+        padding: 16px;
+    }
+
+    .page-header {
+        padding: 16px;
+    }
+
+    .header-left {
+        gap: 12px;
+
+        h1 {
+            font-size: 1.2rem;
+        }
+    }
+
+    .calendar-section {
+        padding: 14px;
+    }
+
+    .calendar-nav {
+        align-items: stretch;
+
+        .calendar-nav-main {
+            min-width: 100%;
+        }
+    }
+
+    .today-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .calendar-grid {
+        gap: 4px;
+    }
+
+    .calendar-day {
+        border-radius: 10px;
+        font-size: 0.85rem;
+    }
+
+    .mission-card,
+    .risk-card {
+        padding: 14px;
     }
 }

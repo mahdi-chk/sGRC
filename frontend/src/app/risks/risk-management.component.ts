@@ -102,9 +102,13 @@ export class RiskManagementComponent implements OnInit {
         this.loadInitialData();
     }
 
-    get isSeniorAuditor(): boolean {
+    get currentUserRole(): UserRole | null {
         const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-        return user.role === UserRole.AUDIT_SENIOR || user.role === UserRole.SUPER_ADMIN;
+        return user.role || null;
+    }
+
+    get isSeniorAuditor(): boolean {
+        return this.currentUserRole === UserRole.AUDIT_SENIOR || this.currentUserRole === UserRole.SUPER_ADMIN;
     }
 
     get authQueryToken(): string {
@@ -152,6 +156,8 @@ export class RiskManagementComponent implements OnInit {
     }
 
     openCreateModal() {
+        if (!this.isRiskManager) return;
+
         this.isEditing = false;
         this.resetForm();
         this.showCreateModal = true;
@@ -215,6 +221,8 @@ export class RiskManagementComponent implements OnInit {
     }
 
     onEditRisk(risk: Risk) {
+        if (!this.isRiskManager) return;
+
         this.isEditing = true;
         this.editRiskId = risk.id;
         this.newRisk = {
@@ -245,7 +253,7 @@ export class RiskManagementComponent implements OnInit {
     }
 
     saveRisk() {
-        if (!this.isFormValid()) return;
+        if (!this.isRiskManager || !this.isFormValid()) return;
 
         const formData = new FormData();
         Object.keys(this.newRisk).forEach(key => {
@@ -269,6 +277,8 @@ export class RiskManagementComponent implements OnInit {
     }
 
     openAssignModal(risk: Risk) {
+        if (!this.isRiskManager) return;
+
         this.selectedRisk = risk;
         // Show only Risk Agents, prioritized by department
         this.filteredAgents = this.riskAgents.filter(u =>
@@ -282,6 +292,8 @@ export class RiskManagementComponent implements OnInit {
     }
 
     assignRisk(agentId: string) {
+        if (!this.isRiskManager) return;
+
         if (this.selectedRisk && agentId) {
             this.isAssigning = true;
             this.riskService.assignRisk(this.selectedRisk.id, parseInt(agentId)).subscribe({
@@ -317,6 +329,8 @@ export class RiskManagementComponent implements OnInit {
     }
 
     closeRisk(riskId: number) {
+        if (!this.isRiskManager) return;
+
         if (confirm('Êtes-vous sûr de vouloir clôturer ce risque ?')) {
             this.riskService.updateStatus(riskId, RiskStatus.CLOSED).subscribe(() => this.loadRisks());
         }
@@ -344,14 +358,15 @@ export class RiskManagementComponent implements OnInit {
     }
 
     revertToInProgress(riskId: number) {
+        if (!this.isRiskManager) return;
+
         if (confirm('Voulez-vous vraiment remettre ce risque en cours de traitement ?')) {
             this.riskService.updateStatus(riskId, RiskStatus.IN_PROGRESS).subscribe(() => this.loadRisks());
         }
     }
 
     get isRiskManager(): boolean {
-        const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-        return user.role === UserRole.RISK_MANAGER || user.role === UserRole.SUPER_ADMIN;
+        return this.currentUserRole === UserRole.RISK_MANAGER || this.currentUserRole === UserRole.SUPER_ADMIN;
     }
 
     deleteRisk(riskId: number) {

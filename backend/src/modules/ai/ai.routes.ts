@@ -76,7 +76,7 @@ router.post('/generate-risks-file', authenticateToken, uploadSecureDoc, async (r
         const risks = await AIService.generateRisksFromSituation(extractedText, req.user!.role);
         res.json(risks);
     } catch (error: any) {
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 });
 

@@ -71,6 +71,12 @@ export class NotificationService {
         );
     }
 
+    markManyAsRead(ids: number[]): Observable<any> {
+        return this.http.put(`${this.apiUrl}/read-selected`, { ids }).pipe(
+            tap(() => this.refresh())
+        );
+    }
+
     private refresh() {
         this.getNotifications().subscribe(notifications => {
             this.notificationsSubject.next(notifications);

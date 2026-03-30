@@ -12,7 +12,7 @@
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn-ai" (click)="showAiModal = true" title="Générer par IA">
+            <button *ngIf="isRiskManager" class="btn-ai" (click)="showAiModal = true" title="Générer par IA">
                 <i class="fas fa-robot"></i> Générer par IA
             </button>
             <button class="btn-ai-eval" (click)="evaluateRisksWithAi()" *ngIf="isSeniorAuditor"
@@ -32,7 +32,7 @@
                     </button>
                 </div>
             </div>
-            <button class="btn-create" (click)="openCreateModal()">
+            <button *ngIf="isRiskManager" class="btn-create" (click)="openCreateModal()">
                 <i class="fas fa-plus"></i> Nouveau Risque
             </button>
         </div>
@@ -121,18 +121,18 @@
                         <button class="action-btn btn-view" (click)="onViewDetails(risk)" title="Voir détails">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="action-btn btn-edit" (click)="onEditRisk(risk)" title="Modifier">
+                        <button *ngIf="isRiskManager" class="action-btn btn-edit" (click)="onEditRisk(risk)" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
                         <button class="action-btn btn-assign" (click)="openAssignModal(risk)" title="Assigner"
-                            *ngIf="risk.statut === 'Ouvert'">
+                            *ngIf="isRiskManager && risk.statut === 'Ouvert'">
                             <i class="fas fa-user-plus"></i>
                         </button>
-                        <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-revert"
+                        <button *ngIf="isRiskManager && risk.statut === 'Traité'" class="action-btn btn-revert"
                             (click)="revertToInProgress(risk.id)" title="Remettre en cours">
                             <i class="fas fa-undo"></i>
                         </button>
-                        <button *ngIf="risk.statut === 'Traité'" class="action-btn btn-close"
+                        <button *ngIf="isRiskManager && risk.statut === 'Traité'" class="action-btn btn-close"
                             (click)="closeRisk(risk.id)" title="Clôturer">
                             <i class="fas fa-check-double"></i>
                         </button>

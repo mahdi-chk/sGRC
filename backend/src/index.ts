@@ -16,6 +16,7 @@ import { authenticateToken } from './middleware/auth.middleware';
 dotenv.config();
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
 /**
  * --- CONFIGURATION DES MIDDLEWARES ---
@@ -29,9 +30,12 @@ app.use(helmet({
 
 // Throttling adaptatif pour bloquer les attaques de force brute sur l'authentification
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // Limite calculée sur une fenêtre de 15 minutes
-  max: 10, // Déclenchement d'un drop IP après 10 erreurs de login répétées
-  message: "Système de protection activé : Trop de tentatives. Veuillez réessayer plus tard.",
+  windowMs: isProduction ? 15 * 60 * 1000 : 60 * 1000, // Fenêtre plus courte en local pour éviter de bloquer le développement
+  max: isProduction ? 10 : 100, // Seuil strict en production, plus tolérant en local
+  skipSuccessfulRequests: true, // Ne compter que les tentatives de connexion en échec
+  message: {
+    message: "Système de protection activé : trop de tentatives de connexion. Veuillez réessayer plus tard."
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });

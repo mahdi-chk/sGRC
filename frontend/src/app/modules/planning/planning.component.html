@@ -6,84 +6,134 @@
             </button>
             <div>
                 <h1><i class="fas fa-calendar-alt"></i> Planning & Calendrier</h1>
-                <p>Visualisez les échéances des risques et les missions d'audit programmées.</p>
+                <p>Visualisez les echeances des risques et les missions d'audit programmees.</p>
             </div>
         </div>
     </div>
-    <div class="calendar-section">
-        <div class="calendar-header">
-            <div class="calendar-nav">
-                <button (click)="prevMonth()" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
-                <span class="current-period">{{ currentMonthName }} {{ currentYear }}</span>
-                <button (click)="nextMonth()" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
+
+    <div class="planning-content">
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <div class="calendar-nav">
+                    <div class="calendar-nav-main">
+                        <button (click)="prevMonth()" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
+                        <span class="current-period">{{ currentMonthName }} {{ currentYear }}</span>
+                        <button (click)="nextMonth()" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <button (click)="goToToday()" class="today-btn">Aujourd'hui</button>
+                </div>
             </div>
-        </div>
 
-        <div class="calendar-grid">
-            <div class="day-name" *ngFor="let name of dayNames">{{ name }}</div>
+            <div class="calendar-grid">
+                <div class="day-name" *ngFor="let name of dayNames">{{ name }}</div>
 
-            <div *ngFor="let day of days" class="calendar-day" [class.today]="day.isToday"
-                [class.not-current]="!day.isCurrentMonth" [class.has-risks]="day.risks.length > 0"
-                [class.selected]="selectedDay === day" (click)="selectDay(day)">
-
-                <span class="day-number" *ngIf="day.date">{{ day.date | date:'d' }}</span>
-                <div class="indicators">
-                    <div class="risk-indicator-dot" *ngIf="day.risks.length > 0" title="Risques"></div>
-                    <div class="mission-indicator-dot" *ngIf="day.missions.length > 0" title="Missions d'audit"></div>
+                <div *ngFor="let day of days" class="calendar-day" [class.today]="day.isToday"
+                    [class.not-current]="!day.isCurrentMonth" [class.has-risks]="day.risks.length > 0"
+                    [class.has-missions]="day.missions.length > 0" [class.selected]="selectedDay === day"
+                    (click)="selectDay(day)">
+                    <span class="day-number" *ngIf="day.date">{{ day.date | date:'d' }}</span>
+                    <div class="indicators">
+                        <div class="risk-indicator-dot" *ngIf="day.risks.length > 0" title="Risques"></div>
+                        <div class="mission-indicator-dot" *ngIf="day.missions.length > 0" title="Missions d'audit"></div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="details-section">
-        <div class="details-header" *ngIf="selectedDay">
-            <h3>{{ selectedDay.date | date:'longDate' }}</h3>
-            <div class="stats-mini">
-                <span class="risk-count" *ngIf="selectedDay.risks.length > 0">
-                    <i class="fas fa-exclamation-triangle"></i> {{ selectedDay.risks.length }} risque(s)
-                </span>
-                <span class="mission-count" *ngIf="selectedDay.missions.length > 0">
-                    <i class="fas fa-clipboard-check"></i> {{ selectedDay.missions.length }} mission(s)
-                </span>
-            </div>
-        </div>
-
-        <div class="details-content"
-            *ngIf="selectedDay && (selectedDay.risks.length > 0 || selectedDay.missions.length > 0)">
-            <!-- Missions Preview -->
-            <div class="mission-card" *ngFor="let mission of selectedDay.missions">
-                <div class="mission-card-header">
-                    <span class="mission-title"><i class="fas fa-clipboard-list"></i> {{ mission.titre }}</span>
-                    <span class="status-badge" [class]="'status-' + mission.statut.toLowerCase().replace(' ', '-')">
-                        {{ mission.statut }}
+        <div class="details-section">
+            <div class="details-header" *ngIf="selectedDay">
+                <h3>{{ selectedDay.date | date:'longDate' }}</h3>
+                <div class="stats-mini">
+                    <span class="risk-count" *ngIf="selectedDay.risks.length > 0">
+                        <i class="fas fa-exclamation-triangle"></i> {{ selectedDay.risks.length }} risque(s)
+                    </span>
+                    <span class="mission-count" *ngIf="selectedDay.missions.length > 0">
+                        <i class="fas fa-clipboard-check"></i> {{ selectedDay.missions.length }} mission(s)
                     </span>
                 </div>
-                <div class="mission-detail">{{ mission.objectifs }}</div>
-                <div class="mission-meta">
-                    <span class="tag">Mission d'Audit</span>
+            </div>
+
+            <div class="details-content"
+                *ngIf="selectedDay && (selectedDay.risks.length > 0 || selectedDay.missions.length > 0)">
+                <div class="detail-block" *ngIf="selectedDay.missions.length > 0">
+                    <div class="detail-block-header">
+                        <h4><i class="fas fa-clipboard-list"></i> Missions programmees</h4>
+                        <span>{{ selectedDay.missions.length }}</span>
+                    </div>
+
+                    <div class="mission-card" *ngFor="let mission of selectedDay.missions">
+                        <div class="mission-card-header">
+                            <span class="mission-title">{{ mission.titre }}</span>
+                            <span class="status-badge" [ngClass]="getMissionStatusClass(mission.statut)">
+                                {{ mission.statut }}
+                            </span>
+                        </div>
+
+                        <div class="mission-highlights">
+                            <span class="meta-chip">
+                                <i class="fas fa-calendar-check"></i>
+                                Echeance {{ mission.delai | date:'dd/MM/yyyy' }}
+                            </span>
+                            <span class="meta-chip meta-chip-muted">
+                                <i class="fas fa-user-check"></i>
+                                {{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Auditeur a affecter' }}
+                            </span>
+                            <span class="meta-chip meta-chip-risk" *ngIf="mission.risk?.titre">
+                                <i class="fas fa-shield-alt"></i>
+                                {{ mission.risk.titre }}
+                            </span>
+                        </div>
+
+                        <div class="mission-detail" *ngIf="mission.objectifs">
+                            <span class="detail-label">Objectifs</span>
+                            <p>{{ mission.objectifs }}</p>
+                        </div>
+
+                        <div class="mission-detail secondary"
+                            *ngIf="mission.description && mission.description !== mission.objectifs">
+                            <span class="detail-label">Description</span>
+                            <p>{{ mission.description }}</p>
+                        </div>
+
+                        <div class="mission-detail secondary"
+                            *ngIf="!mission.objectifs && !mission.description && mission.responsabilites">
+                            <span class="detail-label">Responsabilites</span>
+                            <p>{{ mission.responsabilites }}</p>
+                        </div>
+
+                        <div class="mission-meta">
+                            <span class="tag">Mission d'audit</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-block" *ngIf="selectedDay.risks.length > 0">
+                    <div class="detail-block-header">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Risques a echeance</h4>
+                        <span>{{ selectedDay.risks.length }}</span>
+                    </div>
+
+                    <div class="risk-card" *ngFor="let risk of selectedDay.risks">
+                        <div class="risk-card-header">
+                            <span class="risk-title">{{ risk.titre }}</span>
+                            <span class="risk-badge" [ngClass]="getRiskLevelClass(risk.niveauRisque)">
+                                {{ risk.niveauRisque }}
+                            </span>
+                        </div>
+                        <div class="risk-detail">{{ risk.explication }}</div>
+                        <div class="risk-meta">
+                            <span class="status-indicator" [ngClass]="getRiskStatusClass(risk.statut)"></span>
+                            {{ risk.statut }}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Risks Preview -->
-            <div class="risk-card" *ngFor="let risk of selectedDay.risks">
-                <div class="risk-card-header">
-                    <span class="risk-title">{{ risk.titre }}</span>
-                    <span class="risk-badge" [class]="'level-' + risk.niveauRisque.toLowerCase()">{{ risk.niveauRisque
-                        }}</span>
-                </div>
-                <div class="risk-detail">{{ risk.explication }}</div>
-                <div class="risk-meta">
-                    <span class="status-indicator"
-                        [class]="'status-' + risk.statut.toLowerCase().replace(' ', '-')"></span>
-                    {{ risk.statut }}
-                </div>
+            <div class="empty-details"
+                *ngIf="!selectedDay || (selectedDay.risks.length === 0 && selectedDay.missions.length === 0)">
+                <i class="fas fa-calendar-day"></i>
+                <p>{{ !selectedDay ? 'Selectionnez un jour' : 'Rien de prevu pour ce jour' }}</p>
             </div>
-        </div>
-
-        <div class="empty-details"
-            *ngIf="!selectedDay || (selectedDay.risks.length === 0 && selectedDay.missions.length === 0)">
-            <i class="fas fa-calendar-day"></i>
-            <p>{{ !selectedDay ? 'Sélectionnez un jour' : 'Rien de prévu pour ce jour' }}</p>
         </div>
     </div>
 </div>

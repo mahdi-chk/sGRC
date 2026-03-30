@@ -37,6 +37,10 @@ export class AuthService {
 
         if (savedUser && savedToken) {
             try {
+                if (this.isTokenExpired(savedToken)) {
+                    this.clearSession();
+                    return;
+                }
                 this.currentUserSubject.next(JSON.parse(savedUser));
                 this.startActivityMonitoring();
             } catch (e) {
@@ -48,6 +52,29 @@ export class AuthService {
             console.warn('Inconsistent session state detected, clearing sessionStorage');
             sessionStorage.removeItem('sgrc_user');
             sessionStorage.removeItem('sgrc_token');
+        }
+    }
+
+    private clearSession() {
+        if (this.checkInterval) clearInterval(this.checkInterval);
+        sessionStorage.removeItem('sgrc_token');
+        sessionStorage.removeItem('sgrc_user');
+        this.currentUserSubject.next(null);
+    }
+
+    private isTokenExpired(token: string): boolean {
+        try {
+            const payloadPart = token.split('.')[1];
+            if (!payloadPart) return true;
+
+            const normalizedPayload = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+            const decodedPayload = JSON.parse(atob(normalizedPayload));
+            if (!decodedPayload.exp) return false;
+
+            return decodedPayload.exp * 1000 <= Date.now();
+        } catch (error) {
+            console.warn('Unable to decode JWT from sessionStorage, clearing session');
+            return true;
         }
     }
 
@@ -149,14 +176,30 @@ export class AuthService {
      * Vérifie si un token est présent en session.
      */
     isLoggedIn(): boolean {
-        return !!sessionStorage.getItem('sgrc_token');
+        const token = sessionStorage.getItem('sgrc_token');
+        if (!token) return false;
+
+        if (this.isTokenExpired(token)) {
+            this.clearSession();
+            return false;
+        }
+
+        return true;
     }
 
     /**
      * Récupère le token JWT pour l'intercepteur HTTP.
      */
     getToken(): string | null {
-        return sessionStorage.getItem('sgrc_token');
+        const token = sessionStorage.getItem('sgrc_token');
+        if (!token) return null;
+
+        if (this.isTokenExpired(token)) {
+            this.clearSession();
+            return null;
+        }
+
+        return token;
     }
 
     /**

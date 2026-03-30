@@ -29,7 +29,11 @@ export class LoginComponent {
                 this.router.navigate(['/dashboard']);
             },
             error: (err) => {
-                this.error = 'Email ou mot de passe incorrect';
+                if (err.status === 429) {
+                    this.error = err.error?.message || 'Trop de tentatives de connexion. Veuillez réessayer plus tard.';
+                } else {
+                    this.error = 'Email ou mot de passe incorrect';
+                }
                 this.loading = false;
             }
         });

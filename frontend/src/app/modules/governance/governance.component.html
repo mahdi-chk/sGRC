@@ -5,14 +5,127 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-landmark"></i> Gouvernance</h1>
-                <p>Pilotez la stratégie globale de gestion des risques et de conformité.</p>
+                <h1><i class="fas fa-folder-open"></i> Ressources documentaires</h1>
+                <p>Accedez aux documents de gouvernance par role. Le Super Admin peut gerer tous les dossiers, les autres profils ont un acces consultation uniquement.</p>
             </div>
         </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadDocuments()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
     </div>
-    <div class="empty-state">
-        <i class="fas fa-construction"></i>
-        <h3>Module en cours de développement</h3>
-        <p>Cette interface sera bientôt disponible pour la gouvernance.</p>
+
+    <div class="summary-grid" *ngIf="!isLoading">
+        <div class="summary-card">
+            <span class="eyebrow">Role connecte</span>
+            <h3>{{ currentRole || 'Utilisateur' }}</h3>
+            <p>{{ canEdit ? 'Acces gestion complet' : 'Acces consultation uniquement' }}</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Dossier attribue</span>
+            <h3>{{ assignedFolderKey || 'Aucun' }}</h3>
+            <p>Chaque role consulte son propre espace documentaire.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Documents visibles</span>
+            <h3>{{ totalDocuments }}</h3>
+            <p>Disponibles depuis le bouton Ressource et le sous-module Gestion Documentaire.</p>
+        </div>
+    </div>
+
+    <div class="editor-panel" *ngIf="canEdit">
+        <div class="editor-head">
+            <h2>Gestion des dossiers par role</h2>
+            <p>Le Super Admin peut ajouter ou supprimer des documents dans n'importe quel dossier.</p>
+        </div>
+
+        <div class="editor-form">
+            <div class="field">
+                <label for="role-folder">Dossier cible</label>
+                <select id="role-folder" [(ngModel)]="selectedRoleKey">
+                    <option *ngFor="let folder of getUploadTargets()" [value]="folder.key">{{ folder.label }}</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="document-upload">Document</label>
+                <input id="document-upload" type="file" (change)="onFileSelected($event)">
+            </div>
+
+            <button class="btn-premium" (click)="uploadDocument()" [disabled]="isUploading || !selectedRoleKey || !selectedFile">
+                <i class="fas" [ngClass]="isUploading ? 'fa-circle-notch fa-spin' : 'fa-upload'"></i>
+                Ajouter
+            </button>
+        </div>
+
+        <p class="field-note">Formats acceptes : PDF, Office, images, texte, archives ZIP.</p>
+
+        <p *ngIf="feedbackMessage && !isLoading" class="status-line" [ngClass]="feedbackType">{{ feedbackMessage }}</p>
+    </div>
+
+    <div *ngIf="feedbackMessage && !canEdit && !isLoading" class="status-line" [ngClass]="feedbackType">{{ feedbackMessage }}</div>
+
+    <div class="error-state" *ngIf="feedbackType === 'error' && !isLoading && folders.length === 0">
+        <i class="fas fa-triangle-exclamation"></i>
+        <h3>Chargement impossible</h3>
+        <p>{{ feedbackMessage }}</p>
+    </div>
+
+    <div class="empty-state" *ngIf="isLoading">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <h3>Chargement des ressources</h3>
+        <p>Preparation des dossiers documentaires par role.</p>
+    </div>
+
+    <div class="folders-grid" *ngIf="!isLoading && folders.length > 0">
+        <section class="folder-section" *ngFor="let folder of folders">
+            <div class="folder-header">
+                <div>
+                    <h2>{{ folder.label }}</h2>
+                    <p>{{ getFolderDocumentCount(folder) }} dans {{ folder.relativePath }}</p>
+                </div>
+                <span class="folder-badge">{{ folder.key }}</span>
+            </div>
+
+            <div class="documents-grid" *ngIf="folder.documents.length > 0; else emptyFolder">
+                <article class="doc-card" *ngFor="let document of folder.documents">
+                    <div class="doc-meta">
+                        <div class="doc-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="doc-info">
+                            <h3>{{ document.name }}</h3>
+                            <p>{{ formatSize(document.size) }}</p>
+                            <p>Mis a jour le {{ document.lastModified | date:'short' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="doc-actions">
+                        <button class="action-btn view-btn" (click)="openDocument(document)">
+                            <i class="fas fa-eye"></i>
+                            Voir
+                        </button>
+                        <button class="action-btn download-btn" (click)="downloadDocument(document)">
+                            <i class="fas fa-download"></i>
+                            Telecharger
+                        </button>
+                        <button *ngIf="canEdit" class="action-btn delete-btn" (click)="deleteDocument(document)">
+                            <i class="fas fa-trash"></i>
+                            Supprimer
+                        </button>
+                    </div>
+                </article>
+            </div>
+
+            <ng-template #emptyFolder>
+                <div class="empty-state">
+                    <i class="fas fa-folder-open"></i>
+                    <h3>Dossier vide</h3>
+                    <p>Aucun document n'est encore disponible dans ce dossier.</p>
+                </div>
+            </ng-template>
+        </section>
     </div>
 </div>

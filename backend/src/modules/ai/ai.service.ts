@@ -519,9 +519,17 @@ export class AIService {
     }
 
     static async evaluateRisks(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
-        if (!risks || risks.length === 0) return [];
+        if (!risks || risks.length === 0) {
+            appLogger.warn('AI', 'Strategic AI evaluation skipped because no risks were provided', { role });
+            return [];
+        }
 
         try {
+            appLogger.info('AI', 'Strategic AI evaluation started', {
+                role,
+                riskCount: risks.length,
+            });
+
             const risksText = risks.map(r => `- [${r.id}] ${r.titre} (Niveau: ${r.niveauRisque}, Domaine: ${r.domaine})`).join('\n');
             const isIndexed = await RAGEngine.checkIndexStatus();
             let standardsContext = '';
@@ -563,12 +571,25 @@ export class AIService {
             }
 
             // Normalisation des donnÃ©es pour Sequelize (Conversion string -> number pour priorite)
-            return evaluation.map(item => ({
+            const normalizedEvaluation = evaluation.map(item => ({
                 ...item,
                 priorite: item.priorite ? parseInt(item.priorite.toString()) : 0
             }));
+
+            appLogger.info('AI', 'Strategic AI evaluation completed', {
+                role,
+                riskCount: risks.length,
+                resultCount: normalizedEvaluation.length,
+                ragUsed: isIndexed,
+            });
+
+            return normalizedEvaluation;
         } catch (error: any) {
-            appLogger.error('AI', 'Risk evaluation failed', error.message || error);
+            appLogger.error('AI', 'Strategic AI evaluation failed', {
+                role,
+                riskCount: risks.length,
+                error: error.message || error,
+            });
             // Retourne une liste vide au lieu de crasher le process parent
             return [];
         }

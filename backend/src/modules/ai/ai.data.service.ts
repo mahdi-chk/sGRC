@@ -3,6 +3,7 @@ import { Risk } from '../risk/risk.model';
 import { AuditMission } from '../auditing/audit-mission.model';
 import { UserRole } from '../users/user.roles';
 import { Op } from 'sequelize';
+import { appLogger } from '../../utils/app-logger';
 
 export class AIDataService {
     private static metadataCache: any = null;
@@ -39,7 +40,7 @@ export class AIDataService {
             this.cacheTimestamp = now;
             return this.metadataCache;
         } catch (error) {
-            console.error('Error fetching system metadata:', error);
+            appLogger.error('AIData', 'Failed to fetch system metadata', error);
             return 'DÉPARTEMENTS : Information non disponible.';
         }
     }
@@ -92,7 +93,7 @@ export class AIDataService {
 
             return foundData ? context : '';
         } catch (error) {
-            console.error('Error fetching contextual data:', error);
+            appLogger.error('AIData', 'Failed to fetch contextual data', error);
             return '';
         }
     }

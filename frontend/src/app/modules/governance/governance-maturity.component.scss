@@ -1,0 +1,105 @@
+@import './governance-shared';
+
+.summary-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(37, 99, 235, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.summary-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0f766e 0%, #2563eb 60%, #0f172a 100%);
+}
+
+.summary-card:nth-child(2)::after,
+.summary-card:nth-child(4)::after {
+  background: linear-gradient(90deg, #1d4ed8 0%, #38bdf8 100%);
+}
+
+.section-grid .content-card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.07);
+}
+
+.section-grid .content-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+}
+
+.section-grid .content-card:first-child::before {
+  background: linear-gradient(180deg, #0f766e 0%, #14b8a6 100%);
+}
+
+.section-grid .content-card:last-child::before {
+  background: linear-gradient(180deg, #1d4ed8 0%, #60a5fa 100%);
+}
+
+.section-grid .content-card:first-child .card-head h2 {
+  color: #0f766e;
+}
+
+.section-grid .content-card:last-child .card-head h2 {
+  color: #1d4ed8;
+}
+
+.kpi-list {
+  display: grid;
+  gap: 14px;
+}
+
+.kpi-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #dbe7f3;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.kpi-item strong {
+  font-size: 0.96rem;
+  line-height: 1.45;
+  color: #1e293b;
+}
+
+.kpi-item span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #1d4ed8;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.section-grid .content-card:first-child .kpi-item span {
+  background: #dff7f2;
+  color: #0f766e;
+}
+
+@media (max-width: 640px) {
+  .kpi-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kpi-item span {
+    width: fit-content;
+  }
+}

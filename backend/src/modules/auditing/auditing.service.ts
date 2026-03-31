@@ -15,6 +15,7 @@ import { AuditMissionChecklistItem } from './audit-mission-checklist.model';
 import { AuditEvidence } from './audit-evidence.model';
 import fs from 'fs';
 import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
+import { appLogger } from '../../utils/app-logger';
 
 export class AuditingService {
     /**
@@ -82,7 +83,7 @@ export class AuditingService {
                 );
             }
         } catch (error) {
-            console.error('Error sending assignment notifications:', error);
+            appLogger.error('Auditing', 'Assignment notifications failed', error);
         }
 
         return mission;
@@ -127,7 +128,7 @@ export class AuditingService {
                 );
             }
         } catch (error) {
-            console.error('Error sending report submission notifications:', error);
+            appLogger.error('Auditing', 'Report submission notifications failed', error);
         }
 
         return mission;

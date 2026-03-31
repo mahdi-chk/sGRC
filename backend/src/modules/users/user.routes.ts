@@ -7,6 +7,7 @@ import { authenticateToken, authorizeRoles } from '../../middleware/auth.middlew
 import { UserRole } from './user.roles';
 import { emailService } from '../../utils/email.service';
 import { restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
+import { appLogger } from '../../utils/app-logger';
 
 const router = Router();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,7 +73,10 @@ const sendWelcomeEmailInBackground = (user: { mail: string; nom: string; prenom:
     Promise.resolve()
         .then(() => emailService.sendWelcomeEmail(user))
         .catch((emailError) => {
-            console.error('Failed to send welcome email:', emailError);
+            appLogger.error('Users', 'Failed to send welcome email', {
+                email: user.mail,
+                error: emailError,
+            });
         });
 };
 
@@ -167,7 +171,7 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async 
 
         return res.status(201).json(userResponse);
     } catch (error: any) {
-        console.error('User Creation Error:', error.message);
+        appLogger.error('Users', 'User creation failed', error.message);
         const { status, message } = getUserRouteError(error);
         return res.status(status).json({ message });
     }
@@ -215,7 +219,7 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), asyn
         delete userResponse.password_salt;
         return res.json(userResponse);
     } catch (error: any) {
-        console.error('User Update Error:', error.message);
+        appLogger.error('Users', 'User update failed', error.message);
         const { status, message } = getUserRouteError(error);
         return res.status(status).json({ message });
     }
@@ -232,7 +236,7 @@ router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), a
         await softDeleteInstance(user);
         return res.json({ message: 'User deleted successfully' });
     } catch (error: any) {
-        console.error('User Deletion Error:', error.message);
+        appLogger.error('Users', 'User deletion failed', error.message);
         return res.status(400).json({ message: 'Erreur inattendue lors de la suppression de l\'utilisateur.' });
     }
 });
@@ -252,7 +256,7 @@ router.patch('/:id/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN
         delete userResponse.password_salt;
         return res.json(userResponse);
     } catch (error: any) {
-        console.error('User Restore Error:', error.message);
+        appLogger.error('Users', 'User restore failed', error.message);
         return res.status(400).json({ message: 'Erreur inattendue lors de la restauration de l\'utilisateur.' });
     }
 });

@@ -1,0 +1,88 @@
+<div class="governance-standalone-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-user-check"></i> Adhesion et Application</h1>
+                <p>Taux d application reels mesures sur l assignation et l execution des risques et des missions.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary" (click)="loadData()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="governance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="governance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Risques assignes</span>
+            <h3>{{ assignedRisksRate }}%</h3>
+            <p>Couverture d assignation du portefeuille risques.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Risques traites</span>
+            <h3>{{ treatedRisksRate }}%</h3>
+            <p>Execution effective des actions sur les risques.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Missions assignees</span>
+            <h3>{{ assignedMissionsRate }}%</h3>
+            <p>Missions confiees a un auditeur identifiable.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Rapports produits</span>
+            <h3>{{ reportedMissionsRate }}%</h3>
+            <p>Taux de missions avec rapport ou cloture.</p>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Application sur les risques</h2>
+                <p>Execution reelle sur le registre des risques.</p>
+            </div>
+            <div class="progress-list">
+                <div class="progress-item">
+                    <strong>Assignation du risk agent</strong>
+                    <div class="progress-track"><div class="progress-bar" [style.width.%]="assignedRisksRate"></div></div>
+                    <span>{{ assignedRisksRate }}%</span>
+                </div>
+                <div class="progress-item">
+                    <strong>Traitement effectif</strong>
+                    <div class="progress-track"><div class="progress-bar" [style.width.%]="treatedRisksRate"></div></div>
+                    <span>{{ treatedRisksRate }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Application sur les missions</h2>
+                <p>Execution reelle sur le portefeuille d audit.</p>
+            </div>
+            <div class="progress-list">
+                <div class="progress-item">
+                    <strong>Assignation des auditeurs</strong>
+                    <div class="progress-track"><div class="progress-bar" [style.width.%]="assignedMissionsRate"></div></div>
+                    <span>{{ assignedMissionsRate }}%</span>
+                </div>
+                <div class="progress-item">
+                    <strong>Production des rapports</strong>
+                    <div class="progress-track"><div class="progress-bar" [style.width.%]="reportedMissionsRate"></div></div>
+                    <span>{{ reportedMissionsRate }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

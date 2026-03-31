@@ -245,7 +245,7 @@ export class DashboardComponent {
 
     // Fetch CPS data for this specific submodule
     const cpsModule = CPS_MODULES[this.currentModuleKey];
-    const cpsSubmodule: SubmoduleDetail | undefined = cpsModule?.submodules[s.title];
+    const cpsSubmodule: SubmoduleDetail | undefined = this.resolveCpsSubmodule(cpsModule, m, s);
 
     if (cpsSubmodule) {
       const featuresHtml = cpsSubmodule.features.map(f => `<li>${f}</li>`).join('');
@@ -275,6 +275,35 @@ export class DashboardComponent {
 
     this.modalVisible = true;
     this.creating = false;
+  }
+
+  private resolveCpsSubmodule(moduleDetail: any, moduleItem: ModuleItem, submodule: Submodule): SubmoduleDetail | undefined {
+    if (!moduleDetail?.submodules) {
+      return undefined;
+    }
+
+    if (moduleDetail.submodules[submodule.title]) {
+      return moduleDetail.submodules[submodule.title];
+    }
+
+    const details = Object.values(moduleDetail.submodules) as SubmoduleDetail[];
+    const normalizedTitle = this.normalizeSubmoduleTitle(submodule.title);
+    const directMatch = details.find(detail => this.normalizeSubmoduleTitle(detail.title) === normalizedTitle);
+
+    if (directMatch) {
+      return directMatch;
+    }
+
+    const submoduleIndex = moduleItem.submodules.findIndex(item => item.title === submodule.title);
+    return submoduleIndex >= 0 ? details[submoduleIndex] : undefined;
+  }
+
+  private normalizeSubmoduleTitle(value: string): string {
+    return (value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
   }
 
   closeModal() {

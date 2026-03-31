@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { appLogger } from './app-logger';
 
 class EmailService {
     private transporter;
@@ -22,7 +23,7 @@ class EmailService {
 
     async sendWelcomeEmail(user: { mail: string; nom: string; prenom: string }) {
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            console.warn('Email notification skipped: SMTP credentials (SMTP_USER, SMTP_PASS) are not configured in .env');
+            appLogger.warn('Email', 'Email sending skipped because SMTP credentials are missing');
             return null;
         }
 
@@ -44,14 +45,18 @@ class EmailService {
 
         try {
             const info = await this.transporter.sendMail(mailOptions);
-            console.log('Email sent: %s', info.messageId);
+            appLogger.info('Email', 'Email sent', {
+                messageId: info.messageId,
+                to: user.mail,
+                subject: mailOptions.subject,
+            });
             // If using ethereal
             if (info.messageId && process.env.SMTP_HOST === 'smtp.ethereal.email') {
-                console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info as any));
+                appLogger.debug('Email', 'Preview URL available', nodemailer.getTestMessageUrl(info as any));
             }
             return info;
         } catch (error) {
-            console.error('Error sending email:', error);
+            appLogger.error('Email', 'Email sending failed', error);
             // We don't want to block user creation if email fails
             return null;
         }
@@ -79,7 +84,7 @@ class EmailService {
         try {
             return await this.transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error('Error sending risk assigned email:', error);
+            appLogger.error('Email', 'Risk assigned email failed', error);
             return null;
         }
     }
@@ -106,7 +111,7 @@ class EmailService {
         try {
             return await this.transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error('Error sending risk status update email:', error);
+            appLogger.error('Email', 'Risk status update email failed', error);
             return null;
         }
     }
@@ -142,7 +147,7 @@ class EmailService {
         try {
             return await this.transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error('Error sending risk reminder email:', error);
+            appLogger.error('Email', 'Risk reminder email failed', error);
             return null;
         }
     }
@@ -169,7 +174,7 @@ class EmailService {
         try {
             return await this.transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error('Error sending audit mission assigned email:', error);
+            appLogger.error('Email', 'Audit mission assigned email failed', error);
             return null;
         }
     }
@@ -197,7 +202,7 @@ class EmailService {
         try {
             return await this.transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error('Error sending audit report submitted email:', error);
+            appLogger.error('Email', 'Audit report submitted email failed', error);
             return null;
         }
     }
@@ -224,7 +229,7 @@ class EmailService {
         try {
             return await this.transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error('Error sending risk closed email:', error);
+            appLogger.error('Email', 'Risk closed email failed', error);
             return null;
         }
     }

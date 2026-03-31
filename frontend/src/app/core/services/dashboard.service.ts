@@ -31,23 +31,23 @@ export class DashboardService {
         {
             key: 'gouvernance',
             title: 'Gouvernance',
-            desc: 'Structurer l’organisation, politiques, workflows et traçabilité.',
+            desc: 'Structurer l organisation, les politiques, les workflows et la tracabilite.',
             submodules: [
-                { title: 'Gestion Documentaire', desc: 'Cycle de vie des documents, signatures, archivage.' },
-                { title: 'Traçabilité et Historique', desc: 'Versions, audit trails et recherches avancées.' },
-                { title: 'Workflows d’Approbation', desc: 'Circuits multi-niveaux et notifications.' },
-                { title: 'Indicateurs de Maturité', desc: 'Scoring basé sur COBIT/ISO.' },
-                { title: 'Adhésion et Application', desc: 'Preuves d’adhésion et suivi d’application.' }
+                { title: 'Gestion Documentaire', desc: 'Cycle de vie des documents, signatures et archivage.' },
+                { title: 'Tracabilite et Historique', desc: 'Versions, audit trails et recherches avancees.' },
+                { title: 'Workflows d Approbation', desc: 'Circuits multi-niveaux et notifications.' },
+                { title: 'Indicateurs de Maturite', desc: 'Scoring base sur COBIT et ISO.' },
+                { title: 'Adhesion et Application', desc: 'Preuves d adhesion et suivi d application.' }
             ],
             roles: [UserRole.SUPER_ADMIN]
         },
         {
             key: 'risques',
             title: 'Gestion des Risques',
-            desc: 'Identifier, évaluer et traiter les risques.',
+            desc: 'Identifier, evaluer et traiter les risques.',
             submodules: [
                 { title: 'Registre des Risques' },
-                { title: 'Évaluation Paramétrable' },
+                { title: 'Evaluation Parametrable' },
                 { title: 'Cartographie Dynamique' },
                 { title: 'Plans de Traitement' },
                 { title: 'Alertes et Monitoring' }
@@ -56,39 +56,39 @@ export class DashboardService {
         },
         {
             key: 'controls',
-            title: 'Contrôles Internes',
-            desc: 'Définir, planifier et vérifier les contrôles.',
+            title: 'Controles Internes',
+            desc: 'Definir, planifier et verifier les controles.',
             submodules: [
-                { title: 'Référentiel des Contrôles' },
-                { title: 'Planification Automatisée' },
+                { title: 'Referentiel des Controles' },
+                { title: 'Planification Automatisee' },
                 { title: 'Collecte de Preuves' },
-                { title: 'Évaluation d’Efficacité' },
-                { title: 'Suivi des Non-Conformités' }
+                { title: 'Evaluation d Efficacite' },
+                { title: 'Suivi des Non-Conformites' }
             ],
             roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
         },
         {
             key: 'conformite',
-            title: 'Conformité',
-            desc: 'Mapper exigences réglementaires et preuves.',
+            title: 'Conformite',
+            desc: 'Mapper exigences reglementaires et preuves.',
             submodules: [
-                { title: 'Référentiels Intégrés' },
+                { title: 'Referentiels Integres' },
                 { title: 'Mapping et Liens' },
-                { title: 'Auto-Évaluations' },
-                { title: 'Suivi des Écarts' },
-                { title: 'Mises à Jour et Preuves' }
+                { title: 'Auto-Evaluations' },
+                { title: 'Suivi des Ecarts' },
+                { title: 'Mises a Jour et Preuves' }
             ],
             roles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
         },
         {
             key: 'audit',
             title: 'Audit',
-            desc: 'Planifier et exécuter les audits avec traçabilité.',
+            desc: 'Planifier et executer les audits avec tracabilite.',
             submodules: [
                 { title: 'Planification Pluriannuelle' },
                 { title: 'Gestion des Missions' },
-                { title: 'Check-Lists Paramétrables' },
-                { title: 'Traçabilité des Preuves' },
+                { title: 'Check-Lists Parametrables' },
+                { title: 'Tracabilite des Preuves' },
                 { title: 'Rapports et Suivi' }
             ],
             roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
@@ -96,7 +96,7 @@ export class DashboardService {
         {
             key: 'audit-auditeur',
             title: 'Audit',
-            desc: 'Réalisez vos missions, remplissez les checklists et soumettez vos rapports.',
+            desc: 'Realisez vos missions, remplissez les checklists et soumettez vos rapports.',
             submodules: [
                 { title: 'Mes Missions' },
                 { title: 'Ma Checklist' },
@@ -108,22 +108,22 @@ export class DashboardService {
         {
             key: 'incidents',
             title: 'Gestion des Incidents',
-            desc: 'Déclarer, analyser et traiter les incidents.',
+            desc: 'Declarer, analyser et traiter les incidents.',
             submodules: [
-                { title: 'Enregistrement Structuré' },
+                { title: 'Enregistrement Structure' },
                 { title: 'Workflow de Traitement' },
                 { title: 'Liens et Analyse' },
-                { title: 'Reporting Consolidé' }
+                { title: 'Reporting Consolide' }
             ],
             roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
         },
         {
             key: 'plans-actions',
-            title: 'Plans d’Actions',
-            desc: 'Gérer les actions correctives et préventives.',
+            title: 'Plans d Actions',
+            desc: 'Gerer les actions correctives et preventives.',
             submodules: [
-                { title: 'Gestion Centralisée' },
-                { title: 'Suivi des Échéances' },
+                { title: 'Gestion Centralisee' },
+                { title: 'Suivi des Echeances' },
                 { title: 'Notifications' },
                 { title: 'Indicateurs' }
             ],
@@ -132,11 +132,11 @@ export class DashboardService {
         {
             key: 'reporting',
             title: 'Reporting & Dashboards',
-            desc: 'Synthèse, KPI et exports pour la direction.',
+            desc: 'Synthese, KPI et exports pour la direction.',
             submodules: [
                 { title: 'Tableaux de Bord' },
                 { title: 'KPI Personnalisables' },
-                { title: 'Vision Multi-Entités' },
+                { title: 'Vision Multi-Entites' },
                 { title: 'Exports' }
             ],
             roles: [UserRole.TOP_MANAGEMENT]
@@ -144,10 +144,10 @@ export class DashboardService {
         {
             key: 'supervision',
             title: 'Supervision sGRC',
-            desc: 'Accompagnement méthodologique et recommandations.',
+            desc: 'Accompagnement methodologique et recommandations.',
             submodules: [
-                { title: 'Bibliothèque de Bonnes Pratiques' },
-                { title: 'Recommandations Contextualisées' },
+                { title: 'Bibliotheque de Bonnes Pratiques' },
+                { title: 'Recommandations Contextualisees' },
                 { title: 'Benchmarks Sectoriels' },
                 { title: 'Assistance Experte' },
                 { title: 'Supervision Continue' }
@@ -187,7 +187,7 @@ export class DashboardService {
                 return {
                     ...module,
                     submodules: module.submodules.filter(submodule =>
-                        submodule.title === 'Liens et Analyse' || submodule.title === 'Reporting ConsolidÃ©'
+                        submodule.title === 'Liens et Analyse' || submodule.title === 'Reporting Consolide'
                     )
                 };
             });
@@ -199,34 +199,42 @@ export class DashboardService {
     openSubmoduleModal(m: any, s: any) {
         const currentUser = this.authService.getCurrentUser();
         const isRiskAgent = currentUser?.role === UserRole.RISK_AGENT;
+        const title = (s?.title || '').toLowerCase();
 
-        if (m.key === 'gouvernance' && s.title === 'Gestion Documentaire') {
-            this.router.navigate(['/dashboard/resources']);
+        if (m.key === 'gouvernance' && title.includes('gestion') && title.includes('document')) {
+            this.router.navigate(['/dashboard/governance-documents']);
+        } else if (m.key === 'gouvernance' && title.includes('historique')) {
+            this.router.navigate(['/dashboard/governance-history']);
+        } else if (m.key === 'gouvernance' && title.includes('workflow')) {
+            this.router.navigate(['/dashboard/governance-workflows']);
+        } else if (m.key === 'gouvernance' && title.includes('maturit')) {
+            this.router.navigate(['/dashboard/governance-maturity']);
+        } else if (m.key === 'gouvernance' && title.includes('application')) {
+            this.router.navigate(['/dashboard/governance-adoption']);
         } else if (s.title === 'Registre des Risques') {
             if (isRiskAgent) {
                 this.router.navigate(['/dashboard/assigned-risks']);
             } else {
                 this.router.navigate(['/dashboard/risks']);
             }
-        } else if (s.title === 'Évaluation Paramétrable') {
+        } else if (title.includes('evaluation parametrable')) {
             this.router.navigate(['/dashboard/strategic-evaluation']);
         } else if (s.title === 'Cartographie Dynamique') {
             this.router.navigate(['/dashboard/statistics']);
         } else if (
-            s.title === 'Check-Lists Paramétrables' || 
-            s.title === 'Traçabilité des Preuves' || 
+            s.title === 'Check-Lists Parametrables' ||
+            s.title === 'Tracabilite des Preuves' ||
             s.title === 'Gestion des Missions' ||
             s.title === 'Rapports et Suivi' ||
             s.title === 'Planification Pluriannuelle'
         ) {
             const isSenior = currentUser?.role === UserRole.AUDIT_SENIOR || currentUser?.role === UserRole.SUPER_ADMIN;
-            
-            // Redirections spécifiques
-            if (s.title === 'Check-Lists Paramétrables' && isSenior) {
+
+            if (s.title === 'Check-Lists Parametrables' && isSenior) {
                 this.router.navigate(['/dashboard/audit-checklists']);
             } else if (s.title === 'Planification Pluriannuelle' && isSenior) {
                 this.router.navigate(['/dashboard/audit-planning']);
-            } else if (s.title === 'Traçabilité des Preuves' && isSenior) {
+            } else if (s.title === 'Tracabilite des Preuves' && isSenior) {
                 this.router.navigate(['/dashboard/audit-evidence-explorer']);
             } else if (s.title === 'Rapports et Suivi' && isSenior) {
                 this.router.navigate(['/dashboard/audit-report-review']);
@@ -245,19 +253,19 @@ export class DashboardService {
             this.router.navigate(['/dashboard/alertes-monitoring']);
         } else if (s.title === 'Plans de Traitement') {
             this.router.navigate(['/dashboard/treatment-plans']);
-        } else if (s.title === 'Enregistrement Structuré') {
+        } else if (title.includes('enregistrement structure')) {
             this.router.navigate(['/dashboard/incident-registration']);
         } else if (s.title === 'Workflow de Traitement') {
             this.router.navigate(['/dashboard/incident-workflow']);
         } else if (s.title === 'Liens et Analyse') {
             this.router.navigate(['/dashboard/incident-analysis']);
-        } else if (s.title === 'Reporting Consolidé') {
+        } else if (title.includes('reporting consolide')) {
             this.router.navigate(['/dashboard/incident-reporting']);
         } else if (s.title === 'Tableaux de Bord') {
             this.router.navigate(['/dashboard/reporting/dashboard']);
         } else if (s.title === 'KPI Personnalisables') {
             this.router.navigate(['/dashboard/reporting/kpis']);
-        } else if (s.title === 'Vision Multi-Entités') {
+        } else if (s.title === 'Vision Multi-Entites') {
             this.router.navigate(['/dashboard/reporting/multi-entity']);
         } else if (s.title === 'Exports') {
             this.router.navigate(['/dashboard/reporting/exports']);

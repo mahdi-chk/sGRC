@@ -1,0 +1,100 @@
+<div class="governance-standalone-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-line"></i> Indicateurs de Maturite</h1>
+                <p>Reprise des indicateurs reels utilises dans les vues Top Management pour les risques et les missions.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary" (click)="loadData()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="governance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="governance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Maturite risque</span>
+            <h3>{{ maturityLevel }}/5</h3>
+            <p>Calcul identique a celui du dashboard Top Management.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Traitement risques</span>
+            <h3>{{ treatmentRate }}%</h3>
+            <p>Risques traites ou clotures sur le total visible.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Completion audit</span>
+            <h3>{{ completionRate }}%</h3>
+            <p>Missions terminees sur l ensemble des missions.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Missions a temps</span>
+            <h3>{{ onTimeRate }}%</h3>
+            <p>Mesure reelle de tenue du portefeuille d audit.</p>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>KPIs Risques</h2>
+                <p>Memes leviers que la vue direction risques.</p>
+            </div>
+            <div class="kpi-list">
+                <div class="kpi-item">
+                    <strong>Total risques</strong>
+                    <span>{{ totalRisks }}</span>
+                </div>
+                <div class="kpi-item">
+                    <strong>Taux critiques</strong>
+                    <span>{{ criticalRate }}%</span>
+                </div>
+                <div class="kpi-item">
+                    <strong>Taux de traitement</strong>
+                    <span>{{ treatmentRate }}%</span>
+                </div>
+                <div class="kpi-item">
+                    <strong>Indice de maturite</strong>
+                    <span>{{ maturityLevel }}/5</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-head">
+                <h2>KPIs Audit</h2>
+                <p>Memes indicateurs que l analytics audit du Top Management.</p>
+            </div>
+            <div class="kpi-list">
+                <div class="kpi-item">
+                    <strong>Total missions</strong>
+                    <span>{{ totalMissions }}</span>
+                </div>
+                <div class="kpi-item">
+                    <strong>Completion</strong>
+                    <span>{{ completionRate }}%</span>
+                </div>
+                <div class="kpi-item">
+                    <strong>Retard</strong>
+                    <span>{{ delayedRate }}%</span>
+                </div>
+                <div class="kpi-item">
+                    <strong>A temps</strong>
+                    <span>{{ onTimeRate }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

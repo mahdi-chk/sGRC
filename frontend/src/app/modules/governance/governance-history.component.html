@@ -1,0 +1,110 @@
+<div class="governance-standalone-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-clock-rotate-left"></i> Tracabilite et Historique</h1>
+                <p>Historique de gestion des risques et des missions d audit, sans passer par la couche documentaire.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary" (click)="loadData()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="governance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="governance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Risques ouverts</span>
+            <h3>{{ openRisks }}</h3>
+            <p>Risques encore dans le cycle de traitement.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Risques critiques</span>
+            <h3>{{ criticalRisks }}</h3>
+            <p>Elements a forte exposition visibles dans le registre.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Missions actives</span>
+            <h3>{{ activeMissions }}</h3>
+            <p>Missions actuellement en execution.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Missions en retard</span>
+            <h3>{{ lateMissions }}</h3>
+            <p>Dossiers audit a escalader.</p>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <div class="table-card">
+            <div class="card-head">
+                <h3>Historique risques</h3>
+                <p>Trie par derniere mise a jour du registre des risques.</p>
+            </div>
+            <table class="governance-table" *ngIf="risks.length > 0; else emptyRisks">
+                <thead>
+                    <tr>
+                        <th>Risque</th>
+                        <th>Domaine</th>
+                        <th>Niveau</th>
+                        <th>Statut</th>
+                        <th>Mise a jour</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let risk of risks | slice:0:8">
+                        <td><strong>{{ risk.titre }}</strong></td>
+                        <td>{{ risk.domaine }}</td>
+                        <td>{{ risk.niveauRisque }}</td>
+                        <td><span class="badge" [ngClass]="getRiskBadgeClass(risk.statut)">{{ risk.statut }}</span></td>
+                        <td>{{ risk.updatedAt | date:'short' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <ng-template #emptyRisks>
+                <div class="empty-state">Aucun risque disponible.</div>
+            </ng-template>
+        </div>
+
+        <div class="table-card">
+            <div class="card-head">
+                <h3>Historique missions</h3>
+                <p>Trie par derniere mise a jour des missions d audit.</p>
+            </div>
+            <table class="governance-table" *ngIf="missions.length > 0; else emptyMissions">
+                <thead>
+                    <tr>
+                        <th>Mission</th>
+                        <th>Auditeur</th>
+                        <th>Statut</th>
+                        <th>Echeance</th>
+                        <th>Mise a jour</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let mission of missions | slice:0:8">
+                        <td><strong>{{ mission.titre }}</strong></td>
+                        <td>{{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Non assignee' }}</td>
+                        <td><span class="badge" [ngClass]="getMissionBadgeClass(mission.statut)">{{ mission.statut }}</span></td>
+                        <td>{{ mission.delai | date:'shortDate' }}</td>
+                        <td>{{ mission.updatedAt | date:'short' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <ng-template #emptyMissions>
+                <div class="empty-state">Aucune mission disponible.</div>
+            </ng-template>
+        </div>
+    </div>
+</div>

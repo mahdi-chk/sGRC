@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { SystemSetting } from './setting.model';
 import { authenticateToken, authorizeRoles } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
+import { appLogger } from '../../utils/app-logger';
 
 const router = Router();
 
@@ -26,12 +27,15 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { key, value } = req.body;
-        console.log(`Updating setting: ${key} = ${value}`);
+        appLogger.info('Settings', 'Updating setting', { key });
         const [setting, created] = await SystemSetting.upsert({ key, value });
-        console.log(`Setting ${key} ${created ? 'created' : 'updated'}.`);
+        appLogger.info('Settings', 'Setting persisted', {
+            key,
+            action: created ? 'created' : 'updated',
+        });
         res.status(created ? 201 : 200).json(setting);
     } catch (error) {
-        console.error('Error updating setting:', error);
+        appLogger.error('Settings', 'Setting update failed', error);
         res.status(400).json({ message: 'Error updating setting', error });
     }
 });

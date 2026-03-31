@@ -1,131 +1,86 @@
-<div class="governance-page">
+<div class="governance-standalone-page">
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-folder-open"></i> Ressources documentaires</h1>
-                <p>Accedez aux documents de gouvernance par role. Le Super Admin peut gerer tous les dossiers, les autres profils ont un acces consultation uniquement.</p>
+                <h1><i class="fas fa-sitemap"></i> Gouvernance</h1>
+                <p>Point d entree des sous-modules Gouvernance, alimentes a partir des risques, des missions et des ressources documentaires reelles.</p>
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn-refresh" (click)="loadDocuments()" [disabled]="isLoading">
+            <button class="btn-secondary" (click)="loadData()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
             </button>
         </div>
     </div>
 
-    <div class="summary-grid" *ngIf="!isLoading">
+    <nav class="governance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="governance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid">
         <div class="summary-card">
-            <span class="eyebrow">Role connecte</span>
-            <h3>{{ currentRole || 'Utilisateur' }}</h3>
-            <p>{{ canEdit ? 'Acces gestion complet' : 'Acces consultation uniquement' }}</p>
+            <span class="eyebrow">Risques</span>
+            <h3>{{ risks.length }}</h3>
+            <p>{{ criticalRisks }} critique(s) actuellement visibles.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Dossier attribue</span>
-            <h3>{{ assignedFolderKey || 'Aucun' }}</h3>
-            <p>Chaque role consulte son propre espace documentaire.</p>
+            <span class="eyebrow">Traitement</span>
+            <h3>{{ treatmentRate }}%</h3>
+            <p>Taux de traitement calcule sur la meme logique que le Top Management.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Documents visibles</span>
-            <h3>{{ totalDocuments }}</h3>
-            <p>Disponibles depuis le bouton Ressource et le sous-module Gestion Documentaire.</p>
+            <span class="eyebrow">Maturite</span>
+            <h3>{{ maturityLevel }}/5</h3>
+            <p>Indice de maturite risque reutilise depuis les indicateurs direction.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Missions</span>
+            <h3>{{ missions.length }}</h3>
+            <p>{{ completionRate }}% de completion des missions d audit.</p>
         </div>
     </div>
 
-    <div class="editor-panel" *ngIf="canEdit">
-        <div class="editor-head">
-            <h2>Gestion des dossiers par role</h2>
-            <p>Le Super Admin peut ajouter ou supprimer des documents dans n'importe quel dossier.</p>
-        </div>
-
-        <div class="editor-form">
-            <div class="field">
-                <label for="role-folder">Dossier cible</label>
-                <select id="role-folder" [(ngModel)]="selectedRoleKey">
-                    <option *ngFor="let folder of getUploadTargets()" [value]="folder.key">{{ folder.label }}</option>
-                </select>
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Sous-modules</h2>
+                <p>Chaque interface est desormais separee et accessible directement.</p>
             </div>
 
-            <div class="field">
-                <label for="document-upload">Document</label>
-                <input id="document-upload" type="file" (change)="onFileSelected($event)">
+            <div class="module-list">
+                <a *ngFor="let module of modules" [routerLink]="module.route" class="module-link">
+                    <strong>{{ module.title }}</strong>
+                    <p>{{ module.description }}</p>
+                </a>
             </div>
-
-            <button class="btn-premium" (click)="uploadDocument()" [disabled]="isUploading || !selectedRoleKey || !selectedFile">
-                <i class="fas" [ngClass]="isUploading ? 'fa-circle-notch fa-spin' : 'fa-upload'"></i>
-                Ajouter
-            </button>
         </div>
 
-        <p class="field-note">Formats acceptes : PDF, Office, images, texte, archives ZIP.</p>
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Lecture executive</h2>
+                <p>La gouvernance s appuie ici sur les objets metiers reels plutot que sur des donnees de demonstration.</p>
+            </div>
 
-        <p *ngIf="feedbackMessage && !isLoading" class="status-line" [ngClass]="feedbackType">{{ feedbackMessage }}</p>
-    </div>
-
-    <div *ngIf="feedbackMessage && !canEdit && !isLoading" class="status-line" [ngClass]="feedbackType">{{ feedbackMessage }}</div>
-
-    <div class="error-state" *ngIf="feedbackType === 'error' && !isLoading && folders.length === 0">
-        <i class="fas fa-triangle-exclamation"></i>
-        <h3>Chargement impossible</h3>
-        <p>{{ feedbackMessage }}</p>
-    </div>
-
-    <div class="empty-state" *ngIf="isLoading">
-        <i class="fas fa-circle-notch fa-spin"></i>
-        <h3>Chargement des ressources</h3>
-        <p>Preparation des dossiers documentaires par role.</p>
-    </div>
-
-    <div class="folders-grid" *ngIf="!isLoading && folders.length > 0">
-        <section class="folder-section" *ngFor="let folder of folders">
-            <div class="folder-header">
-                <div>
-                    <h2>{{ folder.label }}</h2>
-                    <p>{{ getFolderDocumentCount(folder) }} dans {{ folder.relativePath }}</p>
+            <div class="executive-notes">
+                <div class="note-item">
+                    <strong>Historique</strong>
+                    <p>Construit sur les risques et les missions, pas sur les documents.</p>
                 </div>
-                <span class="folder-badge">{{ folder.key }}</span>
-            </div>
-
-            <div class="documents-grid" *ngIf="folder.documents.length > 0; else emptyFolder">
-                <article class="doc-card" *ngFor="let document of folder.documents">
-                    <div class="doc-meta">
-                        <div class="doc-icon">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
-                        <div class="doc-info">
-                            <h3>{{ document.name }}</h3>
-                            <p>{{ formatSize(document.size) }}</p>
-                            <p>Mis a jour le {{ document.lastModified | date:'short' }}</p>
-                        </div>
-                    </div>
-
-                    <div class="doc-actions">
-                        <button class="action-btn view-btn" (click)="openDocument(document)">
-                            <i class="fas fa-eye"></i>
-                            Voir
-                        </button>
-                        <button class="action-btn download-btn" (click)="downloadDocument(document)">
-                            <i class="fas fa-download"></i>
-                            Telecharger
-                        </button>
-                        <button *ngIf="canEdit" class="action-btn delete-btn" (click)="deleteDocument(document)">
-                            <i class="fas fa-trash"></i>
-                            Supprimer
-                        </button>
-                    </div>
-                </article>
-            </div>
-
-            <ng-template #emptyFolder>
-                <div class="empty-state">
-                    <i class="fas fa-folder-open"></i>
-                    <h3>Dossier vide</h3>
-                    <p>Aucun document n'est encore disponible dans ce dossier.</p>
+                <div class="note-item">
+                    <strong>Maturite</strong>
+                    <p>Basee sur les memes indicateurs risques et audit que le Top Management.</p>
                 </div>
-            </ng-template>
-        </section>
+                <div class="note-item">
+                    <strong>Interfaces separees</strong>
+                    <p>Chaque sous-module s ouvre sur sa propre page autonome.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

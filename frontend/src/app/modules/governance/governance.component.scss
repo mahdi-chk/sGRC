@@ -1,268 +1,28 @@
-.governance-page {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
+@import './governance-shared';
 
-.summary-grid {
+.module-list,
+.executive-notes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
+  gap: 12px;
 }
 
-.summary-card,
-.editor-panel,
-.folder-section {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 18px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+.module-link,
+.note-item {
+  display: block;
+  text-decoration: none;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
-.summary-card {
-  padding: 22px;
-}
-
-.summary-card .eyebrow {
-  display: inline-block;
-  margin-bottom: 10px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #0f766e;
-}
-
-.summary-card h3 {
-  margin: 0 0 6px;
-  font-size: 1.55rem;
-  color: #0f172a;
-}
-
-.summary-card p {
-  margin: 0;
-  color: #64748b;
-}
-
-.editor-panel {
-  padding: 24px;
-}
-
-.editor-head {
-  margin-bottom: 18px;
-}
-
-.editor-head h2 {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-}
-
-.editor-head p {
-  margin: 0;
-  color: #64748b;
-}
-
-.editor-form {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) 1fr auto;
-  gap: 14px;
-  align-items: end;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field label {
-  font-weight: 700;
+.module-link strong,
+.note-item strong {
   color: #1e293b;
 }
 
-.field select,
-.field input[type="file"] {
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-.field-note {
-  margin: 10px 0 0;
+.module-link p,
+.note-item p {
+  margin: 6px 0 0;
   color: #64748b;
-  font-size: 0.92rem;
-}
-
-.status-line {
-  margin-top: 12px;
-  font-weight: 600;
-}
-
-.status-line.error {
-  color: #b91c1c;
-}
-
-.status-line.success {
-  color: #0f766e;
-}
-
-.folders-grid {
-  display: grid;
-  gap: 18px;
-}
-
-.folder-section {
-  padding: 22px;
-}
-
-.folder-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.folder-header h2 {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-}
-
-.folder-header p {
-  margin: 0;
-  color: #64748b;
-}
-
-.folder-badge {
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.documents-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-}
-
-.doc-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
-}
-
-.doc-meta {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-
-.doc-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #0f766e 0%, #0f172a 100%);
-  color: #ffffff;
-  font-size: 1.2rem;
-}
-
-.doc-info {
-  min-width: 0;
-}
-
-.doc-info h3 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #0f172a;
-  word-break: break-word;
-}
-
-.doc-info p {
-  margin: 0 0 4px;
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
-.doc-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-weight: 700;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.action-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
-}
-
-.view-btn {
-  background: #0f172a;
-  color: #ffffff;
-}
-
-.download-btn {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.delete-btn {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.empty-state,
-.error-state {
-  padding: 36px 24px;
-  text-align: center;
-  border-radius: 20px;
-  background: #ffffff;
-  border: 1px dashed #cbd5e1;
-}
-
-.empty-state i,
-.error-state i {
-  font-size: 2rem;
-  color: #64748b;
-  margin-bottom: 10px;
-}
-
-.empty-state h3,
-.error-state h3 {
-  margin: 0 0 8px;
-}
-
-.empty-state p,
-.error-state p {
-  margin: 0;
-  color: #64748b;
-}
-
-@media (max-width: 900px) {
-  .editor-form {
-    grid-template-columns: 1fr;
-  }
-
-  .folder-header {
-    flex-direction: column;
-  }
 }

@@ -1,0 +1,100 @@
+<div class="governance-standalone-page">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-diagram-project"></i> Workflows d Approbation</h1>
+                <p>Vision des flux de traitement reels a partir des risques et des missions qui demandent une decision ou une action.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary" (click)="loadData()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="governance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="governance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Risques prioritaires</span>
+            <h3>{{ priorityRisks.length }}</h3>
+            <p>Risques critiques, ouverts ou non assignes.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Missions prioritaires</span>
+            <h3>{{ priorityMissions.length }}</h3>
+            <p>Missions en retard, en cours ou sans auditeur.</p>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <div class="table-card">
+            <div class="card-head">
+                <h3>File risques</h3>
+                <p>Elements a arbitrer ou reassigner rapidement.</p>
+            </div>
+            <table class="governance-table" *ngIf="priorityRisks.length > 0; else emptyRisks">
+                <thead>
+                    <tr>
+                        <th>Risque</th>
+                        <th>Niveau</th>
+                        <th>Statut</th>
+                        <th>Echeance</th>
+                        <th>Agent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let risk of priorityRisks | slice:0:10">
+                        <td><strong>{{ risk.titre }}</strong></td>
+                        <td><span class="badge" [ngClass]="getRiskBadgeClass(risk)">{{ risk.niveauRisque }}</span></td>
+                        <td>{{ risk.statut }}</td>
+                        <td>{{ risk.dateEcheance | date:'shortDate' }}</td>
+                        <td>{{ risk.riskAgent ? (risk.riskAgent.prenom + ' ' + risk.riskAgent.nom) : 'Non assigne' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <ng-template #emptyRisks>
+                <div class="empty-state">Aucun risque prioritaire detecte.</div>
+            </ng-template>
+        </div>
+
+        <div class="table-card">
+            <div class="card-head">
+                <h3>File missions</h3>
+                <p>Suivi des missions d audit en attente de traitement gouvernance.</p>
+            </div>
+            <table class="governance-table" *ngIf="priorityMissions.length > 0; else emptyMissions">
+                <thead>
+                    <tr>
+                        <th>Mission</th>
+                        <th>Statut</th>
+                        <th>Echeance</th>
+                        <th>Auditeur</th>
+                        <th>Risque</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let mission of priorityMissions | slice:0:10">
+                        <td><strong>{{ mission.titre }}</strong></td>
+                        <td><span class="badge" [ngClass]="getMissionBadgeClass(mission.statut)">{{ mission.statut }}</span></td>
+                        <td>{{ mission.delai | date:'shortDate' }}</td>
+                        <td>{{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Non assignee' }}</td>
+                        <td>{{ mission.risk?.titre || '-' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <ng-template #emptyMissions>
+                <div class="empty-state">Aucune mission prioritaire detectee.</div>
+            </ng-template>
+        </div>
+    </div>
+</div>

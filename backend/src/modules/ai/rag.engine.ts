@@ -3,6 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { SystemSetting } from '../settings/setting.model';
 import { UserRole } from '../users/user.roles';
+import { appLogger } from '../../utils/app-logger';
 
 const DEFAULT_NORMES_PATH = process.env.NORMES_PATH || path.join(__dirname, '../../../normes');
 const OLLAMA_EMBED_URL = process.env.OLLAMA_EMBED_URL || 'http://localhost:11434/api/embeddings';
@@ -31,9 +32,9 @@ export class RAGEngine {
             try {
                 const data = fs.readFileSync(DB_FILE, 'utf8');
                 this.db = JSON.parse(data);
-                console.log(`Loaded ${this.db.length} entries from vector DB.`);
+                appLogger.info('RAG', 'Vector DB loaded', { count: this.db.length });
             } catch (err) {
-                console.error('Error loading vector DB:', err);
+                appLogger.error('RAG', 'Failed to load vector DB', err);
                 this.db = [];
             }
         }
@@ -61,7 +62,10 @@ export class RAGEngine {
         this.db = [];
         const docsPath = await this.getNormesPath();
         const files = this.getAllPdfFiles(docsPath);
-        console.log(`Found ${files.length} PDF files to index.`);
+        appLogger.info('RAG', 'PDF files discovered for indexing', {
+            count: files.length,
+            docsPath,
+        });
 
         // Process files in batches to avoid memory/process overload
         const BATCH_SIZE = 2;
@@ -72,13 +76,13 @@ export class RAGEngine {
 
         await this.saveDB();
         this.isLoaded = true;
-        console.log(`Indexing complete. Total chunks: ${this.db.length}`);
+        appLogger.info('RAG', 'Document indexing completed', { chunks: this.db.length });
         return { success: true, count: this.db.length };
     }
 
     private static async indexFile(file: string) {
         try {
-            console.log(`Indexing ${path.basename(file)}...`);
+            appLogger.debug('RAG', 'Indexing file', { file: path.basename(file) });
             const text = await this.parsePdf(file);
             const chunks = this.splitText(text, 1000, 200);
 
@@ -114,7 +118,10 @@ export class RAGEngine {
                 });
             });
         } catch (err: any) {
-            console.error(`Error indexing ${file}:`, err.message || err);
+            appLogger.error('RAG', 'File indexing failed', {
+                file,
+                error: err.message || err,
+            });
         }
     }
 
@@ -126,7 +133,9 @@ export class RAGEngine {
             const data = await pdf(dataBuffer);
             return data.text || '';
         } catch (err: any) {
-            console.warn(`[Avertissement] Le PDF ${path.basename(filePath)} est illisible, corrompu ou protégé (ignoré).`);
+            appLogger.warn('RAG', 'Unreadable or protected PDF skipped', {
+                file: path.basename(filePath),
+            });
             return '';
         }
     }
@@ -195,7 +204,7 @@ export class RAGEngine {
             });
             return response.data.embedding;
         } catch (error: any) {
-            console.error('Error getting embedding from Ollama:', error.message);
+            appLogger.error('RAG', 'Embedding generation failed', error.message);
             throw new Error(`Failed to get embedding for model ${EMBED_MODEL}. Make sure it is pulled (ollama pull ${EMBED_MODEL}).`);
         }
     }

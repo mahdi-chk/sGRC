@@ -6,40 +6,12 @@ import { Risk, RiskLevel, RiskService, RiskStatus } from '../../core/services/ri
 import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
 
 @Component({
-  selector: 'app-governance',
-  templateUrl: './governance.component.html',
-  styleUrls: ['./governance.component.scss']
+  selector: 'app-governance-maturity',
+  templateUrl: './governance-maturity.component.html',
+  styleUrls: ['./governance-maturity.component.scss']
 })
-export class GovernanceComponent implements OnInit {
+export class GovernanceMaturityComponent implements OnInit {
   readonly navItems = GOVERNANCE_NAV_ITEMS;
-  readonly modules = [
-    {
-      title: 'Gestion Documentaire',
-      route: '/dashboard/governance-documents',
-      description: 'Acces et administration des ressources documentaires de gouvernance.'
-    },
-    {
-      title: 'Tracabilite et Historique',
-      route: '/dashboard/governance-history',
-      description: 'Suivi des risques et des missions via leurs derniers statuts et mises a jour.'
-    },
-    {
-      title: 'Workflows d Approbation',
-      route: '/dashboard/governance-workflows',
-      description: 'Files de traitement construites a partir des risques et missions en attente.'
-    },
-    {
-      title: 'Indicateurs de Maturite',
-      route: '/dashboard/governance-maturity',
-      description: 'KPIs alignes sur les indicateurs utilises par le Top Management.'
-    },
-    {
-      title: 'Adhesion et Application',
-      route: '/dashboard/governance-adoption',
-      description: 'Couverture d execution reelle sur les risques et les missions.'
-    }
-  ];
-
   risks: Risk[] = [];
   missions: AuditMission[] = [];
   isLoading = false;
@@ -75,11 +47,20 @@ export class GovernanceComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/dashboard/governance']);
   }
 
-  get maturityLevel(): number {
-    return RiskService.calculateMaturityIndex(this.risks);
+  get totalRisks(): number {
+    return this.risks.length;
+  }
+
+  get criticalRate(): number {
+    if (!this.risks.length) {
+      return 0;
+    }
+
+    const critical = this.risks.filter(risk => risk.niveauRisque === RiskLevel.CRITICAL).length;
+    return Math.round((critical / this.risks.length) * 100);
   }
 
   get treatmentRate(): number {
@@ -91,8 +72,12 @@ export class GovernanceComponent implements OnInit {
     return Math.round((treated / this.risks.length) * 100);
   }
 
-  get criticalRisks(): number {
-    return this.risks.filter(risk => risk.niveauRisque === RiskLevel.CRITICAL).length;
+  get maturityLevel(): number {
+    return RiskService.calculateMaturityIndex(this.risks);
+  }
+
+  get totalMissions(): number {
+    return this.missions.length;
   }
 
   get completionRate(): number {
@@ -102,5 +87,25 @@ export class GovernanceComponent implements OnInit {
 
     const completed = this.missions.filter(mission => mission.statut === AuditMissionStatus.TERMINE).length;
     return Math.round((completed / this.missions.length) * 100);
+  }
+
+  get delayedRate(): number {
+    if (!this.missions.length) {
+      return 0;
+    }
+
+    const delayed = this.missions.filter(mission => mission.statut === AuditMissionStatus.EN_RETARD).length;
+    return Math.round((delayed / this.missions.length) * 100);
+  }
+
+  get onTimeRate(): number {
+    if (!this.missions.length) {
+      return 0;
+    }
+
+    const delayed = this.missions.filter(mission => mission.statut === AuditMissionStatus.EN_RETARD).length;
+    const cancelled = this.missions.filter(mission => mission.statut === AuditMissionStatus.ANNULE).length;
+    const onTime = this.missions.length - delayed - cancelled;
+    return Math.round((onTime / this.missions.length) * 100);
   }
 }

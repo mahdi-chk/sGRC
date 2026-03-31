@@ -9,6 +9,7 @@ import { AIService } from '../ai/ai.service';
 import { User } from '../users/user.model';
 import { UserRole } from '../users/user.roles';
 import { Department } from '../departments/department.model';
+import { appLogger } from '../../utils/app-logger';
 
 const router = Router();
 
@@ -544,7 +545,7 @@ router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_
             warnings: sanitizedImport.warnings
         });
     } catch (error: any) {
-        console.error('Erreur import incident:', error);
+        appLogger.error('Incidents', 'Incident import draft failed', error);
         res.status(400).json({
             message: 'Impossible d importer le fichier pour preparer l incident.',
             error: error.message
@@ -574,7 +575,7 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, Use
         const incident = await Incident.create(incidentData);
         res.status(201).json(incident);
     } catch (error: any) {
-        console.error('Erreur creation incident:', error);
+        appLogger.error('Incidents', 'Incident creation failed', error);
         res.status(400).json({
             message: 'Erreur lors de la création de l\'incident',
             error: error.message,
@@ -635,7 +636,10 @@ router.post('/:id/generate-risks', authorizeRoles(UserRole.SUPER_ADMIN, UserRole
 
                 pieceJointeTexte = await AIService.extractTextFromFile(dummyFile);
             } catch (fileErr) {
-                console.warn(`Impossible d'extraire le texte de la pièce jointe pour l'incident ${id}`, fileErr);
+                appLogger.warn('Incidents', 'Attachment text extraction failed for incident risk generation', {
+                    incidentId: id,
+                    error: fileErr,
+                });
             }
         }
 
@@ -646,7 +650,7 @@ router.post('/:id/generate-risks', authorizeRoles(UserRole.SUPER_ADMIN, UserRole
         res.json(risks);
 
     } catch (error: any) {
-        console.error('Erreur génération risques incident:', error);
+        appLogger.error('Incidents', 'Incident risk generation failed', error);
         res.status(500).json({ message: 'Erreur lors de la génération des risques', error: error.message });
     }
 });
@@ -679,7 +683,7 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, U
 
         res.json(updatedIncident);
     } catch (error: any) {
-        console.error('Erreur mise à jour incident:', error);
+        appLogger.error('Incidents', 'Incident update failed', error);
         res.status(400).json({
             message: 'Erreur lors de la mise à jour de l\'incident',
             error: error.message

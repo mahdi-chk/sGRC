@@ -23,6 +23,7 @@ import { AIService } from '../ai/ai.service';
 import XlsxPopulate from 'xlsx-populate';
 import fs from 'fs';
 import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
+import { appLogger } from '../../utils/app-logger';
 
 const router = Router();
 
@@ -102,7 +103,7 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
         const risk = await Risk.create(riskData);
         res.status(201).json(risk);
     } catch (error: any) {
-        console.error('Erreur creation risque:', error);
+        appLogger.error('Risks', 'Risk creation failed', error);
         res.status(400).json({
             message: 'Erreur lors de la création du risque',
             error: error.message,
@@ -182,7 +183,7 @@ router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_A
                     });
                 }
             } catch (err) {
-                console.error('Erreur lors de la notification d\'assignation:', err);
+                appLogger.error('Risks', 'Risk assignment notification failed', err);
             }
         })();
 
@@ -258,7 +259,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                         emailService.sendRiskStatusUpdateEmail(
                             { mail: manager.mail, nom: manager.nom, prenom: manager.prenom },
                             { titre: risk.titre, statut: newStatut }
-                        ).catch(e => console.error('Email error:', e));
+                        ).catch(e => appLogger.error('Risks', 'Risk status email failed', e));
                         await Notification.create({
                             userId: manager.id,
                             type: NotificationType.STATUS_CHANGED,
@@ -272,7 +273,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                         emailService.sendRiskClosedEmail(
                             { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
                             { titre: risk.titre }
-                        ).catch(e => console.error('Email error:', e));
+                        ).catch(e => appLogger.error('Risks', 'Risk closed email failed', e));
                         await Notification.create({
                             userId: agent.id,
                             type: NotificationType.STATUS_CHANGED,
@@ -292,7 +293,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                     }
                 }
             } catch (err) {
-                console.error('Background notification error:', err);
+                appLogger.error('Risks', 'Background notification failed', err);
             }
         })();
     } catch (error: any) {
@@ -306,6 +307,11 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { riskIds } = req.body;
+        appLogger.info('Risks', 'Strategic AI evaluation request received', {
+            userId: req.user!.id,
+            role: req.user!.role,
+            requestedRiskCount: Array.isArray(riskIds) ? riskIds.length : 0,
+        });
         const risks = await Risk.findAll({ where: { id: riskIds } });
         const evaluation = await AIService.evaluateRisks(risks, req.user!.role);
 
@@ -322,8 +328,14 @@ router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_AD
             });
         }
 
+        appLogger.info('Risks', 'Strategic AI evaluation results persisted', {
+            userId: req.user!.id,
+            evaluatedRiskCount: risks.length,
+            persistedResultCount: evaluation.length,
+        });
         res.json(evaluation);
     } catch (error: any) {
+        appLogger.error('Risks', 'Strategic AI evaluation request failed', error);
         res.status(500).json({ message: 'Erreur lors de l\'évaluation des risques', error: error.message });
     }
 });
@@ -408,7 +420,7 @@ router.delete('/:id', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN
         });
         res.status(204).send();
     } catch (error: any) {
-        console.error('Erreur suppression risque:', error);
+        appLogger.error('Risks', 'Risk deletion failed', error);
         res.status(500).json({ message: 'Erreur lors de la suppression du risque', error: error.message });
     }
 });
@@ -436,7 +448,7 @@ router.patch('/:id/restore', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPE
 
         res.json(restoredRisk);
     } catch (error: any) {
-        console.error('Erreur restauration risque:', error);
+        appLogger.error('Risks', 'Risk restore failed', error);
         res.status(500).json({ message: 'Erreur lors de la restauration du risque', error: error.message });
     }
 });
@@ -486,9 +498,9 @@ router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_
                         });
                     }
                 }
-                console.log(`Notifications envoyées pour le risque ${risk.id}`);
+                appLogger.info('Risks', 'Risk notifications sent', { riskId: risk.id });
             } catch (err) {
-                console.error('Erreur envoi notification en arrière-plan:', err);
+                appLogger.error('Risks', 'Background risk notification sending failed', err);
             }
         })();
     } catch (error: any) {
@@ -716,9 +728,9 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
                 dateEcheance: risk.dateEcheance,
                 niveauRisque: risk.niveauRisque
             });
-            console.log(`[Auto-Create] Incident généré pour le risque #${risk.id}`);
+            appLogger.info('Risks', 'Incident auto-created from risk export', { riskId: risk.id });
         } catch (incidentError) {
-            console.error('[Auto-Create Error] Impossible de créer l\'incident en base:', incidentError);
+            appLogger.error('Risks', 'Incident auto-create from risk export failed', incidentError);
             // On ne bloque pas le retour du fichier Excel
         }
 
@@ -729,7 +741,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         res.send(buffer);
 
     } catch (error: any) {
-        console.error('Erreur export incident:', error);
+        appLogger.error('Risks', 'Incident export failed', error);
         res.status(500).json({ message: 'Erreur lors de la génération de la fiche incident', error: error.message });
     }
 });

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditMission, AuditMissionStatus } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
+import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-auditor-report',
@@ -12,7 +13,7 @@ export class AuditorReportComponent implements OnInit {
   missions: AuditMission[] = [];
   selectedMission: AuditMission | null = null;
   isLoading = false;
-  currentUserRole: UserRole | null = null;
+  currentUserRole: UserRole | null = getStoredAuditRole();
   reportData = {
     rapport: '',
     recommandations: ''
@@ -22,6 +23,10 @@ export class AuditorReportComponent implements OnInit {
     private auditingService: AuditingService,
     private router: Router
   ) { }
+
+  get navItems() {
+    return getAuditNavItems(this.currentUserRole);
+  }
 
   ngOnInit(): void {
     this.loadMissions();

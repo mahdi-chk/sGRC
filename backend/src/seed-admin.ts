@@ -3,6 +3,7 @@ import sequelize from './database';
 import { hashPassword } from './utils/security';
 import { UserRole } from './modules/users/user.roles';
 import { Department } from './modules/departments/department.model';
+import { LookupResolutionService } from './database/lookups/lookup.service';
 
 async function seed() {
     try {
@@ -110,7 +111,7 @@ async function seed() {
             const existingUser = await User.findOne({ where: { mail: profile.mail } });
             if (!existingUser) {
                 const { hash, salt } = hashPassword(profile.password);
-                await User.create({
+                await User.create(await LookupResolutionService.resolveEntityPayload('user', {
                     nom: profile.nom,
                     prenom: profile.prenom,
                     mail: profile.mail,
@@ -120,7 +121,7 @@ async function seed() {
                     password_hash: hash,
                     password_salt: salt,
                     role: profile.role
-                });
+                }));
                 console.log(`User ${profile.mail} created successfully`);
             } else {
                 console.log(`User ${profile.mail} already exists`);

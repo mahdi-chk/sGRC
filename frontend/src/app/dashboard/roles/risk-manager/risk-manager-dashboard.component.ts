@@ -23,6 +23,7 @@ export class RiskManagerDashboardComponent implements OnInit {
     departments: any[] = [];
     allUsers: any[] = [];
     filteredAgents: any[] = [];
+    selectedAgentId = '';
     comments: any[] = [];
     treatmentContent = '';
     selectedFile: File | null = null;
@@ -111,8 +112,8 @@ export class RiskManagerDashboardComponent implements OnInit {
         }
 
         const total = this.risks.length;
-        const treated = this.risks.filter(r => r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED).length;
-        const critical = this.risks.filter(r => r.niveauRisque === RiskLevel.CRITICAL).length;
+        const treated = this.risks.filter(r => this.isCompletedRiskStatus((r as any).statutCode || r.statut)).length;
+        const critical = this.risks.filter(r => this.normalizeValue((r as any).niveauRisqueCode || r.niveauRisque) === RiskLevel.CRITICAL).length;
 
         const treatmentRate = Math.round((treated / total) * 100);
         const criticalRate = Math.round((critical / total) * 100);
@@ -131,8 +132,7 @@ export class RiskManagerDashboardComponent implements OnInit {
         this.http.get<any[]>(`${environment.apiUrl}/departments`).subscribe(data => this.departments = data);
         this.http.get<any[]>(`${environment.apiUrl}/users/assignable/risk-agents`).subscribe(users => {
             this.allUsers = users;
-            // Initially, filteredAgents will be empty or all Agents depending on dept selection
-            this.updateFilteredAgents();
+            this.filteredAgents = [...users];
         });
     }
 
@@ -142,9 +142,12 @@ export class RiskManagerDashboardComponent implements OnInit {
     }
 
     updateFilteredAgents() {
-        this.filteredAgents = this.allUsers.filter(u =>
-            u.role === UserRole.RISK_AGENT
-        );
+        const departmentId = Number(this.newRisk.departementId || 0);
+        const departmentAgents = this.allUsers.filter((user) => {
+            return !departmentId || Number(user.departementId) === departmentId;
+        });
+
+        this.filteredAgents = departmentAgents.length > 0 ? departmentAgents : [...this.allUsers];
     }
 
     isFormValid(): boolean {
@@ -276,11 +279,9 @@ export class RiskManagerDashboardComponent implements OnInit {
 
     openAssign(risk: Risk) {
         this.selectedRisk = risk;
+        this.selectedAgentId = risk.riskAgentId ? risk.riskAgentId.toString() : '';
         this.showAssignModal = true;
-        // Update filteredAgents to show all Risk Agents from all departments
-        this.filteredAgents = this.allUsers.filter(u =>
-            u.role === UserRole.RISK_AGENT
-        );
+        this.filteredAgents = this.getAssignableAgentsForRisk(risk);
     }
 
     onViewDetails(risk: Risk) {
@@ -309,13 +310,14 @@ export class RiskManagerDashboardComponent implements OnInit {
         });
     }
 
-    assignRisk(agentId: string) {
+    assignRisk(agentId: string = this.selectedAgentId) {
         if (this.selectedRisk && agentId) {
             this.isAssigning = true;
             this.riskService.assignRisk(this.selectedRisk.id, parseInt(agentId)).subscribe({
                 next: () => {
                     this.isAssigning = false;
                     this.showAssignModal = false;
+                    this.selectedAgentId = '';
                     this.loadRisks();
                     this.selectedRisk = null;
                 },
@@ -358,5 +360,45 @@ export class RiskManagerDashboardComponent implements OnInit {
             responsableTraitementId: ''
         };
         this.selectedFile = null;
+    }
+
+    getAssignRiskModalTitle(): string {
+        return this.selectedRisk?.riskAgentId ? 'Réassigner le risque' : 'Assigner le risque';
+    }
+
+    getAssignRiskActionLabel(): string {
+        return this.selectedRisk?.riskAgentId ? 'Réassigner maintenant' : 'Assigner maintenant';
+    }
+
+    getAssignableAgentsForRisk(risk: Risk | null): any[] {
+        const riskAgents = [...this.allUsers];
+        if (!risk) {
+            return riskAgents;
+        }
+
+        const departmentId = Number(risk.departementId);
+        const departmentAgents = riskAgents.filter((user) => Number(user.departementId) === departmentId);
+        return departmentAgents.length > 0 ? departmentAgents : riskAgents;
+    }
+
+    getAgentDisplayLabel(user: any): string {
+        const fullName = `${user?.prenom || ''} ${user?.nom || ''}`.trim();
+        const department = user?.departement?.nom || user?.departementNom || '';
+        return department ? `${fullName} - ${department}` : fullName;
+    }
+
+    private isCompletedRiskStatus(status?: string | null): boolean {
+        const normalizedStatus = this.normalizeValue(status);
+        return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+    }
+
+    private normalizeValue(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
 }

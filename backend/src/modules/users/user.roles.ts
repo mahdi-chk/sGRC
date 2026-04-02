@@ -1,9 +1,5 @@
-export enum UserRole {
-    RISK_MANAGER = 'Risk Manager',
-    RISK_AGENT = 'Risk Agent',
-    AUDIT_SENIOR = 'Audit Senior',
-    AUDITEUR = 'Auditeur',
-    TOP_MANAGEMENT = 'Top Management',
-    ADMIN_SI = 'Administrateur SI',
-    SUPER_ADMIN = 'Super Admin',
-}
+import { buildLookupCodeList, buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+
+export const UserRole = buildLookupCodeMap('user.role');
+export type UserRole = string;
+export const USER_ROLE_CODES = buildLookupCodeList('user.role');

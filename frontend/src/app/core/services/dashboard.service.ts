@@ -65,7 +65,7 @@ export class DashboardService {
                 { title: 'Evaluation d Efficacite' },
                 { title: 'Suivi des Non-Conformites' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
+            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
         },
         {
             key: 'conformite',
@@ -253,6 +253,8 @@ export class DashboardService {
             this.router.navigate(['/dashboard/alertes-monitoring']);
         } else if (s.title === 'Plans de Traitement') {
             this.router.navigate(['/dashboard/treatment-plans']);
+        } else if (m.key === 'controls') {
+            this.router.navigate(['/dashboard/controls']);
         } else if (title.includes('enregistrement structure')) {
             this.router.navigate(['/dashboard/incident-registration']);
         } else if (s.title === 'Workflow de Traitement') {

@@ -3,6 +3,7 @@ import { AuditingService, AuditMission, AuditMissionStatus, AuditEvidence } from
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { getAuditNavItems, getStoredAuditRole } from './audit-navigation';
 
 @Component({
     selector: 'app-auditor-missions',
@@ -13,12 +14,18 @@ export class AuditorMissionsComponent implements OnInit {
     missions: AuditMission[] = [];
     filteredMissions: AuditMission[] = [];
     isLoading = false;
-    currentUserRole: UserRole | null = null;
+    currentUserRole: UserRole | null = getStoredAuditRole();
 
     // Stats
     totalAssigned = 0;
     pendingCount = 0;
     completedCount = 0;
+
+    // Filter properties
+    filterSearch = '';
+    filterStatus = '';
+
+
 
     showReportModal = false;
     showDetailModal = false;
@@ -36,10 +43,26 @@ export class AuditorMissionsComponent implements OnInit {
         recommandations: ''
     };
 
+    // Expose Enum to template
+    AuditMissionStatus = AuditMissionStatus;
+
+    // Label mappings for UI
+    statusLabelMap: Record<string, string> = {
+        [AuditMissionStatus.A_VENIR]: 'À venir',
+        [AuditMissionStatus.EN_COURS]: 'En cours',
+        [AuditMissionStatus.TERMINE]: 'Terminé',
+        [AuditMissionStatus.EN_RETARD]: 'En retard',
+        [AuditMissionStatus.ANNULE]: 'Annulé'
+    };
+
     constructor(
         private auditingService: AuditingService,
         private router: Router
     ) { }
+
+    get navItems() {
+        return getAuditNavItems(this.currentUserRole);
+    }
 
     ngOnInit() {
         this.loadMyMissions();
@@ -61,6 +84,7 @@ export class AuditorMissionsComponent implements OnInit {
                 this.missions = this.isSuperAdmin
                     ? data
                     : data.filter(m => Number(m.auditeurId) === userId);
+                this.applyFilters();
                 this.calculateStats();
                 this.isLoading = false;
             },
@@ -70,6 +94,32 @@ export class AuditorMissionsComponent implements OnInit {
             }
         });
     }
+
+    applyFilters() {
+        this.filteredMissions = this.missions.filter(m => {
+            const matchSearch = !this.filterSearch || 
+                m.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
+                (m.auditSenior && `${m.auditSenior.prenom} ${m.auditSenior.nom}`.toLowerCase().includes(this.filterSearch.toLowerCase()));
+            
+            const missionStatut = ((m as any).statutCode || m.statut || '').toLowerCase();
+            const filterStatut = (this.filterStatus || '').toLowerCase();
+            const matchStatus = !filterStatut || missionStatut === filterStatut;
+
+            return matchSearch && matchStatus;
+        });
+    }
+
+
+    onFilterChange() {
+        this.applyFilters();
+    }
+
+    clearFilters() {
+        this.filterSearch = '';
+        this.filterStatus = '';
+        this.applyFilters();
+    }
+
 
     calculateStats() {
         this.totalAssigned = this.missions.length;

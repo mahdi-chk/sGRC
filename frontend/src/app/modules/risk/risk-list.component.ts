@@ -1,6 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { RiskService, Risk } from '../../core/services/risk.service';
+import {
+    RiskService,
+    Risk,
+    RISK_LEVEL_LABELS,
+    RISK_LEVEL_OPTIONS,
+    RISK_STATUS_LABELS,
+    RISK_STATUS_OPTIONS
+} from '../../core/services/risk.service';
 
 @Component({
     selector: 'app-risk-list',
@@ -11,21 +18,20 @@ export class RiskListComponent implements OnInit {
     allRisks: Risk[] = [];
     filteredRisks: Risk[] = [];
 
-    // Filter properties
     filterSearch = '';
-    filterLevel: string = '';
-    filterStatus: string = '';
-    filterDomain: string = '';
+    filterLevel = '';
+    filterStatus = '';
+    filterDomain = '';
 
-    // Unique values for filters
-    levels: string[] = ['Faible', 'Moyen', 'Élevé', 'Critique'];
-    statuses: string[] = ['Ouvert', 'En cours', 'Traité', 'Clôturé'];
+    levelOptions = RISK_LEVEL_OPTIONS;
+    statusOptions = RISK_STATUS_OPTIONS;
+    levelLabelMap = RISK_LEVEL_LABELS;
+    statusLabelMap = RISK_STATUS_LABELS;
     domains: string[] = [];
 
     selectedRisk: Risk | null = null;
     showDetailModal = false;
 
-    // Pagination
     pageSize = 10;
     currentPage = 1;
     totalPages = 1;
@@ -37,28 +43,37 @@ export class RiskListComponent implements OnInit {
     }
 
     loadRisks() {
-        this.riskService.getRisks().subscribe(risks => {
+        this.riskService.getRisks().subscribe((risks) => {
             this.allRisks = risks;
-
-            // Extract unique domains for filter dropdown
-            this.domains = [...new Set(risks.map(r => r.domaine))].filter(d => d);
-
+            this.domains = [...new Set(risks.map((risk) => risk.domaine))].filter((domain): domain is string => !!domain);
             this.applyFilters();
         });
     }
 
+    normalize(value: any): string {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'object') return (value.code || '').toString().toLowerCase().trim();
+        return value.toString().toLowerCase().trim();
+    }
+
     applyFilters() {
-        this.filteredRisks = this.allRisks.filter(risk => {
-            const matchSearch = risk.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) ||
-                risk.explication.toLowerCase().includes(this.filterSearch.toLowerCase());
-            const matchLevel = !this.filterLevel || risk.niveauRisque === this.filterLevel;
-            const matchStatus = !this.filterStatus || risk.statut === this.filterStatus;
-            const matchDomain = !this.filterDomain || risk.domaine === this.filterDomain;
+        this.filteredRisks = this.allRisks.filter((risk) => {
+            const search = this.normalize(this.filterSearch);
+            const titre = this.normalize(risk.titre);
+            const explication = this.normalize(risk.explication);
+            const domaine = this.normalize(risk.domaine);
+
+            const matchSearch = !search || titre.includes(search) || explication.includes(search) || domaine.includes(search);
+            const riskLevel = this.normalize((risk as any).niveauRisqueCode || risk.niveauRisque);
+            const matchLevel = !this.filterLevel || riskLevel === this.normalize(this.filterLevel);
+            const riskStatus = this.normalize((risk as any).statutCode || risk.statut);
+            const matchStatus = !this.filterStatus || riskStatus === this.normalize(this.filterStatus);
+            const matchDomain = !this.filterDomain || domaine === this.normalize(this.filterDomain);
 
             return matchSearch && matchLevel && matchStatus && matchDomain;
         });
 
-        this.totalPages = Math.ceil(this.filteredRisks.length / this.pageSize);
+        this.totalPages = Math.max(1, Math.ceil(this.filteredRisks.length / this.pageSize));
         this.currentPage = 1;
     }
 
@@ -95,7 +110,6 @@ export class RiskListComponent implements OnInit {
     }
 
     treatRisk(risk: Risk) {
-        // Navigate to treatment page or open the treatment modal
         this.router.navigate(['/risks/treat', risk.id]);
     }
 
@@ -105,13 +119,33 @@ export class RiskListComponent implements OnInit {
 
     nextPage() {
         if (this.currentPage < this.totalPages) {
-            this.currentPage++;
+            this.currentPage += 1;
         }
     }
 
     previousPage() {
         if (this.currentPage > 1) {
-            this.currentPage--;
+            this.currentPage -= 1;
         }
+    }
+
+    getStatusClass(risk: any): string {
+        const status = this.normalize(risk?.statutCode || risk?.statut);
+        return `badge status-${status}`;
+    }
+
+    getNiveauClass(risk: any): string {
+        const level = this.normalize(risk?.niveauRisqueCode || risk?.niveauRisque);
+        return `badge level-${level}`;
+    }
+
+    getNiveauLabel(risk: any): string {
+        const level = this.normalize(risk?.niveauRisqueCode || risk?.niveauRisque);
+        return this.levelLabelMap[level] || risk?.niveauRisqueLabel || risk?.niveauRisque || '';
+    }
+
+    getStatusLabel(risk: any): string {
+        const status = this.normalize(risk?.statutCode || risk?.statut);
+        return this.statusLabelMap[status] || risk?.statutLabel || risk?.statut || '';
     }
 }

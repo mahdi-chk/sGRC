@@ -60,7 +60,7 @@ export class AssignedRisksComponent implements OnInit {
     calculateStats() {
         this.stats.total = this.assignedRisks.length;
         this.stats.unprocessed = this.assignedRisks.filter(r =>
-            r.statut === RiskStatus.OPEN || r.statut === RiskStatus.IN_PROGRESS
+            this.isActiveRiskStatus(r.statutCode || r.statut)
         ).length;
 
         const now = new Date();
@@ -68,7 +68,7 @@ export class AssignedRisksComponent implements OnInit {
         nextWeek.setDate(now.getDate() + 7);
 
         const urgentRisks = this.assignedRisks.filter(r => {
-            if (r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED) return false;
+            if (this.isCompletedRiskStatus(r.statutCode || r.statut)) return false;
             const dueDate = new Date(r.dateEcheance);
             return dueDate <= nextWeek;
         });
@@ -138,5 +138,25 @@ export class AssignedRisksComponent implements OnInit {
 
     goBack() {
         this.router.navigate(['/dashboard']);
+    }
+
+    private isActiveRiskStatus(status?: string | null): boolean {
+        const normalizedStatus = this.normalizeStatus(status);
+        return normalizedStatus === RiskStatus.OPEN || normalizedStatus === RiskStatus.IN_PROGRESS;
+    }
+
+    private isCompletedRiskStatus(status?: string | null): boolean {
+        const normalizedStatus = this.normalizeStatus(status);
+        return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+    }
+
+    private normalizeStatus(status?: string | null): string {
+        return (status || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
 }

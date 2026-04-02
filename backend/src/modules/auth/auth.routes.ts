@@ -36,6 +36,7 @@ router.post('/login', async (req, res) => {
                 id: user.id,
                 email: user.mail,
                 role: user.role,
+                roleLabel: (user as any).roleLabel,
                 departementId: user.departementId,
                 departementNom: user.departement?.nom
             },
@@ -51,6 +52,7 @@ router.post('/login', async (req, res) => {
                 prenom: user.prenom,
                 mail: user.mail,
                 role: user.role,
+                roleLabel: (user as any).roleLabel,
                 departementId: user.departementId,
                 departementNom: user.departement?.nom
             }

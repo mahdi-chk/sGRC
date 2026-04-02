@@ -9,21 +9,34 @@
                 <p>Suivez le cycle de vie des incidents, de la détection à la clôture.</p>
             </div>
         </div>
-        <div class="header-actions">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Rechercher un incident...">
+        <div class="filters-bar premium mb-4">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" [(ngModel)]="searchTerm" (input)="onFilterChange()" placeholder="Rechercher...">
+                </div>
+
+                <div class="filter-group">
+                    <i class="fas fa-tasks"></i>
+                    <select [(ngModel)]="statusFilter" (change)="onFilterChange()">
+                        <option value="">Tous les statuts</option>
+                        <option [value]="IncidentStatus.NOUVEAU">{{ statusLabelMap[IncidentStatus.NOUVEAU] }}</option>
+                        <option [value]="IncidentStatus.EN_COURS">{{ statusLabelMap[IncidentStatus.EN_COURS] }}</option>
+                        <option [value]="IncidentStatus.TRAITE">{{ statusLabelMap[IncidentStatus.TRAITE] }}</option>
+                        <option [value]="IncidentStatus.CLOS">{{ statusLabelMap[IncidentStatus.CLOS] }}</option>
+                    </select>
+                </div>
+
+                <button class="btn-reset" (click)="clearFilters()" *ngIf="searchTerm || statusFilter">
+                    <i class="fas fa-undo"></i> Réinitialiser
+                </button>
             </div>
-            <div class="filter-box">
-                <select [(ngModel)]="statusFilter" (change)="applyFilters()">
-                    <option value="All">Tous les statuts</option>
-                    <option value="Nouveau">Nouveau</option>
-                    <option value="En cours">En cours</option>
-                    <option value="Traité">Traité</option>
-                    <option value="Clos">Clos</option>
-                </select>
+
+            <div class="results-info">
+                <span class="count-tag"><strong>{{ filteredIncidents.length }}</strong> incident(s) trouvé(s)</span>
             </div>
         </div>
+
     </div>
 
     <div class="workflow-container">
@@ -34,7 +47,8 @@
         <div class="incident-grid" *ngIf="!isLoading">
             <div class="incident-card card shadow-sm" *ngFor="let incident of filteredIncidents">
                 <div class="card-header">
-                    <span class="status-badge" [ngClass]="getStatusClass(incident.statut)">{{ incident.statut }}</span>
+                    <span class="status-badge" [ngClass]="getStatusClass(incident)">{{ statusLabelMap[incident.statut] || incident.statut }}</span>
+
                     <span class="date">{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</span>
                 </div>
                 <div class="card-body">
@@ -47,16 +61,17 @@
                 </div>
                 <div class="card-footer">
                     <div class="status-actions">
-                        <button *ngIf="incident.statut === 'Nouveau'" (click)="updateStatus(incident, 'En cours')" class="btn-action start">
+                        <button *ngIf="incident.statut === IncidentStatus.NOUVEAU" (click)="updateStatus(incident, IncidentStatus.EN_COURS)" class="btn-action start">
                             <i class="fas fa-play"></i> Prise en charge
                         </button>
-                        <button *ngIf="incident.statut === 'En cours'" (click)="updateStatus(incident, 'Traité')" class="btn-action resolve">
+                        <button *ngIf="incident.statut === IncidentStatus.EN_COURS" (click)="updateStatus(incident, IncidentStatus.TRAITE)" class="btn-action resolve">
                             <i class="fas fa-check"></i> Marquer comme Traité
                         </button>
-                        <button *ngIf="incident.statut === 'Traité'" (click)="updateStatus(incident, 'Clos')" class="btn-action close">
+                        <button *ngIf="incident.statut === IncidentStatus.TRAITE" (click)="updateStatus(incident, IncidentStatus.CLOS)" class="btn-action close">
                             <i class="fas fa-lock"></i> Clôturer
                         </button>
                     </div>
+
                     <button type="button" class="btn-details" (click)="openDetailsModal(incident)">
                         <i class="fas fa-eye"></i>
                         <span>Détails</span>
@@ -88,10 +103,11 @@
             <div class="detail-block">
                 <span class="detail-label">Statut</span>
                 <p class="detail-value">
-                    <span class="status-badge" [ngClass]="getStatusClass(selectedIncident.statut)">
-                        {{ selectedIncident.statut }}
+                    <span class="status-badge" [ngClass]="getStatusClass(selectedIncident)">
+                        {{ statusLabelMap[selectedIncident.statut] || selectedIncident.statut }}
                     </span>
                 </p>
+
             </div>
 
             <div class="detail-block">
@@ -117,10 +133,11 @@
             <div class="detail-block" *ngIf="selectedIncident.niveauRisque">
                 <span class="detail-label">Niveau d'impact global</span>
                 <p class="detail-value">
-                    <span class="impact-badge" [ngClass]="getImpactClass(selectedIncident.niveauRisque)">
-                        {{ selectedIncident.niveauRisque }}
+                    <span class="impact-badge" [ngClass]="getImpactClass(selectedIncident)">
+                        {{ levelLabelMap[selectedIncident.niveauRisque!] || selectedIncident.niveauRisque }}
                     </span>
                 </p>
+
             </div>
 
             <div class="detail-block" *ngIf="selectedIncident.macroProcessus">

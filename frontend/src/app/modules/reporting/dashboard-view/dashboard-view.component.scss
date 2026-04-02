@@ -106,6 +106,7 @@
 }
 
 .donut-chart {
+  --p_limited: 0;
   width: 180px;
   height: 180px;
   border-radius: 50%;
@@ -114,7 +115,8 @@
     #ef4444 0 calc(var(--p_crit) * 1%),
     #f97316 0 calc((var(--p_crit) + var(--p_high)) * 1%),
     #eab308 0 calc((var(--p_crit) + var(--p_high) + var(--p_med)) * 1%),
-    #22c55e 0 calc((var(--p_crit) + var(--p_high) + var(--p_med) + var(--p_low)) * 1%),
+    #14b8a6 0 calc((var(--p_crit) + var(--p_high) + var(--p_med) + var(--p_limited)) * 1%),
+    #22c55e 0 calc((var(--p_crit) + var(--p_high) + var(--p_med) + var(--p_limited) + var(--p_low)) * 1%),
     #e2e8f0 0 100%
   );
   display: flex;
@@ -156,10 +158,11 @@
       margin-right: 10px;
     }
 
-    &.critique .dot { background: #ef4444; }
-    &.eleve .dot { background: #f97316; }
-    &.moyen .dot { background: #eab308; }
-    &.faible .dot { background: #22c55e; }
+    &.critical .dot, &.critique .dot { background: #ef4444; }
+    &.high .dot, &.eleve .dot { background: #f97316; }
+    &.medium .dot, &.moyen .dot { background: #eab308; }
+    &.limited .dot, &.limite .dot { background: #14b8a6; }
+    &.low .dot, &.faible .dot { background: #22c55e; }
   }
 }
 
@@ -201,9 +204,9 @@
     }
 
     &.nouveau { background: #3b82f6; }
-    &.en-cours { background: #f59e0b; }
-    &.traite { background: #10b981; }
-    &.clos { background: #64748b; }
+    &.en_cours, &.en-cours { background: #f59e0b; }
+    &.traite, &.treated { background: #10b981; }
+    &.clos, &.closed { background: #64748b; }
   }
 }
 
@@ -234,10 +237,11 @@
     font-size: 18px;
     margin-right: 16px;
 
-    &.critique { background: #fee2e2; color: #ef4444; }
-    &.eleve { background: #ffedd5; color: #f97316; }
-    &.moyen { background: #fef9c3; color: #eab308; }
-    &.faible { background: #dcfce7; color: #22c55e; }
+    &.critical, &.critique { background: #fee2e2; color: #ef4444; }
+    &.high, &.eleve { background: #ffedd5; color: #f97316; }
+    &.medium, &.moyen { background: #fef9c3; color: #eab308; }
+    &.limited, &.limite { background: #ccfbf1; color: #0f766e; }
+    &.low, &.faible { background: #dcfce7; color: #22c55e; }
     &.warning { background: #fef3c7; color: #d97706; }
   }
 

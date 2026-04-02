@@ -24,33 +24,43 @@
     </div>
 
     <!-- Filters Section -->
-    <div class="filter-bar">
-        <div class="filter-group">
-            <i class="fas fa-search"></i>
-            <input type="text" [(ngModel)]="searchTerm" (input)="onFilterChange()"
-                placeholder="Rechercher par titre ou département...">
+    <div class="filter-bar premium">
+        <div class="filter-controls">
+            <div class="filter-group">
+                <i class="fas fa-search"></i>
+                <input type="text" [(ngModel)]="searchTerm" (input)="onFilterChange()"
+                    placeholder="Chercher par nom, département...">
+            </div>
+            <div class="filter-group">
+                <i class="fas fa-tasks"></i>
+                <select [(ngModel)]="statusFilter" (change)="onFilterChange()">
+                    <option value="">Tous les statuts</option>
+                    <option [value]="RiskStatus.OPEN">{{ statusLabelMap[RiskStatus.OPEN] }}</option>
+                    <option [value]="RiskStatus.IN_PROGRESS">{{ statusLabelMap[RiskStatus.IN_PROGRESS] }}</option>
+                    <option [value]="RiskStatus.TREATED">{{ statusLabelMap[RiskStatus.TREATED] }}</option>
+                    <option [value]="RiskStatus.CLOSED">{{ statusLabelMap[RiskStatus.CLOSED] }}</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <i class="fas fa-layer-group"></i>
+                <select [(ngModel)]="levelFilter" (change)="onFilterChange()">
+                    <option value="">Tous les niveaux</option>
+                    <option [value]="RiskLevel.LOW">{{ levelLabelMap[RiskLevel.LOW] }}</option>
+                    <option [value]="RiskLevel.LIMITED">{{ levelLabelMap[RiskLevel.LIMITED] }}</option>
+                    <option [value]="RiskLevel.MEDIUM">{{ levelLabelMap[RiskLevel.MEDIUM] }}</option>
+                    <option [value]="RiskLevel.HIGH">{{ levelLabelMap[RiskLevel.HIGH] }}</option>
+                    <option [value]="RiskLevel.CRITICAL">{{ levelLabelMap[RiskLevel.CRITICAL] }}</option>
+                </select>
+            </div>
+            <button class="btn-reset" (click)="clearFilters()" *ngIf="searchTerm || statusFilter || levelFilter">
+                <i class="fas fa-undo"></i> Réinitialiser
+            </button>
         </div>
-        <div class="filter-group">
-            <i class="fas fa-filter"></i>
-            <select [(ngModel)]="statusFilter" (change)="onFilterChange()">
-                <option value="">Tous les statuts</option>
-                <option value="Ouvert">Ouvert</option>
-                <option value="En cours">En cours</option>
-                <option value="Traité">Traité</option>
-                <option value="Clôturé">Clôturé</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <i class="fas fa-layer-group"></i>
-            <select [(ngModel)]="levelFilter" (change)="onFilterChange()">
-                <option value="">Tous les niveaux</option>
-                <option value="Faible">Faible</option>
-                <option value="Moyen">Moyen</option>
-                <option value="Élevé">Élevé</option>
-                <option value="Critique">Critique</option>
-            </select>
+        <div class="results-info">
+            <span class="count-tag"><strong>{{ filteredRisks.length }}</strong> risque(s) trouvé(s)</span>
         </div>
     </div>
+
 
     <!-- Summary Statistics -->
     <div class="summary-grid">
@@ -109,12 +119,13 @@
                         <!-- Status & Level -->
                         <td>
                             <div style="margin-bottom: 8px;">
-                                <span [class]="'badge-status status-' + risk.statut?.toLowerCase()">{{ risk.statut
-                                    }}</span>
+                                <span class="badge-status" [ngClass]="'status-' + risk.statut?.toLowerCase()">{{
+                                    statusLabelMap[risk.statut!] || risk.statut }}</span>
                             </div>
-                            <span [class]="'level-badge level-' + risk.niveauRisque?.toLowerCase()">{{ risk.niveauRisque
-                                }}</span>
+                            <span class="level-badge" [ngClass]="'level-' + risk.niveauRisque?.toLowerCase()">{{
+                                levelLabelMap[risk.niveauRisque!] || risk.niveauRisque }}</span>
                         </td>
+
 
                         <!-- Treatment / Last Entry -->
                         <td class="treatment-cell"

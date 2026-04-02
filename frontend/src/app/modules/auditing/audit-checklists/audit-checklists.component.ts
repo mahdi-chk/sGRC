@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuditingService, AuditChecklistTemplate } from '../../../core/services/auditing.service';
+import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-audit-checklists',
@@ -7,6 +9,7 @@ import { AuditingService, AuditChecklistTemplate } from '../../../core/services/
   styleUrls: ['./audit-checklists.component.scss']
 })
 export class AuditChecklistsComponent implements OnInit {
+  currentUserRole = getStoredAuditRole();
   templates: AuditChecklistTemplate[] = [];
   isLoading = false;
 
@@ -17,7 +20,14 @@ export class AuditChecklistsComponent implements OnInit {
     items: ['']
   };
 
-  constructor(private auditingService: AuditingService) {}
+  constructor(
+    private auditingService: AuditingService,
+    private router: Router
+  ) {}
+
+  get navItems() {
+    return getAuditNavItems(this.currentUserRole);
+  }
 
   ngOnInit() {
     this.loadTemplates();
@@ -26,11 +36,11 @@ export class AuditChecklistsComponent implements OnInit {
   loadTemplates() {
     this.isLoading = true;
     this.auditingService.getChecklistTemplates().subscribe({
-      next: (data) => {
+      next: data => {
         this.templates = data;
         this.isLoading = false;
       },
-      error: (err) => {
+      error: err => {
         console.error(err);
         this.isLoading = false;
       }
@@ -52,8 +62,7 @@ export class AuditChecklistsComponent implements OnInit {
     }
   }
 
-  // Permet le two-way binding avec *ngFor pour le tableau de chaînes
-  trackByFn(index: any, item: any) {
+  trackByFn(index: number) {
     return index;
   }
 
@@ -61,7 +70,7 @@ export class AuditChecklistsComponent implements OnInit {
     if (!this.newTemplate.titre) return;
     const validItems = this.newTemplate.items.filter(i => i.trim() !== '');
     if (validItems.length === 0) {
-      alert('Veuillez ajouter au moins un élément à la checklist.');
+      alert('Veuillez ajouter au moins un element a la checklist.');
       return;
     }
 
@@ -75,26 +84,30 @@ export class AuditChecklistsComponent implements OnInit {
         this.showModal = false;
         this.loadTemplates();
       },
-      error: (err) => {
+      error: err => {
         console.error(err);
         this.isLoading = false;
-        alert('Erreur lors de la création du modèle.');
+        alert('Erreur lors de la creation du modele.');
       }
     });
   }
 
   deleteTemplate(id: number) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce modèle ?')) return;
+    if (!confirm('Etes-vous sur de vouloir supprimer ce modele ?')) return;
     this.isLoading = true;
     this.auditingService.deleteChecklistTemplate(id).subscribe({
       next: () => {
         this.loadTemplates();
       },
-      error: (err) => {
+      error: err => {
         console.error(err);
         this.isLoading = false;
         alert('Erreur lors de la suppression.');
       }
     });
+  }
+
+  goBack() {
+    this.router.navigate(['/dashboard']);
   }
 }

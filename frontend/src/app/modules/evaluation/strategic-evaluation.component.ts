@@ -4,7 +4,8 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DatePipe } from '@angular/common';
-import { RiskService, Risk } from '../../core/services/risk.service';
+import { RiskService, Risk, RiskStatus, RiskLevel } from '../../core/services/risk.service';
+
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -32,7 +33,29 @@ export class StrategicEvaluationComponent implements OnInit {
     selectedRiskForHistory: (Risk & { treatments?: any[] }) | null = null;
     today = new Date().toISOString().split('T')[0];
 
+    // Expose Enums to templates
+    RiskStatus = RiskStatus;
+    RiskLevel = RiskLevel;
+
+    // Label mappings for UI
+    statusLabelMap: Record<string, string> = {
+        [RiskStatus.OPEN]: 'Ouvert',
+        [RiskStatus.IN_PROGRESS]: 'En cours',
+        [RiskStatus.TREATED]: 'Traité',
+        [RiskStatus.CLOSED]: 'Clôturé'
+    };
+
+    levelLabelMap: Record<string, string> = {
+        [RiskLevel.LOW]: 'Faible',
+        [RiskLevel.LIMITED]: 'Limité',
+        [RiskLevel.MEDIUM]: 'Moyen',
+        [RiskLevel.HIGH]: 'Élevé',
+        [RiskLevel.CRITICAL]: 'Critique'
+    };
+
+
     get authQueryToken(): string {
+
         const token = sessionStorage.getItem('sgrc_token');
         return token ? '?token=' + token : '';
     }
@@ -78,17 +101,30 @@ export class StrategicEvaluationComponent implements OnInit {
                 risk.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
                 (risk.departement?.nom && risk.departement.nom.toLowerCase().includes(this.searchTerm.toLowerCase()));
 
-            const matchesStatus = !this.statusFilter || risk.statut === this.statusFilter;
+            const riskStatut = ((risk as any).statutCode || risk.statut || '').toLowerCase();
+            const filterStatut = (this.statusFilter || '').toLowerCase();
+            const matchesStatus = !filterStatut || riskStatut === filterStatut;
 
-            const matchesLevel = !this.levelFilter || risk.niveauRisque === this.levelFilter;
+            const riskLevel = ((risk as any).niveauRisqueCode || risk.niveauRisque || '').toLowerCase();
+            const filterLevel = (this.levelFilter || '').toLowerCase();
+            const matchesLevel = !filterLevel || riskLevel === filterLevel;
 
             return matchesSearch && matchesStatus && matchesLevel;
         });
     }
 
+
     onFilterChange() {
         this.applyFilters();
     }
+
+    clearFilters() {
+        this.searchTerm = '';
+        this.statusFilter = '';
+        this.levelFilter = '';
+        this.applyFilters();
+    }
+
 
     openHistory(risk: (Risk & { treatments?: any[] })) {
         this.selectedRiskForHistory = risk;
@@ -142,8 +178,9 @@ export class StrategicEvaluationComponent implements OnInit {
     }
 
     getTreatedCount(): number {
-        return this.risks.filter(r => r.statut === 'Traité' || r.statut === 'Clôturé').length;
+        return this.risks.filter(r => this.isCompletedRiskStatus((r as any).statutCode || r.statut)).length;
     }
+
 
     goBack() {
         this.router.navigate(['/dashboard']);
@@ -159,13 +196,14 @@ export class StrategicEvaluationComponent implements OnInit {
             return {
                 'Risque': r.titre,
                 'Département': r.departement?.nom || 'N/A',
-                'Statut': r.statut,
-                'Sévérité': r.niveauRisque,
+                'Statut': this.statusLabelMap[r.statut] || r.statut,
+                'Sévérité': this.levelLabelMap[r.niveauRisque!] || r.niveauRisque,
                 'Dernier Traitement': lastTreatment,
                 'Score IA': ai?.priorite ? `${ai.priorite}/10` : 'N/A',
                 'Impact IA': ai?.impact || 'N/A',
                 'Tendance IA': ai?.tendance || 'N/A',
                 'Suggestion IA': ai?.suggestion || 'N/A'
+
             };
         });
 
@@ -195,11 +233,12 @@ export class StrategicEvaluationComponent implements OnInit {
             return [
                 r.titre,
                 r.departement?.nom || 'N/A',
-                r.statut || 'N/A',
-                r.niveauRisque || 'N/A',
+                this.statusLabelMap[r.statut] || r.statut || 'N/A',
+                this.levelLabelMap[r.niveauRisque!] || r.niveauRisque || 'N/A',
                 ai?.priorite ? `${ai.priorite}/10` : 'N/A',
                 aiText
             ];
+
         });
 
         autoTable(doc, {
@@ -217,5 +256,20 @@ export class StrategicEvaluationComponent implements OnInit {
 
         doc.save(`Export_Evaluation_Strategique_${new Date().getTime()}.pdf`);
         this.showExportMenu = false;
+    }
+
+    private isCompletedRiskStatus(status?: string | null): boolean {
+        const normalizedStatus = this.normalize(status);
+        return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+    }
+
+    private normalize(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
 }

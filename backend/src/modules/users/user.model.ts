@@ -1,11 +1,16 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
 import { Department } from '../departments/department.model';
 import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
-
 import { UserRole } from './user.roles';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import {
+    buildLookupAttribute,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
 
-export class User extends Model {
+export class User extends LookupAwareModel {
     public id!: number;
     public nom!: string;
     public prenom!: string;
@@ -15,6 +20,7 @@ export class User extends Model {
     public departementId!: number;
     public password_hash!: string;
     public password_salt!: string;
+    public roleId!: number;
     public role!: UserRole;
     public is_deleted!: boolean;
     public deleted_at!: Date | null;
@@ -64,10 +70,7 @@ User.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        role: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
+        roleId: buildLookupAttribute('user.role'),
         ...softDeleteAttributes,
     },
     {
@@ -85,4 +88,7 @@ User.init(
 
 User.belongsTo(Department, { foreignKey: 'departementId', as: 'departement' });
 Department.hasMany(User, { foreignKey: 'departementId', as: 'users' });
+
+registerLookupAccessors('user', User);
+registerLookupAssociations('user', User);
 

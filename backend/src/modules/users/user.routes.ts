@@ -8,10 +8,11 @@ import { UserRole } from './user.roles';
 import { emailService } from '../../utils/email.service';
 import { restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 import { appLogger } from '../../utils/app-logger';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
 const router = Router();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const publicUserAttributes: string[] = ['id', 'nom', 'prenom', 'mail', 'telephone', 'poste', 'role', 'departementId'];
+const publicUserAttributes: string[] = ['id', 'nom', 'prenom', 'mail', 'telephone', 'poste', 'roleId', 'departementId'];
 
 const sanitizeString = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 
@@ -41,7 +42,7 @@ const validateUserPayload = (payload: any, requirePassword: boolean) => {
     if (!payload.mail) return 'L\'email est obligatoire.';
     if (!emailRegex.test(payload.mail)) return 'Le format de l\'email est invalide.';
     if (!payload.telephone) return 'Le telephone est obligatoire.';
-    if (!payload.role || !Object.values(UserRole).includes(payload.role)) return 'Le role selectionne est invalide.';
+    if (!payload.role || !LookupResolutionService.getStaticValue('user.role', payload.role)) return 'Le role selectionne est invalide.';
     if (!Number.isInteger(payload.departementId) || payload.departementId <= 0) return 'Le departement selectionne est invalide.';
     if (!payload.poste) return 'Le poste est obligatoire.';
     if (requirePassword && !payload.password) return 'Le mot de passe est obligatoire pour un nouvel utilisateur.';
@@ -83,14 +84,14 @@ const sendWelcomeEmailInBackground = (user: { mail: string; nom: string; prenom:
 router.use(authenticateToken);
 
 router.get('/roles', (req, res) => {
-    const roles = Object.values(UserRole);
+    const roles = LookupResolutionService.getStaticOptions('user.role');
     res.json(roles);
 });
 
 router.get('/assignable/auditors', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
     try {
         const auditors = await User.findAll({
-            where: { role: UserRole.AUDITEUR },
+            where: { roleId: LookupResolutionService.getStaticValue('user.role', UserRole.AUDITEUR)?.id },
             attributes: publicUserAttributes
         });
         res.json(auditors);
@@ -102,7 +103,7 @@ router.get('/assignable/auditors', authorizeRoles(UserRole.SUPER_ADMIN, UserRole
 router.get('/assignable/risk-agents', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER), async (req, res) => {
     try {
         const riskAgents = await User.findAll({
-            where: { role: UserRole.RISK_AGENT },
+            where: { roleId: LookupResolutionService.getStaticValue('user.role', UserRole.RISK_AGENT)?.id },
             attributes: publicUserAttributes
         });
         res.json(riskAgents);
@@ -151,15 +152,17 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async 
             where: { mail: userData.mail },
         });
 
+        const userPayload = await LookupResolutionService.resolveEntityPayload('user', userData);
+
         let user: User;
         if (deletedUser && deletedUser.is_deleted) {
             await restoreSoftDeletedInstance(deletedUser);
-            user = await deletedUser.update(userData);
+            user = await deletedUser.update(userPayload);
         } else {
-            user = await User.create(userData);
+            user = await User.create(userPayload);
         }
 
-        const userResponse = user.toJSON();
+        const userResponse = user.toJSON() as any;
         delete userResponse.password_hash;
         delete userResponse.password_salt;
 
@@ -208,13 +211,14 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), asyn
             delete userData.password;
         }
 
-        const [updated] = await User.update(userData, { where: { id } });
+        const userPayload = await LookupResolutionService.resolveEntityPayload('user', userData);
+        const [updated] = await User.update(userPayload, { where: { id } });
         if (!updated) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         const updatedUser = await User.findByPk(id as string);
-        const userResponse = updatedUser?.toJSON() || {};
+        const userResponse = (updatedUser?.toJSON() as any) || {};
         delete userResponse.password_hash;
         delete userResponse.password_salt;
         return res.json(userResponse);
@@ -251,7 +255,7 @@ router.patch('/:id/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN
         await restoreSoftDeletedInstance(user);
 
         const restoredUser = await User.findByPk(req.params.id as string);
-        const userResponse = restoredUser?.toJSON() || {};
+        const userResponse = (restoredUser?.toJSON() as any) || {};
         delete userResponse.password_hash;
         delete userResponse.password_salt;
         return res.json(userResponse);

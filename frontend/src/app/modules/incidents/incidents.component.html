@@ -17,7 +17,50 @@
     </div>
 
     <div class="content-container">
+        <!-- Filters Bar Premium -->
+        <div class="filters-bar premium mb-4">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher...">
+                </div>
+
+                <div class="filter-group">
+                    <i class="fas fa-tasks"></i>
+                    <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
+                        <option value="">Tous les statuts</option>
+                        <option [value]="IncidentStatus.NOUVEAU">{{ statusLabelMap[IncidentStatus.NOUVEAU] }}</option>
+                        <option [value]="IncidentStatus.EN_COURS">{{ statusLabelMap[IncidentStatus.EN_COURS] }}</option>
+                        <option [value]="IncidentStatus.TRAITE">{{ statusLabelMap[IncidentStatus.TRAITE] }}</option>
+                        <option [value]="IncidentStatus.CLOS">{{ statusLabelMap[IncidentStatus.CLOS] }}</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <i class="fas fa-layer-group"></i>
+                    <select [(ngModel)]="filterLevel" (change)="onFilterChange()">
+                        <option value="">Tous les niveaux</option>
+                        <option [value]="IncidentNiveauRisque.LOW">{{ levelLabelMap[IncidentNiveauRisque.LOW] }}</option>
+                        <option [value]="IncidentNiveauRisque.LIMITED">{{ levelLabelMap[IncidentNiveauRisque.LIMITED] }}</option>
+                        <option [value]="IncidentNiveauRisque.MEDIUM">{{ levelLabelMap[IncidentNiveauRisque.MEDIUM] }}</option>
+                        <option [value]="IncidentNiveauRisque.SIGNIFICANT">{{ levelLabelMap[IncidentNiveauRisque.SIGNIFICANT] }}</option>
+                        <option [value]="IncidentNiveauRisque.HIGH">{{ levelLabelMap[IncidentNiveauRisque.HIGH] }}</option>
+                        <option [value]="IncidentNiveauRisque.CRITICAL">{{ levelLabelMap[IncidentNiveauRisque.CRITICAL] }}</option>
+                    </select>
+                </div>
+
+                <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus || filterLevel">
+                    <i class="fas fa-undo"></i> Réinitialiser
+                </button>
+            </div>
+
+            <div class="results-info">
+                <span class="count-tag"><strong>{{ filteredIncidents.length }}</strong> incident(s) trouvé(s)</span>
+            </div>
+        </div>
+
         <div class="risks-card">
+
             <table class="risks-table">
                 <thead>
                     <tr>
@@ -31,18 +74,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let incident of incidents">
+                    <tr *ngFor="let incident of filteredIncidents">
+
                         <td class="td-title"><strong>{{ incident.titre }}</strong></td>
                         <td>{{ incident.domaine || 'Non defini' }}</td>
                         <td>
-                            <span class="badge" [ngClass]="getNiveauClass(incident.niveauRisque)">
-                                {{ incident.niveauRisque || '-' }}
+                            <span class="badge" [ngClass]="getNiveauClass(incident)">
+                                {{ incident.niveauRisqueLabel || levelLabelMap[incident.niveauRisque!] || incident.niveauRisque || '-' }}
                             </span>
                         </td>
+
                         <td>{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</td>
                         <td>
-                            <span class="badge" [ngClass]="getStatusClass(incident.statut)">{{ incident.statut }}</span>
+                            <span class="badge" [ngClass]="getStatusClass(incident)">{{ incident.statutLabel || statusLabelMap[incident.statut] || incident.statut }}</span>
                         </td>
+
                         <td>
                             {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}
                         </td>
@@ -55,7 +101,8 @@
                             </button>
                         </td>
                     </tr>
-                    <tr *ngIf="incidents.length === 0">
+                    <tr *ngIf="filteredIncidents.length === 0">
+
                         <td colspan="5" class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <p>Aucun incident n'est enregistre pour le moment.</p>
@@ -123,13 +170,14 @@
                     <label>Niveau (Optionnel)</label>
                     <select formControlName="niveauRisque" class="finput">
                         <option value="">Selectionnez un niveau...</option>
-                        <option value="Faible">Faible</option>
-                        <option value="Moyen">Moyen</option>
-                        <option value="Élevé">Élevé</option>
-                        <option value="Critique">Critique</option>
-                        <option value="Significatif">Significatif</option>
-                        <option value="Limité">Limité</option>
+                        <option [value]="IncidentNiveauRisque.LOW">{{ levelLabelMap[IncidentNiveauRisque.LOW] }}</option>
+                        <option [value]="IncidentNiveauRisque.LIMITED">{{ levelLabelMap[IncidentNiveauRisque.LIMITED] }}</option>
+                        <option [value]="IncidentNiveauRisque.MEDIUM">{{ levelLabelMap[IncidentNiveauRisque.MEDIUM] }}</option>
+                        <option [value]="IncidentNiveauRisque.HIGH">{{ levelLabelMap[IncidentNiveauRisque.HIGH] }}</option>
+                        <option [value]="IncidentNiveauRisque.SIGNIFICANT">{{ levelLabelMap[IncidentNiveauRisque.SIGNIFICANT] }}</option>
+                        <option [value]="IncidentNiveauRisque.CRITICAL">{{ levelLabelMap[IncidentNiveauRisque.CRITICAL] }}</option>
                     </select>
+
                 </div>
 
                 <div class="form-group mb-3">
@@ -183,7 +231,8 @@
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Statut</span>
-                    <p class="detail-value"><span class="badge" [ngClass]="getStatusClass(selectedIncident.statut)">{{ selectedIncident.statut }}</span></p>
+                    <p class="detail-value"><span class="badge" [ngClass]="getStatusClass(selectedIncident)">{{ selectedIncident.statutLabel || statusLabelMap[selectedIncident.statut] || selectedIncident.statut }}</span></p>
+
                 </div>
 
                 <ng-container *ngIf="selectedIncident.domaine || selectedIncident.niveauRisque || selectedIncident.planActionTraitement">
@@ -197,9 +246,10 @@
                     <div class="detail-block" *ngIf="selectedIncident.niveauRisque">
                         <span class="detail-label">Niveau d'Impact Global</span>
                         <p class="detail-value">
-                            <span class="badge" [ngClass]="getNiveauClass(selectedIncident.niveauRisque)">
-                                {{ selectedIncident.niveauRisque }}
+                            <span class="badge" [ngClass]="getNiveauClass(selectedIncident)">
+                                {{ selectedIncident.niveauRisqueLabel || levelLabelMap[selectedIncident.niveauRisque!] || selectedIncident.niveauRisque }}
                             </span>
+
                         </p>
                     </div>
 
@@ -276,13 +326,14 @@
                     <label>Niveau</label>
                     <select formControlName="niveauRisque" class="finput">
                         <option value="">Selectionnez un niveau...</option>
-                        <option value="Faible">Faible</option>
-                        <option value="Moyen">Moyen</option>
-                        <option value="Élevé">Élevé</option>
-                        <option value="Critique">Critique</option>
-                        <option value="Significatif">Significatif</option>
-                        <option value="Limité">Limité</option>
+                        <option [value]="IncidentNiveauRisque.LOW">{{ levelLabelMap[IncidentNiveauRisque.LOW] }}</option>
+                        <option [value]="IncidentNiveauRisque.LIMITED">{{ levelLabelMap[IncidentNiveauRisque.LIMITED] }}</option>
+                        <option [value]="IncidentNiveauRisque.MEDIUM">{{ levelLabelMap[IncidentNiveauRisque.MEDIUM] }}</option>
+                        <option [value]="IncidentNiveauRisque.HIGH">{{ levelLabelMap[IncidentNiveauRisque.HIGH] }}</option>
+                        <option [value]="IncidentNiveauRisque.SIGNIFICANT">{{ levelLabelMap[IncidentNiveauRisque.SIGNIFICANT] }}</option>
+                        <option [value]="IncidentNiveauRisque.CRITICAL">{{ levelLabelMap[IncidentNiveauRisque.CRITICAL] }}</option>
                     </select>
+
                 </div>
 
                 <div class="form-group mb-3">
@@ -301,11 +352,12 @@
                 <div class="form-group mb-3">
                     <label>Statut <span class="text-danger">*</span></label>
                     <select formControlName="statut" class="finput">
-                        <option value="Nouveau">Nouveau</option>
-                        <option value="En cours">En cours</option>
-                        <option value="TraitÃ©">TraitÃ©</option>
-                        <option value="Clos">Clos</option>
+                        <option [value]="IncidentStatus.NOUVEAU">{{ statusLabelMap[IncidentStatus.NOUVEAU] }}</option>
+                        <option [value]="IncidentStatus.EN_COURS">{{ statusLabelMap[IncidentStatus.EN_COURS] }}</option>
+                        <option [value]="IncidentStatus.TRAITE">{{ statusLabelMap[IncidentStatus.TRAITE] }}</option>
+                        <option [value]="IncidentStatus.CLOS">{{ statusLabelMap[IncidentStatus.CLOS] }}</option>
                     </select>
+
                 </div>
 
                 <div class="form-footer">

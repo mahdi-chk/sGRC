@@ -3,24 +3,28 @@
  * @description Définition du modèle de données pour les Incidents.
  */
 
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import {
+    buildLookupAttribute,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
 
-export enum IncidentStatus {
-    NOUVEAU = 'Nouveau',
-    EN_COURS = 'En cours',
-    TRAITE = 'Traité',
-    CLOS = 'Clos',
-}
+export const IncidentStatus = buildLookupCodeMap('incident.statut');
+export type IncidentStatus = string;
 
-export class Incident extends Model {
+export class Incident extends LookupAwareModel {
     public id!: number;
     public titre!: string;
     public description!: string;
     public dateSurvenance!: Date;
     public statut!: IncidentStatus;
+    public statutId!: number;
     public pieceJointe!: string | null;
     public userId!: number | null; // L'utilisateur ayant déclaré l'incident
 
@@ -31,6 +35,7 @@ export class Incident extends Model {
     public processus!: string | null;
     public planActionTraitement!: string | null;
     public dateEcheance!: Date | null;
+    public niveauRisqueId!: number | null;
     public niveauRisque!: string | null;
     public riskId!: number | null;
     public is_deleted!: boolean;
@@ -62,13 +67,7 @@ Incident.init(
             type: DataTypes.DATE,
             allowNull: false,
         },
-        statut: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isIn: [Object.values(IncidentStatus)],
-            },
-        },
+        statutId: buildLookupAttribute('incident.statut'),
         pieceJointe: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -105,10 +104,7 @@ Incident.init(
             type: DataTypes.DATE,
             allowNull: true,
         },
-        niveauRisque: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
+        niveauRisqueId: buildLookupAttribute('incident.niveauRisque'),
         riskId: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -129,3 +125,6 @@ Incident.init(
 // Un incident est déclaré par un utilisateur
 Incident.belongsTo(User, { foreignKey: 'userId', as: 'declareur' });
 User.hasMany(Incident, { foreignKey: 'userId', as: 'incidentsDeclares' });
+
+registerLookupAccessors('incident', Incident);
+registerLookupAssociations('incident', Incident);

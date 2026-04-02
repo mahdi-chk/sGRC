@@ -13,12 +13,15 @@ export interface User {
     prenom: string;
     mail: string;
     telephone: string;
-    role: UserRole;
+    role: { id?: number; code: string; label: string };
     departementId: number;
+    departement?: { id: number; nom: string };
     password?: string;
     confirmPassword?: string;
     poste?: string;
 }
+
+
 
 @Component({
     selector: 'app-user-management',
@@ -33,23 +36,31 @@ export class UserManagementComponent implements OnInit {
     users: User[] = [];
     validationErrors: any = {};
     status: string | null = null;
+    messageType: 'success' | 'error' | null = null;
     showExportMenu = false;
+
 
     showPassword = false;
     showConfirmPassword = false;
     isSaving = false;
-
-    postes: string[] = [];
+    roleStats: Record<string, number> = {};
+    postes: any[] = [];
     departements: any[] = [];
     UserRole = UserRole;
 
-    selectedRoleFilter = '';
-    selectedDeptFilter = 0;
+    filters = {
+        search: '',
+        role: '',
+        department: 0
+    };
+
+    filteredUsers: User[] = [];
 
     constructor(
         private http: HttpClient,
         private router: Router
     ) { }
+
 
     ngOnInit() {
         this.loadUsers();
@@ -72,19 +83,44 @@ export class UserManagementComponent implements OnInit {
             prenom: '',
             mail: '',
             telephone: '',
-            role: UserRole.RISK_AGENT,
+            role: { code: '', label: '' },
             departementId: 0,
             password: '',
             confirmPassword: ''
         };
     }
 
+
+
     loadUsers() {
-        this.http.get<User[]>(`${environment.apiUrl}/users`).subscribe(
-            (data: User[]) => this.users = data,
-            (err: any) => this.status = 'Error loading users: ' + (err.status || err.message)
+        this.http.get<any[]>(`${environment.apiUrl}/users`).subscribe(
+            (data: any[]) => {
+                this.users = data.map(u => ({
+                    ...u,
+                    role: { 
+                        code: u.roleCode || (typeof u.role === 'string' ? u.role : u.role?.code) || 'unknown', 
+                        label: u.roleLabel || (typeof u.role === 'string' ? u.role : u.role?.label) || 'Inconnu' 
+                    }
+                }));
+                this.applyFilters();
+            },
+            (err: any) => {
+                this.status = 'Error loading users: ' + (err.status || err.message);
+                this.messageType = 'error';
+            }
         );
     }
+
+
+    calculateStats() {
+        this.roleStats = {};
+        this.filteredUsers.forEach(u => {
+            const roleKey = u.role?.code || 'unknown';
+            this.roleStats[roleKey] = (this.roleStats[roleKey] || 0) + 1;
+        });
+    }
+
+
 
     loadDepartments() {
         this.http.get<any[]>(`${environment.apiUrl}/departments`).subscribe(
@@ -94,21 +130,26 @@ export class UserManagementComponent implements OnInit {
     }
 
     loadRoles() {
-        this.http.get<string[]>(`${environment.apiUrl}/users/roles`).subscribe(
-            (data: string[]) => this.postes = data,
+        this.http.get<any[]>(`${environment.apiUrl}/users/roles`).subscribe(
+            (data: any[]) => this.postes = data,
             (err: any) => this.status = 'Error loading roles: ' + (err.status || err.message)
         );
     }
+
 
     openUserModal(user?: User) {
         this.modalVisible = true;
         this.isSaving = false;
         if (user) {
             this.editingUser = user;
-            this.userForm = { ...user, password: '', confirmPassword: '' };
+            this.userForm = { ...user, role: (user.role?.code || '') as any, password: '', confirmPassword: '' };
         } else {
             this.editingUser = null;
             this.userForm = this.emptyUser();
+            // Ensure role is a string for fresh forms if emptyUser doesn't set it nicely
+            if (typeof this.userForm.role === 'object') {
+                this.userForm.role = '' as any;
+            }
         }
         this.showPassword = false;
         this.showConfirmPassword = false;
@@ -177,18 +218,21 @@ export class UserManagementComponent implements OnInit {
         if (!this.validateUser()) return;
         this.isSaving = true;
 
-        const payload: User = {
+        const roleCode = typeof this.userForm.role === 'string' ? this.userForm.role : this.userForm.role?.code;
+
+        const payload: any = {
             ...this.userForm,
             nom: this.userForm.nom.trim(),
             prenom: this.userForm.prenom.trim(),
             mail: this.userForm.mail.trim().toLowerCase(),
             telephone: this.userForm.telephone.trim(),
             departementId: Number(this.userForm.departementId),
-            poste: (this.userForm.poste || this.userForm.role || '').trim()
+            role: roleCode,
+            poste: (this.userForm.poste || roleCode || '').trim()
         };
 
         if (!payload.poste) {
-            payload.poste = payload.role;
+            payload.poste = roleCode;
         }
 
         if (!payload.password) {
@@ -196,31 +240,40 @@ export class UserManagementComponent implements OnInit {
         }
         delete payload.confirmPassword;
 
+
         if (this.editingUser) {
             this.http.put(`${environment.apiUrl}/users/${this.editingUser.id}`, payload).subscribe(
                 () => {
                     this.isSaving = false;
-                    this.status = 'Utilisateur modifie';
+                    this.status = 'Utilisateur modifié avec succès !';
+                    this.messageType = 'success';
                     this.loadUsers();
                     this.closeUserModal();
+                    setTimeout(() => { this.status = null; this.messageType = null; }, 5000);
                 },
                 (err: any) => {
                     this.isSaving = false;
-                    this.status = this.extractErrorMessage('Erreur lors de la mise a jour', err);
+                    this.status = this.extractErrorMessage('Erreur lors de la mise à jour', err);
+                    this.messageType = 'error';
                 }
+
             );
         } else {
             this.http.post(`${environment.apiUrl}/users`, payload).subscribe(
                 () => {
                     this.isSaving = false;
-                    this.status = 'Utilisateur cree';
+                    this.status = 'Utilisateur créé avec succès !';
+                    this.messageType = 'success';
                     this.loadUsers();
                     this.closeUserModal();
+                    setTimeout(() => { this.status = null; this.messageType = null; }, 5000);
                 },
                 (err: any) => {
                     this.isSaving = false;
-                    this.status = this.extractErrorMessage('Erreur lors de la creation', err);
+                    this.status = this.extractErrorMessage('Erreur lors de la création', err);
+                    this.messageType = 'error';
                 }
+
             );
         }
     }
@@ -235,31 +288,48 @@ export class UserManagementComponent implements OnInit {
         if (confirm(`Etes-vous sur de vouloir supprimer l'utilisateur ${user.prenom} ${user.nom} ?`)) {
             this.http.delete(`${environment.apiUrl}/users/${user.id}`).subscribe(
                 () => {
-                    this.status = 'Utilisateur supprime';
+                    this.status = 'Utilisateur supprimé avec succès !';
+                    this.messageType = 'success';
                     this.loadUsers();
+                    setTimeout(() => { this.status = null; this.messageType = null; }, 5000);
                 },
-                (err: any) => this.status = 'Error deleting user: ' + (err.status || err.message)
+                (err: any) => {
+                    this.status = 'Error deleting user: ' + (err.status || err.message);
+                    this.messageType = 'error';
+                }
+
             );
         }
     }
 
-    get filteredUsers() {
-        return this.users.filter(u => {
-            const matchesSearch = !this.userSearchTerm ||
-                `${u.nom} ${u.prenom} ${u.mail}`.toLowerCase().includes(this.userSearchTerm.toLowerCase());
+    applyFilters() {
+        this.filteredUsers = this.users.filter(u => {
+            const normalizedSearch = (this.filters.search || '').toLowerCase().trim();
+            const matchesSearch = !normalizedSearch ||
+                `${u.nom} ${u.prenom} ${u.mail}`.toLowerCase().includes(normalizedSearch);
 
-            const matchesRole = !this.selectedRoleFilter || u.role === this.selectedRoleFilter;
-            const matchesDept = !this.selectedDeptFilter || u.departementId === Number(this.selectedDeptFilter);
+            const roleCode = (u.role?.code || '').toLowerCase().trim();
+            const filterRole = (this.filters.role || '').toLowerCase().trim();
+            const matchesRole = !filterRole || roleCode === filterRole;
+            
+            const matchesDept = !this.filters.department || Number(u.departementId) === Number(this.filters.department);
 
             return matchesSearch && matchesRole && matchesDept;
         });
+        this.calculateStats();
     }
 
+
+
     resetFilters() {
-        this.userSearchTerm = '';
-        this.selectedRoleFilter = '';
-        this.selectedDeptFilter = 0;
+        this.filters = {
+            search: '',
+            role: '',
+            department: 0
+        };
+        this.applyFilters();
     }
+
 
     selectUser(user: User) {
         this.openUserModal(user);
@@ -279,9 +349,11 @@ export class UserManagementComponent implements OnInit {
             'Prenom': u.prenom,
             'Email': u.mail,
             'Telephone': u.telephone,
-            'Role': u.role,
+            'Role': u.role?.label || u.role?.code || 'N/A',
             'Departement': this.departements.find(d => d.id === u.departementId)?.nom || 'N/A'
+
         }));
+
 
         const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
         const wb: XLSX.WorkBook = XLSX.utils.book_new();
@@ -307,9 +379,11 @@ export class UserManagementComponent implements OnInit {
             u.prenom,
             u.mail,
             u.telephone,
-            u.role,
+            u.role?.label || u.role?.code || 'N/A',
             this.departements.find(d => d.id === u.departementId)?.nom || 'N/A'
+
         ]);
+
 
         autoTable(doc, {
             head: [columns],

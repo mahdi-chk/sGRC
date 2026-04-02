@@ -4,11 +4,22 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export enum IncidentStatus {
-    NOUVEAU = 'Nouveau',
-    EN_COURS = 'En cours',
-    TRAITE = 'Traité',
-    CLOS = 'Clos',
+    NOUVEAU = 'nouveau',
+    EN_COURS = 'en_cours',
+    TRAITE = 'traite',
+    CLOS = 'clos',
 }
+
+export enum IncidentNiveauRisque {
+    LOW = 'low',
+    LIMITED = 'limited',
+    MEDIUM = 'medium',
+    SIGNIFICANT = 'significant',
+    HIGH = 'high',
+    CRITICAL = 'critical',
+}
+
+
 
 export interface Incident {
     id: number;
@@ -16,6 +27,7 @@ export interface Incident {
     description: string;
     dateSurvenance: Date | string;
     statut: IncidentStatus;
+    statutLabel?: string;
     pieceJointe: string | null;
     userId: number | null;
     declareur?: { id: number; nom: string; prenom: string; mail: string };
@@ -29,9 +41,11 @@ export interface Incident {
     processus?: string;
     planActionTraitement?: string;
     dateEcheance?: Date | string;
-    niveauRisque?: string;
+    niveauRisque?: IncidentNiveauRisque;
+    niveauRisqueLabel?: string;
     riskId?: number;
 }
+
 
 export interface IncidentImportDraft {
     titre: string | null;

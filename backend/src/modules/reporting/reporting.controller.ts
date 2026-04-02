@@ -4,6 +4,31 @@ import { Incident, IncidentStatus } from '../incidents/incident.model';
 import { AuditMission, AuditMissionStatus } from '../auditing/audit-mission.model';
 import { Department } from '../departments/department.model';
 import sequelize from '../../database';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
+
+const mapLookupCounts = (rows: any[], field: string, lookupKey: string) =>
+    rows.map((row) => {
+        const id = Number(row?.[field] ?? row?.get?.(field));
+        const count = Number(row?.count ?? row?.get?.('count'));
+        const lookup = LookupResolutionService.getStaticValue(lookupKey, id);
+
+        return {
+            id,
+            code: lookup?.code ?? null,
+            label: lookup?.label ?? null,
+            count,
+        };
+    });
+
+const countByLookup = async (model: any, columnName: string, alias: string) =>
+    model.findAll({
+        attributes: [
+            [sequelize.col(columnName), alias],
+            [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        ],
+        group: [sequelize.col(columnName)],
+        raw: true,
+    });
 
 export class ReportingController {
     /**
@@ -13,28 +38,16 @@ export class ReportingController {
         try {
             // Comptage des Risques
             const totalRisks = await Risk.count();
-            const risksByStatus = await Risk.findAll({
-                attributes: ['statut', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-                group: ['statut']
-            });
-            const risksByLevel = await Risk.findAll({
-                attributes: ['niveauRisque', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-                group: ['niveauRisque']
-            });
+            const risksByStatus = await countByLookup(Risk, 'statut_id', 'statutId');
+            const risksByLevel = await countByLookup(Risk, 'niveau_risque_id', 'niveauRisqueId');
 
             // Comptage des Incidents
             const totalIncidents = await Incident.count();
-            const incidentsByStatus = await Incident.findAll({
-                attributes: ['statut', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-                group: ['statut']
-            });
+            const incidentsByStatus = await countByLookup(Incident, 'statut_id', 'statutId');
 
             // Comptage des Missions d'Audit
             const totalAudits = await AuditMission.count();
-            const auditsByStatus = await AuditMission.findAll({
-                attributes: ['statut', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-                group: ['statut']
-            });
+            const auditsByStatus = await countByLookup(AuditMission, 'statut_id', 'statutId');
 
             // Éléments récents
             const recentRisks = await Risk.findAll({ limit: 5, order: [['createdAt', 'DESC']] });
@@ -43,18 +56,18 @@ export class ReportingController {
             res.json({
                 risks: {
                     total: totalRisks,
-                    byStatus: risksByStatus,
-                    byLevel: risksByLevel,
+                    byStatus: mapLookupCounts(risksByStatus, 'statutId', 'risk.statut'),
+                    byLevel: mapLookupCounts(risksByLevel, 'niveauRisqueId', 'risk.niveauRisque'),
                     recent: recentRisks
                 },
                 incidents: {
                     total: totalIncidents,
-                    byStatus: incidentsByStatus,
+                    byStatus: mapLookupCounts(incidentsByStatus, 'statutId', 'incident.statut'),
                     recent: recentIncidents
                 },
                 audits: {
                     total: totalAudits,
-                    byStatus: auditsByStatus
+                    byStatus: mapLookupCounts(auditsByStatus, 'statutId', 'auditMission.statut')
                 }
             });
         } catch (error: any) {
@@ -68,11 +81,24 @@ export class ReportingController {
     static async getKpis(req: Request, res: Response) {
         try {
             const totalRisks = await Risk.count();
-            const treatedRisks = await Risk.count({ where: { statut: [RiskStatus.TREATED, RiskStatus.CLOSED] } });
-            const criticalRisks = await Risk.count({ where: { niveauRisque: RiskLevel.CRITICAL } });
+            const treatedRisks = await Risk.count({
+                where: {
+                    statutId: [
+                        LookupResolutionService.getStaticValue('risk.statut', RiskStatus.TREATED)?.id,
+                        LookupResolutionService.getStaticValue('risk.statut', RiskStatus.CLOSED)?.id,
+                    ]
+                }
+            });
+            const criticalRisks = await Risk.count({
+                where: {
+                    niveauRisqueId: LookupResolutionService.getStaticValue('risk.niveauRisque', RiskLevel.CRITICAL)?.id
+                }
+            });
 
             const totalIncidents = await Incident.count();
-            const closedIncidents = await Incident.count({ where: { statut: IncidentStatus.CLOS } });
+            const closedIncidents = await Incident.count({
+                where: { statutId: LookupResolutionService.getStaticValue('incident.statut', IncidentStatus.CLOS)?.id }
+            });
 
             const treatmentRate = totalRisks > 0 ? (treatedRisks / totalRisks) * 100 : 0;
             const incidentResolutionRate = totalIncidents > 0 ? (closedIncidents / totalIncidents) * 100 : 0;
@@ -82,7 +108,14 @@ export class ReportingController {
                 { id: 'risk_treatment', label: 'Taux de traitement des risques', value: Math.round(treatmentRate), unit: '%' },
                 { id: 'incident_resolution', label: 'Taux de résolution des incidents', value: Math.round(incidentResolutionRate), unit: '%' },
                 { id: 'critical_risk_ratio', label: 'Ratio de risques critiques', value: Math.round(riskCriticalityRate), unit: '%' },
-                { id: 'audit_completion', label: 'Missions d\'audit terminées', value: await AuditMission.count({ where: { statut: AuditMissionStatus.TERMINE } }), unit: '' }
+                {
+                    id: 'audit_completion',
+                    label: 'Missions d\'audit terminées',
+                    value: await AuditMission.count({
+                        where: { statutId: LookupResolutionService.getStaticValue('auditMission.statut', AuditMissionStatus.TERMINE)?.id }
+                    }),
+                    unit: ''
+                }
             ]);
         } catch (error: any) {
             res.status(500).json({ message: 'Erreur lors de la récupération des KPI', error: error.message });
@@ -99,7 +132,7 @@ export class ReportingController {
                     {
                         model: Risk,
                         as: 'risks',
-                        attributes: ['id', 'niveauRisque', 'statut']
+                        attributes: ['id', 'niveauRisqueId', 'statutId']
                     }
                 ]
             });

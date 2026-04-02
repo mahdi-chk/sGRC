@@ -87,12 +87,12 @@ export class GovernanceComponent implements OnInit {
       return 0;
     }
 
-    const treated = this.risks.filter(risk => risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED).length;
+    const treated = this.risks.filter(risk => this.isCompletedRiskStatus((risk as any).statutCode || risk.statut)).length;
     return Math.round((treated / this.risks.length) * 100);
   }
 
   get criticalRisks(): number {
-    return this.risks.filter(risk => risk.niveauRisque === RiskLevel.CRITICAL).length;
+    return this.risks.filter(risk => this.normalize((risk as any).niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL).length;
   }
 
   get completionRate(): number {
@@ -102,5 +102,20 @@ export class GovernanceComponent implements OnInit {
 
     const completed = this.missions.filter(mission => mission.statut === AuditMissionStatus.TERMINE).length;
     return Math.round((completed / this.missions.length) * 100);
+  }
+
+  private isCompletedRiskStatus(status?: string | null): boolean {
+    const normalizedStatus = this.normalize(status);
+    return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+  }
+
+  private normalize(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 }

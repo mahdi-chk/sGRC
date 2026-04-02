@@ -10,6 +10,7 @@ import { User } from '../users/user.model';
 import { UserRole } from '../users/user.roles';
 import { Department } from '../departments/department.model';
 import { appLogger } from '../../utils/app-logger';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
 const router = Router();
 
@@ -572,7 +573,7 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, Use
             dateSurvenance: cleanedBody.dateSurvenance || new Date()
         };
 
-        const incident = await Incident.create(incidentData);
+        const incident = await Incident.create(await LookupResolutionService.resolveEntityPayload('incident', incidentData));
         res.status(201).json(incident);
     } catch (error: any) {
         appLogger.error('Incidents', 'Incident creation failed', error);
@@ -674,7 +675,7 @@ router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, U
             }
         }
 
-        await incident.update(cleanedBody);
+        await incident.update(await LookupResolutionService.resolveEntityPayload('incident', cleanedBody));
         
         // Récupérer l'incident mis à jour avec les associations pour le renvoyer
         const updatedIncident = await Incident.findByPk(parseInt(id, 10), {

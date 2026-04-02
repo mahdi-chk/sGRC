@@ -6,19 +6,39 @@ import { environment } from '../../../environments/environment';
 export interface ReportingStats {
     risks: {
         total: number;
-        byStatus: any[];
-        byLevel: any[];
-        recent: any[];
+        byStatus: LookupStatEntry[];
+        byLevel: LookupStatEntry[];
+        recent: ReportingRecentItem[];
     };
     incidents: {
         total: number;
-        byStatus: any[];
-        recent: any[];
+        byStatus: LookupStatEntry[];
+        recent: ReportingRecentItem[];
     };
     audits: {
         total: number;
-        byStatus: any[];
+        byStatus: LookupStatEntry[];
     };
+}
+
+export interface LookupStatEntry {
+    id: number;
+    code: string | null;
+    label: string | null;
+    count: number;
+}
+
+export interface ReportingRecentItem {
+    id: number;
+    titre: string;
+    domaine?: string | null;
+    statut?: string | null;
+    statutCode?: string | null;
+    statutLabel?: string | null;
+    niveauRisque?: string | null;
+    niveauRisqueCode?: string | null;
+    niveauRisqueLabel?: string | null;
+    createdAt: string | Date;
 }
 
 export interface KPI {

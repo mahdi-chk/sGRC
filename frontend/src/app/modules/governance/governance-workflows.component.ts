@@ -53,8 +53,8 @@ export class GovernanceWorkflowsComponent implements OnInit {
   get priorityRisks(): Risk[] {
     return this.risks
       .filter(risk =>
-        risk.niveauRisque === RiskLevel.CRITICAL ||
-        risk.statut === RiskStatus.OPEN ||
+        this.normalizeRiskLevel(risk.niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL ||
+        this.normalizeRiskStatus(risk.statutCode || risk.statut) === RiskStatus.OPEN ||
         !risk.riskAgentId
       )
       .slice()
@@ -73,11 +73,11 @@ export class GovernanceWorkflowsComponent implements OnInit {
   }
 
   getRiskBadgeClass(risk: Risk): string {
-    if (risk.niveauRisque === RiskLevel.CRITICAL) {
+    if (this.normalizeRiskLevel(risk.niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL) {
       return 'danger';
     }
 
-    if (risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED) {
+    if (this.isCompletedRiskStatus(risk.statutCode || risk.statut)) {
       return 'success';
     }
 
@@ -95,5 +95,28 @@ export class GovernanceWorkflowsComponent implements OnInit {
       default:
         return 'warning';
     }
+  }
+
+  private isCompletedRiskStatus(status?: string | null): boolean {
+    const normalizedStatus = this.normalizeRiskStatus(status);
+    return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+  }
+
+  private normalizeRiskStatus(status?: string | null): string {
+    return this.normalize(status);
+  }
+
+  private normalizeRiskLevel(level?: string | null): string {
+    return this.normalize(level);
+  }
+
+  private normalize(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 }

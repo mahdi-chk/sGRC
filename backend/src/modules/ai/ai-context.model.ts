@@ -1,14 +1,22 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
+import { buildLookupCodeList, buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import {
+    buildLookupAttribute,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
 
-export const AI_CONTEXT_TYPES = ['system', 'business', 'instruction'] as const;
+export const AIContextType = buildLookupCodeMap('aiContext.type');
+export type AIContextType = string;
+export const AI_CONTEXT_TYPES = buildLookupCodeList('aiContext.type');
 
-export type AIContextType = typeof AI_CONTEXT_TYPES[number];
-
-export class AIContext extends Model {
+export class AIContext extends LookupAwareModel {
     public id!: number;
     public name!: string;
     public type!: AIContextType;
+    public typeId!: number;
     public content!: string;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -29,13 +37,7 @@ AIContext.init(
                 len: [1, 100],
             },
         },
-        type: {
-            type: DataTypes.STRING(20),
-            allowNull: false,
-            validate: {
-                isIn: [AI_CONTEXT_TYPES as unknown as string[]],
-            },
-        },
+        typeId: buildLookupAttribute('aiContext.type'),
         content: {
             type: DataTypes.TEXT,
             allowNull: false,
@@ -51,7 +53,7 @@ AIContext.init(
         indexes: [
             {
                 unique: true,
-                fields: ['name', 'type'],
+                fields: ['name', 'typeId'],
             },
             {
                 fields: ['name'],
@@ -59,3 +61,6 @@ AIContext.init(
         ],
     }
 );
+
+registerLookupAccessors('aiContext', AIContext);
+registerLookupAssociations('aiContext', AIContext);

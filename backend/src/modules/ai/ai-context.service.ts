@@ -1,5 +1,6 @@
 import { AIContext, AIContextType, AI_CONTEXT_TYPES } from './ai-context.model';
 import { DEFAULT_AI_CONTEXTS, DefaultAIContext, getDefaultContextsByName } from './ai-context.defaults';
+import { getRequiredLookupId } from '../../database/lookups/lookup-models';
 
 export interface AIContextGroup {
     name: string;
@@ -28,7 +29,7 @@ export class AIContextService {
 
         let contexts = await AIContext.findAll({
             where: { name: normalizedName },
-            order: [['type', 'ASC']],
+            order: [['typeId', 'ASC']],
         });
 
         const missingDefaults = this.getMissingDefaultContexts(normalizedName, contexts);
@@ -37,7 +38,7 @@ export class AIContextService {
                 await AIContext.findOrCreate({
                     where: {
                         name: context.name,
-                        type: context.type,
+                        typeId: getRequiredLookupId('aiContext.type', context.type),
                     },
                     defaults: {
                         content: context.content,
@@ -47,7 +48,7 @@ export class AIContextService {
 
             contexts = await AIContext.findAll({
                 where: { name: normalizedName },
-                order: [['type', 'ASC']],
+                order: [['typeId', 'ASC']],
             });
         }
 
@@ -69,7 +70,7 @@ export class AIContextService {
 
     static async getAllContexts(): Promise<AIContext[]> {
         return AIContext.findAll({
-            order: [['name', 'ASC'], ['type', 'ASC']],
+            order: [['name', 'ASC'], ['typeId', 'ASC']],
         });
     }
 
@@ -80,7 +81,7 @@ export class AIContextService {
             const [_, created] = await AIContext.findOrCreate({
                 where: {
                     name: context.name,
-                    type: context.type,
+                    typeId: getRequiredLookupId('aiContext.type', context.type),
                 },
                 defaults: {
                     content: context.content,
@@ -109,7 +110,7 @@ export class AIContextService {
         const existing = await AIContext.findOne({
             where: {
                 name: normalizedName,
-                type: normalizedType,
+                typeId: getRequiredLookupId('aiContext.type', normalizedType),
             },
         });
 
@@ -117,7 +118,7 @@ export class AIContextService {
             ? await existing.update({ content: normalizedContent })
             : await AIContext.create({
                 name: normalizedName,
-                type: normalizedType,
+                typeId: getRequiredLookupId('aiContext.type', normalizedType),
                 content: normalizedContent,
             });
 

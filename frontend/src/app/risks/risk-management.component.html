@@ -1,4 +1,4 @@
-<div class="risk-page">
+﻿<div class="risk-page">
 
     <!-- Page Header -->
     <div class="page-header">
@@ -41,19 +41,19 @@
     <!-- KPI Cards -->
     <div class="kpi-row">
         <div class="kpi-card kpi-total">
-            <span class="kpi-value">{{ risks.length }}</span>
+            <span class="kpi-value">{{ filteredRisks.length }}</span>
             <span class="kpi-label">Total Risques</span>
         </div>
         <div class="kpi-card kpi-closed">
-            <span class="kpi-value">{{ getStatusCount('Clôturé') }}</span>
+            <span class="kpi-value">{{ getStatusCount(RiskStatus.CLOSED) }}</span>
             <span class="kpi-label">Clôturés</span>
         </div>
         <div class="kpi-card kpi-progress">
-            <span class="kpi-value">{{ getStatusCount('En cours') }}</span>
+            <span class="kpi-value">{{ getStatusCount(RiskStatus.IN_PROGRESS) }}</span>
             <span class="kpi-label">En cours</span>
         </div>
         <div class="kpi-card kpi-critical">
-            <span class="kpi-value">{{ getLevelCount('Critique') }}</span>
+            <span class="kpi-value">{{ getLevelCount(RiskLevel.CRITICAL) }}</span>
             <span class="kpi-label">Critiques</span>
         </div>
     </div>
@@ -66,11 +66,11 @@
         </div>
         <select [(ngModel)]="filterStatut" class="filter-select">
             <option value="">Tous les statuts</option>
-            <option *ngFor="let s of riskStatuses" [value]="s">{{ s }}</option>
+            <option *ngFor="let opt of statusOptions" [value]="opt.code">{{ opt.label }}</option>
         </select>
         <select [(ngModel)]="filterNiveau" class="filter-select">
             <option value="">Tous les niveaux</option>
-            <option *ngFor="let n of riskLevels" [value]="n">{{ n }}</option>
+            <option *ngFor="let opt of levelOptions" [value]="opt.code">{{ opt.label }}</option>
         </select>
         <button class="btn-clear" (click)="filterStatut=''; filterNiveau=''; searchText=''">
             <i class="fas fa-times"></i> Réinitialiser
@@ -99,8 +99,8 @@
                     <td class="td-id">{{ i + 1 }}</td>
                     <td class="td-title"><strong>{{ risk.titre }}</strong></td>
                     <td><span class="domain-tag">{{ risk.domaine }}</span></td>
-                    <td><span [class]="'badge level-' + risk.niveauRisque">{{ risk.niveauRisque }}</span></td>
-                    <td><span [class]="'badge status-' + risk.statut">{{ risk.statut }}</span></td>
+                    <td><span [class]="getNiveauClass(risk)">{{ getNiveauLabel(risk) }}</span></td>
+                    <td><span [class]="getStatusClass(risk)">{{ getStatusLabel(risk) }}</span></td>
                     <td>{{ risk.responsableTraitement?.nom }}</td>
                     <td>
                         <span *ngIf="risk.riskAgent; else noAgent">
@@ -108,8 +108,11 @@
                         </span>
                         <ng-template #noAgent><em class="text-muted">Non assigné</em></ng-template>
                     </td>
-                    <td><span class="freq-tag" *ngIf="risk.frequenceTraitement !== 'Aucun'">{{ risk.frequenceTraitement
-                            }}</span></td>
+                    <td>
+                        <span class="freq-tag" *ngIf="normalize(risk.frequenceTraitement) !== PeriodicFrequency.NONE">
+                            {{ getFrequencyLabel(risk.frequenceTraitement) }}
+                        </span>
+                    </td>
                     <td>
                         <div class="deadline-box">
                             <span class="main-date">{{ risk.dateEcheance | date:'dd/MM/yyyy' }}</span>
@@ -124,15 +127,15 @@
                         <button *ngIf="isRiskManager" class="action-btn btn-edit" (click)="onEditRisk(risk)" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn btn-assign" (click)="openAssignModal(risk)" title="Assigner"
-                            *ngIf="isRiskManager && risk.statut === 'Ouvert'">
+                        <button class="action-btn btn-assign" (click)="openAssignModal(risk)" [title]="getAssignButtonTitle(risk)"
+                            *ngIf="isRiskManager && !isCompletedRiskStatus(risk.statutCode || risk.statut)">
                             <i class="fas fa-user-plus"></i>
                         </button>
-                        <button *ngIf="isRiskManager && risk.statut === 'Traité'" class="action-btn btn-revert"
+                        <button *ngIf="isRiskManager && normalize(risk.statutCode || risk.statut) === RiskStatus.TREATED" class="action-btn btn-revert"
                             (click)="revertToInProgress(risk.id)" title="Remettre en cours">
                             <i class="fas fa-undo"></i>
                         </button>
-                        <button *ngIf="isRiskManager && risk.statut === 'Traité'" class="action-btn btn-close"
+                        <button *ngIf="isRiskManager && normalize(risk.statutCode || risk.statut) === RiskStatus.TREATED" class="action-btn btn-close"
                             (click)="closeRisk(risk.id)" title="Clôturer">
                             <i class="fas fa-check-double"></i>
                         </button>
@@ -153,7 +156,7 @@
     </div>
 
     <!-- ====================== Create/Edit Modal ====================== -->
-    <app-modal *ngIf="showCreateModal" [title]="isEditing ? 'Modifier le Risque' : 'Créer un Nouveau Risque'"
+    <app-modal *ngIf="showCreateModal" [title]="isEditing ? 'Modifier le risque' : 'Créer un nouveau risque'"
         (close)="showCreateModal = false">
         <div #projected modal-body class="modal-form">
             <div class="form-grid">
@@ -163,7 +166,7 @@
                         class="finput">
                 </div>
                 <div class="form-group full">
-                    <label>Explication Détaillée <span class="req">*</span></label>
+                    <label>Explication détaillée <span class="req">*</span></label>
                     <textarea [(ngModel)]="newRisk.explication" rows="3" placeholder="Description du risque..."
                         class="finput"></textarea>
                 </div>
@@ -194,7 +197,7 @@
                     </select>
                 </div>
 
-                <!-- section évaluation -->
+                <!-- section evaluation -->
                 <div class="section-divider full" style="margin: 10px 0;">
                     <h5 style="border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; color:#475569;">Cotation du Risque</h5>
                 </div>
@@ -203,20 +206,20 @@
                     <label>Probabilité</label>
                     <select [(ngModel)]="newRisk.probabilite" (change)="calculateScores()" class="finput">
                         <option [ngValue]="null">Sélectionner</option>
-                        <option *ngFor="let p of riskProbabilities" [value]="p">{{ p }}</option>
+                        <option *ngFor="let p of riskProbabilities" [value]="p">{{ getProbabilityLabel(p) }}</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Impact</label>
                     <select [(ngModel)]="newRisk.impact" (change)="calculateScores()" class="finput">
                         <option [ngValue]="null">Sélectionner</option>
-                        <option *ngFor="let i of riskImpacts" [value]="i">{{ i }}</option>
+                        <option *ngFor="let i of riskImpacts" [value]="i">{{ getImpactLabel(i) }}</option>
                     </select>
                 </div>
                 <div class="form-group full">
                     <label>Risque Brut</label>
                     <div style="padding:10px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; font-weight:600;">
-                        <span [class]="'badge level-' + newRisk.cotationRisqueBrut" *ngIf="newRisk.cotationRisqueBrut">{{ newRisk.cotationRisqueBrut }}</span>
+                        <span [class]="'badge level-' + newRisk.cotationRisqueBrut" *ngIf="newRisk.cotationRisqueBrut">{{ getNiveauLabel({ niveauRisque: newRisk.cotationRisqueBrut }) }}</span>
                         <span style="color:#64748b;" *ngIf="!newRisk.cotationRisqueBrut">Non évalué</span>
                         <small style="margin-left: 10px; color:#64748b;" *ngIf="newRisk.niveauCotationRisqueBrut">(Score: {{newRisk.niveauCotationRisqueBrut}}/512)</small>
                     </div>
@@ -224,19 +227,19 @@
 
                 <div class="form-group full">
                     <label>DMR Existant</label>
-                    <textarea [(ngModel)]="newRisk.dmrExistant" rows="2" placeholder="Dispositif de Maîtrise des Risques..." class="finput"></textarea>
+                    <textarea [(ngModel)]="newRisk.dmrExistant" rows="2" placeholder="Dispositif de maîtrise des risques..." class="finput"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Niveau de Maîtrise</label>
+                    <label>Niveau de maîtrise</label>
                     <select [(ngModel)]="newRisk.niveauMaitrise" (change)="calculateScores()" class="finput">
                         <option [ngValue]="null">Sélectionner</option>
-                        <option *ngFor="let m of maitriseLevels" [value]="m">{{ m }}</option>
+                        <option *ngFor="let m of maitriseLevels" [value]="m">{{ getMaitriseLabel(m) }}</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Risque Net <span class="req">*</span></label>
                     <div style="padding:10px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; font-weight:600;">
-                        <span [class]="'badge level-' + (newRisk.cotationRisqueNet || newRisk.niveauRisque)">{{ newRisk.cotationRisqueNet || newRisk.niveauRisque }}</span>
+                        <span [class]="'badge level-' + (newRisk.cotationRisqueNet || newRisk.niveauRisque)">{{ getNiveauLabel({ niveauRisque: newRisk.cotationRisqueNet || newRisk.niveauRisque }) }}</span>
                         <small style="margin-left: 10px; color:#64748b;" *ngIf="newRisk.niveauCotationRisqueNet">(Score: {{newRisk.niveauCotationRisqueNet}}/2048)</small>
                     </div>
                 </div>
@@ -254,17 +257,17 @@
                     <input type="date" [(ngModel)]="newRisk.dateEcheance" [min]="today" class="finput">
                 </div>
                 <div class="form-group">
-                    <label>Fréquence de Traitement</label>
+                    <label>Fréquence de traitement</label>
                     <select [(ngModel)]="newRisk.frequenceTraitement" class="finput">
-                        <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ freq }}</option>
+                        <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ getFrequencyLabel(freq) }}</option>
                     </select>
                 </div>
-                <div class="form-group" *ngIf="newRisk.frequenceTraitement !== 'Aucun'">
-                    <label>Prochaine Échéance Périodique</label>
+                <div class="form-group" *ngIf="normalize(newRisk.frequenceTraitement) !== PeriodicFrequency.NONE">
+                    <label>Prochaine échéance périodique</label>
                     <input type="date" [(ngModel)]="newRisk.prochaineEcheance" [min]="today" class="finput">
                 </div>
                 <div class="form-group full">
-                    <label>Pièce Justificative (PDF/Image)</label>
+                    <label>Pièce justificative (PDF/Image)</label>
                     <div class="file-zone" [class.has-file]="selectedFile">
                         <input type="file" (change)="onFileSelected($event)"
                             style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">
@@ -276,41 +279,47 @@
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showCreateModal = false">Annuler</button>
                 <button class="btn-save" (click)="saveRisk()" [disabled]="!isFormValid()">
-                    <i class="fas fa-save"></i> {{ isEditing ? 'Enregistrer' : 'Créer le Risque' }}
+                    <i class="fas fa-save"></i> {{ isEditing ? 'Enregistrer' : 'Créer le risque' }}
                 </button>
             </div>
         </div>
     </app-modal>
 
     <!-- ====================== Assign Modal ====================== -->
-    <app-modal *ngIf="showAssignModal" title="Assigner le Risque" (close)="showAssignModal = false">
+    <app-modal *ngIf="showAssignModal" [title]="getAssignRiskModalTitle()" (close)="showAssignModal = false">
         <div #projected modal-body class="modal-form">
-            <p style="color:#475569; margin-bottom:20px;">Choisissez un <strong>Agent de traitement du risque</strong>
-                pour traiter le
-                risque :
+            <p style="color:#475569; margin-bottom:20px;">
+                Choisissez un <strong>Agent de traitement du risque</strong> pour le risque :
                 <br><strong>{{ selectedRisk?.titre }}</strong>
+            </p>
+            <p style="color:#64748b; margin:-10px 0 20px;" *ngIf="selectedRisk?.riskAgent">
+                Affectation actuelle : <strong>{{ selectedRisk?.riskAgent?.prenom }} {{ selectedRisk?.riskAgent?.nom }}</strong>
             </p>
             <div class="form-group">
                 <label>Agent de traitement du risque</label>
-                <select #agentSelect class="finput">
+                <select class="finput" [(ngModel)]="selectedAgentId">
                     <option value="">Sélectionner</option>
-                    <option *ngFor="let u of filteredAgents" [value]="u.id">{{ u.prenom }} {{ u.nom }} ({{ u.role }})
-                    </option>
+                    <option *ngFor="let u of filteredAgents" [value]="u.id">{{ getAgentDisplayLabel(u) }}</option>
                 </select>
             </div>
+            <p class="hint" *ngIf="selectedRisk?.departement?.nom">
+                Agents proposés en priorité pour le département : <strong>{{ selectedRisk?.departement?.nom }}</strong>
+            </p>
+            <p class="hint error" *ngIf="!hasAssignableAgents()">
+                Aucun agent de traitement disponible pour cette affectation.
+            </p>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showAssignModal = false" [disabled]="isAssigning">Annuler</button>
-                <button class="btn-save" (click)="assignRisk(agentSelect.value)"
-                    [disabled]="!agentSelect.value || isAssigning">
+                <button class="btn-save" (click)="assignRisk()" [disabled]="!selectedAgentId || isAssigning || !hasAssignableAgents()">
                     <i class="fas fa-spinner fa-spin" *ngIf="isAssigning"></i>
-                    {{ isAssigning ? 'Assignation...' : 'Assigner' }}
+                    {{ isAssigning ? 'Assignation...' : getAssignRiskActionLabel() }}
                 </button>
             </div>
         </div>
     </app-modal>
 
     <!-- ====================== Details Modal ====================== -->
-    <app-modal *ngIf="showDetailsModal" title="Détails du Risque" (close)="showDetailsModal = false">
+    <app-modal *ngIf="showDetailsModal" title="Détails du risque" (close)="showDetailsModal = false">
         <div #projected modal-body *ngIf="selectedRisk">
             <div class="details-grid">
                 <div class="detail-block full">
@@ -327,44 +336,44 @@
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Macro Processus</span>
-                    <p class="detail-value">{{ selectedRisk.macroProcessus || '—' }}</p>
+                    <p class="detail-value">{{ selectedRisk.macroProcessus || '-' }}</p>
                 </div>
                 <div class="detail-block full">
                     <span class="detail-label">Processus</span>
-                    <p class="detail-value">{{ selectedRisk.processus || '—' }}</p>
+                    <p class="detail-value">{{ selectedRisk.processus || '-' }}</p>
                 </div>
 
                 <div class="detail-block">
                     <span class="detail-label">Probabilité / Impact</span>
-                    <p class="detail-value">{{ selectedRisk.probabilite || '—' }} / {{ selectedRisk.impact || '—' }}</p>
+                    <p class="detail-value">{{ getProbabilityLabel(selectedRisk.probabilite) || '-' }} / {{ getImpactLabel(selectedRisk.impact) || '-' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Risque Brut</span>
-                    <span [class]="'badge level-' + selectedRisk.cotationRisqueBrut">{{ selectedRisk.cotationRisqueBrut || '—' }}</span>
+                    <span [class]="'badge level-' + selectedRisk.cotationRisqueBrut">{{ selectedRisk.cotationRisqueBrut ? getNiveauLabel({ niveauRisque: selectedRisk.cotationRisqueBrut }) : '-' }}</span>
                     <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueBrut">({{ selectedRisk.niveauCotationRisqueBrut }})</small>
                 </div>
                 
                 <div class="detail-block full">
                     <span class="detail-label">DMR Existant</span>
-                    <p class="detail-value">{{ selectedRisk.dmrExistant || '—' }}</p>
+                    <p class="detail-value">{{ selectedRisk.dmrExistant || '-' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Maîtrise (DMR)</span>
-                    <p class="detail-value">{{ selectedRisk.niveauMaitrise || '—' }}</p>
+                    <p class="detail-value">{{ getMaitriseLabel(selectedRisk.niveauMaitrise) || '-' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Risque Net</span>
-                    <span [class]="'badge level-' + (selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque)">{{ selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque }}</span>
+                    <span [class]="'badge level-' + (selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque)">{{ getNiveauLabel({ niveauRisque: selectedRisk.cotationRisqueNet || selectedRisk.niveauRisque }) }}</span>
                     <small style="margin-left:5px; color:#64748b;" *ngIf="selectedRisk.niveauCotationRisqueNet">({{ selectedRisk.niveauCotationRisqueNet }})</small>
                 </div>
                 
                 <div class="detail-block full">
                     <span class="detail-label">Plan d'action de traitement</span>
-                    <p class="detail-value">{{ selectedRisk.planActionTraitement || '—' }}</p>
+                    <p class="detail-value">{{ selectedRisk.planActionTraitement || '-' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Statut</span>
-                    <span [class]="'badge status-' + selectedRisk.statut">{{ selectedRisk.statut }}</span>
+                    <span [class]="getStatusClass(selectedRisk)">{{ getStatusLabel(selectedRisk) }}</span>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Département</span>
@@ -377,20 +386,20 @@
                 <div class="detail-block">
                     <span class="detail-label">Agent de traitement du risque assigné</span>
                     <p class="detail-value">{{ selectedRisk.riskAgent ? selectedRisk.riskAgent.prenom + ' ' +
-                        selectedRisk.riskAgent.nom : '—' }}</p>
+                        selectedRisk.riskAgent.nom : '-' }}</p>
                 </div>
                 <div class="detail-block">
                     <span class="detail-label">Date d'échéance</span>
                     <p class="detail-value">{{ selectedRisk.dateEcheance | date:'dd/MM/yyyy' }}</p>
                 </div>
                 <div class="detail-block">
-                    <span class="detail-label">Fréquence de Traitement</span>
+                    <span class="detail-label">Fréquence de traitement</span>
                     <p class="detail-value"><span class="freq-tag"
-                            *ngIf="selectedRisk.frequenceTraitement !== 'Aucun'">{{ selectedRisk.frequenceTraitement
-                            }}</span><span *ngIf="selectedRisk.frequenceTraitement === 'Aucun'">Aucun</span></p>
+                            *ngIf="normalize(selectedRisk.frequenceTraitement) !== PeriodicFrequency.NONE">{{ getFrequencyLabel(selectedRisk.frequenceTraitement)
+                            }}</span><span *ngIf="normalize(selectedRisk.frequenceTraitement) === PeriodicFrequency.NONE">Aucun</span></p>
                 </div>
-                <div class="detail-block" *ngIf="selectedRisk.frequenceTraitement !== 'Aucun'">
-                    <span class="detail-label">Prochaine Échéance</span>
+                <div class="detail-block" *ngIf="normalize(selectedRisk.frequenceTraitement) !== PeriodicFrequency.NONE">
+                    <span class="detail-label">Prochaine échéance</span>
                     <p class="detail-value" style="color: #0ea5e9; font-weight: 700;">{{ selectedRisk.prochaineEcheance
                         | date:'dd/MM/yyyy' }}</p>
                 </div>
@@ -476,7 +485,7 @@
     </app-modal>
 
     <!-- ====================== AI Generation Modal ====================== -->
-    <app-modal *ngIf="showAiModal" title="Génération de Risques par IA" (close)="showAiModal = false">
+    <app-modal *ngIf="showAiModal" title="Génération de risques par IA" (close)="showAiModal = false">
         <div #projected modal-body class="modal-form ai-modal">
             <div class="ai-input-zone" *ngIf="suggestedRisks.length === 0">
                 <div class="ai-tabs">
@@ -538,7 +547,7 @@
                         <div class="risk-info">
                             <div class="risk-top-header">
                                 <h5>{{ risk.titre }}</h5>
-                                <span [class]="'badge level-' + risk.niveauRisque">{{ risk.niveauRisque }}</span>
+                                <span [class]="getNiveauClass(risk)">{{ getNiveauLabel(risk) }}</span>
                             </div>
                             <p class="risk-desc">{{ risk.explication }}</p>
 
@@ -549,24 +558,24 @@
                                 </div>
                                 <div class="mini-detail">
                                     <label>Macro Processus</label>
-                                    <span>{{ risk.macroProcessus || '—' }}</span>
+                                    <span>{{ risk.macroProcessus || '-' }}</span>
                                 </div>
                                 <div class="mini-detail full">
                                     <label>Probabilité & Impact (IA)</label>
-                                    <span>{{ risk.probabilite || 'Non évalué' }} / {{ risk.impact || 'Non évalué' }}</span>
+                                    <span>{{ getProbabilityLabel(risk.probabilite) || 'Non évalué' }} / {{ getImpactLabel(risk.impact) || 'Non évalué' }}</span>
                                 </div>
                                 <div class="mini-detail">
                                     <label>Département</label>
                                     <span class="dept-tag">{{ risk.departement }}</span>
                                 </div>
                                 <div class="mini-detail full">
-                                    <label>DMR Suggéré</label>
-                                    <p style="font-size: 0.8rem; margin: 0; color: #475569;">{{ risk.dmrExistant || '—' }}</p>
-                                    <span class="badge" *ngIf="risk.niveauMaitrise">Maîtrise: {{ risk.niveauMaitrise }}</span>
+                                    <label>DMR suggéré</label>
+                                    <p style="font-size: 0.8rem; margin: 0; color: #475569;">{{ risk.dmrExistant || '-' }}</p>
+                                    <span class="badge" *ngIf="risk.niveauMaitrise">Maîtrise: {{ getMaitriseLabel(risk.niveauMaitrise) }}</span>
                                 </div>
                                 <div class="mini-detail full">
                                     <label>Plan d'action prévu (IA)</label>
-                                    <p style="font-size: 0.8rem; margin: 0; color: #475569;">{{ risk.planActionTraitement || '—' }}</p>
+                                    <p style="font-size: 0.8rem; margin: 0; color: #475569;">{{ risk.planActionTraitement || '-' }}</p>
                                 </div>
                                 <div class="mini-detail">
                                     <label>Échéance ({{ risk.delaiSuggestion }} jrs)</label>
@@ -584,9 +593,9 @@
                                         risk.responsableSuggestion }}</small>
                                 </div>
                                 <div class="mini-detail">
-                                    <label>Fréquence Suggérée</label>
+                                    <label>Fréquence suggérée</label>
                                     <select [(ngModel)]="risk.frequenceTraitement" class="mini-input">
-                                        <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ freq }}
+                                        <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ getFrequencyLabel(freq) }}
                                         </option>
                                     </select>
                                 </div>
@@ -609,7 +618,7 @@
 </div>
 
 <!-- ====================== AI Evaluation Results Modal ====================== -->
-<app-modal *ngIf="showEvaluationModal" title="Évaluation Stratégique par IA" (close)="showEvaluationModal = false">
+<app-modal *ngIf="showEvaluationModal" title="Évaluation stratégique par IA" (close)="showEvaluationModal = false">
     <div #projected modal-body class="modal-form">
         <div class="ai-loading" *ngIf="isEvaluating">
             <i class="fas fa-spinner fa-spin"></i>
@@ -1094,37 +1103,43 @@
         white-space: nowrap;
     }
 
-    .level-Faible {
+    .level-low {
         background: #dcfce7;
         color: #166534;
     }
 
-    .level-Moyen {
+    .level-limited,
+    .level-medium {
         background: #fef9c3;
         color: #854d0e;
     }
 
-    .level-Élevé {
+    .level-high {
         background: #ffedd5;
         color: #9a3412;
     }
 
-    .level-Critique {
+    .level-critical {
         background: #fee2e2;
         color: #991b1b;
     }
 
-    .status-En\ cours {
+    .status-open {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .status-in_progress {
         background: #eff6ff;
         color: #1d4ed8;
     }
 
-    .status-Traité {
+    .status-treated {
         background: #f5f3ff;
         color: #5b21b6;
     }
 
-    .status-Clôturé {
+    .status-closed {
         background: #f1f5f9;
         color: #64748b;
     }
@@ -1637,3 +1652,5 @@
         background: #dbeafe;
     }
 </style>
+
+

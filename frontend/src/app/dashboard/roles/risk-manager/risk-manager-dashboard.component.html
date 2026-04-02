@@ -249,26 +249,26 @@
     </app-modal>
 
     <!-- Assign Modal -->
-    <app-modal *ngIf="showAssignModal" title="Assigner le Risque" (close)="showAssignModal = false">
+    <app-modal *ngIf="showAssignModal" [title]="getAssignRiskModalTitle()" (close)="showAssignModal = false">
         <div #projected modal-body>
             <p>Choisissez un Risk Agent pour traiter le risque : <strong>{{ selectedRisk?.titre }}</strong></p>
             <div class="form-group" style="margin: 20px 0;">
                 <label>Agent de traitement du risque</label>
-                <select #agentSelect class="premium-input"
+                <select class="premium-input" [(ngModel)]="selectedAgentId"
                     style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                     <option value="">Sélectionner un collaborateur</option>
                     <option *ngFor="let user of filteredAgents" [value]="user.id">
-                        {{ user.prenom }} {{ user.nom }} ({{ user.role }})
+                        {{ getAgentDisplayLabel(user) }}
                     </option>
                 </select>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn-secondary" (click)="showAssignModal = false"
                     [disabled]="isAssigning">Annuler</button>
-                <button class="btn-primary" (click)="assignRisk(agentSelect.value)"
-                    [disabled]="!agentSelect.value || isAssigning">
+                <button class="btn-primary" (click)="assignRisk()"
+                    [disabled]="!selectedAgentId || isAssigning">
                     <i class="fas fa-spinner fa-spin" *ngIf="isAssigning"></i>
-                    {{ isAssigning ? 'Assignation...' : 'Assigner Maintenant' }}
+                    {{ isAssigning ? 'Assignation...' : getAssignRiskActionLabel() }}
                 </button>
             </div>
         </div>

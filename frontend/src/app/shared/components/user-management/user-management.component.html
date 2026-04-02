@@ -7,53 +7,79 @@
       <h2>Gestion des Utilisateurs</h2>
     </div>
     <div class="actions">
-      <div class="search-input-wrapper">
-        <i class="fas fa-search search-icon"></i>
-        <input type="text" [(ngModel)]="userSearchTerm" placeholder="Rechercher par nom, mail..." />
-      </div>
-      <button type="button" class="btn-primary" (click)="openUserModal()">
+      <button type="button" class="btn btn-primary" (click)="openUserModal()">
         <i class="fas fa-user-plus"></i> Nouvel Utilisateur
       </button>
     </div>
+
   </div>
 
-  <div class="filters-bar">
-    <div class="filter-group">
-      <label><i class="fas fa-filter"></i> Filtrer par :</label>
-      <div class="select-filter-wrapper">
-        <select [(ngModel)]="selectedRoleFilter">
-          <option value="">Tous les roles</option>
-          <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
-        </select>
+  <div class="stats-bar" *ngIf="users.length > 0">
+    <div class="stat-item" *ngFor="let poste of postes" 
+         (click)="filters.role = poste.code; applyFilters()"
+         [class.active]="filters.role === poste.code">
+      <span class="stat-value">{{ roleStats[poste.code] || 0 }}</span>
+      <span class="stat-label">{{ poste.label }}</span>
+    </div>
+    <div class="stat-item total" (click)="filters.role = ''; applyFilters()">
+
+      <span class="stat-value">{{ users.length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+  </div>
+
+  <div class="filters-bar premium">
+    <div class="filter-controls">
+      <div class="filter-group-wrapper">
+        <div class="filter-group">
+          <i class="fas fa-search"></i>
+          <input type="text" [(ngModel)]="filters.search" (ngModelChange)="applyFilters()" placeholder="Rechercher un utilisateur..." />
+        </div>
+  
+        <div class="filter-group">
+          <i class="fas fa-user-tag"></i>
+          <select [(ngModel)]="filters.role" (ngModelChange)="applyFilters()">
+            <option value="">Tous les rôles</option>
+            <option *ngFor="let r of postes" [value]="r.code">{{ r.label }}</option>
+          </select>
+        </div>
+  
+        <div class="filter-group">
+          <i class="fas fa-building"></i>
+          <select [(ngModel)]="filters.department" (ngModelChange)="applyFilters()">
+            <option value="0">Tous les départements</option>
+            <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
+          </select>
+        </div>
       </div>
-      <div class="select-filter-wrapper">
-        <select [(ngModel)]="selectedDeptFilter">
-          <option value="0">Tous les departements</option>
-          <option *ngFor="let d of departements" [value]="d.id">{{ d.nom }}</option>
-        </select>
-      </div>
-      <button type="button" class="btn-text-link" (click)="resetFilters()"
-        *ngIf="userSearchTerm || selectedRoleFilter || selectedDeptFilter !== 0">
-        <i class="fas fa-times"></i> Reinitialiser
+
+      <button type="button" class="btn btn-reset" (click)="resetFilters()"
+        *ngIf="filters.search || filters.role || filters.department !== 0">
+        <i class="fas fa-undo"></i> Réinitialiser
       </button>
     </div>
 
-    <div class="export-dropdown" style="margin-left: auto;">
-      <button type="button" class="btn-export" (click)="showExportMenu = !showExportMenu" title="Telecharger le rapport">
-        <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
-      </button>
-      <div class="dropdown-menu" [class.show]="showExportMenu">
-        <button type="button" (click)="exportToXLSX()">
-          <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
-        </button>
-        <button type="button" (click)="exportToPDF()">
-          <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
-        </button>
-      </div>
-    </div>
 
-    <div class="user-count" style="margin-left: 15px;">
-      <strong>{{ filteredUsers.length }}</strong> utilisateur(s) trouve(s)
+    <div class="export-actions">
+      <div class="export-dropdown">
+        <button type="button" class="btn btn-export" (click)="showExportMenu = !showExportMenu">
+          <i class="fas fa-download"></i> Exporter
+        </button>
+
+
+        <div class="dropdown-menu" [class.show]="showExportMenu">
+          <button type="button" (click)="exportToXLSX()">
+            <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
+          </button>
+          <button type="button" (click)="exportToPDF()">
+            <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
+          </button>
+        </div>
+      </div>
+
+      <div class="user-count" style="margin-left: 15px;">
+        <strong>{{ filteredUsers.length }}</strong> utilisateur(s) trouve(s)
+      </div>
     </div>
   </div>
 
@@ -61,14 +87,9 @@
     <div class="user-card" *ngFor="let user of filteredUsers" (click)="selectUser(user)">
       <div class="user-avatar">{{ user.prenom[0] }}{{ user.nom[0] }}</div>
       <div class="user-info">
-        <span class="role-badge" [ngClass]="{
-          'admin_si': user.role === UserRole.ADMIN_SI,
-          'super_admin': user.role === UserRole.SUPER_ADMIN,
-          'risk_manager': user.role === UserRole.RISK_MANAGER,
-          'risk_agent': user.role === UserRole.RISK_AGENT,
-          'auditeur': user.role === UserRole.AUDITEUR,
-          'audit_senior': user.role === UserRole.AUDIT_SENIOR
-        }">{{ user.role }}</span>
+        <span class="role-badge" [ngClass]="user.role.code">{{ user.role.label }}</span>
+
+
         <h3>{{ user.prenom }} {{ user.nom }}</h3>
         <div class="contact-info">
           <span><i class="fas fa-envelope"></i> {{ user.mail }}</span>
@@ -141,18 +162,19 @@
         <div class="form-grid">
           <div class="form-row">
             <label>Role <span class="required">*</span></label>
-            <div class="select-wrapper">
+            <div class="input-icon-wrapper">
               <i class="fas fa-user-tag icon"></i>
               <select [(ngModel)]="userForm.role" [class.input-error]="validationErrors.role">
                 <option value="">Selectionner un role</option>
-                <option *ngFor="let role of postes" [value]="role">{{ role }}</option>
+                <option *ngFor="let role of postes" [value]="role.code">{{ role.label }}</option>
               </select>
+
             </div>
             <span class="error" *ngIf="validationErrors.role">{{ validationErrors.role }}</span>
           </div>
           <div class="form-row">
             <label>Departement <span class="required">*</span></label>
-            <div class="select-wrapper">
+            <div class="input-icon-wrapper">
               <i class="fas fa-building icon"></i>
               <select [(ngModel)]="userForm.departementId" [class.input-error]="validationErrors.departementId">
                 <option value="0">Selectionner un departement</option>
@@ -194,7 +216,7 @@
       </div>
 
       <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-        <button type="button" class="btn-outline" (click)="closeUserModal()" [disabled]="isSaving">Annuler</button>
+        <button type="button" class="btn-reset" (click)="closeUserModal()" [disabled]="isSaving">Annuler</button>
         <button type="button" class="btn-primary" (click)="saveUser()" [disabled]="isSaving">
           {{ isSaving ? 'En cours...' : (editingUser ? 'Mettre a jour' : 'Creer l\'utilisateur') }}
         </button>
@@ -202,11 +224,19 @@
     </div>
   </app-modal>
 
-  <div class="status-message" *ngIf="status"
-    style="position: fixed; bottom: 20px; right: 20px; background: #004a99; color: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000;">
-    {{ status }}
-    <button type="button" (click)="status = null"
-      style="background: none; border: none; color: white; margin-left: 10px; cursor: pointer;"><i
-        class="fas fa-times"></i></button>
+  <div class="status-message premium-toast" *ngIf="status" [ngClass]="messageType"
+    style="position: fixed; bottom: 30px; right: 30px; display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 9999; min-width: 300px; transition: all 0.3s ease;">
+    <div class="toast-icon">
+      <i class="fas" [ngClass]="messageType === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+    </div>
+    <div class="toast-content" style="flex: 1;">
+      <span style="display: block; font-weight: 600; font-size: 0.95rem;">{{ messageType === 'success' ? 'Succès' : 'Erreur' }}</span>
+      <span style="display: block; font-size: 0.85rem; opacity: 0.9;">{{ status }}</span>
+    </div>
+    <button type="button" (click)="status = null; messageType = null"
+      style="background: none; border: none; color: inherit; cursor: pointer; padding: 4px; opacity: 0.6; transition: opacity 0.2s;">
+      <i class="fas fa-times"></i>
+    </button>
   </div>
+
 </div>

@@ -165,55 +165,141 @@ const initialContexts = [
     },
 ];
 
+const quoteIdentifier = (value) => `[${String(value).replace(/]/g, ']]')}]`;
+
+const getNamedObjectState = async (queryInterface, tableName, objectName) => {
+    const [rows] = await queryInterface.sequelize.query(`
+        SELECT
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM sys.objects
+                    WHERE parent_object_id = OBJECT_ID(N'${tableName}')
+                      AND name = N'${objectName}'
+                ) THEN 1
+                ELSE 0
+            END AS hasConstraint,
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'${tableName}')
+                      AND name = N'${objectName}'
+                ) THEN 1
+                ELSE 0
+            END AS hasIndex,
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM sys.stats
+                    WHERE object_id = OBJECT_ID(N'${tableName}')
+                      AND name = N'${objectName}'
+                ) THEN 1
+                ELSE 0
+            END AS hasStatistics
+    `);
+
+    return rows[0] || {
+        hasConstraint: 0,
+        hasIndex: 0,
+        hasStatistics: 0,
+    };
+};
+
+const ensureIndex = async (queryInterface, tableName, fields, options) => {
+    const state = await getNamedObjectState(queryInterface, tableName, options.name);
+
+    if (state.hasConstraint || state.hasIndex) {
+        return;
+    }
+
+    if (state.hasStatistics) {
+        await queryInterface.sequelize.query(`
+            DROP STATISTICS ${quoteIdentifier(tableName)}.${quoteIdentifier(options.name)}
+        `);
+    }
+
+    await queryInterface.addIndex(tableName, fields, options);
+};
+
 module.exports = {
     async up(queryInterface, Sequelize) {
-        await queryInterface.createTable('ai_contexts', {
-            id: {
-                allowNull: false,
-                autoIncrement: true,
-                primaryKey: true,
-                type: Sequelize.INTEGER,
-            },
-            name: {
-                allowNull: false,
-                type: Sequelize.STRING(100),
-            },
-            type: {
-                allowNull: false,
-                type: Sequelize.STRING(20),
-            },
-            content: {
-                allowNull: false,
-                type: Sequelize.TEXT,
-            },
-            createdAt: {
-                allowNull: false,
-                type: Sequelize.DATE,
-            },
-            updatedAt: {
-                allowNull: false,
-                type: Sequelize.DATE,
-            },
-        });
+        let tableExists = true;
+        try {
+            await queryInterface.describeTable('ai_contexts');
+        } catch (_error) {
+            tableExists = false;
+        }
 
-        await queryInterface.addIndex('ai_contexts', ['name', 'type'], {
-            name: 'ai_contexts_name_type_unique',
-            unique: true,
-        });
+        if (!tableExists) {
+            await queryInterface.createTable('ai_contexts', {
+                id: {
+                    allowNull: false,
+                    autoIncrement: true,
+                    primaryKey: true,
+                    type: Sequelize.INTEGER,
+                },
+                name: {
+                    allowNull: false,
+                    type: Sequelize.STRING(100),
+                },
+                type: {
+                    allowNull: false,
+                    type: Sequelize.STRING(20),
+                },
+                content: {
+                    allowNull: false,
+                    type: Sequelize.TEXT,
+                },
+                createdAt: {
+                    allowNull: false,
+                    type: Sequelize.DATE,
+                },
+                updatedAt: {
+                    allowNull: false,
+                    type: Sequelize.DATE,
+                },
+            });
+        }
 
-        await queryInterface.addIndex('ai_contexts', ['name'], {
-            name: 'ai_contexts_name_idx',
-        });
+        await ensureIndex(
+            queryInterface,
+            'ai_contexts',
+            ['name', 'type'],
+            {
+                name: 'ai_contexts_name_type_unique',
+                unique: true,
+            }
+        );
+        await ensureIndex(
+            queryInterface,
+            'ai_contexts',
+            ['name'],
+            {
+                name: 'ai_contexts_name_idx',
+            }
+        );
 
         const now = new Date();
-        await queryInterface.bulkInsert(
-            'ai_contexts',
-            initialContexts.map((context) => ({
+        const [existingRows] = await queryInterface.sequelize.query(
+            'SELECT name, type FROM ai_contexts'
+        );
+
+        const existingKeys = new Set(
+            existingRows.map((row) => `${row.name}::${row.type}`)
+        );
+
+        const rowsToInsert = initialContexts
+            .filter((context) => !existingKeys.has(`${context.name}::${context.type}`))
+            .map((context) => ({
                 ...context,
                 createdAt: now,
                 updatedAt: now,
-            }))
-        );
+            }));
+
+        if (rowsToInsert.length > 0) {
+            await queryInterface.bulkInsert('ai_contexts', rowsToInsert);
+        }
     },
 
     async down(queryInterface) {

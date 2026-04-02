@@ -59,7 +59,7 @@ export class GovernanceMaturityComponent implements OnInit {
       return 0;
     }
 
-    const critical = this.risks.filter(risk => risk.niveauRisque === RiskLevel.CRITICAL).length;
+    const critical = this.risks.filter(risk => this.normalizeRiskLevel(risk.niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL).length;
     return Math.round((critical / this.risks.length) * 100);
   }
 
@@ -68,7 +68,7 @@ export class GovernanceMaturityComponent implements OnInit {
       return 0;
     }
 
-    const treated = this.risks.filter(risk => risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED).length;
+    const treated = this.risks.filter(risk => this.isCompletedRiskStatus(risk.statutCode || risk.statut)).length;
     return Math.round((treated / this.risks.length) * 100);
   }
 
@@ -107,5 +107,24 @@ export class GovernanceMaturityComponent implements OnInit {
     const cancelled = this.missions.filter(mission => mission.statut === AuditMissionStatus.ANNULE).length;
     const onTime = this.missions.length - delayed - cancelled;
     return Math.round((onTime / this.missions.length) * 100);
+  }
+
+  private isCompletedRiskStatus(status?: string | null): boolean {
+    const normalizedStatus = this.normalize(status);
+    return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+  }
+
+  private normalizeRiskLevel(level?: string | null): string {
+    return this.normalize(level);
+  }
+
+  private normalize(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 }

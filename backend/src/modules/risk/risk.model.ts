@@ -1,123 +1,73 @@
-/**
- * @file risk.model.ts
- * @description Définition du modèle de données pour les Risques.
- * Utilise Sequelize pour la gestion du schéma et des relations.
- */
-
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
 import { Incident } from '../incidents/incident.model';
 import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import {
+    buildLookupAttribute,
+    getRequiredLookupId,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
 
-/**
- * Niveaux de sévérité d'un risque / Cotation générique
- */
-export enum RiskLevel {
-    LOW = 'Faible',
-    MEDIUM = 'Moyen',
-    HIGH = 'Élevé',
-    CRITICAL = 'Critique',
-    LIMITED = 'Limité',
-}
+export const RiskLevel = buildLookupCodeMap('risk.niveauRisque');
+export type RiskLevel = string;
 
-/**
- * Probabilité du risque
- */
-export enum RiskProbability {
-    RARE = 'Rare', // 1
-    POSSIBLE = 'Possible', // 2
-    PROBABLE = 'Probable', // 4
-    PERMANENT = 'Permanent', // 8
-}
+export const RiskProbability = buildLookupCodeMap('risk.probabilite');
+export type RiskProbability = string;
 
-/**
- * Impact du risque
- */
-export enum RiskImpact {
-    LIMITÉ = 'Limité', // 1
-    MOYEN = 'Moyen', // 4
-    SIGNIFICATIF = 'Significatif', // 16
-    CRITIQUE = 'Critique', // 64
-}
+export const RiskImpact = buildLookupCodeMap('risk.impact');
+export type RiskImpact = string;
 
-/**
- * Niveau de maîtrise (DMR)
- */
-export enum MaitriseLevel {
-    FAIBLE = 'Faible', // 4
-    LIMITÉ = 'Limité', // 3
-    MOYEN = 'Moyen', // 2
-    ÉLEVÉ = 'Elevé', // 1
-}
+export const MaitriseLevel = buildLookupCodeMap('risk.niveauMaitrise');
+export type MaitriseLevel = string;
 
-/**
- * États possibles du cycle de vie d'un risque.
- */
-export enum RiskStatus {
-    OPEN = 'Ouvert',
-    IN_PROGRESS = 'En cours',
-    TREATED = 'Traité',
-    CLOSED = 'Clôturé',
-}
+export const RiskStatus = buildLookupCodeMap('risk.statut');
+export type RiskStatus = string;
 
-/**
- * Fréquences de traitement périodique pour un risque.
- */
-export enum PeriodicFrequency {
-    QUOTIDIEN = 'Quotidien',
-    HEBDOMADAIRE = 'Hebdomadaire',
-    BIMENSUEL = 'Bimensuel',
-    MENSUEL = 'Mensuel',
-    TRIMESTRIEL = 'Trimestriel',
-    SEMESTRIEL = 'Semestriel',
-    ANNUEL = 'Annuel',
-    NONE = 'Aucun',
-}
+export const PeriodicFrequency = buildLookupCodeMap('risk.frequenceTraitement');
+export type PeriodicFrequency = string;
 
-/**
- * Classe représentant un Risque dans le système GRC.
- */
-export class Risk extends Model {
+export class Risk extends LookupAwareModel {
     public id!: number;
     public titre!: string;
     public explication!: string;
     public domaine!: string;
     public departementId!: number;
     public dateEcheance!: Date;
+    public niveauRisqueId!: number;
     public niveauRisque!: RiskLevel;
     public responsableTraitementId!: number;
     public riskManagerId!: number;
     public riskAgentId!: number | null;
+    public statutId!: number;
     public statut!: RiskStatus;
     public pieceJustificative!: string | null;
+    public frequenceTraitementId!: number;
     public frequenceTraitement!: PeriodicFrequency;
-    
-    // Nouveaux champs d'évaluation complète
     public macroProcessus!: string | null;
     public processus!: string | null;
-    
+    public probabiliteId!: number | null;
     public probabilite!: RiskProbability | null;
     public cotationProbabilite!: number | null;
-    
+    public impactId!: number | null;
     public impact!: RiskImpact | null;
     public cotationImpact!: number | null;
-    
+    public cotationRisqueBrutId!: number | null;
     public cotationRisqueBrut!: RiskLevel | null;
     public niveauCotationRisqueBrut!: number | null;
-    
     public dmrExistant!: string | null;
+    public niveauMaitriseId!: number | null;
     public niveauMaitrise!: MaitriseLevel | null;
     public cotationDmr!: number | null;
-    
-    // Le risque net correspondra au niveauGlobal (RiskLevel) et aura sa propre valeur calculée
+    public cotationRisqueNetId!: number | null;
     public cotationRisqueNet!: RiskLevel | null;
     public niveauCotationRisqueNet!: number | null;
-    
     public planActionTraitement!: string | null;
-
     public prochaineEcheance!: Date | null;
     public dernierTraitement!: Date | null;
     public aiAnalysisScore!: number | null;
@@ -125,21 +75,17 @@ export class Risk extends Model {
     public aiAnalysisTendance!: string | null;
     public aiAnalysisSuggestion!: string | null;
     public aiAnalysisDate!: Date | null;
-    public incidentId!: number | null; // Traçabilité: incident d'origine
+    public incidentId!: number | null;
     public is_deleted!: boolean;
     public deleted_at!: Date | null;
-
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
-
-    // Associations
     public riskManager?: User;
     public riskAgent?: User;
     public responsableTraitement?: Organigramme;
     public departement?: Department;
 }
 
-// Initialisation du schéma de la table 'risks'
 Risk.init(
     {
         id: {
@@ -159,7 +105,6 @@ Risk.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        // Clé étrangère vers le Département concerné
         departementId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -172,13 +117,7 @@ Risk.init(
             type: DataTypes.DATE,
             allowNull: false,
         },
-        niveauRisque: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isIn: [Object.values(RiskLevel)],
-            },
-        },
+        niveauRisqueId: buildLookupAttribute('risk.niveauRisque'),
         macroProcessus: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -187,32 +126,17 @@ Risk.init(
             type: DataTypes.STRING,
             allowNull: true,
         },
-        probabilite: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            validate: {
-                isIn: [Object.values(RiskProbability)],
-            },
-        },
+        probabiliteId: buildLookupAttribute('risk.probabilite'),
         cotationProbabilite: {
             type: DataTypes.INTEGER,
             allowNull: true,
         },
-        impact: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            validate: {
-                isIn: [Object.values(RiskImpact)],
-            },
-        },
+        impactId: buildLookupAttribute('risk.impact'),
         cotationImpact: {
             type: DataTypes.INTEGER,
             allowNull: true,
         },
-        cotationRisqueBrut: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
+        cotationRisqueBrutId: buildLookupAttribute('risk.cotationRisqueBrut'),
         niveauCotationRisqueBrut: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -221,21 +145,12 @@ Risk.init(
             type: DataTypes.TEXT,
             allowNull: true,
         },
-        niveauMaitrise: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            validate: {
-                isIn: [Object.values(MaitriseLevel)],
-            },
-        },
+        niveauMaitriseId: buildLookupAttribute('risk.niveauMaitrise'),
         cotationDmr: {
             type: DataTypes.INTEGER,
             allowNull: true,
         },
-        cotationRisqueNet: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
+        cotationRisqueNetId: buildLookupAttribute('risk.cotationRisqueNet'),
         niveauCotationRisqueNet: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -244,7 +159,6 @@ Risk.init(
             type: DataTypes.TEXT,
             allowNull: true,
         },
-        // Organigramme responsable du département (Responsable de traitement)
         responsableTraitementId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -253,7 +167,6 @@ Risk.init(
                 key: 'id',
             },
         },
-        // Créateur du risque (Risk Manager)
         riskManagerId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -262,7 +175,6 @@ Risk.init(
                 key: 'id',
             },
         },
-        // Agent de traitement assigné
         riskAgentId: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -271,25 +183,12 @@ Risk.init(
                 key: 'id',
             },
         },
-        statut: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isIn: [Object.values(RiskStatus)],
-            },
-        },
-        // Chemin vers le fichier justificatif (Upload)
+        statutId: buildLookupAttribute('risk.statut'),
         pieceJustificative: {
             type: DataTypes.STRING,
             allowNull: true,
         },
-        frequenceTraitement: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isIn: [Object.values(PeriodicFrequency)],
-            },
-        },
+        frequenceTraitementId: buildLookupAttribute('risk.frequenceTraitement'),
         prochaineEcheance: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -334,72 +233,93 @@ Risk.init(
         ...softDeleteModelOptions,
         hooks: {
             beforeValidate: (risk: Risk) => {
-                // Normalisation de la fréquence (ex: "trimestriel" -> "Trimestriel")
-                if (risk.frequenceTraitement && typeof risk.frequenceTraitement === 'string') {
-                    const normalized = risk.frequenceTraitement.charAt(0).toUpperCase() + risk.frequenceTraitement.slice(1).toLowerCase();
-                    if (Object.values(PeriodicFrequency).includes(normalized as any)) {
-                        risk.frequenceTraitement = normalized as any;
-                    }
-                }
-                
-                // --- Calculs Automatiques de Cotation ---
-                
-                // 1. Détermination de la cotation de la probabilité
                 if (risk.probabilite) {
                     switch (risk.probabilite) {
-                        case RiskProbability.RARE: risk.cotationProbabilite = 1; break;
-                        case RiskProbability.POSSIBLE: risk.cotationProbabilite = 2; break;
-                        case RiskProbability.PROBABLE: risk.cotationProbabilite = 4; break;
-                        case RiskProbability.PERMANENT: risk.cotationProbabilite = 8; break;
-                        default: risk.cotationProbabilite = null;
+                        case RiskProbability.RARE:
+                            risk.cotationProbabilite = 1;
+                            break;
+                        case RiskProbability.POSSIBLE:
+                            risk.cotationProbabilite = 2;
+                            break;
+                        case RiskProbability.PROBABLE:
+                            risk.cotationProbabilite = 4;
+                            break;
+                        case RiskProbability.PERMANENT:
+                            risk.cotationProbabilite = 8;
+                            break;
+                        default:
+                            risk.cotationProbabilite = null;
                     }
                 }
 
-                // 2. Détermination de la cotation de l'impact
                 if (risk.impact) {
                     switch (risk.impact) {
-                        case RiskImpact.LIMITÉ: risk.cotationImpact = 1; break;
-                        case RiskImpact.MOYEN: risk.cotationImpact = 4; break;
-                        case RiskImpact.SIGNIFICATIF: risk.cotationImpact = 16; break;
-                        case RiskImpact.CRITIQUE: risk.cotationImpact = 64; break;
-                        default: risk.cotationImpact = null;
+                        case RiskImpact.LIMITED:
+                            risk.cotationImpact = 1;
+                            break;
+                        case RiskImpact.MEDIUM:
+                            risk.cotationImpact = 4;
+                            break;
+                        case RiskImpact.SIGNIFICANT:
+                            risk.cotationImpact = 16;
+                            break;
+                        case RiskImpact.CRITICAL:
+                            risk.cotationImpact = 64;
+                            break;
+                        default:
+                            risk.cotationImpact = null;
                     }
                 }
 
-                // 3. Calcul du Risque Brut
                 if (risk.cotationProbabilite && risk.cotationImpact) {
                     const brut = risk.cotationProbabilite * risk.cotationImpact;
                     risk.niveauCotationRisqueBrut = brut;
-                    
-                    if (brut <= 8) risk.cotationRisqueBrut = RiskLevel.LOW;
-                    else if (brut <= 32) risk.cotationRisqueBrut = RiskLevel.LIMITED;
-                    else if (brut <= 128) risk.cotationRisqueBrut = RiskLevel.MEDIUM;
-                    else risk.cotationRisqueBrut = RiskLevel.HIGH;
-                }
 
-                // 4. Détermination de la cotation du DMR
-                if (risk.niveauMaitrise) {
-                    switch (risk.niveauMaitrise) {
-                        case MaitriseLevel.FAIBLE: risk.cotationDmr = 4; break;
-                        case MaitriseLevel.LIMITÉ: risk.cotationDmr = 3; break;
-                        case MaitriseLevel.MOYEN: risk.cotationDmr = 2; break;
-                        case MaitriseLevel.ÉLEVÉ: risk.cotationDmr = 1; break;
-                        default: risk.cotationDmr = null;
+                    if (brut <= 8) {
+                        risk.cotationRisqueBrutId = getRequiredLookupId('risk.cotationRisqueBrut', RiskLevel.LOW);
+                    } else if (brut <= 32) {
+                        risk.cotationRisqueBrutId = getRequiredLookupId('risk.cotationRisqueBrut', RiskLevel.LIMITED);
+                    } else if (brut <= 128) {
+                        risk.cotationRisqueBrutId = getRequiredLookupId('risk.cotationRisqueBrut', RiskLevel.MEDIUM);
+                    } else {
+                        risk.cotationRisqueBrutId = getRequiredLookupId('risk.cotationRisqueBrut', RiskLevel.HIGH);
                     }
                 }
 
-                // 5. Calcul du Risque Net
+                if (risk.niveauMaitrise) {
+                    switch (risk.niveauMaitrise) {
+                        case MaitriseLevel.FAIBLE:
+                            risk.cotationDmr = 4;
+                            break;
+                        case MaitriseLevel.LIMITED:
+                            risk.cotationDmr = 3;
+                            break;
+                        case MaitriseLevel.MEDIUM:
+                            risk.cotationDmr = 2;
+                            break;
+                        case MaitriseLevel.HIGH:
+                            risk.cotationDmr = 1;
+                            break;
+                        default:
+                            risk.cotationDmr = null;
+                    }
+                }
+
                 if (risk.niveauCotationRisqueBrut && risk.cotationDmr) {
                     const net = risk.niveauCotationRisqueBrut * risk.cotationDmr;
                     risk.niveauCotationRisqueNet = net;
-                    
-                    if (net <= 32) risk.cotationRisqueNet = RiskLevel.LOW;
-                    else if (net <= 128) risk.cotationRisqueNet = RiskLevel.LIMITED;
-                    else if (net <= 512) risk.cotationRisqueNet = RiskLevel.MEDIUM;
-                    else risk.cotationRisqueNet = RiskLevel.HIGH;
 
-                    // Synchronisation de l'ancien champ 'niveauRisque' avec le risque net calculé
-                    risk.niveauRisque = risk.cotationRisqueNet;
+                    if (net <= 32) {
+                        risk.cotationRisqueNetId = getRequiredLookupId('risk.cotationRisqueNet', RiskLevel.LOW);
+                    } else if (net <= 128) {
+                        risk.cotationRisqueNetId = getRequiredLookupId('risk.cotationRisqueNet', RiskLevel.LIMITED);
+                    } else if (net <= 512) {
+                        risk.cotationRisqueNetId = getRequiredLookupId('risk.cotationRisqueNet', RiskLevel.MEDIUM);
+                    } else {
+                        risk.cotationRisqueNetId = getRequiredLookupId('risk.cotationRisqueNet', RiskLevel.HIGH);
+                    }
+
+                    risk.niveauRisqueId = risk.cotationRisqueNetId;
                 }
             },
             beforeCreate: (risk: Risk) => {
@@ -407,14 +327,11 @@ Risk.init(
             },
             beforeUpdate: (risk: Risk) => {
                 calculateNextDeadline(risk);
-            }
-        }
+            },
+        },
     }
 );
 
-/**
- * Calcule la prochaine échéance en fonction de la fréquence.
- */
 function calculateNextDeadline(risk: Risk) {
     if (!risk.frequenceTraitement || risk.frequenceTraitement === PeriodicFrequency.NONE) {
         risk.prochaineEcheance = null;
@@ -430,35 +347,46 @@ function calculateNextDeadline(risk: Risk) {
     }
 
     switch (risk.frequenceTraitement) {
-        case PeriodicFrequency.QUOTIDIEN: next.setDate(next.getDate() + 1); break;
-        case PeriodicFrequency.HEBDOMADAIRE: next.setDate(next.getDate() + 7); break;
-        case PeriodicFrequency.BIMENSUEL: next.setDate(next.getDate() + 15); break;
-        case PeriodicFrequency.MENSUEL: next.setMonth(next.getMonth() + 1); break;
-        case PeriodicFrequency.TRIMESTRIEL: next.setMonth(next.getMonth() + 3); break;
-        case PeriodicFrequency.SEMESTRIEL: next.setMonth(next.getMonth() + 6); break;
-        case PeriodicFrequency.ANNUEL: next.setFullYear(next.getFullYear() + 1); break;
-        default: return;
+        case PeriodicFrequency.QUOTIDIEN:
+            next.setDate(next.getDate() + 1);
+            break;
+        case PeriodicFrequency.HEBDOMADAIRE:
+            next.setDate(next.getDate() + 7);
+            break;
+        case PeriodicFrequency.BIMENSUEL:
+            next.setDate(next.getDate() + 15);
+            break;
+        case PeriodicFrequency.MENSUEL:
+            next.setMonth(next.getMonth() + 1);
+            break;
+        case PeriodicFrequency.TRIMESTRIEL:
+            next.setMonth(next.getMonth() + 3);
+            break;
+        case PeriodicFrequency.SEMESTRIEL:
+            next.setMonth(next.getMonth() + 6);
+            break;
+        case PeriodicFrequency.ANNUEL:
+            next.setFullYear(next.getFullYear() + 1);
+            break;
+        default:
+            return;
     }
+
     risk.prochaineEcheance = next;
 }
 
-/**
- * --- DÉFINITION DES RELATIONS ---
- */
-
-// Un risque appartient à un département
 Risk.belongsTo(Department, { foreignKey: 'departementId', as: 'departement' });
-// Relations avec les utilisateurs/organigramme selon leur rôle dans le traitement du risque
 Risk.belongsTo(Organigramme, { foreignKey: 'responsableTraitementId', as: 'responsableTraitement' });
 Risk.belongsTo(User, { foreignKey: 'riskManagerId', as: 'riskManager' });
 Risk.belongsTo(User, { foreignKey: 'riskAgentId', as: 'riskAgent' });
 
-// Inverse des relations pour faciliter les requêtes
 Department.hasMany(Risk, { foreignKey: 'departementId', as: 'risks' });
 User.hasMany(Risk, { foreignKey: 'riskManagerId', as: 'managedRisks' });
 User.hasMany(Risk, { foreignKey: 'riskAgentId', as: 'assignedRisks' });
 Organigramme.hasMany(Risk, { foreignKey: 'responsableTraitementId', as: 'treatableRisks' });
 
-// Association avec l'incident d'origine (Traçabilité)
 Risk.belongsTo(Incident, { foreignKey: 'incidentId', as: 'incidentSource' });
 Incident.hasMany(Risk, { foreignKey: 'incidentId', as: 'risquesGeneres' });
+
+registerLookupAccessors('risk', Risk);
+registerLookupAssociations('risk', Risk);

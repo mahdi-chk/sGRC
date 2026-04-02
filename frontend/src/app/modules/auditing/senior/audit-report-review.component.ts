@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditMission, AuditMissionStatus } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
+import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-audit-report-review',
@@ -8,16 +9,45 @@ import { Router } from '@angular/router';
   styleUrls: ['./audit-report-review.component.scss']
 })
 export class AuditReportReviewComponent implements OnInit {
+  currentUserRole = getStoredAuditRole();
   reports: AuditMission[] = [];
   filteredReports: AuditMission[] = [];
   selectedReport: AuditMission | null = null;
   isLoading = false;
-  filterStatus: 'All' | 'Terminé' | 'À réviser' = 'All';
+  filterStatus: AuditMissionStatus | 'All' | 'a_reviser' = 'All';
+
+  // Expose Enum to template
+  AuditMissionStatus = AuditMissionStatus;
+
+  // Label mappings for UI
+  statusLabelMap: Record<string, string> = {
+    [AuditMissionStatus.A_VENIR]: 'À venir',
+    [AuditMissionStatus.EN_COURS]: 'En cours',
+    [AuditMissionStatus.TERMINE]: 'Terminé',
+    [AuditMissionStatus.EN_RETARD]: 'En retard',
+    [AuditMissionStatus.ANNULE]: 'Annulé',
+    'a_reviser': 'À réviser'
+  };
+
+  levelLabelMap: Record<string, string> = {
+    'low': 'Faible',
+    'limited': 'Limité',
+    'medium': 'Moyen',
+    'high': 'Élevé',
+    'critical': 'Critique'
+  };
+
+
+
 
   constructor(
     private auditingService: AuditingService,
     private router: Router
   ) { }
+
+  get navItems() {
+    return getAuditNavItems(this.currentUserRole);
+  }
 
   ngOnInit(): void {
     this.loadReports();
@@ -49,7 +79,13 @@ export class AuditReportReviewComponent implements OnInit {
     if (this.filterStatus === 'All') {
       this.filteredReports = this.reports;
     } else {
-      this.filteredReports = this.reports.filter(r => r.statut === this.filterStatus);
+      this.filteredReports = this.reports.filter(r => {
+          if (this.filterStatus === 'a_reviser') {
+              return r.statut === AuditMissionStatus.TERMINE; // Or some other logic if 'a_reviser' is distinct
+          }
+          return r.statut === this.filterStatus;
+      });
+
     }
   }
 

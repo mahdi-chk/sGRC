@@ -8,6 +8,7 @@ import { Notification, NotificationType } from './notification.model';
 import { emailService } from '../../utils/email.service';
 import { User } from '../users/user.model';
 import { Op } from 'sequelize';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
 export class PeriodicReminderService {
     /**
@@ -45,7 +46,9 @@ export class PeriodicReminderService {
         // 1. Risques dont l'echeance approche (3 jours avant)
         const upcomingRisks = await Risk.findAll({
             where: {
-                frequenceTraitement: { [Op.ne]: PeriodicFrequency.NONE },
+                frequenceTraitementId: {
+                    [Op.ne]: LookupResolutionService.getStaticValue('risk.frequenceTraitement', PeriodicFrequency.NONE)?.id
+                },
                 prochaineEcheance: {
                     [Op.between]: [now, threeDaysFromNow]
                 }
@@ -63,7 +66,9 @@ export class PeriodicReminderService {
         // 2. Risques en retard
         const delayedRisks = await Risk.findAll({
             where: {
-                frequenceTraitement: { [Op.ne]: PeriodicFrequency.NONE },
+                frequenceTraitementId: {
+                    [Op.ne]: LookupResolutionService.getStaticValue('risk.frequenceTraitement', PeriodicFrequency.NONE)?.id
+                },
                 prochaineEcheance: { [Op.lt]: now }
             },
             include: ['riskAgent', 'riskManager']
@@ -87,7 +92,7 @@ export class PeriodicReminderService {
                 where: {
                     userId,
                     riskId: risk.id,
-                    type: NotificationType.REMINDER,
+                    typeId: LookupResolutionService.getStaticValue('notification.type', NotificationType.REMINDER)?.id,
                     content: message,
                     createdAt: {
                         [Op.gte]: startOfDay
@@ -99,12 +104,12 @@ export class PeriodicReminderService {
                 continue;
             }
 
-            await Notification.create({
+            await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
                 userId,
                 type: NotificationType.REMINDER,
                 content: message,
                 riskId: risk.id
-            });
+            }));
 
             const user = await User.findByPk(userId);
             if (user?.mail) {

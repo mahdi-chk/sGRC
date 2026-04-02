@@ -12,12 +12,13 @@ import { environment } from '../../../environments/environment';
  * Énumération des statuts de mission d'audit (synchronisée avec le backend)
  */
 export enum AuditMissionStatus {
-    A_VENIR = 'À venir',
-    EN_COURS = 'En cours',
-    TERMINE = 'Terminé',
-    EN_RETARD = 'En retard',
-    ANNULE = 'Annulé',
+    A_VENIR = 'a_venir',
+    EN_COURS = 'en_cours',
+    TERMINE = 'termine',
+    EN_RETARD = 'en_retard',
+    ANNULE = 'annule',
 }
+
 
 /**
  * Interface représentant une Mission d'Audit côté frontend.

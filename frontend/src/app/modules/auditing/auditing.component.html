@@ -28,11 +28,48 @@
         </div>
     </div>
 
+    <nav class="audit-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="audit-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
 
 
     <!-- Missions List Content -->
     <div class="tab-content">
+        <!-- Filters Bar Premium -->
+        <div class="filters-bar premium mb-4">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher...">
+                </div>
+
+                <div class="filter-group">
+                    <i class="fas fa-tasks"></i>
+                    <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
+                        <option value="">Tous les statuts</option>
+                        <option [value]="AuditMissionStatus.A_VENIR">{{ statusLabelMap[AuditMissionStatus.A_VENIR] }}</option>
+                        <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
+                        <option [value]="AuditMissionStatus.TERMINE">{{ statusLabelMap[AuditMissionStatus.TERMINE] }}</option>
+                        <option [value]="AuditMissionStatus.EN_RETARD">{{ statusLabelMap[AuditMissionStatus.EN_RETARD] }}</option>
+                        <option [value]="AuditMissionStatus.ANNULE">{{ statusLabelMap[AuditMissionStatus.ANNULE] }}</option>
+                    </select>
+                </div>
+
+                <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus">
+                    <i class="fas fa-undo"></i> Réinitialiser
+                </button>
+            </div>
+
+            <div class="results-info">
+                <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> mission(s) trouvée(s)</span>
+            </div>
+        </div>
+
         <div class="missions-card">
+
             <div class="table-loading" *ngIf="isLoadingMissions">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement des missions...
             </div>
@@ -49,7 +86,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let mission of missions">
+                    <tr *ngFor="let mission of filteredMissions">
+
                         <td>
                             <div class="mission-info">
                                 <strong>{{ mission.titre }}</strong>
@@ -70,17 +108,16 @@
                             <ng-template #unassigned><em class="text-muted">Non assignée</em></ng-template>
                         </td>
                         <td>{{ mission.delai | date:'dd/MM/yyyy' }}</td>
-                        <td><span [class]="'badge status-' + mission.statut.replace(' ', '-').toLowerCase()">{{
-                                mission.statut }}</span></td>
+                        <td><span [class]="'badge status-' + mission.statut.replace('_', '-')">{{ statusLabelMap[mission.statut] || mission.statut }}</span></td>
                         <td class="actions-cell">
                             <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir détails">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="action-btn btn-assign" *ngIf="isSeniorAuditor && !mission.auditeur"
-                                (click)="openAssignModal(mission)" title="Assigner Auditeur">
+                            <button class="action-btn btn-assign" *ngIf="canAssignAuditor(mission)"
+                                (click)="openAssignModal(mission)" [title]="mission.auditeur ? 'Réassigner un auditeur' : 'Assigner un auditeur'">
                                 <i class="fas fa-user-plus"></i>
                             </button>
-                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.statut !== 'Terminé'"
+                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.statut !== AuditMissionStatus.TERMINE"
                                 (click)="openAssignChecklistModal(mission)" title="Assigner Checklist">
                                 <i class="fas fa-tasks" style="color:#004a99"></i>
                             </button>
@@ -88,7 +125,7 @@
                                 (click)="openChecklistModal(mission)" title="Voir Checklist">
                                 <i class="fas fa-list-check" style="color:#10b981"></i>
                             </button>
-                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === 'En cours'"
+                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === AuditMissionStatus.EN_COURS"
                                 (click)="openReportModal(mission)" title="Faire le rapport">
                                 <i class="fas fa-file-signature"></i>
                             </button>
@@ -101,7 +138,7 @@
                                 <i class="fas fa-paperclip"></i>
                             </button>
                             <!-- New Actions for Senior Auditor -->
-                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.statut === 'Terminé'"
+                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.statut === AuditMissionStatus.TERMINE"
                                 (click)="resetMission(mission.id)" title="Réinitialiser la mission">
                                 <i class="fas fa-undo"></i>
                             </button>
@@ -125,21 +162,24 @@
 
 
     <!-- Assign Modal -->
-    <app-modal *ngIf="showAssignModal" title="Assigner un Auditeur" (close)="showAssignModal = false">
+    <app-modal *ngIf="showAssignModal" [title]="getAssignAuditorModalTitle()" (close)="showAssignModal = false">
         <div #projected modal-body class="modal-form">
             <p>Assignez un auditeur qualifié pour la mission : <br><strong>{{ selectedMission?.titre }}</strong></p>
             <div class="form-group">
                 <label>Choisir un Auditeur</label>
-                <select #auditeurSelect class="finput">
+                <select class="finput" [(ngModel)]="selectedAuditorId">
                     <option value="">Sélectionner...</option>
                     <option *ngFor="let u of auditors" [value]="u.id">{{ u.prenom }} {{ u.nom }}</option>
                 </select>
             </div>
+            <p class="hint error" *ngIf="auditors.length === 0">
+                Aucun auditeur assignable n'a ete charge pour le moment.
+            </p>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showAssignModal = false">Annuler</button>
-                <button class="btn-save" (click)="assignMission(auditeurSelect.value)"
-                    [disabled]="!auditeurSelect.value || isAssigning">
-                    {{ isAssigning ? 'Assignation...' : 'Assigner' }}
+                <button class="btn-save" (click)="assignMission()"
+                    [disabled]="!selectedAuditorId || isAssigning || auditors.length === 0">
+                    {{ isAssigning ? 'Assignation...' : getAssignAuditorActionLabel() }}
                 </button>
             </div>
         </div>
@@ -198,8 +238,8 @@
                 </div>
                 <div class="detail-item">
                     <label>Statut</label>
-                    <span [class]="'badge status-' + selectedMission?.statut?.replace(' ', '-')?.toLowerCase()">
-                        {{ selectedMission?.statut }}
+                    <span [class]="'badge status-' + selectedMission?.statut?.replace('_', '-')">
+                        {{ statusLabelMap[selectedMission?.statut!] || selectedMission?.statut }}
                     </span>
                 </div>
                 <div class="detail-item full">
@@ -311,11 +351,11 @@
                 <div class="form-group">
                     <label>Statut</label>
                     <select [(ngModel)]="selectedMission.statut" class="finput">
-                        <option value="À venir">À venir</option>
-                        <option value="En cours">En cours</option>
-                        <option value="Terminé">Terminé</option>
-                        <option value="En retard">En retard</option>
-                        <option value="Annulé">Annulé</option>
+                        <option [value]="AuditMissionStatus.A_VENIR">{{ statusLabelMap[AuditMissionStatus.A_VENIR] }}</option>
+                        <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
+                        <option [value]="AuditMissionStatus.TERMINE">{{ statusLabelMap[AuditMissionStatus.TERMINE] }}</option>
+                        <option [value]="AuditMissionStatus.EN_RETARD">{{ statusLabelMap[AuditMissionStatus.EN_RETARD] }}</option>
+                        <option [value]="AuditMissionStatus.ANNULE">{{ statusLabelMap[AuditMissionStatus.ANNULE] }}</option>
                     </select>
                 </div>
             </div>

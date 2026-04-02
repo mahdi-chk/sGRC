@@ -8,6 +8,7 @@ import { AuditMissionChecklistItem } from '../../core/services/auditing.service'
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getAuditNavItems, getStoredAuditRole } from './audit-navigation';
 
 @Component({
   selector: 'app-auditing',
@@ -15,11 +16,18 @@ import autoTable from 'jspdf-autotable';
   styleUrls: ['./auditing.component.scss']
 })
 export class AuditingComponent implements OnInit {
+  currentUserRole = getStoredAuditRole();
   missions: AuditMission[] = [];
   allUsers: any[] = [];
   auditors: any[] = [];
   checklistTemplates: AuditChecklistTemplate[] = [];
+  filteredMissions: AuditMission[] = [];
   showExportMenu = false;
+
+  // Filter properties
+  filterSearch = '';
+  filterStatus = '';
+
 
   // UI States
   isLoadingMissions = false;
@@ -36,6 +44,7 @@ export class AuditingComponent implements OnInit {
   showChecklistModal = false;
   showEditModal = false;
   selectedMission: AuditMission | null = null;
+  selectedAuditorId = '';
   currentEvidences: AuditEvidence[] = [];
   currentChecklistItems: AuditMissionChecklistItem[] = [];
   backendUrl = environment.apiUrl.replace('/api', '');
@@ -46,11 +55,27 @@ export class AuditingComponent implements OnInit {
     recommandations: ''
   };
 
+  // Expose Enum to template
+  AuditMissionStatus = AuditMissionStatus;
+
+  // Label mappings for UI
+  statusLabelMap: Record<string, string> = {
+    [AuditMissionStatus.A_VENIR]: 'À venir',
+    [AuditMissionStatus.EN_COURS]: 'En cours',
+    [AuditMissionStatus.TERMINE]: 'Terminé',
+    [AuditMissionStatus.EN_RETARD]: 'En retard',
+    [AuditMissionStatus.ANNULE]: 'Annulé'
+  };
+
   constructor(
     private auditingService: AuditingService,
     private http: HttpClient,
     private router: Router
   ) { }
+
+  get navItems() {
+    return getAuditNavItems(this.currentUserRole);
+  }
 
   ngOnInit() {
     if (this.isAuditor && !this.isSeniorAuditor) {
@@ -84,6 +109,7 @@ export class AuditingComponent implements OnInit {
     this.auditingService.getMissions().subscribe({
       next: (data) => {
         this.missions = data;
+        this.applyFilters();
         this.isLoadingMissions = false;
       },
       error: (err) => {
@@ -93,10 +119,36 @@ export class AuditingComponent implements OnInit {
     });
   }
 
+  applyFilters() {
+    this.filteredMissions = this.missions.filter(m => {
+      const matchSearch = !this.filterSearch || 
+        m.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
+        (m.auditeur && `${m.auditeur.prenom} ${m.auditeur.nom}`.toLowerCase().includes(this.filterSearch.toLowerCase()));
+      
+      const missionStatut = ((m as any).statutCode || m.statut || '').toLowerCase();
+      const filterStatut = (this.filterStatus || '').toLowerCase();
+      const matchStatus = !filterStatut || missionStatut === filterStatut;
+
+      return matchSearch && matchStatus;
+    });
+  }
+
+
+  onFilterChange() {
+    this.applyFilters();
+  }
+
+  clearFilters() {
+    this.filterSearch = '';
+    this.filterStatus = '';
+    this.applyFilters();
+  }
+
+
   loadUsers() {
     this.http.get<any[]>(`${environment.apiUrl}/users/assignable/auditors`).subscribe(users => {
       this.allUsers = users;
-      this.auditors = users.filter(u => u.role === UserRole.AUDITEUR);
+      this.auditors = [...users];
     });
   }
 
@@ -109,6 +161,7 @@ export class AuditingComponent implements OnInit {
 
   openAssignModal(mission: AuditMission) {
     this.selectedMission = mission;
+    this.selectedAuditorId = mission.auditeurId ? mission.auditeurId.toString() : '';
     this.showAssignModal = true;
   }
 
@@ -135,13 +188,14 @@ export class AuditingComponent implements OnInit {
     });
   }
 
-  assignMission(auditeurId: string) {
+  assignMission(auditeurId: string = this.selectedAuditorId) {
     if (!this.selectedMission || !auditeurId) return;
     this.isAssigning = true;
     this.auditingService.assignMission(this.selectedMission.id, parseInt(auditeurId)).subscribe({
       next: () => {
         this.isAssigning = false;
         this.showAssignModal = false;
+        this.selectedAuditorId = '';
         this.loadMissions();
       },
       error: (err) => {
@@ -149,6 +203,29 @@ export class AuditingComponent implements OnInit {
         this.isAssigning = false;
       }
     });
+  }
+
+  getAssignAuditorModalTitle(): string {
+    return this.selectedMission?.auditeurId ? 'Réassigner un auditeur' : 'Assigner un auditeur';
+  }
+
+  getAssignAuditorActionLabel(): string {
+    return this.selectedMission?.auditeurId ? 'Réassigner' : 'Assigner';
+  }
+
+  canAssignAuditor(mission: AuditMission): boolean {
+    const missionStatus = this.normalizeMissionStatus((mission as any).statutCode || mission.statut);
+    return this.isSeniorAuditor && missionStatus !== AuditMissionStatus.TERMINE && missionStatus !== AuditMissionStatus.ANNULE;
+  }
+
+  private normalizeMissionStatus(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 
   // --- EVIDENCE MANAGEMENT ---
@@ -298,7 +375,7 @@ export class AuditingComponent implements OnInit {
       'Risque Associé': m.risk?.titre || `ID: ${m.riskId}`,
       'Auditeur': m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : 'Non assigné',
       'Échéance': new Date(m.delai).toLocaleDateString(),
-      'Statut': m.statut
+      'Statut': this.statusLabelMap[m.statut] || m.statut
     }));
 
     const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -325,7 +402,7 @@ export class AuditingComponent implements OnInit {
       m.risk?.titre || `ID: ${m.riskId}`,
       m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : 'Non assigné',
       new Date(m.delai).toLocaleDateString(),
-      m.statut
+      this.statusLabelMap[m.statut] || m.statut
     ]);
 
     autoTable(doc, {

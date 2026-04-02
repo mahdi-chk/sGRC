@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { IncidentService, Incident, IncidentStatus } from '../../../core/services/incident.service';
+import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from '../../../core/services/incident.service';
+
 import { Router } from '@angular/router';
 
 @Component({
@@ -14,7 +15,29 @@ export class IncidentWorkflowComponent implements OnInit {
   showDetailsModal = false;
   isLoading = false;
   searchTerm = '';
-  statusFilter = 'All';
+  statusFilter = '';
+
+  // Expose Enums
+  IncidentStatus = IncidentStatus;
+  IncidentNiveauRisque = IncidentNiveauRisque;
+
+  // Label mappings
+  statusLabelMap: Record<string, string> = {
+    [IncidentStatus.NOUVEAU]: 'Nouveau',
+    [IncidentStatus.EN_COURS]: 'En cours',
+    [IncidentStatus.TRAITE]: 'Traité',
+    [IncidentStatus.CLOS]: 'Clos'
+  };
+
+  levelLabelMap: Record<string, string> = {
+    [IncidentNiveauRisque.LOW]: 'Faible',
+    [IncidentNiveauRisque.LIMITED]: 'Limité',
+    [IncidentNiveauRisque.MEDIUM]: 'Moyen',
+    [IncidentNiveauRisque.SIGNIFICANT]: 'Significatif',
+    [IncidentNiveauRisque.HIGH]: 'Élevé',
+    [IncidentNiveauRisque.CRITICAL]: 'Critique'
+  };
+
 
   constructor(
     private incidentService: IncidentService,
@@ -42,12 +65,29 @@ export class IncidentWorkflowComponent implements OnInit {
 
   applyFilters() {
     this.filteredIncidents = this.incidents.filter(i => {
-      const matchSearch = i.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) || 
+      const matchSearch = !this.searchTerm || 
+                          i.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) || 
                           i.description.toLowerCase().includes(this.searchTerm.toLowerCase());
-      const matchStatus = this.statusFilter === 'All' || i.statut === this.statusFilter;
+      
+      const incidentStatut = ((i as any).statutCode || i.statut || '').toLowerCase();
+      const filterStatut = (this.statusFilter || '').toLowerCase();
+      const matchStatus = !filterStatut || incidentStatut === filterStatut;
+
       return matchSearch && matchStatus;
     });
+
   }
+
+  onFilterChange() {
+    this.applyFilters();
+  }
+
+  clearFilters() {
+    this.searchTerm = '';
+    this.statusFilter = '';
+    this.applyFilters();
+  }
+
 
   updateStatus(incident: Incident, newStatus: IncidentStatus) {
     this.incidentService.updateIncident(incident.id, { statut: newStatus }).subscribe({
@@ -74,32 +114,31 @@ export class IncidentWorkflowComponent implements OnInit {
     this.selectedIncident = null;
   }
 
-  getStatusClass(status: string): string {
+  getStatusClass(incident: any): string {
+    const status = incident?.statutCode || incident?.statut;
     switch (status) {
-      case 'Nouveau': return 'status-new';
-      case 'En cours': return 'status-progress';
-      case 'Traité': return 'status-resolved';
-      case 'Clos': return 'status-closed';
+      case IncidentStatus.NOUVEAU: return 'status-new';
+      case IncidentStatus.EN_COURS: return 'status-progress';
+      case IncidentStatus.TRAITE: return 'status-resolved';
+      case IncidentStatus.CLOS: return 'status-closed';
       default: return '';
     }
   }
 
-  getImpactClass(level?: string): string {
+  getImpactClass(incident: any): string {
+    const level = incident?.niveauRisqueCode || incident?.niveauRisque;
+    if (!level) return '';
     switch (level) {
-      case 'Critique':
-        return 'impact-critical';
-      case 'Significatif':
-      case 'Élevé':
-        return 'impact-high';
-      case 'Modéré':
-      case 'Moyen':
-        return 'impact-medium';
-      case 'Faible':
-        return 'impact-low';
-      default:
-        return '';
+      case IncidentNiveauRisque.CRITICAL: return 'impact-critical';
+      case IncidentNiveauRisque.SIGNIFICANT:
+      case IncidentNiveauRisque.HIGH: return 'impact-high';
+      case IncidentNiveauRisque.MEDIUM: return 'impact-medium';
+      case IncidentNiveauRisque.LOW:
+      case IncidentNiveauRisque.LIMITED: return 'impact-low';
+      default: return '';
     }
   }
+
 
   goBack() {
     this.router.navigate(['/dashboard']);

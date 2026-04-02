@@ -1,9 +1,10 @@
 export enum UserRole {
-    RISK_MANAGER = 'Risk Manager',
-    RISK_AGENT = 'Risk Agent',
-    AUDIT_SENIOR = 'Audit Senior',
-    AUDITEUR = 'Auditeur',
-    TOP_MANAGEMENT = 'Top Management',
-    ADMIN_SI = 'Administrateur SI',
-    SUPER_ADMIN = 'Super Admin',
+    RISK_MANAGER = 'risk_manager',
+    RISK_AGENT = 'risk_agent',
+    AUDIT_SENIOR = 'audit_senior',
+    AUDITEUR = 'auditeur',
+    TOP_MANAGEMENT = 'top_management',
+    ADMIN_SI = 'admin_si',
+    SUPER_ADMIN = 'super_admin',
 }
+

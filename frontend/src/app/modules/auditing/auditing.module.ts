@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { AuditingComponent } from './auditing.component';
 import { AuditorMissionsComponent } from './auditor-missions.component';
 import { AuditChecklistsComponent } from './audit-checklists/audit-checklists.component';
@@ -27,6 +28,7 @@ import { AuditReportReviewComponent } from './senior/audit-report-review.compone
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     SharedModule
   ],
   exports: [

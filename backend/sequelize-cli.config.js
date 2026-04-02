@@ -7,6 +7,7 @@ const baseConfig = {
     host: process.env.DB_HOST || 'localhost',
     dialect: 'mssql',
     logging: false,
+
     dialectOptions: {
         options: {
             instanceName: process.env.DB_INSTANCE || 'SQLEXPRESS',

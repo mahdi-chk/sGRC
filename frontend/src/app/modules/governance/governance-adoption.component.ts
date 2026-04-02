@@ -64,7 +64,7 @@ export class GovernanceAdoptionComponent implements OnInit {
       return 0;
     }
 
-    const treated = this.risks.filter(risk => risk.statut === RiskStatus.TREATED || risk.statut === RiskStatus.CLOSED).length;
+    const treated = this.risks.filter(risk => this.isCompletedRiskStatus(risk.statutCode || risk.statut)).length;
     return Math.round((treated / this.risks.length) * 100);
   }
 
@@ -84,5 +84,20 @@ export class GovernanceAdoptionComponent implements OnInit {
 
     const reported = this.missions.filter(mission => !!mission.rapport || mission.statut === AuditMissionStatus.TERMINE).length;
     return Math.round((reported / this.missions.length) * 100);
+  }
+
+  private isCompletedRiskStatus(status?: string | null): boolean {
+    const normalizedStatus = this.normalize(status);
+    return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+  }
+
+  private normalize(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 }

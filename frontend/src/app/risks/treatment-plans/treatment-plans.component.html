@@ -1,13 +1,12 @@
 <div class="role-dashboard treatment-plans-page">
-    <!-- HEADER -->
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-tasks"></i> Plans de Traitement</h1>
-                <p>Planifier les réponses, tracker l'exécution et mesurer l'efficacité</p>
+                <h1><i class="fas fa-tasks"></i> Plans de traitement</h1>
+                <p>Planifier les réponses, suivre l'exécution et mesurer l'efficacité</p>
             </div>
         </div>
         <div class="header-right">
@@ -17,22 +16,21 @@
         </div>
     </div>
 
-    <!-- KPI ROW -->
     <div class="kpi-row mb-4">
         <div class="kpi-card kpi-total">
             <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
             <span class="kpi-value">{{ metrics.total }}</span>
-            <span class="kpi-label">Total des Plans</span>
+            <span class="kpi-label">Total des plans</span>
         </div>
         <div class="kpi-card kpi-progress">
             <div class="kpi-icon"><i class="fas fa-spinner"></i></div>
             <span class="kpi-value">{{ metrics.enCours }}</span>
-            <span class="kpi-label">En Cours</span>
+            <span class="kpi-label">En cours</span>
         </div>
         <div class="kpi-card kpi-danger">
             <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
             <span class="kpi-value">{{ metrics.enRetard }}</span>
-            <span class="kpi-label">En Retard</span>
+            <span class="kpi-label">En retard</span>
         </div>
         <div class="kpi-card kpi-closed">
             <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
@@ -41,10 +39,9 @@
         </div>
     </div>
 
-    <!-- PERFORMANCE -->
     <div class="module-card premium stats-card mb-4" *ngIf="metrics.total > 0">
         <div class="stats-header">
-            <h3><i class="fas fa-tachometer-alt"></i> Performance Globale</h3>
+            <h3><i class="fas fa-tachometer-alt"></i> Performance globale</h3>
         </div>
         <div class="progress-row">
             <div class="progress-item">
@@ -64,16 +61,15 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="module-card premium full-width-card">
         <div class="card-header-bar">
-            <h3><i class="fas fa-list-check"></i> Suivi des Exécutions</h3>
+            <h3><i class="fas fa-list-check"></i> Suivi des exécutions</h3>
         </div>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>Plan d'Action</th>
+                        <th>Plan d'action</th>
                         <th>Responsable</th>
                         <th>Progression</th>
                         <th>Statut</th>
@@ -127,13 +123,12 @@
         </div>
     </div>
 
-    <!-- DETAIL / EDIT PANEL (Inline Slide-in) -->
     <div class="detail-panel-overlay" *ngIf="showDetailPanel" (click)="closePanel()">
         <div class="detail-panel" (click)="$event.stopPropagation()">
             <div class="panel-header">
                 <h3>
                     <i class="fas" [ngClass]="isEditing ? 'fa-edit' : 'fa-info-circle'"></i>
-                    {{ isEditing ? 'Modifier le Plan' : 'Détails du Plan' }}
+                    {{ isEditing ? 'Modifier le plan' : 'Détails du plan' }}
                 </h3>
                 <button class="close-btn" (click)="closePanel()">
                     <i class="fas fa-times"></i>
@@ -141,7 +136,6 @@
             </div>
 
             <div class="panel-body" *ngIf="selectedPlan">
-                <!-- Infos -->
                 <div class="detail-section">
                     <label>Plan d'action</label>
                     <p class="detail-value">{{ selectedPlan.name }}</p>
@@ -197,7 +191,6 @@
                     <p class="detail-value desc">{{ selectedPlan.description }}</p>
                 </div>
 
-                <!-- Actions -->
                 <div class="panel-actions">
                     <button class="btn-action primary full" (click)="markAsCompleted(selectedPlan)" *ngIf="selectedPlan.status !== 'Terminé'">
                         <i class="fas fa-check"></i> Marquer comme terminé

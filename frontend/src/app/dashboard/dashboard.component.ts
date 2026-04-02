@@ -5,6 +5,7 @@ import { DashboardService } from '../core/services/dashboard.service';
 import { NotificationService } from '../core/services/notification.service';
 import { Notification, NotificationType } from '../core/models/notification.model';
 import { UserRole } from '../core/models/user-role.enum';
+import { Risk, RiskService, RiskStatus } from '../core/services/risk.service';
 import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
@@ -74,13 +75,19 @@ export class DashboardComponent {
       route: '/dashboard/incidents',
       roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
     },
-    { label: 'Contrôle' },
+    {
+      label: 'Controle',
+      route: '/dashboard/controls',
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+    },
     { label: 'Action' }
   ];
 
 
   form: any = { name: '', description: '', config: '{}' };
 
+  risks: Risk[] = [];
+  allNotifications: Notification[] = [];
   notifications: Notification[] = [];
   unreadCount = 0;
   showNotifDropdown = false;
@@ -90,12 +97,21 @@ export class DashboardComponent {
     private authService: AuthService,
     private dashboardService: DashboardService,
     private notificationService: NotificationService,
+    private riskService: RiskService,
     private router: Router
   ) {
     this.authService.currentUser$.subscribe(user => {
       this.currentUserRole = user?.role;
       this.currentUserName = user?.prenom && user?.nom ? `${user.prenom} ${user.nom}` : 'Utilisateur';
       this.setDashboardInfo();
+
+      if (user && this.canLoadRiskData(user.role)) {
+        this.loadRisks();
+      } else {
+        this.risks = [];
+        this.notifications = this.getVisibleNotifications(this.allNotifications);
+        this.unreadCount = this.notifications.filter(n => !n.isRead).length;
+      }
     });
 
     this.dashboardService.openModal$.subscribe(data => {
@@ -103,6 +119,7 @@ export class DashboardComponent {
     });
 
     this.notificationService.notifications$.subscribe(notifs => {
+      this.allNotifications = notifs;
       this.notifications = this.getVisibleNotifications(notifs);
       this.unreadCount = this.notifications.filter(n => !n.isRead).length;
     });
@@ -148,16 +165,80 @@ export class DashboardComponent {
   }
 
   private getVisibleNotifications(notifs: Notification[]): Notification[] {
+    const filteredNotifications = notifs.filter(n => this.isNotificationVisibleForRisk(n));
+
     if (this.currentUserRole === UserRole.RISK_AGENT) {
-      return notifs.filter(n =>
-        n.type === NotificationType.RISK_ASSIGNED ||
-        n.type === NotificationType.STATUS_CHANGED ||
-        n.type === NotificationType.COMMENT_ADDED ||
-        n.type === NotificationType.REMINDER
-      );
+      return filteredNotifications.filter(n => {
+        const notificationType = this.getNotificationType(n);
+        return notificationType === NotificationType.RISK_ASSIGNED ||
+          notificationType === NotificationType.STATUS_CHANGED ||
+          notificationType === NotificationType.COMMENT_ADDED ||
+          notificationType === NotificationType.REMINDER;
+      });
     }
 
-    return notifs;
+    return filteredNotifications;
+  }
+
+  private loadRisks() {
+    this.riskService.getRisks().subscribe({
+      next: risks => {
+        this.risks = risks;
+        this.notifications = this.getVisibleNotifications(this.allNotifications);
+        this.unreadCount = this.notifications.filter(n => !n.isRead).length;
+      },
+      error: () => {
+        this.risks = [];
+        this.notifications = this.getVisibleNotifications(this.allNotifications);
+        this.unreadCount = this.notifications.filter(n => !n.isRead).length;
+      }
+    });
+  }
+
+  private canLoadRiskData(role?: UserRole | null): boolean {
+    return role === UserRole.SUPER_ADMIN ||
+      role === UserRole.RISK_MANAGER ||
+      role === UserRole.RISK_AGENT ||
+      role === UserRole.AUDIT_SENIOR ||
+      role === UserRole.TOP_MANAGEMENT;
+  }
+
+  private isNotificationVisibleForRisk(notification: Notification): boolean {
+    if (!notification.riskId) {
+      return true;
+    }
+
+    const risk = this.risks.find(item => item.id === notification.riskId);
+    if (!risk) {
+      return true;
+    }
+
+    return !this.isCompletedRiskStatus(risk.statutCode || risk.statut);
+  }
+
+  private isCompletedRiskStatus(status?: string | null): boolean {
+    const normalizedStatus = this.normalizeRiskStatus(status);
+    return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+  }
+
+  private normalizeRiskStatus(status?: string | null): string {
+    return (status || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
+  }
+
+  private getNotificationType(notification: Notification): string {
+    return (notification.typeCode || notification.type || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 
   get visibleSubNavItems(): NavItem[] {

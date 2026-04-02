@@ -12,6 +12,12 @@
         </div>
     </div>
 
+    <nav class="audit-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="audit-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
     <!-- Summary Stats -->
     <div class="stats-grid">
         <div class="stat-card total">
@@ -44,8 +50,39 @@
         </div>
     </div>
 
+    <!-- Filters Bar Premium -->
+    <div class="filters-bar premium mb-4">
+        <div class="filter-controls">
+            <div class="filter-group">
+                <i class="fas fa-search"></i>
+                <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher...">
+            </div>
+
+            <div class="filter-group">
+                <i class="fas fa-tasks"></i>
+                <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
+                    <option value="">Tous les statuts</option>
+                    <option [value]="AuditMissionStatus.A_VENIR">{{ statusLabelMap[AuditMissionStatus.A_VENIR] }}</option>
+                    <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
+                    <option [value]="AuditMissionStatus.TERMINE">{{ statusLabelMap[AuditMissionStatus.TERMINE] }}</option>
+                    <option [value]="AuditMissionStatus.EN_RETARD">{{ statusLabelMap[AuditMissionStatus.EN_RETARD] }}</option>
+                    <option [value]="AuditMissionStatus.ANNULE">{{ statusLabelMap[AuditMissionStatus.ANNULE] }}</option>
+                </select>
+            </div>
+
+            <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus">
+                <i class="fas fa-undo"></i> Réinitialiser
+            </button>
+        </div>
+
+        <div class="results-info">
+            <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> mission(s) trouvée(s)</span>
+        </div>
+    </div>
+
     <!-- Missions Table -->
     <div class="missions-card">
+
         <div class="table-loading" *ngIf="isLoading">
             <i class="fas fa-circle-notch fa-spin"></i> {{ isSuperAdmin ? 'Chargement des missions...' : 'Chargement de vos missions...' }}
         </div>
@@ -62,7 +99,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let mission of missions">
+                <tr *ngFor="let mission of filteredMissions">
+
                     <td>
                         <div class="mission-info">
                             <strong>{{ mission.titre }}</strong>
@@ -83,29 +121,30 @@
                     </td>
                     <td>{{ mission.delai | date:'dd/MM/yyyy' }}</td>
                     <td>
-                        <span [class]="'badge status-' + mission.statut.replace(' ', '-').toLowerCase()">
-                            {{ mission.statut }}
+                        <span [class]="'badge status-' + mission.statut.replace('_', '-')">
+                            {{ statusLabelMap[mission.statut] || mission.statut }}
                         </span>
                     </td>
                     <td class="actions-cell">
                         <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir détails">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="action-btn btn-checklist" *ngIf="mission.statut === 'En cours'"
+                        <button class="action-btn btn-checklist" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
                             (click)="openChecklistModal(mission)" title="Ouvrir Checklist">
                             <i class="fas fa-tasks"></i>
                         </button>
-                        <button class="action-btn btn-evidence" *ngIf="mission.statut === 'En cours'"
+                        <button class="action-btn btn-evidence" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
                             (click)="openEvidenceModal(mission)" title="Traçabilité des Preuves">
                             <i class="fas fa-paperclip"></i>
                         </button>
-                        <button class="action-btn btn-report" *ngIf="mission.statut === 'En cours'"
+                        <button class="action-btn btn-report" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
                             (click)="openReportModal(mission)" title="Soumettre Rapport">
                             <i class="fas fa-file-signature"></i>
                         </button>
                     </td>
                 </tr>
-                <tr *ngIf="missions.length === 0">
+                <tr *ngIf="filteredMissions.length === 0">
+
                     <td colspan="5" class="empty-state">
                         <i class="fas fa-check-circle"></i>
                         <p>Vous n'avez aucune mission d'audit assignée pour le moment.</p>
@@ -211,8 +250,8 @@
                 </div>
                 <div class="detail-item">
                     <label>Statut</label>
-                    <span [class]="'badge status-' + selectedMission?.statut?.replace(' ', '-')?.toLowerCase()">
-                        {{ selectedMission?.statut }}
+                    <span [class]="'badge status-' + selectedMission?.statut?.replace('_', '-')">
+                        {{ statusLabelMap[selectedMission?.statut!] || selectedMission?.statut }}
                     </span>
                 </div>
                 <div class="detail-item full">

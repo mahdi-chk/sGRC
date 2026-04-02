@@ -1,0 +1,346 @@
+{
+  "definitions": [
+    {
+      "key": "user.role",
+      "entityKey": "user",
+      "entityTable": "users",
+      "fieldName": "role",
+      "foreignKey": "roleId",
+      "foreignKeyColumn": "role_id",
+      "associationAlias": "roleLookup",
+      "lookupTable": "user_roles",
+      "lookupModelName": "UserRoleLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "role",
+        "type": "string",
+        "length": 255,
+        "defaultLabel": "Auditeur"
+      },
+      "values": [
+        { "id": 1, "symbol": "RISK_MANAGER", "code": "risk_manager", "label": "Risk Manager", "sortOrder": 1 },
+        { "id": 2, "symbol": "RISK_AGENT", "code": "risk_agent", "label": "Risk Agent", "sortOrder": 2 },
+        { "id": 3, "symbol": "AUDIT_SENIOR", "code": "audit_senior", "label": "Audit Senior", "sortOrder": 3 },
+        { "id": 4, "symbol": "AUDITEUR", "code": "auditeur", "label": "Auditeur", "sortOrder": 4 },
+        { "id": 5, "symbol": "TOP_MANAGEMENT", "code": "top_management", "label": "Top Management", "sortOrder": 5 },
+        { "id": 6, "symbol": "ADMIN_SI", "code": "admin_si", "label": "Administrateur SI", "sortOrder": 6 },
+        { "id": 7, "symbol": "SUPER_ADMIN", "code": "super_admin", "label": "Super Admin", "sortOrder": 7 }
+      ]
+    },
+    {
+      "key": "notification.type",
+      "entityKey": "notification",
+      "entityTable": "notifications",
+      "fieldName": "type",
+      "foreignKey": "typeId",
+      "foreignKeyColumn": "type_id",
+      "associationAlias": "typeLookup",
+      "lookupTable": "notification_types",
+      "lookupModelName": "NotificationTypeLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "type",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "RISK_ASSIGNED", "code": "risk_assigned", "label": "RISK_ASSIGNED", "sortOrder": 1 },
+        { "id": 2, "symbol": "STATUS_CHANGED", "code": "status_changed", "label": "STATUS_CHANGED", "sortOrder": 2 },
+        { "id": 3, "symbol": "COMMENT_ADDED", "code": "comment_added", "label": "COMMENT_ADDED", "sortOrder": 3 },
+        { "id": 4, "symbol": "REMINDER", "code": "reminder", "label": "REMINDER", "sortOrder": 4 },
+        { "id": 5, "symbol": "AUDIT_MISSION_ASSIGNED", "code": "audit_mission_assigned", "label": "AUDIT_MISSION_ASSIGNED", "sortOrder": 5 },
+        { "id": 6, "symbol": "AUDIT_REPORT_SUBMITTED", "code": "audit_report_submitted", "label": "AUDIT_REPORT_SUBMITTED", "sortOrder": 6 }
+      ]
+    },
+    {
+      "key": "incident.statut",
+      "entityKey": "incident",
+      "entityTable": "incidents",
+      "fieldName": "statut",
+      "foreignKey": "statutId",
+      "foreignKeyColumn": "statut_id",
+      "associationAlias": "statutLookup",
+      "lookupTable": "incident_statuts",
+      "lookupModelName": "IncidentStatutLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "statut",
+        "type": "string",
+        "length": 255,
+        "defaultLabel": "Nouveau"
+      },
+      "values": [
+        { "id": 1, "symbol": "NOUVEAU", "code": "nouveau", "label": "Nouveau", "sortOrder": 1 },
+        { "id": 2, "symbol": "EN_COURS", "code": "en_cours", "label": "En cours", "sortOrder": 2 },
+        { "id": 3, "symbol": "TRAITE", "code": "traite", "label": "Trait\u00e9", "sortOrder": 3 },
+        { "id": 4, "symbol": "CLOS", "code": "clos", "label": "Clos", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "incident.niveauRisque",
+      "entityKey": "incident",
+      "entityTable": "incidents",
+      "fieldName": "niveauRisque",
+      "foreignKey": "niveauRisqueId",
+      "foreignKeyColumn": "niveau_risque_id",
+      "associationAlias": "niveauRisqueLookup",
+      "lookupTable": "incident_niveau_risques",
+      "lookupModelName": "IncidentNiveauRisqueLookup",
+      "allowNull": true,
+      "legacyColumn": {
+        "name": "niveauRisque",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "LOW", "code": "low", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "LIMITED", "code": "limited", "label": "Limit\u00e9", "sortOrder": 2 },
+        { "id": 3, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 3 },
+        { "id": 4, "symbol": "SIGNIFICANT", "code": "significant", "label": "Significatif", "sortOrder": 4 },
+        { "id": 5, "symbol": "HIGH", "code": "high", "label": "\u00c9lev\u00e9", "sortOrder": 5 },
+        { "id": 6, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 6 }
+      ]
+    },
+    {
+      "key": "auditMission.statut",
+      "entityKey": "auditMission",
+      "entityTable": "audit_missions",
+      "fieldName": "statut",
+      "foreignKey": "statutId",
+      "foreignKeyColumn": "statut_id",
+      "associationAlias": "statutLookup",
+      "lookupTable": "audit_mission_statuts",
+      "lookupModelName": "AuditMissionStatutLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "statut",
+        "type": "string",
+        "length": 255,
+        "defaultLabel": "\u00c0 venir"
+      },
+      "values": [
+        { "id": 1, "symbol": "A_VENIR", "code": "a_venir", "label": "\u00c0 venir", "sortOrder": 1 },
+        { "id": 2, "symbol": "EN_COURS", "code": "en_cours", "label": "En cours", "sortOrder": 2 },
+        { "id": 3, "symbol": "TERMINE", "code": "termine", "label": "Termin\u00e9", "sortOrder": 3 },
+        { "id": 4, "symbol": "EN_RETARD", "code": "en_retard", "label": "En retard", "sortOrder": 4 },
+        { "id": 5, "symbol": "ANNULE", "code": "annule", "label": "Annul\u00e9", "sortOrder": 5 }
+      ]
+    },
+    {
+      "key": "aiContext.type",
+      "entityKey": "aiContext",
+      "entityTable": "ai_contexts",
+      "fieldName": "type",
+      "foreignKey": "typeId",
+      "foreignKeyColumn": "type_id",
+      "associationAlias": "typeLookup",
+      "lookupTable": "ai_context_types",
+      "lookupModelName": "AIContextTypeLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "type",
+        "type": "string",
+        "length": 20
+      },
+      "values": [
+        { "id": 1, "symbol": "SYSTEM", "code": "system", "label": "system", "sortOrder": 1 },
+        { "id": 2, "symbol": "BUSINESS", "code": "business", "label": "business", "sortOrder": 2 },
+        { "id": 3, "symbol": "INSTRUCTION", "code": "instruction", "label": "instruction", "sortOrder": 3 }
+      ]
+    },
+    {
+      "key": "risk.niveauRisque",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "niveauRisque",
+      "foreignKey": "niveauRisqueId",
+      "foreignKeyColumn": "niveau_risque_id",
+      "associationAlias": "niveauRisqueLookup",
+      "lookupTable": "risk_niveau_risques",
+      "lookupModelName": "RiskNiveauRisqueLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "niveauRisque",
+        "type": "string",
+        "length": 255,
+        "defaultLabel": "Faible"
+      },
+      "values": [
+        { "id": 1, "symbol": "LOW", "code": "low", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "LIMITED", "code": "limited", "label": "Limit\u00e9", "sortOrder": 2 },
+        { "id": 3, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 3 },
+        { "id": 4, "symbol": "HIGH", "code": "high", "label": "\u00c9lev\u00e9", "sortOrder": 4 },
+        { "id": 5, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 5 }
+      ]
+    },
+    {
+      "key": "risk.probabilite",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "probabilite",
+      "foreignKey": "probabiliteId",
+      "foreignKeyColumn": "probabilite_id",
+      "associationAlias": "probabiliteLookup",
+      "lookupTable": "risk_probabilites",
+      "lookupModelName": "RiskProbabiliteLookup",
+      "allowNull": true,
+      "legacyColumn": {
+        "name": "probabilite",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "RARE", "code": "rare", "label": "Rare", "sortOrder": 1 },
+        { "id": 2, "symbol": "POSSIBLE", "code": "possible", "label": "Possible", "sortOrder": 2 },
+        { "id": 3, "symbol": "PROBABLE", "code": "probable", "label": "Probable", "sortOrder": 3 },
+        { "id": 4, "symbol": "PERMANENT", "code": "permanent", "label": "Permanent", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "risk.impact",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "impact",
+      "foreignKey": "impactId",
+      "foreignKeyColumn": "impact_id",
+      "associationAlias": "impactLookup",
+      "lookupTable": "risk_impacts",
+      "lookupModelName": "RiskImpactLookup",
+      "allowNull": true,
+      "legacyColumn": {
+        "name": "impact",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "LIMITED", "code": "limited", "label": "Limit\u00e9", "sortOrder": 1 },
+        { "id": 2, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 2 },
+        { "id": 3, "symbol": "SIGNIFICANT", "code": "significant", "label": "Significatif", "sortOrder": 3 },
+        { "id": 4, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "risk.niveauMaitrise",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "niveauMaitrise",
+      "foreignKey": "niveauMaitriseId",
+      "foreignKeyColumn": "niveau_maitrise_id",
+      "associationAlias": "niveauMaitriseLookup",
+      "lookupTable": "risk_niveau_maitrises",
+      "lookupModelName": "RiskNiveauMaitriseLookup",
+      "allowNull": true,
+      "legacyColumn": {
+        "name": "niveauMaitrise",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "FAIBLE", "code": "faible", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "LIMITED", "code": "limited", "label": "Limit\u00e9", "sortOrder": 2 },
+        { "id": 3, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 3 },
+        { "id": 4, "symbol": "HIGH", "code": "high", "label": "\u00c9lev\u00e9", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "risk.statut",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "statut",
+      "foreignKey": "statutId",
+      "foreignKeyColumn": "statut_id",
+      "associationAlias": "statutLookup",
+      "lookupTable": "risk_statuts",
+      "lookupModelName": "RiskStatutLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "statut",
+        "type": "string",
+        "length": 255,
+        "defaultLabel": "Ouvert"
+      },
+      "values": [
+        { "id": 1, "symbol": "OPEN", "code": "open", "label": "Ouvert", "sortOrder": 1 },
+        { "id": 2, "symbol": "IN_PROGRESS", "code": "in_progress", "label": "En cours", "sortOrder": 2 },
+        { "id": 3, "symbol": "TREATED", "code": "treated", "label": "Trait\u00e9", "sortOrder": 3 },
+        { "id": 4, "symbol": "CLOSED", "code": "closed", "label": "Cl\u00f4tur\u00e9", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "risk.frequenceTraitement",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "frequenceTraitement",
+      "foreignKey": "frequenceTraitementId",
+      "foreignKeyColumn": "frequence_traitement_id",
+      "associationAlias": "frequenceTraitementLookup",
+      "lookupTable": "risk_frequence_traitements",
+      "lookupModelName": "RiskFrequenceTraitementLookup",
+      "allowNull": false,
+      "legacyColumn": {
+        "name": "frequenceTraitement",
+        "type": "string",
+        "length": 255,
+        "defaultLabel": "Aucun"
+      },
+      "values": [
+        { "id": 1, "symbol": "QUOTIDIEN", "code": "quotidien", "label": "Quotidien", "sortOrder": 1 },
+        { "id": 2, "symbol": "HEBDOMADAIRE", "code": "hebdomadaire", "label": "Hebdomadaire", "sortOrder": 2 },
+        { "id": 3, "symbol": "BIMENSUEL", "code": "bimensuel", "label": "Bimensuel", "sortOrder": 3 },
+        { "id": 4, "symbol": "MENSUEL", "code": "mensuel", "label": "Mensuel", "sortOrder": 4 },
+        { "id": 5, "symbol": "TRIMESTRIEL", "code": "trimestriel", "label": "Trimestriel", "sortOrder": 5 },
+        { "id": 6, "symbol": "SEMESTRIEL", "code": "semestriel", "label": "Semestriel", "sortOrder": 6 },
+        { "id": 7, "symbol": "ANNUEL", "code": "annuel", "label": "Annuel", "sortOrder": 7 },
+        { "id": 8, "symbol": "NONE", "code": "none", "label": "Aucun", "sortOrder": 8 }
+      ]
+    },
+    {
+      "key": "risk.cotationRisqueBrut",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "cotationRisqueBrut",
+      "foreignKey": "cotationRisqueBrutId",
+      "foreignKeyColumn": "cotation_risque_brut_id",
+      "associationAlias": "cotationRisqueBrutLookup",
+      "lookupTable": "risk_cotation_risque_bruts",
+      "lookupModelName": "RiskCotationRisqueBrutLookup",
+      "allowNull": true,
+      "legacyColumn": {
+        "name": "cotationRisqueBrut",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "LOW", "code": "low", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "LIMITED", "code": "limited", "label": "Limit\u00e9", "sortOrder": 2 },
+        { "id": 3, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 3 },
+        { "id": 4, "symbol": "HIGH", "code": "high", "label": "\u00c9lev\u00e9", "sortOrder": 4 },
+        { "id": 5, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 5 }
+      ]
+    },
+    {
+      "key": "risk.cotationRisqueNet",
+      "entityKey": "risk",
+      "entityTable": "risks",
+      "fieldName": "cotationRisqueNet",
+      "foreignKey": "cotationRisqueNetId",
+      "foreignKeyColumn": "cotation_risque_net_id",
+      "associationAlias": "cotationRisqueNetLookup",
+      "lookupTable": "risk_cotation_risque_nets",
+      "lookupModelName": "RiskCotationRisqueNetLookup",
+      "allowNull": true,
+      "legacyColumn": {
+        "name": "cotationRisqueNet",
+        "type": "string",
+        "length": 255
+      },
+      "values": [
+        { "id": 1, "symbol": "LOW", "code": "low", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "LIMITED", "code": "limited", "label": "Limit\u00e9", "sortOrder": 2 },
+        { "id": 3, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 3 },
+        { "id": 4, "symbol": "HIGH", "code": "high", "label": "\u00c9lev\u00e9", "sortOrder": 4 },
+        { "id": 5, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 5 }
+      ]
+    }
+  ]
+}

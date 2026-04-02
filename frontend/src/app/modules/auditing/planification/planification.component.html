@@ -19,6 +19,12 @@
         </div>
     </div>
 
+    <nav class="audit-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="audit-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
     <!-- suggested Plan Content -->
     <div class="plan-content" *ngIf="suggestedPlan.length > 0">
         <div class="plan-header-row">

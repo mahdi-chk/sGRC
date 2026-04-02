@@ -1,54 +1,71 @@
-<div class="header-actions">
-    <h1><i class="fas fa-tasks"></i> Modèles de Check-Lists (Paramétrables)</h1>
-    <button class="btn-primary" (click)="openCreateModal()"><i class="fas fa-plus"></i> Nouveau Modèle</button>
-</div>
-
-<div class="loader" *ngIf="isLoading">Chargement...</div>
-
-<div class="templates-grid" *ngIf="!isLoading">
-    <div *ngIf="templates.length === 0" class="empty-state">
-        <p>Aucun modèle de checklist pour le moment.</p>
-    </div>
-
-    <div class="card" *ngFor="let template of templates">
-        <div class="card-header">
-            <h3>{{ template.titre }}</h3>
-            <button class="icon-btn delete" (click)="deleteTemplate(template.id)" title="Supprimer">
-                <i class="fas fa-trash"></i>
+<div class="audit-page senior-view">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
             </button>
+            <div>
+                <h1><i class="fas fa-tasks"></i> Modeles de Check-Lists</h1>
+                <p>Parametrez les checklists utilisees dans les missions d'audit et centralisez leur maintenance.</p>
+            </div>
         </div>
-        <div class="card-body">
-            <p class="desc" *ngIf="template.description">{{ template.description }}</p>
-            <ul class="items-list">
-                <li *ngFor="let item of template.items">
-                    <i class="far fa-square" style="color:#004a99"></i> {{ item.texte }}
-                </li>
-            </ul>
+        <div class="header-actions">
+            <button class="btn-primary" (click)="openCreateModal()"><i class="fas fa-plus"></i> Nouveau Modele</button>
+        </div>
+    </div>
+
+    <nav class="audit-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="audit-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="loader" *ngIf="isLoading">Chargement...</div>
+
+    <div class="templates-grid" *ngIf="!isLoading">
+        <div *ngIf="templates.length === 0" class="empty-state">
+            <p>Aucun modele de checklist pour le moment.</p>
+        </div>
+
+        <div class="card" *ngFor="let template of templates">
+            <div class="card-header">
+                <h3>{{ template.titre }}</h3>
+                <button class="icon-btn delete" (click)="deleteTemplate(template.id)" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="desc" *ngIf="template.description">{{ template.description }}</p>
+                <ul class="items-list">
+                    <li *ngFor="let item of template.items">
+                        <i class="far fa-square" style="color:#004a99"></i> {{ item.texte }}
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Creation -->
 <div class="modal-overlay" *ngIf="showModal" (click)="showModal=false">
     <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-            <h2>Créer un modèle de Checklist</h2>
+            <h2>Creer un modele de checklist</h2>
             <button class="close-btn" (click)="showModal=false"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body form-container">
             <div class="form-group">
-                <label>Titre du modèle</label>
+                <label>Titre du modele</label>
                 <input type="text" [(ngModel)]="newTemplate.titre" placeholder="Ex: Checklist Audit Informatique" />
             </div>
             <div class="form-group">
-                <label>Description (Optionnelle)</label>
-                <textarea [(ngModel)]="newTemplate.description" rows="2" placeholder="Description du modèle..."></textarea>
+                <label>Description</label>
+                <textarea [(ngModel)]="newTemplate.description" rows="2" placeholder="Description du modele..."></textarea>
             </div>
-            
+
             <div class="form-group">
-                <label>Éléments à vérifier</label>
+                <label>Elements a verifier</label>
                 <div class="item-input-row" *ngFor="let item of newTemplate.items; let i = index; trackBy: trackByFn">
-                    <input type="text" [(ngModel)]="newTemplate.items[i]" placeholder="Point de contrôle..." />
+                    <input type="text" [(ngModel)]="newTemplate.items[i]" placeholder="Point de controle..." />
                     <button class="icon-btn remove" (click)="removeItem(i)" *ngIf="newTemplate.items.length > 1">
                         <i class="fas fa-minus-circle"></i>
                     </button>

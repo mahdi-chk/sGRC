@@ -913,6 +913,7 @@
 
   .donut-chart {
     --p_low: 0;
+    --p_limited: 0;
     --p_med: 0;
     --p_high: 0;
     --p_crit: 0;
@@ -921,9 +922,10 @@
     border-radius: 50%;
     position: relative;
     background: conic-gradient(#3b82f6 0% calc(var(--p_low) * 1%),
-        #f59e0b calc(var(--p_low) * 1%) calc((var(--p_low) + var(--p_med)) * 1%),
-        #ef4444 calc((var(--p_low) + var(--p_med)) * 1%) calc((var(--p_low) + var(--p_med) + var(--p_high)) * 1%),
-        #7f1d1d calc((var(--p_low) + var(--p_med) + var(--p_high)) * 1%) 100%);
+        #14b8a6 calc(var(--p_low) * 1%) calc((var(--p_low) + var(--p_limited)) * 1%),
+        #f59e0b calc((var(--p_low) + var(--p_limited)) * 1%) calc((var(--p_low) + var(--p_limited) + var(--p_med)) * 1%),
+        #ef4444 calc((var(--p_low) + var(--p_limited) + var(--p_med)) * 1%) calc((var(--p_low) + var(--p_limited) + var(--p_med) + var(--p_high)) * 1%),
+        #7f1d1d calc((var(--p_low) + var(--p_limited) + var(--p_med) + var(--p_high)) * 1%) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -978,6 +980,10 @@
         background: #3b82f6;
       }
 
+      &.limited .dot {
+        background: #14b8a6;
+      }
+
       &.med .dot {
         background: #f59e0b;
       }
@@ -1030,18 +1036,22 @@
         font-weight: 800;
       }
 
+      &.open,
       &.ouvert {
         background: #94a3b8;
       }
 
+      &.in_progress,
       &.en-cours {
         background: #3b82f6;
       }
 
+      &.treated,
       &.traite {
         background: #10b981; // Green
       }
 
+      &.closed,
       &.cloture {
         background: #64748b; // Slate grey
       }
@@ -1752,6 +1762,11 @@
   &.medium {
     background: #fef3c7;
     color: #92400e;
+  }
+
+  &.limited {
+    background: #ccfbf1;
+    color: #115e59;
   }
 
   &.low {

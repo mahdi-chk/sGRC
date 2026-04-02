@@ -39,9 +39,9 @@ export class TopManagementDashboardComponent implements OnInit {
         this.riskService.getRisks().subscribe(risks => {
             this.risks = risks;
             this.totalRisks = risks.length;
-            this.criticalRisks = risks.filter(r => r.niveauRisque === RiskLevel.CRITICAL).length;
+            this.criticalRisks = risks.filter(r => this.normalizeRiskLevel(r.niveauRisqueCode || r.niveauRisque) === RiskLevel.CRITICAL).length;
 
-            const treatedCount = risks.filter(r => r.statut === RiskStatus.TREATED || r.statut === RiskStatus.CLOSED).length;
+            const treatedCount = risks.filter(r => this.isCompletedRiskStatus(r.statutCode || r.statut)).length;
             this.treatmentRate = this.totalRisks > 0 ? Math.round((treatedCount / this.totalRisks) * 100) : 0;
 
             this.maturityLevel = RiskService.calculateMaturityIndex(this.risks);
@@ -59,5 +59,24 @@ export class TopManagementDashboardComponent implements OnInit {
 
     goToAuditStatistics() {
         this.router.navigate(['/dashboard/audit-statistics']);
+    }
+
+    private isCompletedRiskStatus(status?: string | null): boolean {
+        const normalizedStatus = this.normalize(status);
+        return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+    }
+
+    private normalizeRiskLevel(level?: string | null): string {
+        return this.normalize(level);
+    }
+
+    private normalize(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
 }

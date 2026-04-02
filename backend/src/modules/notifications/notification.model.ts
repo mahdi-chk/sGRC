@@ -1,21 +1,23 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import {
+    buildLookupAttribute,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
 
-export enum NotificationType {
-    RISK_ASSIGNED = 'RISK_ASSIGNED',
-    STATUS_CHANGED = 'STATUS_CHANGED',
-    COMMENT_ADDED = 'COMMENT_ADDED',
-    REMINDER = 'REMINDER',
-    AUDIT_MISSION_ASSIGNED = 'AUDIT_MISSION_ASSIGNED',
-    AUDIT_REPORT_SUBMITTED = 'AUDIT_REPORT_SUBMITTED',
-}
+export const NotificationType = buildLookupCodeMap('notification.type');
+export type NotificationType = string;
 
-export class Notification extends Model {
+export class Notification extends LookupAwareModel {
     public id!: number;
     public userId!: number;
     public type!: NotificationType;
+    public typeId!: number;
     public content!: string;
     public isRead!: boolean;
     public riskId!: number | null;
@@ -41,10 +43,7 @@ Notification.init(
                 key: 'id',
             }
         },
-        type: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
+        typeId: buildLookupAttribute('notification.type'),
         content: {
             type: DataTypes.TEXT,
             allowNull: false,
@@ -79,5 +78,8 @@ Notification.init(
 
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+
+registerLookupAccessors('notification', Notification);
+registerLookupAssociations('notification', Notification);
 
 export default Notification;

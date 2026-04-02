@@ -3,6 +3,7 @@ import { AuditingService, AuditMission, AuditEvidence, AuditMissionStatus } from
 import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { UserRole } from '../../../core/models/user-role.enum';
+import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-auditor-evidence',
@@ -17,12 +18,16 @@ export class AuditorEvidenceComponent implements OnInit {
   isUploading = false;
   selectedFile: File | null = null;
   backendUrl = environment.apiUrl.replace('/api', '');
-  currentUserRole: UserRole | null = null;
+  currentUserRole: UserRole | null = getStoredAuditRole();
 
   constructor(
     private auditingService: AuditingService,
     private router: Router
   ) { }
+
+  get navItems() {
+    return getAuditNavItems(this.currentUserRole);
+  }
 
   ngOnInit(): void {
     this.loadMissions();

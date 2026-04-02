@@ -60,7 +60,7 @@ export class AIDataService {
                     where: this.getSecurityFilter(userId, role),
                     limit: 10,
                     order: [['updatedAt', 'DESC']],
-                    attributes: ['titre', 'explication', 'niveauRisque', 'statut']
+                    attributes: ['titre', 'explication', 'niveauRisqueId', 'statutId']
                 });
 
                 if (risks.length > 0) {
@@ -78,7 +78,7 @@ export class AIDataService {
                     where: this.getSecurityFilter(userId, role, 'audit'),
                     limit: 10,
                     order: [['updatedAt', 'DESC']],
-                    attributes: ['titre', 'objectifs', 'statut', 'delai']
+                    attributes: ['titre', 'objectifs', 'statutId', 'delai']
                 });
 
                 if (missions.length > 0) {

@@ -9,6 +9,7 @@ import { UserRole } from '../users/user.roles';
 import { secureUpload } from '../../middleware/file.middleware';
 import path from 'path';
 import fs from 'fs';
+import { appLogger } from '../../utils/app-logger';
 
 const router = Router();
 
@@ -55,9 +56,24 @@ router.use(authenticateToken);
  */
 router.post('/suggest-plan', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
     try {
+        appLogger.info('Auditing', 'Suggested AI planning request received', {
+            userId: req.user!.id,
+            role: req.user!.role,
+        });
         const plan = await AuditingService.suggestAnnualPlan(req.user!.role);
+        appLogger.info('Auditing', 'Suggested AI planning generated', {
+            userId: req.user!.id,
+            role: req.user!.role,
+            suggestionCount: Array.isArray(plan) ? plan.length : 0,
+        });
         res.json(plan);
     } catch (error: any) {
+        appLogger.error('Auditing', 'Suggested AI planning request failed', {
+            userId: req.user?.id,
+            role: req.user?.role,
+            message: error?.message,
+            stack: error?.stack,
+        });
         res.status(500).json({ message: 'Erreur lors de la génération du plan', error: error.message });
     }
 });
@@ -67,9 +83,26 @@ router.post('/suggest-plan', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPE
  */
 router.post('/create-missions', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
     try {
+        appLogger.info('Auditing', 'Mission creation from suggested AI planning request received', {
+            userId: req.user!.id,
+            role: req.user!.role,
+            requestedMissionCount: Array.isArray(req.body?.missions) ? req.body.missions.length : 0,
+        });
         const missions = await AuditingService.createMissionsFromPlan(req.user!.id, req.body.missions);
+        appLogger.info('Auditing', 'Mission creation from suggested AI planning completed', {
+            userId: req.user!.id,
+            role: req.user!.role,
+            createdMissionCount: Array.isArray(missions) ? missions.length : 0,
+        });
         res.status(201).json(missions);
     } catch (error: any) {
+        appLogger.error('Auditing', 'Mission creation from suggested AI planning failed', {
+            userId: req.user?.id,
+            role: req.user?.role,
+            requestedMissionCount: Array.isArray(req.body?.missions) ? req.body.missions.length : 0,
+            message: error?.message,
+            stack: error?.stack,
+        });
         res.status(400).json({ message: 'Erreur lors de la création des missions', error: error.message });
     }
 });

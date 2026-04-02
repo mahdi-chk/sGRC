@@ -16,6 +16,7 @@ import { AuditEvidence } from './audit-evidence.model';
 import fs from 'fs';
 import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 import { appLogger } from '../../utils/app-logger';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
 export class AuditingService {
     /**
@@ -24,7 +25,13 @@ export class AuditingService {
     static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_SENIOR) {
         // Récupérer tous les risques non clôturés
         const risks = await Risk.findAll({
-            where: { statut: ['Ouvert', 'En cours', 'Traité'] }
+            where: {
+                statutId: [
+                    LookupResolutionService.getStaticValue('risk.statut', 'open')?.id,
+                    LookupResolutionService.getStaticValue('risk.statut', 'in_progress')?.id,
+                    LookupResolutionService.getStaticValue('risk.statut', 'treated')?.id,
+                ]
+            }
         });
 
         if (risks.length === 0) {
@@ -42,14 +49,14 @@ export class AuditingService {
     static async createMissionsFromPlan(seniorId: number, missionsData: any[]) {
         const missions = [];
         for (const data of missionsData) {
-            const mission = await AuditMission.create({
+            const mission = await AuditMission.create(await LookupResolutionService.resolveEntityPayload('auditMission', {
                 ...data,
                 auditSeniorId: seniorId,
                 statut: AuditMissionStatus.A_VENIR,
                 delai: new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000),
                 is_deleted: false,
                 deleted_at: null,
-            });
+            }));
             missions.push(mission);
         }
         return missions;
@@ -62,19 +69,22 @@ export class AuditingService {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
 
-        await mission.update({ auditeurId, statut: AuditMissionStatus.EN_COURS });
+        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
+            auditeurId,
+            statut: AuditMissionStatus.EN_COURS
+        }));
 
         // Notifications & Emails
         try {
             const auditeur = await User.findByPk(auditeurId);
             if (auditeur) {
                 // Internal notification
-                await Notification.create({
+                await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
                     userId: auditeurId,
                     type: NotificationType.AUDIT_MISSION_ASSIGNED,
                     content: `Une nouvelle mission d'audit vous a été assignée : ${mission.titre}`,
                     auditMissionId: missionId
-                });
+                }));
 
                 // Email notification
                 await emailService.sendAuditMissionAssignedEmail(
@@ -103,10 +113,10 @@ export class AuditingService {
         if (!mission) throw new Error('Mission non trouvée');
         if (mission.auditeurId !== auditeurId) throw new Error('Action non autorisée');
 
-        await mission.update({
+        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
             ...reportData,
             statut: AuditMissionStatus.TERMINE
-        });
+        }));
 
         // Notifications & Emails
         try {
@@ -114,12 +124,12 @@ export class AuditingService {
             const actor = await User.findByPk(actorId);
             if (senior && actor) {
                 // Internal notification
-                await Notification.create({
+                await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
                     userId: senior.id,
                     type: NotificationType.AUDIT_REPORT_SUBMITTED,
                     content: `Un rapport d'audit a été soumis pour la mission : ${mission.titre}`,
                     auditMissionId: missionId
-                });
+                }));
 
                 // Email notification
                 await emailService.sendAuditReportSubmittedEmail(
@@ -142,7 +152,7 @@ export class AuditingService {
         if (!mission) throw new Error('Mission non trouvée');
         
         // Autoriser la modification du titre, objectifs, responsabilités, délai et statut
-        await mission.update(data);
+        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', data));
         
         return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk'] });
     }
@@ -196,12 +206,12 @@ export class AuditingService {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
 
-        await mission.update({
+        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
             auditeurId: null,
             rapport: null,
             recommandations: null,
             statut: AuditMissionStatus.A_VENIR
-        });
+        }));
         
         // Supprimer aussi les checklists instanciées
         await AuditMissionChecklistItem.update(getSoftDeleteValues(), {

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditChecklistTemplate } from '../../../core/services/auditing.service';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { Router } from '@angular/router';
+import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-planification',
@@ -9,6 +10,7 @@ import { Router } from '@angular/router';
   styleUrls: ['./planification.component.scss']
 })
 export class PlanificationComponent implements OnInit {
+  currentUserRole = getStoredAuditRole();
   suggestedPlan: any[] = [];
   isGeneratingPlan = false;
   isCreatingMissions = false;
@@ -17,6 +19,10 @@ export class PlanificationComponent implements OnInit {
     private auditingService: AuditingService,
     private router: Router
   ) { }
+
+  get navItems() {
+    return getAuditNavItems(this.currentUserRole);
+  }
 
   ngOnInit(): void {
     if (!this.isSeniorAuditor) {

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { IncidentService, Incident } from '../../../core/services/incident.service';
+import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from '../../../core/services/incident.service';
+
 import { Router } from '@angular/router';
 
 @Component({
@@ -31,9 +32,10 @@ export class IncidentReportingComponent implements OnInit {
     this.incidentService.getIncidents().subscribe(data => {
       this.incidents = data;
       this.totalIncidents = data.length;
-      this.openIncidents = data.filter(i => i.statut !== 'Clos').length;
-      this.resolvedIncidents = data.filter(i => i.statut === 'Traité' || i.statut === 'Clos').length;
-      this.criticalIncidents = data.filter(i => i.niveauRisque === 'Critique').length;
+      this.openIncidents = data.filter(i => i.statut !== IncidentStatus.CLOS).length;
+      this.resolvedIncidents = data.filter(i => i.statut === IncidentStatus.TRAITE || i.statut === IncidentStatus.CLOS).length;
+      this.criticalIncidents = data.filter(i => i.niveauRisque === IncidentNiveauRisque.CRITICAL).length;
+
       this.isLoading = false;
     });
   }

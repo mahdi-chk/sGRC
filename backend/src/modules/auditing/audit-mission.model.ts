@@ -3,27 +3,30 @@
  * @description Définition du modèle de données pour les Missions d'Audit.
  */
 
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
 import { User } from '../users/user.model';
 import { Risk } from '../risk/risk.model';
 import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import {
+    buildLookupAttribute,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
 
-export enum AuditMissionStatus {
-    A_VENIR = 'À venir',
-    EN_COURS = 'En cours',
-    TERMINE = 'Terminé',
-    EN_RETARD = 'En retard',
-    ANNULE = 'Annulé',
-}
+export const AuditMissionStatus = buildLookupCodeMap('auditMission.statut');
+export type AuditMissionStatus = string;
 
-export class AuditMission extends Model {
+export class AuditMission extends LookupAwareModel {
     public id!: number;
     public titre!: string;
     public objectifs!: string;
     public responsabilites!: string;
     public delai!: Date;
     public statut!: AuditMissionStatus;
+    public statutId!: number;
     public auditSeniorId!: number;
     public auditeurId!: number | null;
     public riskId!: number;
@@ -59,13 +62,7 @@ AuditMission.init(
             type: DataTypes.DATE,
             allowNull: false,
         },
-        statut: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                isIn: [Object.values(AuditMissionStatus)],
-            },
-        },
+        statutId: buildLookupAttribute('auditMission.statut'),
         auditSeniorId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -129,3 +126,6 @@ User.hasMany(AuditMission, { foreignKey: 'auditSeniorId', as: 'seniorMissions' }
 User.hasMany(AuditMission, { foreignKey: 'auditeurId', as: 'assignedMissions' });
 Risk.hasMany(AuditMission, { foreignKey: 'riskId', as: 'auditMissions' });
 AuditChecklistTemplate.hasMany(AuditMission, { foreignKey: 'checklistTemplateId', as: 'missions' });
+
+registerLookupAccessors('auditMission', AuditMission);
+registerLookupAssociations('auditMission', AuditMission);

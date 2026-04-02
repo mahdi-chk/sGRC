@@ -12,7 +12,7 @@ import { Risk, RiskLevel, RiskStatus } from './risk.model';
 import { Comment } from './comment.model';
 import { User } from '../users/user.model';
 import { Department } from '../departments/department.model';
-import { Incident } from '../incidents/incident.model';
+import { Incident, IncidentStatus } from '../incidents/incident.model';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
@@ -24,6 +24,7 @@ import XlsxPopulate from 'xlsx-populate';
 import fs from 'fs';
 import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 import { appLogger } from '../../utils/app-logger';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
 const router = Router();
 
@@ -38,6 +39,12 @@ const uploadSecurePiece = secureUpload(['pdf', 'jpg', 'jpeg', 'png'], 'pieceJust
  * Middleware d'upload sécurisé pour les commentaires (pièces jointes)
  */
 const uploadSecureComment = secureUpload(['pdf', 'jpg', 'jpeg', 'png'], 'pieceJointe', 5 * 1024 * 1024);
+
+const resolveRiskPayload = (payload: Record<string, unknown>) =>
+    LookupResolutionService.resolveEntityPayload('risk', payload);
+
+const createNotification = async (payload: Record<string, unknown>) =>
+    Notification.create(await LookupResolutionService.resolveEntityPayload('notification', payload));
 
 /**
  * Helper to save buffer to storage
@@ -100,7 +107,7 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
             deleted_at: null,
         };
 
-        const risk = await Risk.create(riskData);
+        const risk = await Risk.create(await resolveRiskPayload(riskData));
         res.status(201).json(risk);
     } catch (error: any) {
         appLogger.error('Risks', 'Risk creation failed', error);
@@ -161,7 +168,10 @@ router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_A
         const risk = await Risk.findByPk(parseInt(id as string));
         if (!risk) return res.status(404).json({ message: 'Risque non trouvé' });
 
-        await risk.update({ riskAgentId: parseInt(riskAgentId as string), statut: RiskStatus.IN_PROGRESS });
+        await risk.update(await resolveRiskPayload({
+            riskAgentId: parseInt(riskAgentId as string),
+            statut: RiskStatus.IN_PROGRESS
+        }));
 
         // Notifications en arrière-plan (non-bloquant)
         (async () => {
@@ -172,10 +182,12 @@ router.put('/:id/assign', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_A
                     await emailService.sendRiskAssignedEmail(
                         { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
                         { titre: risk.titre, id: risk.id }
-                    );
+                    ).catch((emailError) => {
+                        appLogger.error('Risks', 'Risk assignment email failed', emailError);
+                    });
 
                     // Création de notification in-app
-                    await Notification.create({
+                    await createNotification({
                         userId: agent.id,
                         type: NotificationType.RISK_ASSIGNED,
                         content: `Un nouveau risque vous a été assigné : ${risk.titre}`,
@@ -214,7 +226,7 @@ router.put('/:id', uploadSecurePiece, async (req: AuthRequest, res) => {
             updateData.pieceJustificative = saveToStorage(req.file, 'risks');
         }
 
-        await risk.update(updateData);
+        await risk.update(await resolveRiskPayload(updateData));
         res.json(risk);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la mise à jour du risque', error: error.message });
@@ -238,14 +250,20 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
             return res.status(403).json({ message: 'Permissions insuffisantes' });
         }
 
+        const requestedStatus = LookupResolutionService.getStaticValue('risk.statut', statut);
+        if (!requestedStatus) {
+            return res.status(400).json({ message: 'Le statut selectionne est invalide.' });
+        }
+
         // Restriction : Seuls le Manager/Admin peuvent clôturer
-        if (statut === RiskStatus.CLOSED && role !== UserRole.RISK_MANAGER && role !== UserRole.SUPER_ADMIN) {
+        if (requestedStatus.code === RiskStatus.CLOSED && role !== UserRole.RISK_MANAGER && role !== UserRole.SUPER_ADMIN) {
             return res.status(403).json({ message: 'Seul le manager peut clôturer un risque' });
         }
 
         const oldStatut = risk.statut;
-        const newStatut = statut as RiskStatus;
-        await risk.update({ statut: newStatut });
+        const newStatut = requestedStatus.code as RiskStatus;
+        const newStatutLabel = requestedStatus.label;
+        await risk.update(await resolveRiskPayload({ statut: newStatut }));
 
         // Respond immediately
         res.json(risk);
@@ -258,12 +276,12 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                     if (manager) {
                         emailService.sendRiskStatusUpdateEmail(
                             { mail: manager.mail, nom: manager.nom, prenom: manager.prenom },
-                            { titre: risk.titre, statut: newStatut }
+                            { titre: risk.titre, statut: newStatutLabel }
                         ).catch(e => appLogger.error('Risks', 'Risk status email failed', e));
-                        await Notification.create({
+                        await createNotification({
                             userId: manager.id,
                             type: NotificationType.STATUS_CHANGED,
-                            content: `Le statut du risque "${risk.titre}" a été mis à jour par l'agent : ${newStatut}`,
+                            content: `Le statut du risque "${risk.titre}" a été mis à jour par l'agent : ${newStatutLabel}`,
                             riskId: risk.id
                         });
                     }
@@ -274,7 +292,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                             { mail: agent.mail, nom: agent.nom, prenom: agent.prenom },
                             { titre: risk.titre }
                         ).catch(e => appLogger.error('Risks', 'Risk closed email failed', e));
-                        await Notification.create({
+                        await createNotification({
                             userId: agent.id,
                             type: NotificationType.STATUS_CHANGED,
                             content: `Le risque "${risk.titre}" a été clôturé par le manager.`,
@@ -284,7 +302,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
                 } else if (newStatut === RiskStatus.IN_PROGRESS && oldStatut === RiskStatus.TREATED && role === UserRole.RISK_MANAGER) {
                     const agent = await User.findByPk(risk.riskAgentId!);
                     if (agent) {
-                        await Notification.create({
+                        await createNotification({
                             userId: agent.id,
                             type: NotificationType.STATUS_CHANGED,
                             content: `Le risque "${risk.titre}" a été remis en cours de traitement par le manager car il n'a pas été traité correctement.`,
@@ -361,10 +379,10 @@ router.post('/:id/comments', uploadSecureComment, async (req: AuthRequest, res) 
         if (risk) {
             const recipientId = userId === risk.riskManagerId ? risk.riskAgentId : risk.riskManagerId;
             if (recipientId) {
-                await Notification.create({
+                await createNotification({
                     userId: recipientId,
                     type: NotificationType.COMMENT_ADDED,
-                    content: `Un nouveau commentaire a été ajouté au risque : ${risk.titre}`,
+                    content: `Un nouveau commentaire a ete ajoute au risque : ${risk.titre}`,
                     riskId: risk.id
                 });
             }
@@ -486,14 +504,17 @@ router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_
                 for (const recipient of recipients) {
                     await emailService.sendRiskStatusUpdateEmail(
                         recipient,
-                        { titre: risk.titre, statut: `⚠️ ALERTE — Risque ${risk.niveauRisque}: ${risk.statut}` }
+                        {
+                            titre: risk.titre,
+                            statut: `ALERTE - Risque ${(risk as any).niveauRisqueLabel || risk.niveauRisque}: ${(risk as any).statutLabel || risk.statut}`
+                        }
                     );
                     const user = await User.findOne({ where: { mail: recipient.mail } });
                     if (user) {
-                        await Notification.create({
+                        await createNotification({
                             userId: user.id,
                             type: NotificationType.STATUS_CHANGED,
-                            content: `⚠️ Alerte envoyée pour le risque "${risk.titre}"`,
+                            content: `Alerte envoyee pour le risque "${risk.titre}"`,
                             riskId: risk.id
                         });
                     }
@@ -554,7 +575,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         // E4: *Validé par :, E5: *Validé le :
         // G4: Clos par :, G5: Clos le :
 
-        sheet.cell("D3").value(risk.statut); // Statut
+        sheet.cell("D3").value((risk as any).statutLabel || risk.statut); // Statut
 
         if (risk.riskManager) {
             sheet.cell("D4").value(`${risk.riskManager.prenom} ${risk.riskManager.nom}`); // Créé par
@@ -606,7 +627,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         sheet.cell("F58").value(0); // Montant net (A-B-C)
 
         // --- SECTION 5: IMPACTS QUALITATIFS ---
-        if (risk.niveauRisque === 'Critique' || risk.niveauRisque === 'Élevé') {
+        if (risk.niveauRisque === RiskLevel.CRITICAL || risk.niveauRisque === RiskLevel.HIGH) {
             sheet.cell("G66").value("X"); // Risque d'image row index changed in analysis
             sheet.cell("G68").value("X"); // Interruption de processus
         }
@@ -632,9 +653,9 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         };
         const deptName = risk.departement?.nom || '';
         const ownerName = risk.responsableTraitement?.nom || deptName || 'A definir';
-        const level = risk.niveauRisque || '';
-        const impact = risk.impact || level || '';
-        const probability = risk.probabilite || '';
+        const level = (risk as any).niveauRisqueLabel || risk.niveauRisque || '';
+        const impact = (risk as any).impactLabel || level || '';
+        const probability = (risk as any).probabiliteLabel || '';
         const appContext = [risk.domaine, risk.macroProcessus, risk.processus].filter(Boolean).join(' / ');
         const detailedSummary = [
             risk.explication ? `Description initiale: ${risk.explication}` : '',
@@ -656,7 +677,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
         sheet.cell("B15").value(risk.processus || risk.macroProcessus || 'A definir');
         sheet.cell("B16").value(risk.titre || 'A definir');
         sheet.cell("B17").value(risk.incidentId ? `Incident source #${risk.incidentId}` : `Risque #${risk.id}`);
-        sheet.cell("B18").value(risk.impact ? `Evenement ${risk.impact.toLowerCase()} a investiguer` : 'Cause a analyser');
+        sheet.cell("B18").value(impact ? `Evenement ${impact.toLowerCase()} a investiguer` : 'Cause a analyser');
         sheet.cell("B19").value(risk.responsableTraitement?.nom || risk.departement?.nom || 'A definir');
         sheet.cell("B20").value(detailedSummary || 'Causes principales a confirmer');
         sheet.cell("B21").value(appContext || 'A definir');
@@ -713,11 +734,11 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
 
         // --- AUTOMATISATION : CRÉATION DE L'INCIDENT ---
         try {
-            await Incident.create({
+            await Incident.create(await LookupResolutionService.resolveEntityPayload('incident', {
                 titre: risk.titre || 'Incident Mappé (Sans Titre)',
                 description: risk.explication || 'Issu d\'une Fiche Incident',
                 dateSurvenance: risk.createdAt,
-                statut: 'Nouveau',
+                statut: IncidentStatus.NOUVEAU,
                 pieceJointe: null,
                 userId: req.user?.id || null, // Optional chaining in case auth is incomplete
                 departementId: risk.departementId,
@@ -727,7 +748,7 @@ router.get('/:id/export-incident', async (req: AuthRequest, res) => {
                 planActionTraitement: risk.planActionTraitement,
                 dateEcheance: risk.dateEcheance,
                 niveauRisque: risk.niveauRisque
-            });
+            }));
             appLogger.info('Risks', 'Incident auto-created from risk export', { riskId: risk.id });
         } catch (incidentError) {
             appLogger.error('Risks', 'Incident auto-create from risk export failed', incidentError);

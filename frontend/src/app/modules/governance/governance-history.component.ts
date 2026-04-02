@@ -55,11 +55,11 @@ export class GovernanceHistoryComponent implements OnInit {
   }
 
   get openRisks(): number {
-    return this.risks.filter(risk => risk.statut === RiskStatus.OPEN || risk.statut === RiskStatus.IN_PROGRESS).length;
+    return this.risks.filter(risk => this.isOpenRiskStatus(risk.statutCode || risk.statut)).length;
   }
 
   get criticalRisks(): number {
-    return this.risks.filter(risk => risk.niveauRisque === RiskLevel.CRITICAL).length;
+    return this.risks.filter(risk => this.normalizeRiskLevel(risk.niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL).length;
   }
 
   get activeMissions(): number {
@@ -71,7 +71,7 @@ export class GovernanceHistoryComponent implements OnInit {
   }
 
   getRiskBadgeClass(status: string): string {
-    switch (status) {
+    switch (this.normalizeRiskStatus(status)) {
       case RiskStatus.TREATED:
       case RiskStatus.CLOSED:
         return 'success';
@@ -93,5 +93,28 @@ export class GovernanceHistoryComponent implements OnInit {
       default:
         return 'warning';
     }
+  }
+
+  private isOpenRiskStatus(status?: string | null): boolean {
+    const normalizedStatus = this.normalizeRiskStatus(status);
+    return normalizedStatus === RiskStatus.OPEN || normalizedStatus === RiskStatus.IN_PROGRESS;
+  }
+
+  private normalizeRiskStatus(status?: string | null): string {
+    return this.normalize(status);
+  }
+
+  private normalizeRiskLevel(level?: string | null): string {
+    return this.normalize(level);
+  }
+
+  private normalize(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 }

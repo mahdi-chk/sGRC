@@ -1,63 +1,168 @@
 import { Component, OnInit } from '@angular/core';
-import { RiskService, Risk, RiskLevel, RiskStatus, RiskProbability, RiskImpact } from '../../../../core/services/risk.service';
 import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+import {
+    Risk,
+    RiskImpact,
+    RiskLevel,
+    RiskProbability,
+    RiskService,
+    RiskStatus,
+} from '../../../../core/services/risk.service';
+
 @Component({
     selector: 'app-risk-statistics',
     templateUrl: './risk-statistics.component.html',
-    styleUrls: ['../../../dashboard.component.scss']
+    styleUrls: ['../../../dashboard.component.scss'],
 })
 export class RiskStatisticsComponent implements OnInit {
     risks: Risk[] = [];
 
-    // Stats for Charts
-    levelStats: { [key: string]: number } = {};
-    statusStats: { [key: string]: number } = {};
-    domainStats: { [key: string]: number } = {};
-    deptStats: { [key: string]: number } = {};
+    levelStats: Record<string, number> = {};
+    statusStats: Record<string, number> = {};
+    domainStats: Record<string, number> = {};
+    deptStats: Record<string, number> = {};
 
-    totalRisks: number = 0;
-    criticalRate: number = 0;
-    treatmentRate: number = 0;
-    avgMaturity: number = 0;
+    totalRisks = 0;
+    criticalRate = 0;
+    treatmentRate = 0;
+    avgMaturity = 0;
     showExportMenu = false;
     matrixRowTotals: number[] = [0, 0, 0, 0];
     matrixColTotals: number[] = [0, 0, 0, 0];
-    criticalExposureCount: number = 0;
-    dominantProbabilityLabel: string = '-';
-    dominantImpactLabel: string = '-';
-    topZoneLabel: string = '-';
-    topZoneCount: number = 0;
-    topZoneShare: number = 0;
+    criticalExposureCount = 0;
+    dominantProbabilityLabel = '-';
+    dominantImpactLabel = '-';
+    topZoneLabel = '-';
+    topZoneCount = 0;
+    topZoneShare = 0;
     showMatrixDetailsModal = false;
     selectedMatrixRow = -1;
     selectedMatrixCol = -1;
     selectedMatrixRisks: Risk[] = [];
 
-    readonly probabilityLabels = ['Permanent', 'Probable', 'Possible', 'Rare'];
-    readonly impactLabels = ['Limité', 'Moyen', 'Significatif', 'Critique'];
+    readonly probabilityOrder = [
+        RiskProbability.PERMANENT,
+        RiskProbability.PROBABLE,
+        RiskProbability.POSSIBLE,
+        RiskProbability.RARE,
+    ];
 
-    // 4x4 Matrix for Heat Map (Rows = Probabilite, Cols = Impact)
-    // Probabilités: Permanent (0), Probable (1), Possible (2), Rare (3)
-    // Impacts: Limité (0), Moyen (1), Significatif (2), Critique (3)
+    readonly impactOrder = [
+        RiskImpact.LIMITED,
+        RiskImpact.MEDIUM,
+        RiskImpact.SIGNIFICANT,
+        RiskImpact.CRITICAL,
+    ];
+
+    readonly levelOrder = [
+        RiskLevel.LOW,
+        RiskLevel.LIMITED,
+        RiskLevel.MEDIUM,
+        RiskLevel.HIGH,
+        RiskLevel.CRITICAL,
+    ];
+
+    readonly statusOrder = [
+        RiskStatus.OPEN,
+        RiskStatus.IN_PROGRESS,
+        RiskStatus.TREATED,
+        RiskStatus.CLOSED,
+    ];
+
+    readonly probabilityLabels: Record<string, string> = {
+        [RiskProbability.PERMANENT]: 'Permanent',
+        [RiskProbability.PROBABLE]: 'Probable',
+        [RiskProbability.POSSIBLE]: 'Possible',
+        [RiskProbability.RARE]: 'Rare',
+    };
+
+    readonly impactLabels: Record<string, string> = {
+        [RiskImpact.LIMITED]: 'Limité',
+        [RiskImpact.MEDIUM]: 'Moyen',
+        [RiskImpact.SIGNIFICANT]: 'Significatif',
+        [RiskImpact.CRITICAL]: 'Critique',
+    };
+
+    readonly levelLabels: Record<string, string> = {
+        [RiskLevel.LOW]: 'Faible',
+        [RiskLevel.LIMITED]: 'Limité',
+        [RiskLevel.MEDIUM]: 'Moyen',
+        [RiskLevel.HIGH]: 'Élevé',
+        [RiskLevel.CRITICAL]: 'Critique',
+    };
+
+    readonly statusLabels: Record<string, string> = {
+        [RiskStatus.OPEN]: 'Ouvert',
+        [RiskStatus.IN_PROGRESS]: 'En cours',
+        [RiskStatus.TREATED]: 'Traité',
+        [RiskStatus.CLOSED]: 'Clôturé',
+    };
+
+    readonly probabilityAliases: Record<string, RiskProbability> = {
+        permanent: RiskProbability.PERMANENT,
+        probable: RiskProbability.PROBABLE,
+        possible: RiskProbability.POSSIBLE,
+        rare: RiskProbability.RARE,
+    };
+
+    readonly impactAliases: Record<string, RiskImpact> = {
+        limited: RiskImpact.LIMITED,
+        limite: RiskImpact.LIMITED,
+        medium: RiskImpact.MEDIUM,
+        moyen: RiskImpact.MEDIUM,
+        significant: RiskImpact.SIGNIFICANT,
+        significatif: RiskImpact.SIGNIFICANT,
+        critical: RiskImpact.CRITICAL,
+        critique: RiskImpact.CRITICAL,
+    };
+
+    readonly levelAliases: Record<string, RiskLevel> = {
+        low: RiskLevel.LOW,
+        faible: RiskLevel.LOW,
+        limited: RiskLevel.LIMITED,
+        limite: RiskLevel.LIMITED,
+        medium: RiskLevel.MEDIUM,
+        moyen: RiskLevel.MEDIUM,
+        high: RiskLevel.HIGH,
+        eleve: RiskLevel.HIGH,
+        critical: RiskLevel.CRITICAL,
+        critique: RiskLevel.CRITICAL,
+    };
+
+    readonly statusAliases: Record<string, RiskStatus> = {
+        open: RiskStatus.OPEN,
+        ouvert: RiskStatus.OPEN,
+        in_progress: RiskStatus.IN_PROGRESS,
+        encours: RiskStatus.IN_PROGRESS,
+        en_cours: RiskStatus.IN_PROGRESS,
+        treated: RiskStatus.TREATED,
+        traite: RiskStatus.TREATED,
+        closed: RiskStatus.CLOSED,
+        cloture: RiskStatus.CLOSED,
+    };
+
     riskMatrix: number[][] = [
         [0, 0, 0, 0],
         [0, 0, 0, 0],
         [0, 0, 0, 0],
-        [0, 0, 0, 0]
+        [0, 0, 0, 0],
     ];
 
-    constructor(private riskService: RiskService, private router: Router) { }
+    RiskStatus = RiskStatus;
+    RiskLevel = RiskLevel;
+
+    constructor(private riskService: RiskService, private router: Router) {}
 
     ngOnInit() {
         this.loadData();
     }
 
     loadData() {
-        this.riskService.getRisks().subscribe(risks => {
+        this.riskService.getRisks().subscribe((risks) => {
             this.risks = risks;
             this.totalRisks = risks.length;
             this.calculateStats();
@@ -65,28 +170,21 @@ export class RiskStatisticsComponent implements OnInit {
     }
 
     calculateStats() {
-        this.levelStats = {
-            'Faible': 0,
-            'Moyen': 0,
-            'Élevé': 0,
-            'Critique': 0
-        };
-
-        this.statusStats = {
-            'Ouvert': 0,
-            'En cours': 0,
-            'Traité': 0,
-            'Clôturé': 0
-        };
-
+        this.levelStats = this.levelOrder.reduce<Record<string, number>>((accumulator, code) => {
+            accumulator[code] = 0;
+            return accumulator;
+        }, {});
+        this.statusStats = this.statusOrder.reduce<Record<string, number>>((accumulator, code) => {
+            accumulator[code] = 0;
+            return accumulator;
+        }, {});
         this.domainStats = {};
         this.deptStats = {};
-
         this.riskMatrix = [
             [0, 0, 0, 0],
             [0, 0, 0, 0],
             [0, 0, 0, 0],
-            [0, 0, 0, 0]
+            [0, 0, 0, 0],
         ];
         this.matrixRowTotals = [0, 0, 0, 0];
         this.matrixColTotals = [0, 0, 0, 0];
@@ -97,33 +195,25 @@ export class RiskStatisticsComponent implements OnInit {
         this.topZoneCount = 0;
         this.topZoneShare = 0;
 
-        this.risks.forEach(r => {
-            if (this.levelStats[r.niveauRisque] !== undefined) this.levelStats[r.niveauRisque]++;
-            if (this.statusStats[r.statut] !== undefined) this.statusStats[r.statut]++;
+        this.risks.forEach((risk) => {
+            const level = this.resolveRiskLevel(risk.niveauRisqueCode || risk.niveauRisque);
+            const status = this.resolveRiskStatus(risk.statutCode || risk.statut);
+            const row = this.getMatrixRowIndex(risk);
+            const col = this.getMatrixColIndex(risk);
 
-            const domain = r.domaine || 'Général';
+            if (level) {
+                this.levelStats[level] = (this.levelStats[level] || 0) + 1;
+            }
+
+            if (status) {
+                this.statusStats[status] = (this.statusStats[status] || 0) + 1;
+            }
+
+            const domain = risk.domaine?.trim() || 'Général';
             this.domainStats[domain] = (this.domainStats[domain] || 0) + 1;
 
-            const dept = r.departement?.nom || 'Non spécifié';
+            const dept = risk.departement?.nom?.trim() || 'Non spécifié';
             this.deptStats[dept] = (this.deptStats[dept] || 0) + 1;
-
-            // Populate Matrix
-            let row = -1;
-            let col = -1;
-            
-            switch (r.probabilite) {
-                case RiskProbability.PERMANENT: row = 0; break;
-                case RiskProbability.PROBABLE: row = 1; break;
-                case RiskProbability.POSSIBLE: row = 2; break;
-                case RiskProbability.RARE: row = 3; break;
-            }
-
-            switch (r.impact) {
-                case RiskImpact.LIMITÉ: col = 0; break;
-                case RiskImpact.MOYEN: col = 1; break;
-                case RiskImpact.SIGNIFICATIF: col = 2; break;
-                case RiskImpact.CRITIQUE: col = 3; break;
-            }
 
             if (row !== -1 && col !== -1) {
                 this.riskMatrix[row][col]++;
@@ -138,10 +228,10 @@ export class RiskStatisticsComponent implements OnInit {
 
         this.computeMatrixHighlights();
 
-        const criticalCount = this.levelStats['Critique'] || 0;
+        const criticalCount = this.levelStats[RiskLevel.CRITICAL] || 0;
         this.criticalRate = this.totalRisks > 0 ? Math.round((criticalCount / this.totalRisks) * 100) : 0;
 
-        const treatedCount = (this.statusStats['Traité'] || 0) + (this.statusStats['Clôturé'] || 0);
+        const treatedCount = (this.statusStats[RiskStatus.TREATED] || 0) + (this.statusStats[RiskStatus.CLOSED] || 0);
         this.treatmentRate = this.totalRisks > 0 ? Math.round((treatedCount / this.totalRisks) * 100) : 0;
 
         this.avgMaturity = RiskService.calculateMaturityIndex(this.risks);
@@ -152,19 +242,22 @@ export class RiskStatisticsComponent implements OnInit {
         const topColIndex = this.getMaxIndex(this.matrixColTotals);
         const topCell = this.getTopMatrixCell();
 
-        this.dominantProbabilityLabel = topRowIndex === -1 ? '-' : this.probabilityLabels[topRowIndex];
-        this.dominantImpactLabel = topColIndex === -1 ? '-' : this.impactLabels[topColIndex];
+        this.dominantProbabilityLabel = topRowIndex === -1 ? '-' : this.getProbabilityLabel(this.probabilityOrder[topRowIndex]);
+        this.dominantImpactLabel = topColIndex === -1 ? '-' : this.getImpactLabel(this.impactOrder[topColIndex]);
 
         if (topCell) {
-            this.topZoneLabel = `${this.probabilityLabels[topCell.row]} x ${this.impactLabels[topCell.col]}`;
+            this.topZoneLabel = `${this.getProbabilityLabel(this.probabilityOrder[topCell.row])} x ${this.getImpactLabel(this.impactOrder[topCell.col])}`;
             this.topZoneCount = topCell.count;
             this.topZoneShare = this.getMatrixShare(topCell.count);
         }
     }
 
     getMaxIndex(values: number[]): number {
-        if (!values.length || values.every(value => value === 0)) return -1;
-        return values.reduce((maxIndex, value, index, array) => value > array[maxIndex] ? index : maxIndex, 0);
+        if (!values.length || values.every((value) => value === 0)) {
+            return -1;
+        }
+
+        return values.reduce((maxIndex, value, index, array) => (value > array[maxIndex] ? index : maxIndex), 0);
     }
 
     getTopMatrixCell(): { row: number; col: number; count: number } | null {
@@ -182,11 +275,7 @@ export class RiskStatisticsComponent implements OnInit {
             });
         });
 
-        if (bestCount > 0) {
-            return { row: bestRow, col: bestCol, count: bestCount };
-        }
-
-        return null;
+        return bestCount > 0 ? { row: bestRow, col: bestCol, count: bestCount } : null;
     }
 
     getMatrixShare(count: number): number {
@@ -196,8 +285,8 @@ export class RiskStatisticsComponent implements OnInit {
     openMatrixCellDetails(row: number, col: number) {
         this.selectedMatrixRow = row;
         this.selectedMatrixCol = col;
-        this.selectedMatrixRisks = this.risks.filter(risk =>
-            this.getMatrixRowIndex(risk) === row && this.getMatrixColIndex(risk) === col
+        this.selectedMatrixRisks = this.risks.filter(
+            (risk) => this.getMatrixRowIndex(risk) === row && this.getMatrixColIndex(risk) === col,
         );
         this.showMatrixDetailsModal = true;
     }
@@ -214,40 +303,58 @@ export class RiskStatisticsComponent implements OnInit {
             return 'Détails de la zone';
         }
 
-        return `${this.probabilityLabels[this.selectedMatrixRow]} x ${this.impactLabels[this.selectedMatrixCol]}`;
+        return `${this.getProbabilityLabel(this.probabilityOrder[this.selectedMatrixRow])} x ${this.getImpactLabel(this.impactOrder[this.selectedMatrixCol])}`;
     }
 
     getMatrixRowIndex(risk: Risk): number {
-        switch (risk.probabilite) {
-            case RiskProbability.PERMANENT: return 0;
-            case RiskProbability.PROBABLE: return 1;
-            case RiskProbability.POSSIBLE: return 2;
-            case RiskProbability.RARE: return 3;
-            default: return -1;
-        }
+        const probability = this.resolveProbability(risk.probabilite);
+        return probability ? this.probabilityOrder.indexOf(probability) : -1;
     }
 
     getMatrixColIndex(risk: Risk): number {
-        switch (risk.impact) {
-            case 'Limit\u00E9': return 0;
-            case RiskImpact.MOYEN: return 1;
-            case RiskImpact.SIGNIFICATIF: return 2;
-            case RiskImpact.CRITIQUE: return 3;
-            default: return -1;
-        }
+        const impact = this.resolveImpact(risk.impact);
+        return impact ? this.impactOrder.indexOf(impact) : -1;
     }
 
     getRiskLevelClass(level?: string | null): string {
-        switch (level) {
-            case 'Critique': return 'critical';
-            case '\u00C9lev\u00E9': return 'high';
-            case 'Moyen': return 'medium';
-            case 'Faible': return 'low';
-            default: return 'default';
-        }
+        return this.resolveRiskLevel(level) || 'default';
     }
 
-    // Helper for CSS Pie Charts
+    getStatusClass(status?: string | null): string {
+        return this.resolveRiskStatus(status) || 'default';
+    }
+
+    getRiskLevelLabel(level?: string | null): string {
+        const code = this.resolveRiskLevel(level);
+        return code ? this.levelLabels[code] : 'Non défini';
+    }
+
+    getStatusLabel(status?: string | null): string {
+        const code = this.resolveRiskStatus(status);
+        return code ? this.statusLabels[code] : 'Non défini';
+    }
+
+    getProbabilityLabel(probability?: string | null): string {
+        const code = this.resolveProbability(probability);
+        return code ? this.probabilityLabels[code] : 'Non défini';
+    }
+
+    getImpactLabel(impact?: string | null): string {
+        const code = this.resolveImpact(impact);
+        return code ? this.impactLabels[code] : 'Non défini';
+    }
+
+    getLevelCount(level: RiskLevel): number {
+        return this.levelStats[level] || 0;
+    }
+
+    getOrderedStatusEntries(): Array<{ key: RiskStatus; value: number }> {
+        return this.statusOrder.map((code) => ({
+            key: code,
+            value: this.statusStats[code] || 0,
+        }));
+    }
+
     getRotation(value: number, total: number): number {
         return total > 0 ? (value / total) * 360 : 0;
     }
@@ -258,29 +365,30 @@ export class RiskStatisticsComponent implements OnInit {
 
     exportToXLSX() {
         this.showExportMenu = false;
+
         const rows = [
             ['Catégorie', 'Métrique', 'Valeur'],
-            ['Vue d\'ensemble', 'Total Risques', this.totalRisks],
-            ['Vue d\'ensemble', 'Taux de Traitement', this.treatmentRate + '%'],
-            ['Vue d\'ensemble', 'Niveau de Maturité', this.avgMaturity + '/5'],
-            ['Vue d\'ensemble', 'Taux de Risques Critiques', this.criticalRate + '%'],
+            ['Vue d’ensemble', 'Total des risques', this.totalRisks],
+            ['Vue d’ensemble', 'Taux de traitement', `${this.treatmentRate}%`],
+            ['Vue d’ensemble', 'Indice de maturité', `${this.avgMaturity}/5`],
+            ['Vue d’ensemble', 'Taux de risques critiques', `${this.criticalRate}%`],
             [''],
-            ['Distribution par Sévérité', '', ''],
-            ...Object.entries(this.levelStats).map(([k, v]) => ['Sévérité', k, v]),
+            ['Distribution par sévérité', '', ''],
+            ...this.levelOrder.map((code) => ['Sévérité', this.levelLabels[code], this.levelStats[code] || 0]),
             [''],
-            ['État d\'Avancement', '', ''],
-            ...Object.entries(this.statusStats).map(([k, v]) => ['Statut', k, v]),
+            ['État d’avancement', '', ''],
+            ...this.statusOrder.map((code) => ['Statut', this.statusLabels[code], this.statusStats[code] || 0]),
             [''],
-            ['Distribution par Domaine', '', ''],
-            ...Object.entries(this.domainStats).map(([k, v]) => ['Domaine', k, v]),
+            ['Distribution par domaine', '', ''],
+            ...Object.entries(this.domainStats).map(([key, value]) => ['Domaine', key, value]),
             [''],
-            ['Distribution par Département', '', ''],
-            ...Object.entries(this.deptStats).map(([k, v]) => ['Département', k, v])
+            ['Distribution par département', '', ''],
+            ...Object.entries(this.deptStats).map(([key, value]) => ['Département', key, value]),
         ];
 
         const ws: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(rows);
         const wb: XLSX.WorkBook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Statistiques Risques');
+        XLSX.utils.book_append_sheet(wb, ws, 'Statistiques risques');
         XLSX.writeFile(wb, `statistiques_risques_${new Date().toISOString().split('T')[0]}.xlsx`);
     }
 
@@ -289,16 +397,16 @@ export class RiskStatisticsComponent implements OnInit {
         const doc = new jsPDF('p', 'mm', 'a4');
 
         doc.setFontSize(18);
-        doc.text('Statistiques des Risques', 14, 22);
+        doc.text('Statistiques des risques', 14, 22);
         doc.setFontSize(11);
         doc.setTextColor(100);
-        doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
+        doc.text(`Généré le : ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
 
         const overviewData = [
-            ['Risques Totaux', this.totalRisks.toString()],
-            ['Taux de Traitement', this.treatmentRate + '%'],
-            ['Indice de Maturité', this.avgMaturity + '/5'],
-            ['Taux Critiques', this.criticalRate + '%']
+            ['Risques totaux', this.totalRisks.toString()],
+            ['Taux de traitement', `${this.treatmentRate}%`],
+            ['Indice de maturité', `${this.avgMaturity}/5`],
+            ['Taux critiques', `${this.criticalRate}%`],
         ];
 
         autoTable(doc, {
@@ -306,27 +414,38 @@ export class RiskStatisticsComponent implements OnInit {
             head: [['Métrique', 'Valeur']],
             body: overviewData,
             theme: 'grid',
-            headStyles: { fillColor: [0, 74, 153] }
+            headStyles: { fillColor: [0, 74, 153] },
         });
 
-        // Distribution sections
         let finalY = (doc as any).lastAutoTable.finalY + 15;
 
         const sections = [
-            { title: 'Distribution par Sévérité', data: this.levelStats, head: ['Sévérité', 'Nombre'] },
-            { title: 'État d\'Avancement', data: this.statusStats, head: ['Statut', 'Nombre'] }
+            {
+                title: 'Distribution par sévérité',
+                data: this.levelOrder.map((code) => [this.levelLabels[code], (this.levelStats[code] || 0).toString()]),
+                head: ['Sévérité', 'Nombre'],
+            },
+            {
+                title: 'État d’avancement',
+                data: this.statusOrder.map((code) => [this.statusLabels[code], (this.statusStats[code] || 0).toString()]),
+                head: ['Statut', 'Nombre'],
+            },
         ];
 
-        sections.forEach(section => {
-            if (finalY > 240) { doc.addPage(); finalY = 20; }
+        sections.forEach((section) => {
+            if (finalY > 240) {
+                doc.addPage();
+                finalY = 20;
+            }
+
             doc.setFontSize(14);
             doc.text(section.title, 14, finalY);
             autoTable(doc, {
                 startY: finalY + 5,
                 head: [section.head],
-                body: Object.entries(section.data).map(([k, v]) => [k, v.toString()]),
+                body: section.data,
                 theme: 'striped',
-                headStyles: { fillColor: [0, 74, 153] }
+                headStyles: { fillColor: [0, 74, 153] },
             });
             finalY = (doc as any).lastAutoTable.finalY + 15;
         });
@@ -336,5 +455,35 @@ export class RiskStatisticsComponent implements OnInit {
 
     goBack() {
         this.router.navigate(['/dashboard']);
+    }
+
+    private normalize(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
+    }
+
+    private resolveRiskLevel(level?: string | null): RiskLevel | null {
+        const normalized = this.normalize(level);
+        return this.levelAliases[normalized] || null;
+    }
+
+    private resolveRiskStatus(status?: string | null): RiskStatus | null {
+        const normalized = this.normalize(status);
+        return this.statusAliases[normalized] || null;
+    }
+
+    private resolveProbability(probability?: string | null): RiskProbability | null {
+        const normalized = this.normalize(probability);
+        return this.probabilityAliases[normalized] || null;
+    }
+
+    private resolveImpact(impact?: string | null): RiskImpact | null {
+        const normalized = this.normalize(impact);
+        return this.impactAliases[normalized] || null;
     }
 }

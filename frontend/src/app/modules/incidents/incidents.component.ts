@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IncidentService, Incident, IncidentImportDraft, IncidentStatus } from '../../core/services/incident.service';
+import { IncidentService, Incident, IncidentImportDraft, IncidentStatus, IncidentNiveauRisque } from '../../core/services/incident.service';
+
 import { Department, DepartmentService } from '../../core/services/department.service';
 import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -17,7 +18,15 @@ export class IncidentsComponent implements OnInit {
     incidents: Incident[] = [];
     departments: Department[] = [];
     risks: Risk[] = [];
+    filteredIncidents: Incident[] = [];
     environment = environment;
+
+
+    // Filter properties
+    filterSearch = '';
+    filterStatus = '';
+    filterLevel = '';
+
 
     // Modals state
     showCreateModal = false;
@@ -35,6 +44,27 @@ export class IncidentsComponent implements OnInit {
 
     // Selected state
     selectedIncident: Incident | null = null;
+
+    // Expose Enums to templates
+    IncidentStatus = IncidentStatus;
+    IncidentNiveauRisque = IncidentNiveauRisque;
+
+    // Label mappings for UI 
+    statusLabelMap: Record<string, string> = {
+        [IncidentStatus.NOUVEAU]: 'Nouveau',
+        [IncidentStatus.EN_COURS]: 'En cours',
+        [IncidentStatus.TRAITE]: 'Traité',
+        [IncidentStatus.CLOS]: 'Clos'
+    };
+
+    levelLabelMap: Record<string, string> = {
+        [IncidentNiveauRisque.LOW]: 'Faible',
+        [IncidentNiveauRisque.LIMITED]: 'Limité',
+        [IncidentNiveauRisque.MEDIUM]: 'Moyen',
+        [IncidentNiveauRisque.SIGNIFICANT]: 'Significatif',
+        [IncidentNiveauRisque.HIGH]: 'Élevé',
+        [IncidentNiveauRisque.CRITICAL]: 'Critique'
+    };
 
     constructor(
         private fb: FormBuilder,
@@ -77,10 +107,44 @@ export class IncidentsComponent implements OnInit {
 
     loadIncidents() {
         this.incidentService.getIncidents().subscribe({
-            next: (data) => this.incidents = data,
+            next: (data) => {
+                this.incidents = data;
+                this.applyFilters();
+            },
             error: (err) => console.error('Erreur chargement incidents:', err)
         });
     }
+
+    applyFilters() {
+        this.filteredIncidents = this.incidents.filter(incident => {
+            const matchSearch = !this.filterSearch || 
+                incident.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
+                incident.description.toLowerCase().includes(this.filterSearch.toLowerCase());
+            
+            const incidentStatut = ((incident as any).statutCode || incident.statut || '').toLowerCase();
+            const filterStatut = (this.filterStatus || '').toLowerCase();
+            const matchStatus = !filterStatut || incidentStatut === filterStatut;
+            
+            const incidentLevel = ((incident as any).niveauRisqueCode || incident.niveauRisque || '').toLowerCase();
+            const filterLevel = (this.filterLevel || '').toLowerCase();
+            const matchLevel = !filterLevel || incidentLevel === filterLevel;
+
+            return matchSearch && matchStatus && matchLevel;
+        });
+    }
+
+
+    onFilterChange() {
+        this.applyFilters();
+    }
+
+    clearFilters() {
+        this.filterSearch = '';
+        this.filterStatus = '';
+        this.filterLevel = '';
+        this.applyFilters();
+    }
+
 
     loadDepartments() {
         this.departmentService.getAll().subscribe(d => this.departments = d);
@@ -180,14 +244,15 @@ export class IncidentsComponent implements OnInit {
     private normalizeLevel(level?: string | null): string {
         if (!level) return '';
         const normalized = level.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        if (normalized.includes('critique')) return 'Critique';
-        if (normalized.includes('significatif')) return 'Significatif';
-        if (normalized.includes('eleve')) return 'Élevé';
-        if (normalized.includes('moyen')) return 'Moyen';
-        if (normalized.includes('limit')) return 'Limité';
-        if (normalized.includes('faible')) return 'Faible';
+        if (normalized.includes('critique')) return IncidentNiveauRisque.CRITICAL;
+        if (normalized.includes('significatif')) return IncidentNiveauRisque.SIGNIFICANT;
+        if (normalized.includes('eleve')) return IncidentNiveauRisque.HIGH;
+        if (normalized.includes('moyen')) return IncidentNiveauRisque.MEDIUM;
+        if (normalized.includes('limit')) return IncidentNiveauRisque.LIMITED;
+        if (normalized.includes('faible')) return IncidentNiveauRisque.LOW;
         return level;
     }
+
 
     submitIncident() {
         if (this.isReadOnlyRole || this.incidentForm.invalid) return;
@@ -266,24 +331,26 @@ export class IncidentsComponent implements OnInit {
         });
     }
 
-    getStatusClass(status: string): string {
+    getStatusClass(incident: any): string {
+        const status = incident?.statutCode || incident?.statut;
         switch (status) {
-            case 'Nouveau': return 'bg-blue-100 text-blue-800';
-            case 'En cours': return 'bg-yellow-100 text-yellow-800';
-            case 'Traité': return 'bg-green-100 text-green-800';
-            case 'Clos': return 'bg-gray-100 text-gray-800';
+            case IncidentStatus.NOUVEAU: return 'bg-blue-100 text-blue-800';
+            case IncidentStatus.EN_COURS: return 'bg-yellow-100 text-yellow-800';
+            case IncidentStatus.TRAITE: return 'bg-green-100 text-green-800';
+            case IncidentStatus.CLOS: return 'bg-gray-100 text-gray-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     }
 
-    getNiveauClass(niveau?: string): string {
+    getNiveauClass(incident: any): string {
+        const niveau = incident?.niveauRisqueCode || incident?.niveauRisque;
         switch (niveau) {
-            case 'Critique': return 'badge-danger';
-            case 'Significatif':
-            case 'Élevé': return 'badge-warning';
-            case 'Modéré':
-            case 'Moyen': return 'badge-info';
-            case 'Faible': return 'badge-success';
+            case IncidentNiveauRisque.CRITICAL: return 'badge-danger';
+            case IncidentNiveauRisque.SIGNIFICANT:
+            case IncidentNiveauRisque.HIGH: return 'badge-warning';
+            case IncidentNiveauRisque.MEDIUM: return 'badge-info';
+            case IncidentNiveauRisque.LOW:
+            case IncidentNiveauRisque.LIMITED: return 'badge-success';
             default: return 'bg-gray-100 text-gray-800';
         }
     }

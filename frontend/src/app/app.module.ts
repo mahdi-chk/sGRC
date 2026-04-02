@@ -60,6 +60,8 @@ import { GovernanceWorkflowsComponent } from './modules/governance/governance-wo
 import { GovernanceMaturityComponent } from './modules/governance/governance-maturity.component';
 import { GovernanceAdoptionComponent } from './modules/governance/governance-adoption.component';
 import { GovernanceModule } from './modules/governance/governance.module';
+import { ControlsModule } from './modules/controls/controls.module';
+import { ControlsComponent } from './modules/controls/controls.component';
 
 import { UserRole } from './core/models/user-role.enum';
 
@@ -96,6 +98,7 @@ const routes: Routes = [
       { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
+      { path: 'controls', component: ControlsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
       { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
       { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
@@ -189,6 +192,7 @@ const routes: Routes = [
     AuditingModule,
     IncidentsModule,
     GovernanceModule,
+    ControlsModule,
     RouterModule.forRoot(routes)
   ],
   providers: [

@@ -40,85 +40,7 @@
 }
 
 // Filters Section
-.filters-section {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    align-items: end;
-}
 
-.filter-group {
-    display: flex;
-    flex-direction: column;
-
-    label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 6px;
-        color: #333;
-    }
-
-    input,
-    select {
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        transition: all 0.2s;
-
-        &:focus {
-            border-color: #004a99;
-            box-shadow: 0 0 0 3px rgba(0, 74, 153, 0.1);
-            outline: none;
-        }
-    }
-
-    input {
-        width: 100%;
-    }
-
-    select {
-        width: 100%;
-    }
-}
-
-.filter-input {
-    width: 100%;
-}
-
-.filter-select {
-    width: 100%;
-}
-
-.filter-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-clear {
-    padding: 10px 16px;
-    background: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: #333;
-    transition: all 0.2s;
-    white-space: nowrap;
-
-    &:hover {
-        background: #e0e0e0;
-    }
-
-    i {
-        margin-right: 6px;
-    }
-}
 
 // Results Info
 .results-info {
@@ -227,36 +149,54 @@
     border: 1px solid #ffecb3;
 }
 
-.level-Élevé {
+.level-low {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.level-limited {
+    background: #f1f8e9;
+    color: #558b2f;
+    border: 1px solid #dcedc8;
+}
+
+.level-medium {
+    background: #fff8e1;
+    color: #f9a825;
+    border: 1px solid #ffecb3;
+}
+
+.level-high {
     background: #fff3e0;
     color: #fb8c00;
     border: 1px solid #ffe0b2;
 }
 
-.level-Critique {
+.level-critical {
     background: #ffebee;
     color: #d32f2f;
     border: 1px solid #ffcdd2;
 }
 
-.status-Ouvert {
+.status-open {
     color: #64748b;
     background: rgba(100, 116, 139, 0.1);
 }
 
-.status-En\ cours {
+.status-in_progress {
     background: #e3f2fd;
     color: #1976d2;
     border: 1px solid #bbdefb;
 }
 
-.status-Traité {
+.status-treated {
     background: #f3e5f5;
     color: #7b1fa2;
     border: 1px solid #e1bee7;
 }
 
-.status-Clôturé {
+.status-closed {
     background: #eeeeee;
     color: #616161;
     border: 1px solid #e0e0e0;

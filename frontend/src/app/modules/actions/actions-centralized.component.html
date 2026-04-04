@@ -1,0 +1,182 @@
+<div class="actions-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-list-check"></i> Gestion Centralisee</h1>
+                <p>Referentiel consolide des actions issues des audits, incidents et risques.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="actions-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="actions-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Actions visibles</span>
+            <h3>{{ registry.length }}</h3>
+            <p>Portefeuille consolide sur la vue centrale.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Prioritaires</span>
+            <h3>{{ criticalCount }}</h3>
+            <p>Actions critiques a arbitrer en priorite.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Modules sources</span>
+            <h3>{{ linkedModulesCount }}</h3>
+            <p>Origines actuellement alimentees dans le dispositif.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Bloquees</span>
+            <h3>{{ data.summary.blockedActions }}</h3>
+            <p>Actions en attente de levee de dependances.</p>
+        </div>
+    </div>
+
+    <div class="table-card" *ngIf="registry.length > 0; else emptyState">
+        <div class="card-head">
+            <h2>Registre des actions</h2>
+            <p>Chaque ligne conserve la source, les dependances, l avancement et les actions de pilotage proposees.</p>
+        </div>
+
+        <div class="feedback-banner" *ngIf="feedbackMessage" [ngClass]="feedbackTone === 'error' ? 'tone-error' : 'tone-success'">
+            {{ feedbackMessage }}
+        </div>
+
+        <div class="filter-bar">
+            <label class="filter-field">
+                <span>Recherche</span>
+                <input type="text" [ngModel]="filters.q" (ngModelChange)="onFilterChange('q', $event)" placeholder="Reference, titre, owner..." />
+            </label>
+            <label class="filter-field">
+                <span>Statut</span>
+                <select [ngModel]="filters.status" (ngModelChange)="onFilterChange('status', $event)">
+                    <option value="">Tous</option>
+                    <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+                </select>
+            </label>
+            <label class="filter-field">
+                <span>Source</span>
+                <select [ngModel]="filters.source" (ngModelChange)="onFilterChange('source', $event)">
+                    <option value="">Toutes</option>
+                    <option *ngFor="let source of sourceOptions" [value]="source">{{ source }}</option>
+                </select>
+            </label>
+            <label class="filter-field">
+                <span>Priorite</span>
+                <select [ngModel]="filters.priority" (ngModelChange)="onFilterChange('priority', $event)">
+                    <option value="">Toutes</option>
+                    <option *ngFor="let priority of priorityOptions" [value]="priority">{{ priority }}</option>
+                </select>
+            </label>
+            <label class="filter-field">
+                <span>Affectation</span>
+                <select [ngModel]="filters.owner" (ngModelChange)="onFilterChange('owner', $event)">
+                    <option *ngFor="let option of ownerOptions" [value]="option.value">{{ option.label }}</option>
+                </select>
+            </label>
+            <button type="button" class="btn-refresh btn-clear" (click)="clearFilters()">Reinitialiser</button>
+        </div>
+
+        <p class="results-caption">{{ filteredRegistry.length }} action(s) affichee(s) sur {{ registry.length }}.</p>
+
+        <div class="assignment-panel" *ngIf="assignmentItem as selected">
+            <div class="assignment-head">
+                <div>
+                    <span class="eyebrow">Affectation</span>
+                    <h3>{{ selected.reference }}</h3>
+                    <p>{{ selected.title }} | {{ selected.sourceModule }}</p>
+                </div>
+                <button type="button" class="btn-refresh btn-clear" (click)="closeAssignmentPanel()">Fermer</button>
+            </div>
+
+            <div class="assignment-body" *ngIf="!isLoadingAssignableUsers; else assignmentLoading">
+                <label class="filter-field">
+                    <span>Responsable a designer</span>
+                    <select [(ngModel)]="selectedAssigneeId">
+                        <option value="">Selectionner un responsable</option>
+                        <option *ngFor="let user of assignableUsers" [value]="user.id">{{ buildUserLabel(user) }}</option>
+                    </select>
+                </label>
+
+                <div class="assignment-actions">
+                    <button type="button" class="btn-refresh" (click)="submitAssignment()" [disabled]="!canSubmitAssignment">
+                        {{ isSubmittingAssignment ? 'Affectation en cours...' : 'Confirmer l affectation' }}
+                    </button>
+                    <button type="button" class="btn-refresh btn-clear" (click)="closeAssignmentPanel()" [disabled]="isSubmittingAssignment">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+
+            <ng-template #assignmentLoading>
+                <p class="status-line">Chargement des responsables disponibles...</p>
+            </ng-template>
+        </div>
+
+        <table class="actions-table">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Source</th>
+                    <th>Responsable</th>
+                    <th>Avancement</th>
+                    <th>Echeance</th>
+                    <th>Statut</th>
+                    <th>Actions a faire</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let item of filteredRegistry">
+                    <td>
+                        <strong>{{ item.reference }}</strong>
+                        <small>{{ item.title }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ item.sourceModule }}</strong>
+                        <small>{{ item.sourceReference }} | {{ item.department }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ item.owner }}</strong>
+                        <small>Mise a jour: {{ formatDate(item.lastUpdate) }}</small>
+                    </td>
+                    <td>
+                        <div class="progress-line">
+                            <span>{{ item.progress }}%</span>
+                            <div class="progress-track">
+                                <div class="progress-fill" [style.width.%]="item.progress"></div>
+                            </div>
+                        </div>
+                        <small>{{ item.dependencies.join(' | ') }}</small>
+                    </td>
+                    <td>{{ formatDate(item.dueDate) }}</td>
+                    <td><span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span></td>
+                    <td>
+                        <div class="mini-actions">
+                            <button type="button" class="action-btn" *ngFor="let action of item.displayActions" (click)="onActionClick(action, item)" [disabled]="isActionBusy(action, item)">
+                                {{ getActionLabel(action, item) }}
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">Aucune action centralisee disponible.</div>
+    </ng-template>
+</div>

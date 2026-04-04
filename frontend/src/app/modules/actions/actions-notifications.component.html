@@ -1,0 +1,77 @@
+<div class="actions-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-bell"></i> Notifications</h1>
+                <p>Pilotez les rappels, escalades et syntheses periodiques relies aux plans d actions.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="actions-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="actions-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Scenarios actifs</span>
+            <h3>{{ activeCount }}</h3>
+            <p>Rappels ou escalades actuellement executes.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Emails</span>
+            <h3>{{ emailCount }}</h3>
+            <p>Modeles d information ou de relance par email.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Alertes globales</span>
+            <h3>{{ data.summary.activeAlerts }}</h3>
+            <p>Alertes remontant actuellement dans le dispositif.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Retards</span>
+            <h3>{{ data.summary.overdueActions }}</h3>
+            <p>Source principale des escalades automatiques.</p>
+        </div>
+    </div>
+
+    <div class="status-line" *ngIf="currentFocus">
+        Focus actif: {{ currentFocus }}
+    </div>
+
+    <div class="notification-list" *ngIf="notifications.length > 0; else emptyState">
+        <article class="notification-item" *ngFor="let item of notifications">
+            <div class="notification-head">
+                <div>
+                    <h3>{{ item.title }}</h3>
+                    <p>{{ item.trigger }}</p>
+                </div>
+                <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+            </div>
+            <div class="notification-meta">
+                <span class="tag">{{ item.channel }}</span>
+                <span class="tag subtle">{{ item.audience }}</span>
+                <span class="tag">Escalade {{ item.escalationLevel }}</span>
+                <span>Prochain envoi: {{ formatDate(item.nextSendAt) }}</span>
+            </div>
+            <div class="mini-actions" *ngIf="item.detailLabel">
+                <button type="button" class="action-btn" (click)="openDetail(item)">{{ item.detailLabel }}</button>
+            </div>
+        </article>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">Aucune notification parametree sur ce module.</div>
+    </ng-template>
+</div>

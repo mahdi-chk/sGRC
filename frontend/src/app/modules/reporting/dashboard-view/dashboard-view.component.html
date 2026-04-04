@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-chart-line"></i> Tableaux de bord consolidés</h1>
-                <p>Vue d'ensemble transverse des risques, incidents et audits.</p>
+                <h1><i class="fas fa-chart-line"></i> Tableaux de bord consolides</h1>
+                <p>Vue transverse plus detaillee des risques, incidents, audits et indicateurs de performance.</p>
             </div>
         </div>
         <div class="header-right">
@@ -18,37 +18,76 @@
 
     <div *ngIf="isLoading" class="loading-overlay">
         <div class="spinner"></div>
-        <p>Chargement des données...</p>
+        <p>Chargement des donnees...</p>
     </div>
 
     <div *ngIf="!isLoading && stats" class="dashboard-content">
-        <div class="kpi-row mb-4">
+        <div class="kpi-row">
             <div class="kpi-card kpi-risks">
                 <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="kpi-info">
                     <span class="kpi-value">{{ stats.risks.total }}</span>
-                    <span class="kpi-label">Risques identifiés</span>
+                    <span class="kpi-label">Risques identifies</span>
                 </div>
             </div>
             <div class="kpi-card kpi-incidents">
                 <div class="kpi-icon"><i class="fas fa-fire"></i></div>
                 <div class="kpi-info">
                     <span class="kpi-value">{{ stats.incidents.total }}</span>
-                    <span class="kpi-label">Incidents déclarés</span>
+                    <span class="kpi-label">Incidents declares</span>
                 </div>
             </div>
             <div class="kpi-card kpi-audits">
                 <div class="kpi-icon"><i class="fas fa-clipboard-check"></i></div>
                 <div class="kpi-info">
                     <span class="kpi-value">{{ stats.audits.total }}</span>
-                    <span class="kpi-label">Missions d'audit</span>
+                    <span class="kpi-label">Missions d audit</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="insight-grid">
+            <div class="module-card premium kpi-detail-card">
+                <h3><i class="fas fa-gauge-high"></i> KPI de pilotage</h3>
+                <div class="kpi-detail-list">
+                    <div class="kpi-detail-item" *ngFor="let kpi of kpis">
+                        <div class="kpi-detail-top">
+                            <span>{{ kpi.label }}</span>
+                            <strong>{{ kpi.value }}{{ kpi.unit }}</strong>
+                        </div>
+                        <div class="kpi-progress-bar">
+                            <div class="fill" [style.width.%]="getKpiProgress(kpi.id)"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="module-card premium posture-card">
+                <h3><i class="fas fa-shield-halved"></i> Posture de risque</h3>
+                <div class="posture-list">
+                    <div class="posture-item">
+                        <span>Ouverts</span>
+                        <strong>{{ getStatusCount(riskStatusOrder[0]) }}</strong>
+                    </div>
+                    <div class="posture-item">
+                        <span>En cours</span>
+                        <strong>{{ getStatusCount(riskStatusOrder[1]) }}</strong>
+                    </div>
+                    <div class="posture-item">
+                        <span>Traites</span>
+                        <strong>{{ getStatusCount(riskStatusOrder[2]) }}</strong>
+                    </div>
+                    <div class="posture-item">
+                        <span>Clotures</span>
+                        <strong>{{ getStatusCount(riskStatusOrder[3]) }}</strong>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="dashboard-grid">
             <div class="module-card premium chart-card">
-                <h3><i class="fas fa-signal"></i> Sévérité des risques</h3>
+                <h3><i class="fas fa-signal"></i> Severite des risques</h3>
                 <div class="chart-container donut-wrapper">
                     <div class="donut-chart"
                         [style.--p_low]="getPercent(getRiskLevelCount(riskLevelOrder[0]), stats.risks.total)"
@@ -69,6 +108,27 @@
                 </div>
             </div>
 
+            <div class="module-card premium matrix-preview-card">
+                <div class="matrix-card-header">
+                    <h3><i class="fas fa-table-cells-large"></i> Apercu matrice de risque</h3>
+                    <button class="btn-inline" (click)="openRiskMatrix()">Ouvrir la matrice</button>
+                </div>
+                <div class="matrix-preview-grid">
+                    <div class="matrix-preview-corner">Niveau / Statut</div>
+                    <div class="matrix-preview-header" *ngFor="let status of riskStatusOrder">{{ getRiskStatusLabel(status) }}</div>
+
+                    <ng-container *ngFor="let level of riskLevelOrder">
+                        <div class="matrix-preview-header row-title">{{ getRiskLevelLabel(level) }}</div>
+                        <div
+                            class="matrix-preview-cell"
+                            *ngFor="let status of riskStatusOrder"
+                            [ngClass]="getMatrixTone(level, status)">
+                            {{ getMatrixCount(level, status) }}
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+
             <div class="module-card premium chart-card">
                 <h3><i class="fas fa-tasks"></i> Statut des incidents</h3>
                 <div class="chart-container bar-wrapper">
@@ -86,7 +146,7 @@
             </div>
 
             <div class="module-card premium list-card">
-                <h3><i class="fas fa-history"></i> Risques récents</h3>
+                <h3><i class="fas fa-history"></i> Risques recents</h3>
                 <div class="item-list">
                     <div *ngFor="let risk of stats.risks.recent" class="list-item">
                         <div class="item-icon" [ngClass]="getRiskLevelClass(risk.niveauRisqueCode || risk.niveauRisque)">
@@ -94,7 +154,7 @@
                         </div>
                         <div class="item-details">
                             <span class="item-title">{{ risk.titre }}</span>
-                            <span class="item-meta">{{ risk.domaine || 'Général' }} • {{ getRiskStatusLabel(risk.statutLabel || risk.statutCode || risk.statut) }}</span>
+                            <span class="item-meta">{{ risk.domaine || 'General' }} • {{ getRiskStatusLabel(risk.statutLabel || risk.statutCode || risk.statut) }}</span>
                         </div>
                         <span class="item-date">{{ risk.createdAt | date:'dd/MM' }}</span>
                     </div>
@@ -102,7 +162,7 @@
             </div>
 
             <div class="module-card premium list-card">
-                <h3><i class="fas fa-bolt"></i> Incidents récents</h3>
+                <h3><i class="fas fa-bolt"></i> Incidents recents</h3>
                 <div class="item-list">
                     <div *ngFor="let incident of stats.incidents.recent" class="list-item">
                         <div class="item-icon warning">

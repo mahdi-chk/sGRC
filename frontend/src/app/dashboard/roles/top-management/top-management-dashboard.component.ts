@@ -1,6 +1,4 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
-import { RiskService, Risk, RiskLevel, RiskStatus } from '../../../core/services/risk.service';
-import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
 
@@ -13,21 +11,12 @@ export class TopManagementDashboardComponent implements OnInit {
     @Input() title: string = 'Dashboard Top Management';
     @Output() openModule = new EventEmitter<any>();
 
-    risks: Risk[] = [];
-    totalRisks: number = 0;
-    criticalRisks: number = 0;
-    maturityLevel: number = 0;
-    treatmentRate: number = 0;
-
     constructor(
-        private riskService: RiskService,
-        private router: Router,
         private authService: AuthService,
         private dashboardService: DashboardService
     ) { }
 
     ngOnInit() {
-        this.loadStatistics();
         this.authService.currentUser$.subscribe(user => {
             if (this.filteredModules.length === 0 && user?.role) {
                 this.filteredModules = this.dashboardService.getFilteredModules(user.role);
@@ -35,48 +24,8 @@ export class TopManagementDashboardComponent implements OnInit {
         });
     }
 
-    loadStatistics() {
-        this.riskService.getRisks().subscribe(risks => {
-            this.risks = risks;
-            this.totalRisks = risks.length;
-            this.criticalRisks = risks.filter(r => this.normalizeRiskLevel(r.niveauRisqueCode || r.niveauRisque) === RiskLevel.CRITICAL).length;
-
-            const treatedCount = risks.filter(r => this.isCompletedRiskStatus(r.statutCode || r.statut)).length;
-            this.treatmentRate = this.totalRisks > 0 ? Math.round((treatedCount / this.totalRisks) * 100) : 0;
-
-            this.maturityLevel = RiskService.calculateMaturityIndex(this.risks);
-        });
-    }
-
     onOpenModule(m: any, s: any) {
         this.dashboardService.openSubmoduleModal(m, s);
         this.openModule.emit({ m, s });
-    }
-
-    goToStatistics() {
-        this.router.navigate(['/dashboard/statistics']);
-    }
-
-    goToAuditStatistics() {
-        this.router.navigate(['/dashboard/audit-statistics']);
-    }
-
-    private isCompletedRiskStatus(status?: string | null): boolean {
-        const normalizedStatus = this.normalize(status);
-        return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
-    }
-
-    private normalizeRiskLevel(level?: string | null): string {
-        return this.normalize(level);
-    }
-
-    private normalize(value?: string | null): string {
-        return (value || '')
-            .toString()
-            .trim()
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[\s-]+/g, '_');
     }
 }

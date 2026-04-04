@@ -5,9 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <span class="eyebrow">Module transverse</span>
-                <h1><i class="fas fa-user-check"></i> Contr&ocirc;les Internes</h1>
-                <p>Le module rassemble le r&eacute;f&eacute;rentiel, la planification, les preuves, l'efficacit&eacute; et le suivi des &eacute;carts sur une m&ecirc;me vue de pilotage.</p>
+                <h1><i class="fas fa-user-check"></i> Controles Internes</h1>
+                <p>Point d entree du module. Chaque sous-module dispose maintenant de sa propre interface, a la maniere de Gouvernance.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -18,260 +17,70 @@
         </div>
     </div>
 
-    <div class="hero-panel">
-        <div class="hero-copy">
-            <span class="hero-label">Pilotage du dispositif</span>
-            <h2>Du contr&ocirc;le con&ccedil;u au contr&ocirc;le ex&eacute;cut&eacute;</h2>
-            <p>La vue ci-dessous consolide les donn&eacute;es r&eacute;elles des risques, des audits et des incidents pour donner une lecture op&eacute;rationnelle du contr&ocirc;le interne.</p>
-        </div>
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
 
-        <div class="capability-grid">
-            <article class="capability-card" *ngFor="let capability of capabilities">
-                <h3>{{ capability.title }}</h3>
-                <p>{{ capability.description }}</p>
-            </article>
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Controles</span>
+            <h3>{{ data.summary.totalControls }}</h3>
+            <p>Controles actuellement derives du perimetre operationnel charge.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Preuves</span>
+            <h3>{{ data.summary.evidenceCount }}</h3>
+            <p>Justificatifs consolides depuis les audits, risques et incidents.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Score d efficacite</span>
+            <h3>{{ data.summary.effectivenessScore }}%</h3>
+            <p>Mesure globale de l efficacite observee.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Non-conformites</span>
+            <h3>{{ data.summary.openNonConformities }}</h3>
+            <p>Ecarts encore actifs dans le dispositif de suivi.</p>
         </div>
     </div>
 
-    <div class="feedback-state" *ngIf="isLoading">
-        <i class="fas fa-circle-notch fa-spin"></i>
-        <span>Chargement de la synthese des controles...</span>
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Sous-modules</h2>
+                <p>Chaque domaine de travail a desormais sa page dediee et sa navigation propre.</p>
+            </div>
+
+            <div class="module-list">
+                <a *ngFor="let module of modules" [routerLink]="module.route" class="module-link">
+                    <strong>{{ module.title }}</strong>
+                    <p>{{ module.description }}</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="content-card" *ngIf="overview as data">
+            <div class="card-head">
+                <h2>Lecture rapide</h2>
+                <p>La separation des interfaces facilite l acces direct a chaque sous-processus du controle interne.</p>
+            </div>
+
+            <div class="module-list">
+                <div class="module-link">
+                    <strong>Referentiel</strong>
+                    <p>{{ data.summary.periodicControls }} controles periodiques et {{ data.summary.ponctualControls }} controles ponctuels visibles.</p>
+                </div>
+                <div class="module-link">
+                    <strong>Planification</strong>
+                    <p>{{ data.summary.upcomingActions }} actions a venir et {{ data.summary.overdueActions }} actions en retard.</p>
+                </div>
+                <div class="module-link">
+                    <strong>Suivi continu</strong>
+                    <p>{{ data.summary.openNonConformities }} non-conformites ouvertes a traiter en continu.</p>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="feedback-state error" *ngIf="!isLoading && errorMessage">
-        <i class="fas fa-triangle-exclamation"></i>
-        <span>{{ errorMessage }}</span>
-    </div>
-
-    <ng-container *ngIf="!isLoading && overview as data">
-        <div class="summary-grid">
-            <div class="summary-card">
-                <span class="metric-label">Controles suivis</span>
-                <strong>{{ data.summary.totalControls }}</strong>
-                <p>{{ data.summary.periodicControls }} periodiques et {{ data.summary.ponctualControls }} ponctuels.</p>
-            </div>
-            <div class="summary-card">
-                <span class="metric-label">Actions a venir</span>
-                <strong>{{ data.summary.upcomingActions }}</strong>
-                <p>Elements planifies sur les 30 prochains jours.</p>
-            </div>
-            <div class="summary-card">
-                <span class="metric-label">Actions en retard</span>
-                <strong>{{ data.summary.overdueActions }}</strong>
-                <p>Points a replanifier ou a escalader rapidement.</p>
-            </div>
-            <div class="summary-card">
-                <span class="metric-label">Preuves centralisees</span>
-                <strong>{{ data.summary.evidenceCount }}</strong>
-                <p>Justificatifs audit, risques et incidents confondus.</p>
-            </div>
-            <div class="summary-card">
-                <span class="metric-label">Score d efficacite</span>
-                <strong>{{ data.summary.effectivenessScore }}%</strong>
-                <p>Base sur la recurrence des incidents observes.</p>
-            </div>
-            <div class="summary-card">
-                <span class="metric-label">Non-conformites ouvertes</span>
-                <strong>{{ data.summary.openNonConformities }}</strong>
-                <p>Ecarts encore actifs dans le cycle de controle.</p>
-            </div>
-        </div>
-
-        <div class="content-grid">
-            <section class="panel panel-wide">
-                <div class="panel-head">
-                    <div>
-                        <span class="eyebrow">Referentiel</span>
-                        <h2>Referentiel des controles</h2>
-                    </div>
-                    <span class="panel-badge">{{ data.registry.length }} controles</span>
-                </div>
-
-                <div class="table-shell" *ngIf="registryPreview.length > 0; else emptyRegistry">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Controle</th>
-                                <th>Type</th>
-                                <th>Execution</th>
-                                <th>Departement</th>
-                                <th>Responsable</th>
-                                <th>Prochaine revue</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let control of registryPreview">
-                                <td>{{ control.code }}</td>
-                                <td>
-                                    <strong>{{ control.title }}</strong>
-                                    <small>{{ control.linkedRisk }}</small>
-                                </td>
-                                <td><span class="tag">{{ control.controlType }}</span></td>
-                                <td><span class="tag subtle">{{ control.executionType }}</span></td>
-                                <td>{{ control.department }}</td>
-                                <td>{{ control.owner }}</td>
-                                <td>
-                                    <span [ngClass]="getStatusClass(control.status)">{{ formatDate(control.nextReview) }}</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section class="panel">
-                <div class="panel-head">
-                    <div>
-                        <span class="eyebrow">Planification</span>
-                        <h2>Audits et controles</h2>
-                    </div>
-                    <span class="panel-badge">{{ data.planning.length }} lignes</span>
-                </div>
-
-                <div class="agenda-list" *ngIf="planningPreview.length > 0; else emptyPlanning">
-                    <article class="agenda-item" *ngFor="let item of planningPreview">
-                        <div class="agenda-date">{{ formatDate(item.dueDate) }}</div>
-                        <div class="agenda-copy">
-                            <h3>{{ item.title }}</h3>
-                            <p>{{ item.department }} | {{ item.owner }}</p>
-                            <div class="agenda-meta">
-                                <span class="tag">{{ item.scheduleType }}</span>
-                                <span class="tag subtle">{{ item.cadence }}</span>
-                                <span [ngClass]="getStatusClass(item.status)">{{ item.linkLabel }}</span>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            </section>
-        </div>
-
-        <div class="content-grid">
-            <section class="panel">
-                <div class="panel-head">
-                    <div>
-                        <span class="eyebrow">Preuves</span>
-                        <h2>Collecte et rattachement</h2>
-                    </div>
-                    <span class="panel-badge">{{ data.evidence.length }}</span>
-                </div>
-
-                <div class="evidence-list" *ngIf="evidencePreview.length > 0; else emptyEvidence">
-                    <article class="evidence-item" *ngFor="let evidence of evidencePreview">
-                        <div class="evidence-icon">
-                            <i class="fas fa-file-shield"></i>
-                        </div>
-                        <div class="evidence-copy">
-                            <h3>{{ evidence.filename }}</h3>
-                            <p>{{ evidence.title }}</p>
-                            <div class="evidence-meta">
-                                <span>{{ evidence.author }}</span>
-                                <span>{{ evidence.department }}</span>
-                                <span>{{ formatDate(evidence.uploadedAt) }}</span>
-                            </div>
-                            <small *ngIf="evidence.linkedAudit">Audit lie : {{ evidence.linkedAudit }}</small>
-                        </div>
-                        <span class="tag">{{ evidence.sourceType }}</span>
-                    </article>
-                </div>
-            </section>
-
-            <section class="panel">
-                <div class="panel-head">
-                    <div>
-                        <span class="eyebrow">Ecarts</span>
-                        <h2>Suivi des non-conformites</h2>
-                    </div>
-                    <span class="panel-badge">{{ data.nonConformities.length }}</span>
-                </div>
-
-                <div class="nonconformity-list" *ngIf="nonConformityPreview.length > 0; else emptyNonConformities">
-                    <article class="nonconformity-item" *ngFor="let item of nonConformityPreview">
-                        <div class="nonconformity-head">
-                            <h3>{{ item.title }}</h3>
-                            <span class="tag" [ngClass]="getStatusClass(item.severity)">{{ item.severity }}</span>
-                        </div>
-                        <p>{{ item.department }} | Source : {{ item.source }}</p>
-                        <div class="nonconformity-meta">
-                            <span>{{ item.owner || 'Sans proprietaire' }}</span>
-                            <span>{{ formatDate(item.dueDate) }}</span>
-                            <span [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
-                        </div>
-                    </article>
-                </div>
-            </section>
-        </div>
-
-        <section class="panel">
-            <div class="panel-head">
-                <div>
-                    <span class="eyebrow">Efficacite</span>
-                    <h2>Lecture de la recurrence des incidents</h2>
-                </div>
-                <span class="panel-badge">{{ data.effectiveness.length }} controles evalues</span>
-            </div>
-
-            <div class="effectiveness-grid" *ngIf="effectivenessPreview.length > 0; else emptyEffectiveness">
-                <article class="effectiveness-card" *ngFor="let item of effectivenessPreview" [ngClass]="getToneClass(item.score)">
-                    <div class="effectiveness-head">
-                        <div>
-                            <span class="metric-label">{{ item.controlCode }}</span>
-                            <h3>{{ item.title }}</h3>
-                        </div>
-                        <strong>{{ item.score }}%</strong>
-                    </div>
-                    <p>Mise en oeuvre : {{ formatDate(item.implementationDate) }}</p>
-                    <div class="effectiveness-metrics">
-                        <div>
-                            <span>Avant</span>
-                            <strong>{{ item.incidentsBefore }}</strong>
-                        </div>
-                        <div>
-                            <span>Apres</span>
-                            <strong>{{ item.incidentsAfter }}</strong>
-                        </div>
-                        <div>
-                            <span>Tendance</span>
-                            <strong [ngClass]="getTrendClass(item.recurrenceTrend)">{{ getTrendLabel(item.recurrenceTrend) }}</strong>
-                        </div>
-                    </div>
-                </article>
-            </div>
-        </section>
-    </ng-container>
-
-    <ng-template #emptyRegistry>
-        <div class="empty-state">
-            <i class="fas fa-folder-open"></i>
-            <p>Aucun controle rattache a votre perimetre.</p>
-        </div>
-    </ng-template>
-
-    <ng-template #emptyPlanning>
-        <div class="empty-state">
-            <i class="fas fa-calendar-day"></i>
-            <p>Aucune ligne de planification disponible.</p>
-        </div>
-    </ng-template>
-
-    <ng-template #emptyEvidence>
-        <div class="empty-state">
-            <i class="fas fa-paperclip"></i>
-            <p>Aucune preuve centralisee pour le moment.</p>
-        </div>
-    </ng-template>
-
-    <ng-template #emptyNonConformities>
-        <div class="empty-state">
-            <i class="fas fa-shield-check"></i>
-            <p>Aucune non-conformite ouverte dans le perimetre courant.</p>
-        </div>
-    </ng-template>
-
-    <ng-template #emptyEffectiveness>
-        <div class="empty-state">
-            <i class="fas fa-chart-line"></i>
-            <p>Pas assez de donnees pour evaluer l efficacite.</p>
-        </div>
-    </ng-template>
 </div>

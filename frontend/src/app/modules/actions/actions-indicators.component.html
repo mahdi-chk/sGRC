@@ -1,0 +1,69 @@
+<div class="actions-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-line"></i> Indicateurs</h1>
+                <p>Vision direction sur le rythme de cloture, l efficacite et la tension du portefeuille d actions.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="actions-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="actions-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">KPI suivis</span>
+            <h3>{{ indicators.length }}</h3>
+            <p>Mesures actuellement publiees dans le cockpit.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Dans la cible</span>
+            <h3>{{ onTargetCount }}</h3>
+            <p>Indicateurs deja au niveau d ambition attendu.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Achevement</span>
+            <h3>{{ data.summary.completionRate }}%</h3>
+            <p>Taux de cloture du portefeuille sur la periode.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Efficacite</span>
+            <h3>{{ data.summary.effectivenessScore }}%</h3>
+            <p>Reduction moyenne constatee apres implementation.</p>
+        </div>
+    </div>
+
+    <div class="indicator-grid" *ngIf="indicators.length > 0; else emptyState">
+        <article class="indicator-card" *ngFor="let item of indicators">
+            <div class="indicator-head">
+                <div>
+                    <span class="eyebrow">{{ item.label }}</span>
+                    <h3>{{ item.value }}{{ item.unit }}</h3>
+                </div>
+                <span [ngClass]="getTrendClass(item.trend)">{{ item.trend }}</span>
+            </div>
+            <p>{{ item.commentary }}</p>
+            <div class="indicator-target">
+                <span>Cible</span>
+                <strong>{{ item.target }}{{ item.unit }}</strong>
+            </div>
+        </article>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">Aucun indicateur n est disponible pour cette vue.</div>
+    </ng-template>
+</div>

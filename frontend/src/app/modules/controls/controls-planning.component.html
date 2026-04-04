@@ -1,0 +1,74 @@
+<div class="controls-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-calendar-check"></i> Planification Automatisee</h1>
+                <p>Lecture dediee aux controles et audits planifies, qu ils soient ponctuels ou periodiques.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Lignes planifiees</span>
+            <h3>{{ planning.length }}</h3>
+            <p>Agenda consolide des audits et des controles.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">A venir</span>
+            <h3>{{ data.summary.upcomingActions }}</h3>
+            <p>Elements attendus dans les 30 prochains jours.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">En retard</span>
+            <h3>{{ data.summary.overdueActions }}</h3>
+            <p>Points a replanifier ou a escalader.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Audits / Controles</span>
+            <h3>{{ auditCount }} / {{ controlCount }}</h3>
+            <p>Repartition du planning integre.</p>
+        </div>
+    </div>
+
+    <div class="content-card" *ngIf="planning.length > 0; else emptyPlanning">
+        <div class="card-head">
+            <h2>Agenda integre</h2>
+            <p>Chaque ligne precise la nature, la cadence, le proprietaire et le rattachement metier.</p>
+        </div>
+
+        <div class="agenda-list">
+            <article class="agenda-item" *ngFor="let item of planning">
+                <div class="agenda-date">{{ formatDate(item.dueDate) }}</div>
+                <div class="agenda-copy">
+                    <h3>{{ item.title }}</h3>
+                    <p>{{ item.department }} | {{ item.owner || 'Non assigne' }}</p>
+                    <div class="agenda-meta">
+                        <span class="tag">{{ item.scheduleType }}</span>
+                        <span class="tag subtle">{{ item.cadence }}</span>
+                        <span [ngClass]="getStatusClass(item.status)">{{ item.linkLabel }}</span>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <ng-template #emptyPlanning>
+        <div class="empty-state">Aucune ligne de planification disponible.</div>
+    </ng-template>
+</div>

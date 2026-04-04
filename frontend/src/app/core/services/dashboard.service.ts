@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { UserRole } from '../models/user-role.enum';
 import { AuthService } from './auth.service';
+import { getControlsDashboardSubmodules } from '../../modules/controls/controls-navigation';
+import { getActionsDashboardSubmodules } from '../../modules/actions/actions-navigation';
 
 export interface Submodule {
     title: string;
@@ -52,7 +54,7 @@ export class DashboardService {
                 { title: 'Plans de Traitement' },
                 { title: 'Alertes et Monitoring' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
         },
         {
             key: 'controls',
@@ -65,7 +67,7 @@ export class DashboardService {
                 { title: 'Evaluation d Efficacite' },
                 { title: 'Suivi des Non-Conformites' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
         },
         {
             key: 'conformite',
@@ -115,7 +117,7 @@ export class DashboardService {
                 { title: 'Liens et Analyse' },
                 { title: 'Reporting Consolide' }
             ],
-            roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+            roles: [UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
         },
         {
             key: 'plans-actions',
@@ -127,7 +129,13 @@ export class DashboardService {
                 { title: 'Notifications' },
                 { title: 'Indicateurs' }
             ],
-            roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.RISK_MANAGER,
+                UserRole.RISK_AGENT,
+                UserRole.AUDIT_SENIOR,
+                UserRole.TOP_MANAGEMENT
+            ]
         },
         {
             key: 'reporting',
@@ -136,6 +144,7 @@ export class DashboardService {
             submodules: [
                 { title: 'Tableaux de Bord' },
                 { title: 'KPI Personnalisables' },
+                { title: 'Matrice de Risque' },
                 { title: 'Vision Multi-Entites' },
                 { title: 'Exports' }
             ],
@@ -175,7 +184,11 @@ export class DashboardService {
             m.roles && m.roles.some(r => r.toString() === roleStr)
         ).map(module => ({
             ...module,
-            submodules: [...module.submodules]
+            submodules: module.key === 'controls'
+                ? getControlsDashboardSubmodules(roleStr)
+                : module.key === 'plans-actions'
+                    ? getActionsDashboardSubmodules(roleStr)
+                    : [...module.submodules]
         }));
 
         if (roleStr === UserRole.TOP_MANAGEMENT) {
@@ -253,8 +266,28 @@ export class DashboardService {
             this.router.navigate(['/dashboard/alertes-monitoring']);
         } else if (s.title === 'Plans de Traitement') {
             this.router.navigate(['/dashboard/treatment-plans']);
+        } else if (s.title === 'Referentiel des Controles') {
+            this.router.navigate(['/dashboard/controls-referential']);
+        } else if (s.title === 'Planification Automatisee') {
+            this.router.navigate(['/dashboard/controls-planning']);
+        } else if (s.title === 'Collecte de Preuves') {
+            this.router.navigate(['/dashboard/controls-evidence']);
+        } else if (s.title === 'Evaluation d Efficacite') {
+            this.router.navigate(['/dashboard/controls-effectiveness']);
+        } else if (s.title === 'Suivi des Non-Conformites') {
+            this.router.navigate(['/dashboard/controls-non-conformities']);
         } else if (m.key === 'controls') {
-            this.router.navigate(['/dashboard/controls']);
+            this.router.navigate(['/dashboard/controls-referential']);
+        } else if (s.title === 'Gestion Centralisee') {
+            this.router.navigate(['/dashboard/actions-centralized']);
+        } else if (s.title === 'Suivi des Echeances') {
+            this.router.navigate(['/dashboard/actions-deadlines']);
+        } else if (s.title === 'Notifications' && m.key === 'plans-actions') {
+            this.router.navigate(['/dashboard/actions-notifications']);
+        } else if (s.title === 'Indicateurs' && m.key === 'plans-actions') {
+            this.router.navigate(['/dashboard/actions-indicators']);
+        } else if (m.key === 'plans-actions') {
+            this.router.navigate(['/dashboard/actions']);
         } else if (title.includes('enregistrement structure')) {
             this.router.navigate(['/dashboard/incident-registration']);
         } else if (s.title === 'Workflow de Traitement') {
@@ -267,6 +300,8 @@ export class DashboardService {
             this.router.navigate(['/dashboard/reporting/dashboard']);
         } else if (s.title === 'KPI Personnalisables') {
             this.router.navigate(['/dashboard/reporting/kpis']);
+        } else if (s.title === 'Matrice de Risque') {
+            this.router.navigate(['/dashboard/reporting/risk-matrix']);
         } else if (s.title === 'Vision Multi-Entites') {
             this.router.navigate(['/dashboard/reporting/multi-entity']);
         } else if (s.title === 'Exports') {

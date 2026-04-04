@@ -1,37 +1,10 @@
 <div class="role-dashboard top-management">
     <div class="welcome-banner">
         <h2><i class="fas fa-chart-line"></i> {{ title }}</h2>
-        <p>Vision stratégique, indicateurs clés et aide à la décision.</p>
+        <p>Vision strategique, indicateurs cles et aide a la decision.</p>
     </div>
 
-
-    <div class="dashboard-grid">
-        <!-- Risk Analytics Card -->
-        <div class="module-card premium special-admin">
-            <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
-            <h3>Analytics Risques</h3>
-            <p class="desc">Suivez l'évolution du paysage des risques, les taux de traitement et l'indice de maturité
-                GRC pour un pilotage stratégique.</p>
-            <div class="card-footer">
-                <button class="btn-primary" (click)="goToStatistics()">
-                    <i class="fas fa-external-link-alt"></i> Voir les détails
-                </button>
-            </div>
-        </div>
-
-        <!-- Audit Analytics Card -->
-        <div class="module-card premium special-admin">
-            <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
-            <h3>Analytics Audit</h3>
-            <p class="desc">Suivez la performance des audits, les missions en cours et les taux de complétion pour
-                une vue d'ensemble du contrôle interne.</p>
-            <div class="card-footer">
-                <button class="btn-primary" (click)="goToAuditStatistics()">
-                    <i class="fas fa-external-link-alt"></i> Voir les détails
-                </button>
-            </div>
-        </div>
-
+    <div class="dashboard-grid" *ngIf="filteredModules.length > 0; else noModules">
         <div *ngFor="let m of filteredModules" class="module-card premium">
             <div class="card-icon"><i class="fas fa-eye"></i></div>
             <h3>{{ m.title }}</h3>
@@ -47,7 +20,7 @@
     <ng-template #noModules>
         <div class="empty-state">
             <i class="fas fa-folder-open"></i>
-            <p>Aucun module fonctionnel n'est assigné à votre rôle.</p>
+            <p>Aucun module fonctionnel n'est assigne a votre role.</p>
         </div>
     </ng-template>
 </div>

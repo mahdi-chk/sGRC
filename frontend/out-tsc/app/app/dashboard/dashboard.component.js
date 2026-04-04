@@ -248,7 +248,7 @@ export class DashboardComponent {
             },
             {
                 label: 'Controle',
-                route: '/dashboard/controls',
+                route: '/dashboard/controls-referential',
                 roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
             },
             { label: 'Action' }

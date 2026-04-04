@@ -1,0 +1,74 @@
+<div class="controls-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-shield-exclamation"></i> Suivi des Non-Conformites</h1>
+                <p>Page dediee aux ecarts detectes apres execution des controles et a leur traitement continu.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Ecarts ouverts</span>
+            <h3>{{ data.summary.openNonConformities }}</h3>
+            <p>Non-conformites encore actives dans le cycle de controle.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Critiques / hautes</span>
+            <h3>{{ criticalCount }}</h3>
+            <p>Ecarts a prioriser en premier.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">En retard</span>
+            <h3>{{ overdueCount }}</h3>
+            <p>Dossiers dont l echeance est depassee.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Total suivi</span>
+            <h3>{{ items.length }}</h3>
+            <p>Vue dediee au traitement des deviations constatees.</p>
+        </div>
+    </div>
+
+    <div class="content-card" *ngIf="items.length > 0; else emptyItems">
+        <div class="card-head">
+            <h2>Registre des non-conformites</h2>
+            <p>Chaque ecart reste rattache a son departement, sa source et sa date cible de traitement.</p>
+        </div>
+
+        <div class="nonconformity-list">
+            <article class="nonconformity-item" *ngFor="let item of items">
+                <div class="nonconformity-head">
+                    <h3>{{ item.title }}</h3>
+                    <span class="tag" [ngClass]="getStatusClass(item.severity)">{{ item.severity }}</span>
+                </div>
+                <p>{{ item.department }} | Source : {{ item.source }}</p>
+                <div class="nonconformity-meta">
+                    <span>{{ item.owner || 'Sans proprietaire' }}</span>
+                    <span>{{ formatDate(item.dueDate) }}</span>
+                    <span [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <ng-template #emptyItems>
+        <div class="empty-state">Aucune non-conformite ouverte dans ce perimetre.</div>
+    </ng-template>
+</div>

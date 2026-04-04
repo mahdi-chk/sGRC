@@ -58,7 +58,11 @@ import { GovernanceMaturityComponent } from './modules/governance/governance-mat
 import { GovernanceAdoptionComponent } from './modules/governance/governance-adoption.component';
 import { GovernanceModule } from './modules/governance/governance.module';
 import { ControlsModule } from './modules/controls/controls.module';
-import { ControlsComponent } from './modules/controls/controls.component';
+import { ControlsReferentialComponent } from './modules/controls/controls-referential.component';
+import { ControlsPlanningComponent } from './modules/controls/controls-planning.component';
+import { ControlsEvidenceComponent } from './modules/controls/controls-evidence.component';
+import { ControlsEffectivenessComponent } from './modules/controls/controls-effectiveness.component';
+import { ControlsNonConformitiesComponent } from './modules/controls/controls-non-conformities.component';
 import { UserRole } from './core/models/user-role.enum';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/router";
@@ -95,7 +99,12 @@ const routes = [
             { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
             { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
             { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
-            { path: 'controls', component: ControlsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+            { path: 'controls', redirectTo: 'controls-referential', pathMatch: 'full' },
+            { path: 'controls-referential', component: ControlsReferentialComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+            { path: 'controls-planning', component: ControlsPlanningComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+            { path: 'controls-evidence', component: ControlsEvidenceComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+            { path: 'controls-effectiveness', component: ControlsEffectivenessComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+            { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
             { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
             { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
             { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },

@@ -77,7 +77,7 @@ export class NotificationService {
         );
     }
 
-    private refresh() {
+    refresh() {
         this.getNotifications().subscribe(notifications => {
             this.notificationsSubject.next(notifications);
             this.unreadCountSubject.next(notifications.filter(n => !n.isRead).length);

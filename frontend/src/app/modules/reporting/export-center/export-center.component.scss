@@ -15,6 +15,7 @@
       display: flex;
       gap: 40px;
       margin-top: 20px;
+      margin-bottom: 18px;
     }
 
     .config-item {
@@ -60,6 +61,27 @@
           background: #f8fafc;
         }
       }
+    }
+  }
+
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    font-weight: 600;
+
+    &.success {
+      color: #166534;
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+    }
+
+    &.error {
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
     }
   }
 

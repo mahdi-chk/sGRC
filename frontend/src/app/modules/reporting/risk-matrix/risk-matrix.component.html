@@ -1,0 +1,291 @@
+<div class="role-dashboard reporting-dashboard risk-matrix-page">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1><i class="fas fa-table-cells-large"></i> Matrice de Risque</h1>
+        <p>Vue matricielle alignee sur l'analyse detaillee des risques, avec zones dominantes et acces au detail par case.</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-refresh" (click)="loadRisks()" [disabled]="isLoading">
+        <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Chargement de la matrice...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !loadError">
+    <div class="kpi-row mb-4">
+      <div class="kpi-card kpi-open">
+        <span class="kpi-value">{{ risksOpenCount }}</span>
+        <span class="kpi-label">Ouverts</span>
+      </div>
+
+      <div class="kpi-card kpi-total">
+        <span class="kpi-value">{{ totalRisks }}</span>
+        <span class="kpi-label">Risques totaux</span>
+      </div>
+
+      <div class="kpi-card kpi-progress">
+        <span class="kpi-value">{{ risksInProgressCount }}</span>
+        <span class="kpi-label">En traitement</span>
+      </div>
+
+      <div class="kpi-card kpi-closed">
+        <span class="kpi-value">{{ risksManagedCount }}</span>
+        <span class="kpi-label">Clotures / Traites</span>
+      </div>
+    </div>
+
+    <div class="module-card premium risk-matrix-card">
+      <div class="matrix-header">
+        <div>
+          <h3><i class="fas fa-th"></i> Matrice des risques</h3>
+          <p class="matrix-subtitle">Lecture croisee de la probabilite et de l'impact avec zones dominantes et totaux par axe.</p>
+        </div>
+        <div class="matrix-legend">
+          <span class="legend-chip green">Faible</span>
+          <span class="legend-chip yellow">Modere</span>
+          <span class="legend-chip orange">Eleve</span>
+          <span class="legend-chip red">Critique</span>
+        </div>
+      </div>
+
+      <div class="matrix-insights">
+        <div class="insight-card highlight">
+          <span class="insight-label">Zone dominante</span>
+          <strong>{{ topZoneLabel }}</strong>
+          <small>{{ topZoneCount }} risque(s) - {{ topZoneShare }}%</small>
+        </div>
+        <div class="insight-card critical">
+          <span class="insight-label">Exposition critique</span>
+          <strong>{{ criticalExposureCount }}</strong>
+          <small>risque(s) en zone sensible</small>
+        </div>
+        <div class="insight-card">
+          <span class="insight-label">Probabilite dominante</span>
+          <strong>{{ dominantProbabilityLabel }}</strong>
+          <small>{{ matrixRowTotals[getMaxIndex(matrixRowTotals)] || 0 }} risque(s)</small>
+        </div>
+        <div class="insight-card">
+          <span class="insight-label">Impact dominant</span>
+          <strong>{{ dominantImpactLabel }}</strong>
+          <small>{{ matrixColTotals[getMaxIndex(matrixColTotals)] || 0 }} risque(s)</small>
+        </div>
+      </div>
+
+      <div class="risk-matrix-container">
+        <div class="risk-matrix-y-axis">
+          <i class="fas fa-arrow-up"></i> Probabilite
+        </div>
+        <div class="risk-matrix-body">
+          <table class="risk-matrix-table">
+            <colgroup>
+              <col class="col-axis">
+              <col class="col-impact">
+              <col class="col-impact">
+              <col class="col-impact">
+              <col class="col-impact">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="axis-corner"></th>
+                <th class="impact-label">Limite <span class="score">(1)</span></th>
+                <th class="impact-label">Moyen <span class="score">(4)</span></th>
+                <th class="impact-label">Significatif <span class="score">(16)</span></th>
+                <th class="impact-label">Critique <span class="score">(64)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th class="prob-label">Permanent <span class="score">(8)</span></th>
+                <td class="cell cell-yellow" [class.is-clickable]="riskMatrix[0][0] > 0" (click)="riskMatrix[0][0] > 0 && openMatrixCellDetails(0, 0)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[0][0]">{{ riskMatrix[0][0] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[0][0]">{{ getMatrixShare(riskMatrix[0][0]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-orange" [class.is-clickable]="riskMatrix[0][1] > 0" (click)="riskMatrix[0][1] > 0 && openMatrixCellDetails(0, 1)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[0][1]">{{ riskMatrix[0][1] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[0][1]">{{ getMatrixShare(riskMatrix[0][1]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-red" [class.is-clickable]="riskMatrix[0][2] > 0" (click)="riskMatrix[0][2] > 0 && openMatrixCellDetails(0, 2)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[0][2]">{{ riskMatrix[0][2] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[0][2]">{{ getMatrixShare(riskMatrix[0][2]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-darkred" [class.is-clickable]="riskMatrix[0][3] > 0" (click)="riskMatrix[0][3] > 0 && openMatrixCellDetails(0, 3)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[0][3]">{{ riskMatrix[0][3] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[0][3]">{{ getMatrixShare(riskMatrix[0][3]) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th class="prob-label">Probable <span class="score">(4)</span></th>
+                <td class="cell cell-lightyellow" [class.is-clickable]="riskMatrix[1][0] > 0" (click)="riskMatrix[1][0] > 0 && openMatrixCellDetails(1, 0)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[1][0]">{{ riskMatrix[1][0] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[1][0]">{{ getMatrixShare(riskMatrix[1][0]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-yellow" [class.is-clickable]="riskMatrix[1][1] > 0" (click)="riskMatrix[1][1] > 0 && openMatrixCellDetails(1, 1)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[1][1]">{{ riskMatrix[1][1] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[1][1]">{{ getMatrixShare(riskMatrix[1][1]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-orange" [class.is-clickable]="riskMatrix[1][2] > 0" (click)="riskMatrix[1][2] > 0 && openMatrixCellDetails(1, 2)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[1][2]">{{ riskMatrix[1][2] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[1][2]">{{ getMatrixShare(riskMatrix[1][2]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-red" [class.is-clickable]="riskMatrix[1][3] > 0" (click)="riskMatrix[1][3] > 0 && openMatrixCellDetails(1, 3)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[1][3]">{{ riskMatrix[1][3] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[1][3]">{{ getMatrixShare(riskMatrix[1][3]) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th class="prob-label">Possible <span class="score">(2)</span></th>
+                <td class="cell cell-green" [class.is-clickable]="riskMatrix[2][0] > 0" (click)="riskMatrix[2][0] > 0 && openMatrixCellDetails(2, 0)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[2][0]">{{ riskMatrix[2][0] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[2][0]">{{ getMatrixShare(riskMatrix[2][0]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-lightyellow" [class.is-clickable]="riskMatrix[2][1] > 0" (click)="riskMatrix[2][1] > 0 && openMatrixCellDetails(2, 1)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[2][1]">{{ riskMatrix[2][1] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[2][1]">{{ getMatrixShare(riskMatrix[2][1]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-yellow" [class.is-clickable]="riskMatrix[2][2] > 0" (click)="riskMatrix[2][2] > 0 && openMatrixCellDetails(2, 2)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[2][2]">{{ riskMatrix[2][2] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[2][2]">{{ getMatrixShare(riskMatrix[2][2]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-orange" [class.is-clickable]="riskMatrix[2][3] > 0" (click)="riskMatrix[2][3] > 0 && openMatrixCellDetails(2, 3)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[2][3]">{{ riskMatrix[2][3] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[2][3]">{{ getMatrixShare(riskMatrix[2][3]) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th class="prob-label">Rare <span class="score">(1)</span></th>
+                <td class="cell cell-lightgreen" [class.is-clickable]="riskMatrix[3][0] > 0" (click)="riskMatrix[3][0] > 0 && openMatrixCellDetails(3, 0)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[3][0]">{{ riskMatrix[3][0] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[3][0]">{{ getMatrixShare(riskMatrix[3][0]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-green" [class.is-clickable]="riskMatrix[3][1] > 0" (click)="riskMatrix[3][1] > 0 && openMatrixCellDetails(3, 1)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[3][1]">{{ riskMatrix[3][1] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[3][1]">{{ getMatrixShare(riskMatrix[3][1]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-lightyellow" [class.is-clickable]="riskMatrix[3][2] > 0" (click)="riskMatrix[3][2] > 0 && openMatrixCellDetails(3, 2)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[3][2]">{{ riskMatrix[3][2] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[3][2]">{{ getMatrixShare(riskMatrix[3][2]) }}%</span>
+                  </div>
+                </td>
+                <td class="cell cell-yellow" [class.is-clickable]="riskMatrix[3][3] > 0" (click)="riskMatrix[3][3] > 0 && openMatrixCellDetails(3, 3)">
+                  <div class="cell-content">
+                    <span class="cell-value" *ngIf="riskMatrix[3][3]">{{ riskMatrix[3][3] }}</span>
+                    <span class="cell-meta" *ngIf="riskMatrix[3][3]">{{ getMatrixShare(riskMatrix[3][3]) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              <tr class="totals-row">
+                <th class="total-label">Total</th>
+                <td class="total-cell">{{ matrixColTotals[0] }}</td>
+                <td class="total-cell">{{ matrixColTotals[1] }}</td>
+                <td class="total-cell">{{ matrixColTotals[2] }}</td>
+                <td class="total-cell">{{ matrixColTotals[3] }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="risk-matrix-x-axis">
+          <i class="fas fa-arrow-right"></i> Impact
+        </div>
+      </div>
+
+      <div class="matrix-footer">
+        <div class="footer-note">
+          <strong>Lecture rapide :</strong> les zones orange et rouges concentrent les risques a traiter en priorite.
+        </div>
+        <div class="footer-note">
+          <strong>Structure :</strong> chaque cellule affiche le nombre de risques et leur poids dans le portefeuille. Cliquez sur une case pour voir le detail.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && loadError" class="status-panel error">
+    <i class="fas fa-circle-exclamation"></i>
+    <span>{{ loadError }}</span>
+  </div>
+
+  <app-modal *ngIf="showMatrixDetailsModal" [title]="'Zone : ' + getSelectedMatrixTitle()" (close)="closeMatrixDetails()">
+    <div modal-body class="matrix-risk-modal-body">
+      <div class="matrix-detail-summary">
+        <div class="summary-item">
+          <span class="summary-label">Probabilite</span>
+          <strong>{{ selectedMatrixRow >= 0 ? getProbabilityLabel(probabilityOrder[selectedMatrixRow]) : '-' }}</strong>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Impact</span>
+          <strong>{{ selectedMatrixCol >= 0 ? getImpactLabel(impactOrder[selectedMatrixCol]) : '-' }}</strong>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Nombre de risques</span>
+          <strong>{{ selectedMatrixRisks.length }}</strong>
+        </div>
+      </div>
+
+      <div class="matrix-risk-list" *ngIf="selectedMatrixRisks.length > 0; else emptyMatrixDetail">
+        <div class="matrix-risk-item" *ngFor="let risk of selectedMatrixRisks">
+          <div class="risk-item-head">
+            <h4>{{ risk.titre }}</h4>
+            <span class="risk-level-badge" [ngClass]="getRiskLevelClass(risk.niveauRisqueCode || risk.niveauRisque)">
+              {{ getRiskLevelLabel(risk.niveauRisqueCode || risk.niveauRisque) }}
+            </span>
+          </div>
+          <p class="risk-item-desc">{{ risk.explication || 'Aucune description disponible.' }}</p>
+          <div class="risk-item-meta">
+            <span><strong>Domaine :</strong> {{ risk.domaine || 'General' }}</span>
+            <span><strong>Departement :</strong> {{ risk.departement?.nom || 'Non specifie' }}</span>
+            <span><strong>Statut :</strong> {{ getRiskStatusLabel(risk.statutCode || risk.statut) }}</span>
+            <span><strong>Traitement :</strong> {{ risk.planActionTraitement || 'Non defini' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #emptyMatrixDetail>
+        <div class="empty-matrix-detail">
+          Aucun risque detaille dans cette zone.
+        </div>
+      </ng-template>
+    </div>
+    <div modal-footer>
+      <button class="btn-export" type="button" (click)="closeMatrixDetails()">Fermer</button>
+    </div>
+  </app-modal>
+</div>

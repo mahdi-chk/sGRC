@@ -8,6 +8,7 @@ export interface ReportingStats {
         total: number;
         byStatus: LookupStatEntry[];
         byLevel: LookupStatEntry[];
+        matrix: ReportingRiskMatrixCell[];
         recent: ReportingRecentItem[];
     };
     incidents: {
@@ -46,6 +47,16 @@ export interface KPI {
     label: string;
     value: number;
     unit: string;
+}
+
+export interface ReportingRiskMatrixCell {
+    levelId: number;
+    levelCode: string | null;
+    levelLabel: string | null;
+    statusId: number;
+    statusCode: string | null;
+    statusLabel: string | null;
+    count: number;
 }
 
 export interface MultiEntityData {

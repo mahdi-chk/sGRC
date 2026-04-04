@@ -1,0 +1,87 @@
+<div class="controls-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-book-bookmark"></i> Referentiel des Controles</h1>
+                <p>Catalogue operationnel des controles relies aux risques, aux responsables et aux revues planifiees.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Controles</span>
+            <h3>{{ data.summary.totalControls }}</h3>
+            <p>Elements suivis dans le registre de controle.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Periodiques</span>
+            <h3>{{ data.summary.periodicControls }}</h3>
+            <p>Controles relies a une frequence d execution.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Ponctuels</span>
+            <h3>{{ data.summary.ponctualControls }}</h3>
+            <p>Controles lies a un besoin ou un contexte donne.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Departements couverts</span>
+            <h3>{{ departmentCount }}</h3>
+            <p>Perimetres actuellement rattaches au referentiel.</p>
+        </div>
+    </div>
+
+    <div class="table-card" *ngIf="registry.length > 0; else emptyRegistry">
+        <div class="card-head">
+            <h2>Catalogue des controles</h2>
+            <p>Vision dediee au referentiel, separee des preuves, de la planification et des non-conformites.</p>
+        </div>
+
+        <table class="controls-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Controle</th>
+                    <th>Type</th>
+                    <th>Execution</th>
+                    <th>Departement</th>
+                    <th>Responsable</th>
+                    <th>Revue</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let control of registry">
+                    <td>{{ control.code }}</td>
+                    <td>
+                        <strong>{{ control.title }}</strong>
+                        <small>{{ control.linkedRisk }}</small>
+                    </td>
+                    <td><span class="tag">{{ control.controlType }}</span></td>
+                    <td><span class="tag subtle">{{ control.executionType }}</span></td>
+                    <td>{{ control.department }}</td>
+                    <td>{{ control.owner }}</td>
+                    <td><span [ngClass]="getStatusClass(control.status)">{{ formatDate(control.nextReview) }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <ng-template #emptyRegistry>
+        <div class="empty-state">Aucun controle disponible pour ce perimetre.</div>
+    </ng-template>
+</div>

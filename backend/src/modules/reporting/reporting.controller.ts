@@ -30,6 +30,17 @@ const countByLookup = async (model: any, columnName: string, alias: string) =>
         raw: true,
     });
 
+const countRiskMatrix = async () =>
+    Risk.findAll({
+        attributes: [
+            [sequelize.col('niveau_risque_id'), 'niveauRisqueId'],
+            [sequelize.col('statut_id'), 'statutId'],
+            [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        ],
+        group: [sequelize.col('niveau_risque_id'), sequelize.col('statut_id')],
+        raw: true,
+    });
+
 export class ReportingController {
     /**
      * Récupère les statistiques globales pour le tableau de bord
@@ -40,6 +51,7 @@ export class ReportingController {
             const totalRisks = await Risk.count();
             const risksByStatus = await countByLookup(Risk, 'statut_id', 'statutId');
             const risksByLevel = await countByLookup(Risk, 'niveau_risque_id', 'niveauRisqueId');
+            const riskMatrix = await countRiskMatrix();
 
             // Comptage des Incidents
             const totalIncidents = await Incident.count();
@@ -58,6 +70,22 @@ export class ReportingController {
                     total: totalRisks,
                     byStatus: mapLookupCounts(risksByStatus, 'statutId', 'risk.statut'),
                     byLevel: mapLookupCounts(risksByLevel, 'niveauRisqueId', 'risk.niveauRisque'),
+                    matrix: riskMatrix.map((row: any) => {
+                        const niveauRisqueId = Number(row?.niveauRisqueId ?? row?.get?.('niveauRisqueId'));
+                        const statutId = Number(row?.statutId ?? row?.get?.('statutId'));
+                        const levelLookup = LookupResolutionService.getStaticValue('risk.niveauRisque', niveauRisqueId);
+                        const statusLookup = LookupResolutionService.getStaticValue('risk.statut', statutId);
+
+                        return {
+                            levelId: niveauRisqueId,
+                            levelCode: levelLookup?.code ?? null,
+                            levelLabel: levelLookup?.label ?? null,
+                            statusId: statutId,
+                            statusCode: statusLookup?.code ?? null,
+                            statusLabel: statusLookup?.label ?? null,
+                            count: Number(row?.count ?? row?.get?.('count') ?? 0),
+                        };
+                    }),
                     recent: recentRisks
                 },
                 incidents: {

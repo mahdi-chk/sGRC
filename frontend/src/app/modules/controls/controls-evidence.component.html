@@ -1,0 +1,78 @@
+<div class="controls-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-paperclip"></i> Collecte de Preuves</h1>
+                <p>Centralisation dediee des justificatifs avec auteur du depot, source et rattachement audit ou departement.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Preuves</span>
+            <h3>{{ data.summary.evidenceCount }}</h3>
+            <p>Volume global des elements centralises.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Audit</span>
+            <h3>{{ auditEvidenceCount }}</h3>
+            <p>Preuves rattachees aux missions et dossiers d audit.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Risques</span>
+            <h3>{{ riskEvidenceCount }}</h3>
+            <p>Justificatifs provenant de la gestion des risques.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Incidents</span>
+            <h3>{{ incidentEvidenceCount }}</h3>
+            <p>Pieces issues des incidents et de leur traitement.</p>
+        </div>
+    </div>
+
+    <div class="content-card" *ngIf="evidence.length > 0; else emptyEvidence">
+        <div class="card-head">
+            <h2>Registre des preuves</h2>
+            <p>Chaque piece conserve sa source, son auteur et son contexte metier de rattachement.</p>
+        </div>
+
+        <div class="evidence-list">
+            <article class="evidence-item" *ngFor="let item of evidence">
+                <div class="evidence-icon">
+                    <i class="fas fa-file-shield"></i>
+                </div>
+                <div class="evidence-copy">
+                    <h3>{{ item.filename }}</h3>
+                    <p>{{ item.title }}</p>
+                    <div class="evidence-meta">
+                        <span>{{ item.author || 'Auteur non renseigne' }}</span>
+                        <span>{{ item.department }}</span>
+                        <span>{{ formatDate(item.uploadedAt) }}</span>
+                    </div>
+                    <small *ngIf="item.linkedAudit">Audit lie : {{ item.linkedAudit }}</small>
+                </div>
+                <span class="tag">{{ item.sourceType }}</span>
+            </article>
+        </div>
+    </div>
+
+    <ng-template #emptyEvidence>
+        <div class="empty-state">Aucune preuve centralisee pour le moment.</div>
+    </ng-template>
+</div>

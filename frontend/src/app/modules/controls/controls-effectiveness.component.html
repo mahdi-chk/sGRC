@@ -1,0 +1,79 @@
+<div class="controls-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-line"></i> Evaluation d Efficacite</h1>
+                <p>Analyse dediee de la recurrence des incidents et du score d efficacite des controles mis en place.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Score moyen</span>
+            <h3>{{ data.summary.effectivenessScore }}%</h3>
+            <p>Vision moyenne de l efficacite des controles evalues.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Solides</span>
+            <h3>{{ strongCount }}</h3>
+            <p>Controles avec un score fort et une tendance favorable.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Sous surveillance</span>
+            <h3>{{ watchCount }}</h3>
+            <p>Controles a confirmer ou a renforcer.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Fragiles</span>
+            <h3>{{ alertCount }}</h3>
+            <p>Controles ou la recurrence reste trop elevee.</p>
+        </div>
+    </div>
+
+    <div class="effectiveness-grid" *ngIf="effectiveness.length > 0; else emptyEffectiveness">
+        <article class="effectiveness-card" *ngFor="let item of effectiveness" [ngClass]="getToneClass(item.score)">
+            <div class="effectiveness-head">
+                <div>
+                    <span class="eyebrow">{{ item.controlCode }}</span>
+                    <h3>{{ item.title }}</h3>
+                </div>
+                <strong>{{ item.score }}%</strong>
+            </div>
+            <p>Mise en oeuvre : {{ formatDate(item.implementationDate) }}</p>
+            <div class="effectiveness-metrics">
+                <div>
+                    <span>Avant</span>
+                    <strong>{{ item.incidentsBefore }}</strong>
+                </div>
+                <div>
+                    <span>Apres</span>
+                    <strong>{{ item.incidentsAfter }}</strong>
+                </div>
+                <div>
+                    <span>Tendance</span>
+                    <strong [ngClass]="getTrendClass(item.recurrenceTrend)">{{ getTrendLabel(item.recurrenceTrend) }}</strong>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <ng-template #emptyEffectiveness>
+        <div class="empty-state">Pas assez de donnees pour evaluer l efficacite.</div>
+    </ng-template>
+</div>

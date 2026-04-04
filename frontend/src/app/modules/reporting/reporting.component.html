@@ -1,1 +1,14 @@
-<router-outlet></router-outlet>
+<div class="reporting-shell">
+    <nav class="reporting-tabs">
+        <a
+            *ngFor="let tab of tabs"
+            [routerLink]="tab.route"
+            routerLinkActive="active"
+            class="reporting-tab">
+            <i class="fas" [ngClass]="tab.icon"></i>
+            <span>{{ tab.label }}</span>
+        </a>
+    </nav>
+
+    <router-outlet></router-outlet>
+</div>

@@ -1,0 +1,84 @@
+<div class="actions-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-calendar-day"></i> Suivi des Echeances</h1>
+                <p>Vue operationnelle des jalons, retards et previsions de livraison des plans d actions.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="actions-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="actions-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Jalons suivis</span>
+            <h3>{{ deadlines.length }}</h3>
+            <p>Jalons actuellement visibles sur la cadence de delivery.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">A risque</span>
+            <h3>{{ atRiskCount }}</h3>
+            <p>Jalons demandant arbitrage ou support immediat.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">En retard</span>
+            <h3>{{ data.summary.overdueActions }}</h3>
+            <p>Actions depassant leur date d engagement.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">A 30 jours</span>
+            <h3>{{ data.summary.dueThisMonth }}</h3>
+            <p>Livrables attendus avant la prochaine revue mensuelle.</p>
+        </div>
+    </div>
+
+    <div class="status-line" *ngIf="currentQuery">
+        Focus actif: {{ currentQuery }}
+    </div>
+
+    <div class="content-card" *ngIf="filteredDeadlines.length > 0; else emptyState">
+        <div class="card-head">
+            <h2>Cadence des actions</h2>
+            <p>Les blocages et previsions de delivery permettent d anticiper les glissements.</p>
+        </div>
+
+        <div class="timeline-list">
+            <article class="timeline-item" *ngFor="let item of filteredDeadlines">
+                <div class="timeline-date">{{ formatDate(item.dueDate) }}</div>
+                <div class="timeline-copy">
+                    <h3>{{ item.title }}</h3>
+                    <p>{{ item.milestone }} | {{ item.owner }}</p>
+                    <div class="progress-line compact">
+                        <span>{{ item.progress }}%</span>
+                        <div class="progress-track">
+                            <div class="progress-fill" [style.width.%]="item.progress"></div>
+                        </div>
+                    </div>
+                    <div class="timeline-meta">
+                        <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+                        <span class="tag">{{ item.forecast }}</span>
+                        <span class="tag subtle" *ngIf="item.blocker">{{ item.blocker }}</span>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">Aucune echeance n est disponible pour le moment.</div>
+    </ng-template>
+</div>

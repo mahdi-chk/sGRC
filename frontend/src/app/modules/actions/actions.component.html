@@ -1,18 +1,104 @@
-<div class="actions-page">
+<div class="actions-workspace">
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-tasks"></i> Plans d'Actions</h1>
-                <p>Suivez l'avancement des actions correctives et préventives.</p>
+                <h1><i class="fas fa-tasks"></i> Plans d Actions</h1>
+                <p>Coordonnez les actions correctives, preventives et de remediations issues des risques, incidents et audits.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="actions-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="actions-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Actions ouvertes</span>
+            <h3>{{ data.summary.totalOpenActions }}</h3>
+            <p>Actions encore en execution sur l ensemble du portefeuille.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">En retard</span>
+            <h3>{{ data.summary.overdueActions }}</h3>
+            <p>Actions depassant leur echeance ou un jalon critique.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">A 30 jours</span>
+            <h3>{{ data.summary.dueThisMonth }}</h3>
+            <p>Actions ou jalons attendus dans les 30 prochains jours.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Taux de cloture</span>
+            <h3>{{ data.summary.completionRate }}%</h3>
+            <p>Part des actions cloturees au dernier cycle de revue.</p>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Sous-modules</h2>
+                <p>Chaque vue couvre un angle de pilotage distinct du plan d actions.</p>
+            </div>
+
+            <div class="module-list">
+                <a *ngFor="let module of modules" [routerLink]="module.route" class="module-link">
+                    <strong>{{ module.title }}</strong>
+                    <p>{{ module.description }}</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="content-card" *ngIf="overview as data">
+            <div class="card-head">
+                <h2>Lecture rapide</h2>
+                <p>Le module unifie les plans issus des audits, de la maitrise des risques et du traitement des incidents.</p>
+            </div>
+
+            <div class="module-list">
+                <div class="module-link">
+                    <strong>Portefeuille</strong>
+                    <p>{{ data.summary.criticalActions }} actions prioritaires et {{ data.summary.blockedActions }} actions bloquees a arbitrer.</p>
+                </div>
+                <div class="module-link">
+                    <strong>Alertes</strong>
+                    <p>{{ data.summary.activeAlerts }} rappels ou escalades automatiques sont actuellement actives.</p>
+                </div>
+                <div class="module-link">
+                    <strong>Efficacite</strong>
+                    <p>{{ data.summary.effectivenessScore }}% d efficacite moyenne mesuree sur les plans clotures.</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="empty-state">
-        <i class="fas fa-construction"></i>
-        <h3>Module en cours de développement</h3>
-        <p>Cette interface sera bientôt disponible pour la gestion des plans d'actions.</p>
+
+    <div class="content-card" *ngIf="overview?.todoActions?.length">
+        <div class="card-head">
+            <h2>Actions a faire</h2>
+            <p>Suggestions purement visuelles generees a partir des retards, priorites et affectations detectes.</p>
+        </div>
+
+        <div class="todo-list">
+            <article class="todo-item" *ngFor="let item of overview?.todoActions" [ngClass]="'tone-' + item.tone">
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.detail }}</p>
+                <div class="todo-meta">
+                    <span class="tag">{{ item.sourceModule }}</span>
+                    <span class="tag subtle">{{ item.owner }}</span>
+                </div>
+            </article>
+        </div>
     </div>
 </div>

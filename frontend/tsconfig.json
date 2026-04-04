@@ -3,6 +3,7 @@
     "target": "es2015",
     "module": "esnext",
     "lib": ["es2018", "dom"],
+    "rootDir": "./src",
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
     "declaration": false,
@@ -12,12 +13,11 @@
     "skipLibCheck": true,
     "strict": true,
     "noImplicitAny": true,
-    "baseUrl": "./src",
     "paths": {
-      "@app/*": ["app/*"],
-      "@shared/*": ["shared/*"],
-      "@core/*": ["core/*"],
-      "@features/*": ["features/*"]
+      "@app/*": ["./src/app/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@core/*": ["./src/core/*"],
+      "@features/*": ["./src/features/*"]
     }
   },
   "include": [

@@ -236,8 +236,23 @@ export class DashboardService {
         else if (s.title === 'Plans de Traitement') {
             this.router.navigate(['/dashboard/treatment-plans']);
         }
+        else if (s.title === 'Referentiel des Controles') {
+            this.router.navigate(['/dashboard/controls-referential']);
+        }
+        else if (s.title === 'Planification Automatisee') {
+            this.router.navigate(['/dashboard/controls-planning']);
+        }
+        else if (s.title === 'Collecte de Preuves') {
+            this.router.navigate(['/dashboard/controls-evidence']);
+        }
+        else if (s.title === 'Evaluation d Efficacite') {
+            this.router.navigate(['/dashboard/controls-effectiveness']);
+        }
+        else if (s.title === 'Suivi des Non-Conformites') {
+            this.router.navigate(['/dashboard/controls-non-conformities']);
+        }
         else if (m.key === 'controls') {
-            this.router.navigate(['/dashboard/controls']);
+            this.router.navigate(['/dashboard/controls-referential']);
         }
         else if (title.includes('enregistrement structure')) {
             this.router.navigate(['/dashboard/incident-registration']);

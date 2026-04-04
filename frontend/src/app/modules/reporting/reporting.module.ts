@@ -7,6 +7,7 @@ import { MultiEntityVisionComponent } from './multi-entity-vision/multi-entity-v
 import { ExportCenterComponent } from './export-center/export-center.component';
 import { ReportingRoutingModule } from './reporting-routing.module';
 import { SharedModule } from '../../shared/shared.module';
+import { RiskMatrixComponent } from './risk-matrix/risk-matrix.component';
 
 @NgModule({
   declarations: [
@@ -14,7 +15,8 @@ import { SharedModule } from '../../shared/shared.module';
     DashboardViewComponent,
     KpiManagementComponent,
     MultiEntityVisionComponent,
-    ExportCenterComponent
+    ExportCenterComponent,
+    RiskMatrixComponent
   ],
   imports: [
     CommonModule,
@@ -26,7 +28,8 @@ import { SharedModule } from '../../shared/shared.module';
     DashboardViewComponent,
     KpiManagementComponent,
     MultiEntityVisionComponent,
-    ExportCenterComponent
+    ExportCenterComponent,
+    RiskMatrixComponent
   ]
 })
 export class ReportingModule { }

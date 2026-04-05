@@ -7,6 +7,7 @@ import { MultiEntityVisionComponent } from './multi-entity-vision/multi-entity-v
 import { ExportCenterComponent } from './export-center/export-center.component';
 import { ReportingRoutingModule } from './reporting-routing.module';
 import { SharedModule } from '../../shared/shared.module';
+import { RiskMatrixComponent } from './risk-matrix/risk-matrix.component';
 import * as i0 from "@angular/core";
 export class ReportingModule {
 }
@@ -25,7 +26,8 @@ ReportingModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ imports: [[
                     DashboardViewComponent,
                     KpiManagementComponent,
                     MultiEntityVisionComponent,
-                    ExportCenterComponent
+                    ExportCenterComponent,
+                    RiskMatrixComponent
                 ],
                 imports: [
                     CommonModule,
@@ -37,7 +39,8 @@ ReportingModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ imports: [[
                     DashboardViewComponent,
                     KpiManagementComponent,
                     MultiEntityVisionComponent,
-                    ExportCenterComponent
+                    ExportCenterComponent,
+                    RiskMatrixComponent
                 ]
             }]
     }], null, null); })();
@@ -45,11 +48,13 @@ ReportingModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ imports: [[
         DashboardViewComponent,
         KpiManagementComponent,
         MultiEntityVisionComponent,
-        ExportCenterComponent], imports: [CommonModule,
+        ExportCenterComponent,
+        RiskMatrixComponent], imports: [CommonModule,
         ReportingRoutingModule,
         SharedModule], exports: [ReportingComponent,
         DashboardViewComponent,
         KpiManagementComponent,
         MultiEntityVisionComponent,
-        ExportCenterComponent] }); })();
+        ExportCenterComponent,
+        RiskMatrixComponent] }); })();
 //# sourceMappingURL=reporting.module.js.map

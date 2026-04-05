@@ -5,20 +5,45 @@ import { AIService } from './ai.service';
 import { RAGEngine } from './rag.engine';
 import { authenticateToken, AuthRequest, authorizeRoles } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
-import multer from 'multer';
-
 import { secureUpload } from '../../middleware/file.middleware';
 
 const router = Router();
+const LONG_RUNNING_REQUEST_TIMEOUT_MS = Number(process.env.AI_LONG_REQUEST_TIMEOUT_MS || 30 * 60 * 1000);
 
-/**
- * Middleware d'upload sécurisé pour les documents (PDF, DOCX, Images)
- */
+const configureLongRunningRequest = (req: AuthRequest, res: Response) => {
+    const timeoutMs = Number.isFinite(LONG_RUNNING_REQUEST_TIMEOUT_MS) && LONG_RUNNING_REQUEST_TIMEOUT_MS >= 0
+        ? LONG_RUNNING_REQUEST_TIMEOUT_MS
+        : 30 * 60 * 1000;
+
+    req.setTimeout(timeoutMs);
+    res.setTimeout(timeoutMs);
+};
+
+const parseBooleanFlag = (value: unknown): boolean | undefined => {
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+            return true;
+        }
+
+        if (['0', 'false', 'no', 'off'].includes(normalized)) {
+            return false;
+        }
+    }
+
+    return undefined;
+};
+
 const uploadSecureDoc = secureUpload(['pdf', 'docx', 'jpg', 'jpeg', 'png'], 'file', 5 * 1024 * 1024);
+const uploadRagDoc = secureUpload(['pdf', 'docx'], 'file', 15 * 1024 * 1024);
 
-// Main chat endpoint with streaming support
 router.post('/generate', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+        configureLongRunningRequest(req, res);
         const { prompt, sessionId } = req.body;
         const role = req.user!.role;
 
@@ -26,7 +51,6 @@ router.post('/generate', authenticateToken, async (req: AuthRequest, res: Respon
             return res.status(400).json({ error: 'Session ID is required' });
         }
 
-        // Pass res for streaming mode
         await AIService.generateResponse(prompt, role, sessionId, req.user!.id, res);
     } catch (error: any) {
         if (!res.headersSent) {
@@ -35,7 +59,7 @@ router.post('/generate', authenticateToken, async (req: AuthRequest, res: Respon
     }
 });
 
-router.get('/status', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/status', authenticateToken, async (_req: AuthRequest, res: Response) => {
     try {
         const isInitialized = await RAGEngine.checkIndexStatus();
         res.json({ isInitialized });
@@ -46,10 +70,12 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res: Response)
 
 router.post('/generate-risks', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+        configureLongRunningRequest(req, res);
         const { situation } = req.body;
         if (!situation) {
             return res.status(400).json({ error: 'Situation is required' });
         }
+
         const risks = await AIService.generateRisksFromSituation(situation, req.user!.role);
         res.json(risks);
     } catch (error: any) {
@@ -57,18 +83,14 @@ router.post('/generate-risks', authenticateToken, async (req: AuthRequest, res: 
     }
 });
 
-/**
- * Génération de risques à partir d'un fichier (PDF, Word, Image)
- */
 router.post('/generate-risks-file', authenticateToken, uploadSecureDoc, async (req: AuthRequest, res: Response) => {
     try {
+        configureLongRunningRequest(req, res);
         if (!req.file) {
             return res.status(400).json({ error: 'Fichier requis' });
         }
 
-        // Extraction, nettoyage et limitation du texte (fait dans AIService)
         const extractedText = await AIService.extractTextFromFile(req.file);
-
         if (!extractedText || extractedText.trim().length < 10) {
             return res.status(400).json({ error: 'Le fichier ne contient pas assez de texte exploitable.' });
         }
@@ -82,24 +104,24 @@ router.post('/generate-risks-file', authenticateToken, uploadSecureDoc, async (r
 
 router.post('/index', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req: AuthRequest, res: Response) => {
     try {
-        const result = await RAGEngine.indexDocuments();
+        configureLongRunningRequest(req, res);
+        const useOcr = parseBooleanFlag(req.body?.useOcr);
+        const result = await RAGEngine.indexDocuments({ useOcr });
         res.json(result);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });
 
-/**
- * Gestion des documents RAG
- */
-const uploadRagDoc = secureUpload(['pdf', 'docx'], 'file', 15 * 1024 * 1024);
-
-router.get('/docs', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER), async (req: AuthRequest, res: Response) => {
+router.get('/docs', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.RISK_MANAGER), async (_req: AuthRequest, res: Response) => {
     try {
         const docsPath = await RAGEngine.getNormesPath();
-        
+
         const getAllDocs = (dir: string, fileList: any[] = [], currentSubDir: string = '') => {
-            if (!fs.existsSync(dir)) return fileList;
+            if (!fs.existsSync(dir)) {
+                return fileList;
+            }
+
             const items = fs.readdirSync(dir);
             for (const item of items) {
                 const itemPath = path.join(dir, item);
@@ -115,9 +137,10 @@ router.get('/docs', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, User
                     });
                 }
             }
+
             return fileList;
         };
-        
+
         res.json(getAllDocs(docsPath));
     } catch (error: any) {
         res.status(500).json({ error: error.message });
@@ -126,16 +149,18 @@ router.get('/docs', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, User
 
 router.post('/docs/upload', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), uploadRagDoc, async (req: AuthRequest, res: Response) => {
     try {
+        configureLongRunningRequest(req, res);
         if (!req.file) {
             return res.status(400).json({ error: 'Fichier requis' });
         }
 
+        const useOcr = parseBooleanFlag(req.body?.useOcr);
         const docsPath = await RAGEngine.getNormesPath();
         if (!fs.existsSync(docsPath)) {
             fs.mkdirSync(docsPath, { recursive: true });
         }
 
-        const safeName = req.file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
         let finalPath = path.join(docsPath, safeName);
 
         if (fs.existsSync(finalPath)) {
@@ -145,9 +170,14 @@ router.post('/docs/upload', authenticateToken, authorizeRoles(UserRole.SUPER_ADM
         }
 
         await fs.promises.writeFile(finalPath, req.file.buffer);
-        await RAGEngine.indexDocuments();
+        const indexing = await RAGEngine.indexDocuments({ useOcr });
 
-        res.json({ message: 'Fichier uploadé et indexé avec succès', file: path.basename(finalPath) });
+        res.json({
+            message: 'Fichier uploade et indexe avec succes',
+            file: path.basename(finalPath),
+            useOcr,
+            indexing,
+        });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -155,21 +185,29 @@ router.post('/docs/upload', authenticateToken, authorizeRoles(UserRole.SUPER_ADM
 
 router.delete('/docs/file', authenticateToken, authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI), async (req: AuthRequest, res: Response) => {
     try {
+        configureLongRunningRequest(req, res);
         const filePathParam = req.query.path as string;
+        const useOcr = parseBooleanFlag(req.query.useOcr);
+
         if (!filePathParam || filePathParam.includes('..')) {
             return res.status(400).json({ error: 'Chemin invalide' });
         }
-        
+
         const docsPath = await RAGEngine.getNormesPath();
         const finalPath = path.resolve(docsPath, filePathParam);
 
-        if (fs.existsSync(finalPath)) {
-            await fs.promises.unlink(finalPath);
-            await RAGEngine.indexDocuments();
-            res.json({ message: 'Fichier supprimé et index mis à jour' });
-        } else {
-            res.status(404).json({ error: 'Fichier non trouvé' });
+        if (!fs.existsSync(finalPath)) {
+            return res.status(404).json({ error: 'Fichier non trouve' });
         }
+
+        await fs.promises.unlink(finalPath);
+        const indexing = await RAGEngine.indexDocuments({ useOcr });
+
+        res.json({
+            message: 'Fichier supprime et index mis a jour',
+            useOcr,
+            indexing,
+        });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }

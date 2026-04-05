@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { SettingsService } from '../../../core/services/settings.service';
-import { AIService } from '../../../core/services/ai.service';
 import { HttpEventType, HttpResponse } from '@angular/common/http';
+import { SettingsService } from '../../../core/services/settings.service';
+import { AIService, RagIndexingResult } from '../../../core/services/ai.service';
 
 @Component({
     selector: 'app-rag-manager',
@@ -128,6 +128,14 @@ import { HttpEventType, HttpResponse } from '@angular/common/http';
         @media (max-width: 900px) {
             .main-content {
                 grid-template-columns: 1fr;
+            }
+            .settings-actions {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .settings-actions button {
+                flex: 1;
+                justify-content: center;
             }
         }
         .upload-card, .list-card {
@@ -327,11 +335,11 @@ export class RagManagerComponent implements OnInit {
     loadSettings() {
         this.settingsService.getSettings().subscribe({
             next: (settings: any) => {
-                this.docsPath = settings['DOCS_PATH'] || 'G:\\Téléchargement\\sGRC\\normes';
+                this.docsPath = settings['DOCS_PATH'] || 'G:\\Telechargement\\sGRC\\normes';
                 this.loadDocuments();
             },
             error: (err: any) => {
-                console.error('Erreur chargement paramètres:', err);
+                console.error('Erreur chargement parametres:', err);
             }
         });
     }
@@ -342,12 +350,12 @@ export class RagManagerComponent implements OnInit {
         this.settingsService.updateSetting('DOCS_PATH', this.docsPath).subscribe({
             next: () => {
                 this.isSaving = false;
-                this.saveMessage = 'Chemin appliqué et sauvegardé !';
+                this.saveMessage = 'Chemin applique et sauvegarde.';
                 setTimeout(() => this.saveMessage = '', 5000);
             },
             error: (err: any) => {
                 this.isSaving = false;
-                this.saveMessage = 'Erreur lors de la mise à jour.';
+                this.saveMessage = 'Erreur lors de la mise a jour.';
                 console.error(err);
             }
         });
@@ -355,11 +363,16 @@ export class RagManagerComponent implements OnInit {
 
     startIndexing() {
         this.isIndexing = true;
-        this.saveMessage = 'Indexation complète en cours...';
+        this.saveMessage = 'Indexation complete en cours...';
+
         this.aiService.indexNormes().subscribe({
-            next: (response: { success: boolean, count: number }) => {
+            next: (response) => {
                 this.isIndexing = false;
-                this.saveMessage = `Indexation réussie : ${response.count} fragments indexés.`;
+                const summary = this.buildIndexingBreakdown(response);
+                const ocrNote = response.ocrUsedFiles > 0 ? ' OCR applique uniquement aux documents scannes detectes.' : '';
+                this.saveMessage = response.failedFiles > 0
+                    ? `Indexation terminee : ${response.count} fragments indexes, ${response.failedFiles} fichier(s) non exploitable(s). ${summary}${ocrNote}`
+                    : `Indexation reussie : ${response.count} fragments indexes. ${summary}${ocrNote}`;
                 setTimeout(() => this.saveMessage = '', 7000);
             },
             error: (err: any) => {
@@ -402,8 +415,10 @@ export class RagManagerComponent implements OnInit {
         event.preventDefault();
         event.stopPropagation();
         this.isDragging = false;
-        
-        if (this.isUploading) return;
+
+        if (this.isUploading) {
+            return;
+        }
 
         const files = event.dataTransfer?.files;
         if (files && files.length > 0) {
@@ -422,15 +437,15 @@ export class RagManagerComponent implements OnInit {
     private handleSelectedFile(file: File) {
         const extension = file.name.split('.').pop()?.toLowerCase();
         if (extension !== 'pdf' && extension !== 'docx') {
-            this.saveMessage = 'Erreur : Seuls les fichiers PDF et DOCX sont autorisés.';
+            this.saveMessage = 'Erreur : seuls les fichiers PDF et DOCX sont autorises.';
             setTimeout(() => this.saveMessage = '', 5000);
             return;
         }
-        
+
         if (file.size > 15 * 1024 * 1024) {
-             this.saveMessage = 'Erreur : Le fichier dépasse 15 Mo.';
-             setTimeout(() => this.saveMessage = '', 5000);
-             return;
+            this.saveMessage = 'Erreur : le fichier depasse 15 Mo.';
+            setTimeout(() => this.saveMessage = '', 5000);
+            return;
         }
 
         this.uploadFile(file);
@@ -445,10 +460,20 @@ export class RagManagerComponent implements OnInit {
             next: (event: any) => {
                 if (event.type === HttpEventType.UploadProgress) {
                     this.uploadProgress = Math.round(100 * event.loaded / event.total);
-                } else if (event instanceof HttpResponse) {
+                    return;
+                }
+
+                if (event instanceof HttpResponse) {
                     this.isUploading = false;
                     this.uploadProgress = 100;
-                    this.saveMessage = `${file.name} uplaodé et indexé avec succès !`;
+                    const indexing = event.body?.indexing as RagIndexingResult | undefined;
+                    const failedFiles = indexing?.failedFiles || 0;
+                    const summary = indexing ? this.buildIndexingBreakdown(indexing) : '';
+                    const ocrNote = indexing && indexing.ocrUsedFiles > 0 ? ' OCR applique uniquement aux documents scannes detectes.' : '';
+                    this.saveMessage = failedFiles > 0
+                        ? `${file.name} charge, mais ${failedFiles} fichier(s) restent non exploitables dans l'index. ${summary}${ocrNote}`
+                        : `${file.name} uploade et indexe avec succes. ${summary}${ocrNote}`;
+
                     setTimeout(() => {
                         this.uploadProgress = 0;
                         this.saveMessage = '';
@@ -459,18 +484,25 @@ export class RagManagerComponent implements OnInit {
             error: (err: any) => {
                 this.isUploading = false;
                 this.uploadProgress = 0;
-                this.saveMessage = 'Erreur lors de l\'upload : ' + (err.error?.error || 'Erreur inconnue');
+                this.saveMessage = 'Erreur lors de l upload : ' + (err.error?.error || 'Erreur inconnue');
                 setTimeout(() => this.saveMessage = '', 5000);
             }
         });
     }
 
     deleteDocument(doc: any) {
-        if (confirm(`Êtes-vous sûr de vouloir supprimer '${doc.name}' et de le retirer de l'index RAG ?`)) {
-            this.saveMessage = 'Suppression et réindexation en cours...';
+        if (confirm(`Etes-vous sur de vouloir supprimer '${doc.name}' et de le retirer de l'index RAG ?`)) {
+            this.saveMessage = 'Suppression et reindexation en cours...';
+
             this.aiService.deleteRagDocument(doc.relativePath || doc.name).subscribe({
-                next: () => {
-                    this.saveMessage = 'Document supprimé et index mis à jour.';
+                next: (response: any) => {
+                    const indexing = response?.indexing as RagIndexingResult | undefined;
+                    const failedFiles = indexing?.failedFiles || 0;
+                    const summary = indexing ? this.buildIndexingBreakdown(indexing) : '';
+                    const ocrNote = indexing && indexing.ocrUsedFiles > 0 ? ' OCR applique uniquement aux documents scannes detectes.' : '';
+                    this.saveMessage = failedFiles > 0
+                        ? `Document supprime. Reindexation terminee avec ${failedFiles} fichier(s) non exploitable(s). ${summary}${ocrNote}`
+                        : `Document supprime et index mis a jour. ${summary}${ocrNote}`;
                     setTimeout(() => this.saveMessage = '', 5000);
                     this.loadDocuments();
                 },
@@ -484,10 +516,17 @@ export class RagManagerComponent implements OnInit {
     }
 
     formatSize(bytes: number): string {
-        if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) {
+            return '0 Bytes';
+        }
+
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    private buildIndexingBreakdown(result: RagIndexingResult): string {
+        return `${result.files} fichiers, ${result.ocrUsedFiles} OCR, ${result.nativeFiles} natifs${result.scannedPdfLikelyFiles > result.ocrUsedFiles ? `, ${result.scannedPdfLikelyFiles} scannes detectes` : ''}`;
     }
 }

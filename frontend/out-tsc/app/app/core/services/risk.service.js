@@ -4,9 +4,13 @@
  */
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { defer } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/common/http";
+import * as i2 from "./auth.service";
 /**
  * Enumerations synchronisees avec les lookups backend.
  * Les alias francais sont conserves pour eviter de casser le code existant.
@@ -172,9 +176,16 @@ export const RISK_STATUS_OPTIONS = CANONICAL_RISK_STATUSES.map((code) => ({
     label: RISK_STATUS_LABELS[code],
 }));
 export class RiskService {
-    constructor(http) {
+    constructor(http, authService) {
         this.http = http;
+        this.authService = authService;
         this.apiUrl = `${environment.apiUrl}/risk`;
+    }
+    trackLongRunningRequest(factory) {
+        return defer(() => {
+            this.authService.beginLongRunningTask();
+            return factory().pipe(finalize(() => this.authService.endLongRunningTask()));
+        });
     }
     getRisks() {
         return this.http.get(this.apiUrl);
@@ -198,12 +209,12 @@ export class RiskService {
         return this.http.get(`${this.apiUrl}/${riskId}/comments`);
     }
     generateRisks(situation) {
-        return this.http.post(`${environment.apiUrl}/assistant/generate-risks`, { situation });
+        return this.trackLongRunningRequest(() => this.http.post(`${environment.apiUrl}/assistant/generate-risks`, { situation }));
     }
     generateRisksFromFile(file) {
         const formData = new FormData();
         formData.append('file', file);
-        return this.http.post(`${environment.apiUrl}/assistant/generate-risks-file`, formData);
+        return this.trackLongRunningRequest(() => this.http.post(`${environment.apiUrl}/assistant/generate-risks-file`, formData));
     }
     evaluateRisks(riskIds) {
         return this.http.post(`${this.apiUrl}/evaluate`, { riskIds });
@@ -256,12 +267,12 @@ export class RiskService {
         return this.http.get(`${this.apiUrl}/${id}/export-incident`, { responseType: 'blob' });
     }
 }
-RiskService.ɵfac = function RiskService_Factory(t) { return new (t || RiskService)(i0.ɵɵinject(i1.HttpClient)); };
+RiskService.ɵfac = function RiskService_Factory(t) { return new (t || RiskService)(i0.ɵɵinject(i1.HttpClient), i0.ɵɵinject(i2.AuthService)); };
 RiskService.ɵprov = /*@__PURE__*/ i0.ɵɵdefineInjectable({ token: RiskService, factory: RiskService.ɵfac, providedIn: 'root' });
 (function () { (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(RiskService, [{
         type: Injectable,
         args: [{
                 providedIn: 'root'
             }]
-    }], function () { return [{ type: i1.HttpClient }]; }, null); })();
+    }], function () { return [{ type: i1.HttpClient }, { type: i2.AuthService }]; }, null); })();
 //# sourceMappingURL=risk.service.js.map

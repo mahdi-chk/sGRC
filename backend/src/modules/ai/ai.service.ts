@@ -8,6 +8,7 @@ import { Op } from 'sequelize';
 import { RAGEngine } from './rag.engine';
 import { AIDataService } from './ai.data.service';
 import { AIPromptBuilder } from './ai-prompt-builder';
+import { DocumentTextExtractor } from './document-text-extractor';
 import { UserRole } from '../users/user.roles';
 import { Response } from 'express';
 import * as mammoth from 'mammoth';
@@ -1016,73 +1017,12 @@ export class AIService {
      * Extrait le texte d'un fichier (PDF, Word, Image)
      */
     static async extractTextFromFile(file: Express.Multer.File): Promise<string> {
-        const extension = file.originalname.split('.').pop()?.toLowerCase();
-        let extractedText = '';
-
-        if (extension === 'pdf') {
-            let nativePdfText = '';
-            let nativePdfError: any = null;
-
-            try {
-                nativePdfText = await this.extractTextFromPdfBuffer(file.buffer);
-            } catch (error: any) {
-                nativePdfError = error;
-            }
-
-            const normalizedNativeText = this.cleanText(nativePdfText);
-            if (this.hasEnoughExtractedText(normalizedNativeText)) {
-                extractedText = normalizedNativeText;
-            } else {
-                try {
-                    const ocrPdfText = await this.extractTextFromPdfWithOcr(file.buffer);
-                    const normalizedOcrText = ocrPdfText
-                        .split(/\r?\n/)
-                        .map(line => line.replace(/\s+/g, ' ').trim())
-                        .filter(Boolean)
-                        .join('\n');
-
-                    if (this.hasEnoughExtractedText(normalizedOcrText)) {
-                        return this.limitText(normalizedOcrText);
-                    }
-
-                    extractedText = normalizedNativeText || normalizedOcrText;
-                } catch (ocrError: any) {
-                    const extractionError = new Error(
-                        nativePdfError
-                            ? 'Impossible de lire ce PDF. Le parseur PDF a echoue et le fallback OCR n a pas pu extraire un texte exploitable.'
-                            : 'Le PDF ne contient pas assez de texte exploitable et le fallback OCR n a rien pu extraire.'
-                    );
-                    (extractionError as any).statusCode = ocrError?.statusCode || 400;
-                    (extractionError as any).cause = ocrError;
-                    throw extractionError;
-                }
-            }
-
-            if (!this.hasEnoughExtractedText(extractedText)) {
-                const extractionError = new Error('Le PDF ne contient pas assez de texte exploitable, meme apres tentative d OCR.');
-                (extractionError as any).statusCode = 400;
-                (extractionError as any).cause = nativePdfError;
-                throw extractionError;
-            }
-        } else if (extension === 'docx') {
-            const result = await mammoth.extractRawText({ buffer: file.buffer });
-            extractedText = result.value;
-        } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
-            extractedText = await this.extractTextFromImageBuffer(file.buffer, true);
-        } else {
-            throw new Error('Format de fichier non supportÃ© pour l\'extraction de texte');
-        }
-
-        if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
-            const normalizedOcrText = extractedText
-                .split(/\r?\n/)
-                .map(line => line.replace(/\s+/g, ' ').trim())
-                .filter(Boolean)
-                .join('\n');
-            return this.limitText(normalizedOcrText);
-        }
-
-        return this.limitText(this.cleanText(extractedText));
+        return DocumentTextExtractor.extractTextFromFile(file, {
+            useOcrForPdf: true,
+            includeStructuredRegionsForImages: true,
+            requireUsableText: true,
+            limitChars: 4000,
+        });
     }
 }
 

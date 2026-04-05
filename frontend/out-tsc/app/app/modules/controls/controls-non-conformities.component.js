@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { CONTROLS_NAV_ITEMS } from './controls-navigation';
+import { getControlsNavItems, getStoredControlsRole } from './controls-navigation';
 import { ControlsService } from './controls.service';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/router";
@@ -149,7 +149,7 @@ export class ControlsNonConformitiesComponent {
     constructor(router, controlsService) {
         this.router = router;
         this.controlsService = controlsService;
-        this.navItems = CONTROLS_NAV_ITEMS;
+        this.navItems = getControlsNavItems(getStoredControlsRole());
         this.overview = null;
         this.isLoading = false;
     }

@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { defer, Observable } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export enum IncidentStatus {
     NOUVEAU = 'nouveau',
@@ -70,7 +72,14 @@ export interface IncidentImportDraft {
 export class IncidentService {
     private apiUrl = `${environment.apiUrl}/incidents`;
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient, private authService: AuthService) { }
+
+    private trackLongRunningRequest<T>(factory: () => Observable<T>): Observable<T> {
+        return defer(() => {
+            this.authService.beginLongRunningTask();
+            return factory().pipe(finalize(() => this.authService.endLongRunningTask()));
+        });
+    }
 
     getIncidents(): Observable<Incident[]> {
         return this.http.get<Incident[]>(this.apiUrl);
@@ -83,7 +92,7 @@ export class IncidentService {
     importIncidentDraft(file: File): Observable<IncidentImportDraft> {
         const formData = new FormData();
         formData.append('sourceFile', file);
-        return this.http.post<IncidentImportDraft>(`${this.apiUrl}/import-draft`, formData);
+        return this.trackLongRunningRequest(() => this.http.post<IncidentImportDraft>(`${this.apiUrl}/import-draft`, formData));
     }
 
     updateIncident(id: number, data: any): Observable<Incident> {
@@ -91,6 +100,6 @@ export class IncidentService {
     }
 
     generateRisksFromIncident(incidentId: number): Observable<any[]> {
-        return this.http.post<any[]>(`${this.apiUrl}/${incidentId}/generate-risks`, {});
+        return this.trackLongRunningRequest(() => this.http.post<any[]>(`${this.apiUrl}/${incidentId}/generate-risks`, {}));
     }
 }

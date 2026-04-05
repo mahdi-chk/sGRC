@@ -29,6 +29,7 @@ export class AuthService {
     private lastActivityTimestamp: number = Date.now();
     private readonly INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
     private checkInterval: any;
+    private longRunningTaskCount = 0;
 
     constructor(private http: HttpClient, private router: Router, private ngZone: NgZone) {
         // Restauration de la session depuis le sessionStorage au démarrage
@@ -57,6 +58,7 @@ export class AuthService {
 
     private clearSession() {
         if (this.checkInterval) clearInterval(this.checkInterval);
+        this.longRunningTaskCount = 0;
         sessionStorage.removeItem('sgrc_token');
         sessionStorage.removeItem('sgrc_user');
         this.currentUserSubject.next(null);
@@ -109,6 +111,16 @@ export class AuthService {
         this.lastActivityTimestamp = Date.now();
     }
 
+    beginLongRunningTask() {
+        this.longRunningTaskCount += 1;
+        this.resetActivity();
+    }
+
+    endLongRunningTask() {
+        this.longRunningTaskCount = Math.max(0, this.longRunningTaskCount - 1);
+        this.resetActivity();
+    }
+
     /**
      * Vérifie si la session est toujours valide en fonction de l'activité.
      */
@@ -117,6 +129,19 @@ export class AuthService {
 
         const now = Date.now();
         const elapsed = now - this.lastActivityTimestamp;
+
+        if (this.longRunningTaskCount > 0) {
+            this.lastActivityTimestamp = now;
+            this.refreshToken().pipe(
+                catchError(err => {
+                    if (err.status === 401 || err.status === 403) {
+                        this.logout();
+                    }
+                    return of(null);
+                })
+            ).subscribe();
+            return;
+        }
 
         if (elapsed >= this.INACTIVITY_LIMIT) {
             console.log('Session expirée pour inactivité (elapsed: ' + Math.round(elapsed / 1000) + 's)');
@@ -166,6 +191,7 @@ export class AuthService {
      */
     logout() {
         if (this.checkInterval) clearInterval(this.checkInterval);
+        this.longRunningTaskCount = 0;
         sessionStorage.removeItem('sgrc_token');
         sessionStorage.removeItem('sgrc_user');
         this.currentUserSubject.next(null);

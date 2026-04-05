@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { CONTROLS_NAV_ITEMS } from './controls-navigation';
+import { getControlsModuleItems, getControlsNavItems, getStoredControlsRole } from './controls-navigation';
 import { ControlsService } from './controls.service';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/router";
@@ -142,36 +142,11 @@ export class ControlsComponent {
     constructor(router, controlsService) {
         this.router = router;
         this.controlsService = controlsService;
-        this.navItems = CONTROLS_NAV_ITEMS;
+        this.currentRole = getStoredControlsRole();
+        this.navItems = getControlsNavItems(this.currentRole);
+        this.modules = getControlsModuleItems(this.currentRole);
         this.overview = null;
         this.isLoading = false;
-        this.modules = [
-            {
-                title: 'Referentiel des Controles',
-                route: '/dashboard/controls-referential',
-                description: 'Catalogue des controles relies aux risques, responsables et frequences.'
-            },
-            {
-                title: 'Planification Automatisee',
-                route: '/dashboard/controls-planning',
-                description: 'Agenda consolide des controles et des audits, ponctuels ou periodiques.'
-            },
-            {
-                title: 'Collecte de Preuves',
-                route: '/dashboard/controls-evidence',
-                description: 'Centralisation des justificatifs avec auteur et rattachement metier.'
-            },
-            {
-                title: 'Evaluation d Efficacite',
-                route: '/dashboard/controls-effectiveness',
-                description: 'Mesure de la recurrence des incidents apres mise en oeuvre.'
-            },
-            {
-                title: 'Suivi des Non-Conformites',
-                route: '/dashboard/controls-non-conformities',
-                description: 'Traitement continu des ecarts detectes apres execution.'
-            }
-        ];
     }
     ngOnInit() {
         this.loadOverview();

@@ -6,6 +6,9 @@ import jwt from 'jsonwebtoken';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me_to_a_secure_value';
+const JWT_EXPIRES_IN_SECONDS = Number(process.env.AUTH_JWT_EXPIRES_IN_SECONDS || 10 * 60);
+
+const signAuthToken = (payload: Record<string, unknown>) => jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN_SECONDS });
 
 // Login route
 router.post('/login', async (req, res) => {
@@ -31,18 +34,14 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign(
-            {
-                id: user.id,
-                email: user.mail,
-                role: user.role,
-                roleLabel: (user as any).roleLabel,
-                departementId: user.departementId,
-                departementNom: user.departement?.nom
-            },
-            JWT_SECRET,
-            { expiresIn: '10m' }
-        );
+        const token = signAuthToken({
+            id: user.id,
+            email: user.mail,
+            role: user.role,
+            roleLabel: (user as any).roleLabel,
+            departementId: user.departementId,
+            departementNom: user.departement?.nom
+        });
 
         res.json({
             token,
@@ -75,7 +74,7 @@ router.get('/refresh', async (req, res) => {
         // Remove iat and exp to sign a new token
         const { iat, exp, ...payload } = user;
 
-        const newToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '10m' });
+        const newToken = signAuthToken(payload);
         res.json({ token: newToken });
     });
 });

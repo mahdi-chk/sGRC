@@ -5,6 +5,7 @@ import { KpiManagementComponent } from './kpi-management/kpi-management.componen
 import { MultiEntityVisionComponent } from './multi-entity-vision/multi-entity-vision.component';
 import { ExportCenterComponent } from './export-center/export-center.component';
 import { ReportingComponent } from './reporting.component';
+import { RiskMatrixComponent } from './risk-matrix/risk-matrix.component';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/router";
 const routes = [
@@ -14,6 +15,7 @@ const routes = [
         children: [
             { path: 'dashboard', component: DashboardViewComponent },
             { path: 'kpis', component: KpiManagementComponent },
+            { path: 'risk-matrix', component: RiskMatrixComponent },
             { path: 'multi-entity', component: MultiEntityVisionComponent },
             { path: 'exports', component: ExportCenterComponent },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }

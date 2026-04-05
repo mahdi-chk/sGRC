@@ -5,8 +5,10 @@
 
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { defer, Observable } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 /**
  * Enumerations synchronisees avec les lookups backend.
@@ -250,7 +252,14 @@ export interface Risk {
 export class RiskService {
     private apiUrl = `${environment.apiUrl}/risk`;
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient, private authService: AuthService) { }
+
+    private trackLongRunningRequest<T>(factory: () => Observable<T>): Observable<T> {
+        return defer(() => {
+            this.authService.beginLongRunningTask();
+            return factory().pipe(finalize(() => this.authService.endLongRunningTask()));
+        });
+    }
 
     getRisks(): Observable<Risk[]> {
         return this.http.get<Risk[]>(this.apiUrl);
@@ -281,13 +290,13 @@ export class RiskService {
     }
 
     generateRisks(situation: string): Observable<any[]> {
-        return this.http.post<any[]>(`${environment.apiUrl}/assistant/generate-risks`, { situation });
+        return this.trackLongRunningRequest(() => this.http.post<any[]>(`${environment.apiUrl}/assistant/generate-risks`, { situation }));
     }
 
     generateRisksFromFile(file: File): Observable<any[]> {
         const formData = new FormData();
         formData.append('file', file);
-        return this.http.post<any[]>(`${environment.apiUrl}/assistant/generate-risks-file`, formData);
+        return this.trackLongRunningRequest(() => this.http.post<any[]>(`${environment.apiUrl}/assistant/generate-risks-file`, formData));
     }
 
     evaluateRisks(riskIds: number[]): Observable<any[]> {

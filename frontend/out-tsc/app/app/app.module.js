@@ -63,6 +63,14 @@ import { ControlsPlanningComponent } from './modules/controls/controls-planning.
 import { ControlsEvidenceComponent } from './modules/controls/controls-evidence.component';
 import { ControlsEffectivenessComponent } from './modules/controls/controls-effectiveness.component';
 import { ControlsNonConformitiesComponent } from './modules/controls/controls-non-conformities.component';
+import { getControlsRolesByRoute } from './modules/controls/controls-navigation';
+import { ActionsModule } from './modules/actions/actions.module';
+import { ActionsComponent } from './modules/actions/actions.component';
+import { ActionsCentralizedComponent } from './modules/actions/actions-centralized.component';
+import { ActionsDeadlinesComponent } from './modules/actions/actions-deadlines.component';
+import { ActionsNotificationsComponent } from './modules/actions/actions-notifications.component';
+import { ActionsIndicatorsComponent } from './modules/actions/actions-indicators.component';
+import { getActionsRolesByRoute } from './modules/actions/actions-navigation';
 import { UserRole } from './core/models/user-role.enum';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/router";
@@ -100,11 +108,16 @@ const routes = [
             { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
             { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
             { path: 'controls', redirectTo: 'controls-referential', pathMatch: 'full' },
-            { path: 'controls-referential', component: ControlsReferentialComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
-            { path: 'controls-planning', component: ControlsPlanningComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
-            { path: 'controls-evidence', component: ControlsEvidenceComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
-            { path: 'controls-effectiveness', component: ControlsEffectivenessComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
-            { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+            { path: 'controls-referential', component: ControlsReferentialComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-referential') } },
+            { path: 'controls-planning', component: ControlsPlanningComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-planning') } },
+            { path: 'controls-evidence', component: ControlsEvidenceComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-evidence') } },
+            { path: 'controls-effectiveness', component: ControlsEffectivenessComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-effectiveness') } },
+            { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-non-conformities') } },
+            { path: 'actions', component: ActionsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions') } },
+            { path: 'actions-centralized', component: ActionsCentralizedComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-centralized') } },
+            { path: 'actions-deadlines', component: ActionsDeadlinesComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-deadlines') } },
+            { path: 'actions-notifications', component: ActionsNotificationsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-notifications') } },
+            { path: 'actions-indicators', component: ActionsIndicatorsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-indicators') } },
             { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
             { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
             { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
@@ -180,6 +193,7 @@ AppModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ providers: [
             IncidentsModule,
             GovernanceModule,
             ControlsModule,
+            ActionsModule,
             RouterModule.forRoot(routes)
         ]] });
 (function () { (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(AppModule, [{
@@ -217,6 +231,7 @@ AppModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ providers: [
                     IncidentsModule,
                     GovernanceModule,
                     ControlsModule,
+                    ActionsModule,
                     RouterModule.forRoot(routes)
                 ],
                 providers: [
@@ -252,5 +267,6 @@ AppModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ providers: [
         AuditingModule,
         IncidentsModule,
         GovernanceModule,
-        ControlsModule, i1.RouterModule] }); })();
+        ControlsModule,
+        ActionsModule, i1.RouterModule] }); })();
 //# sourceMappingURL=app.module.js.map

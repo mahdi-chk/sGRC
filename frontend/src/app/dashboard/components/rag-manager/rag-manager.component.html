@@ -1,31 +1,28 @@
 <div class="rag-manager-container">
-    
-    <!-- Epic Header -->
     <div class="header-section">
         <div class="header-content">
             <h2>Gestionnaire de Base de Connaissances RAG</h2>
-            <p>Uploadez, gérez et indexez les normes et documents source pour l'intelligence artificielle sGRC.</p>
+            <p>Importez, gerez et reindexez les documents source utilises par l assistant sGRC.</p>
         </div>
         <div class="header-icon">
             <i class="fas fa-brain"></i>
         </div>
     </div>
 
-    <!-- General Settings -->
     <div class="controls-section">
         <div class="form-group">
-            <label>Chemin de Stockage des Normes (DOCS_PATH)</label>
+            <label>Chemin de stockage des normes (DOCS_PATH)</label>
             <input type="text" [(ngModel)]="docsPath" placeholder="D:\LocalDocs\normes" class="path-input">
         </div>
 
         <div class="settings-actions">
-            <button class="btn-apply" (click)="saveDocsPath()" [disabled]="isSaving || isUploading">
+            <button class="btn-apply" (click)="saveDocsPath()" [disabled]="isSaving || isUploading || isIndexing">
                 <i class="fas" [class.fa-save]="!isSaving" [class.fa-spinner]="isSaving" [class.fa-spin]="isSaving"></i>
-                Appliquer Chemin
+                Appliquer chemin
             </button>
-            <button class="btn-reindex" (click)="startIndexing()" [disabled]="isIndexing || isUploading" title="Forcer une ré-indexation complète de la base RAG">
+            <button class="btn-reindex" (click)="startIndexing()" [disabled]="isIndexing || isUploading" title="Forcer une reindexation complete de la base RAG">
                 <i class="fas" [class.fa-sync-alt]="!isIndexing" [class.fa-spinner]="isIndexing" [class.fa-spin]="isIndexing"></i>
-                Re-Indexer Tout
+                Reindexer tout
             </button>
         </div>
 
@@ -35,68 +32,68 @@
     </div>
 
     <div class="main-content">
-        <!-- Upload Zone -->
         <div class="upload-card">
             <h3><i class="fas fa-cloud-upload-alt"></i> Importer un document</h3>
-            
-            <div class="dropzone" 
+
+            <div class="dropzone"
                  [class.drag-over]="isDragging"
-                 (dragover)="onDragOver($event)" 
-                 (dragleave)="onDragLeave($event)" 
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
                  (drop)="onDrop($event)"
                  (click)="!isUploading && fileInput.click()">
-                 
+
                 <input type="file" #fileInput class="file-input" (change)="onFileSelected($event)" accept=".pdf,.docx">
-                
+
                 <i class="main-icon fas" [class.fa-file-upload]="!isUploading" [class.fa-circle-notch]="isUploading" [class.fa-spin]="isUploading"></i>
-                
-                <div class="dropzone-text" *ngIf="!isUploading">Glissez-déposez ici ou parcourez vos fichiers</div>
-                <div class="dropzone-text" *ngIf="isUploading">Transfert et Analyse RAG en cours...</div>
-                
-                <div class="dropzone-subtext" *ngIf="!isUploading">Support : PDF, DOCX • Max 15 MB / fichier</div>
-                
+
+                <div class="dropzone-text" *ngIf="!isUploading">Glissez-deposez ici ou parcourez vos fichiers</div>
+                <div class="dropzone-text" *ngIf="isUploading">Transfert et analyse RAG en cours...</div>
+
+                <div class="dropzone-subtext" *ngIf="!isUploading">
+                    Support : PDF, DOCX - Max 15 MB / fichier
+                </div>
+
                 <div *ngIf="isUploading && uploadProgress > 0" class="progress-bar-container">
                     <div class="progress-bar" [style.width.%]="uploadProgress"></div>
                 </div>
-                <div *ngIf="isUploading && uploadProgress > 0" class="progress-text">{{ uploadProgress }}% Effectué</div>
+                <div *ngIf="isUploading && uploadProgress > 0" class="progress-text">{{ uploadProgress }}% effectue</div>
             </div>
         </div>
 
-        <!-- Documents Registry -->
         <div class="list-card">
             <h3>
-                <i class="fas fa-folder-open"></i> Régistre Documentaire
-                <span class="badge" *ngIf="documents.length > 0">{{documents.length}} Indexés</span>
+                <i class="fas fa-folder-open"></i> Registre documentaire
+                <span class="badge" *ngIf="documents.length > 0">{{ documents.length }} indexes</span>
             </h3>
 
             <div *ngIf="isLoadingDocs" class="empty-docs">
                 <i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom: 1rem; color: #6366f1;"></i>
-                <br>Chargement du répertoire...
+                <br>Chargement du repertoire...
             </div>
 
             <div *ngIf="!isLoadingDocs && documents.length === 0" class="empty-docs">
                 <i class="far fa-folder fa-3x" style="margin-bottom: 1rem; color: #cbd5e1;"></i>
-                <br>Aucun document trouvé dans ce répertoire.<br>
-                <span style="font-size: 0.85rem;">Commencez par en importer un !</span>
+                <br>Aucun document trouve dans ce repertoire.<br>
+                <span style="font-size: 0.85rem;">Commencez par en importer un.</span>
             </div>
 
             <div *ngIf="!isLoadingDocs && documents.length > 0" class="docs-container">
                 <div class="doc-item" *ngFor="let doc of documents">
                     <div class="doc-info">
-                        <i class="doc-icon fas" 
+                        <i class="doc-icon fas"
                            [class.fa-file-pdf]="doc.name.toLowerCase().endsWith('.pdf')" [class.pdf]="doc.name.toLowerCase().endsWith('.pdf')"
                            [class.fa-file-word]="doc.name.toLowerCase().endsWith('.docx')" [class.docx]="doc.name.toLowerCase().endsWith('.docx')">
                         </i>
                         <div class="doc-details">
                             <span class="doc-name" [title]="doc.name">{{ doc.name }}</span>
                             <span class="doc-meta">
-                                <span>{{ formatSize(doc.size) }}</span> &bull; 
+                                <span>{{ formatSize(doc.size) }}</span> &bull;
                                 <span>{{ doc.uploadedAt | date:'mediumDate' }}</span>
                             </span>
                         </div>
                     </div>
                     <div class="doc-actions">
-                        <button class="btn-icon" (click)="deleteDocument(doc)" title="Supprimer définitivement l'index et le fichier">
+                        <button class="btn-icon" (click)="deleteDocument(doc)" title="Supprimer definitivement le fichier et mettre l index a jour">
                             <i class="far fa-trash-alt"></i>
                         </button>
                     </div>

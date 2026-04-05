@@ -12,6 +12,8 @@ var __asyncGenerator = (this && this.__asyncGenerator) || function (thisArg, _ar
 };
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpRequest } from '@angular/common/http';
+import { defer } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import * as i0 from "@angular/core";
@@ -23,46 +25,58 @@ export class AIService {
         this.authService = authService;
         this.apiUrl = `${environment.apiUrl}/assistant`;
     }
+    trackLongRunningRequest(factory) {
+        return defer(() => {
+            this.authService.beginLongRunningTask();
+            return factory().pipe(finalize(() => this.authService.endLongRunningTask()));
+        });
+    }
     chat(prompt, sessionId) {
         return this.http.post(`${this.apiUrl}/generate`, { prompt, sessionId });
     }
     chatStream(prompt, sessionId, signal) {
         var _a;
         return __asyncGenerator(this, arguments, function* chatStream_1() {
-            const token = this.authService.getToken();
-            const response = yield __await(fetch(`${this.apiUrl}/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ prompt, sessionId }),
-                signal
-            }));
-            if (!response.ok)
-                throw new Error('AI Service Error');
-            const reader = (_a = response.body) === null || _a === void 0 ? void 0 : _a.getReader();
-            if (!reader)
-                throw new Error('ReadableStream not supported');
-            const decoder = new TextDecoder();
-            while (true) {
-                const { done, value } = yield __await(reader.read());
-                if (done)
-                    break;
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        if (data === '[DONE]')
-                            return yield __await(void 0);
-                        try {
-                            const parsed = JSON.parse(data);
-                            yield yield __await(parsed.content);
+            this.authService.beginLongRunningTask();
+            try {
+                const token = this.authService.getToken();
+                const response = yield __await(fetch(`${this.apiUrl}/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ prompt, sessionId }),
+                    signal
+                }));
+                if (!response.ok)
+                    throw new Error('AI Service Error');
+                const reader = (_a = response.body) === null || _a === void 0 ? void 0 : _a.getReader();
+                if (!reader)
+                    throw new Error('ReadableStream not supported');
+                const decoder = new TextDecoder();
+                while (true) {
+                    const { done, value } = yield __await(reader.read());
+                    if (done)
+                        break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]')
+                                return yield __await(void 0);
+                            try {
+                                const parsed = JSON.parse(data);
+                                yield yield __await(parsed.content);
+                            }
+                            catch (e) { }
                         }
-                        catch (e) { }
                     }
                 }
+            }
+            finally {
+                this.authService.endLongRunningTask();
             }
         });
     }
@@ -70,7 +84,7 @@ export class AIService {
         return this.http.get(`${this.apiUrl}/status`);
     }
     indexNormes() {
-        return this.http.post(`${this.apiUrl}/index`, {});
+        return this.trackLongRunningRequest(() => this.http.post(`${this.apiUrl}/index`, {}));
     }
     getRagDocuments() {
         return this.http.get(`${this.apiUrl}/docs`);
@@ -78,13 +92,15 @@ export class AIService {
     uploadRagDocument(file) {
         const formData = new FormData();
         formData.append('file', file);
-        const req = new HttpRequest('POST', `${this.apiUrl}/docs/upload`, formData, {
-            reportProgress: true
+        return this.trackLongRunningRequest(() => {
+            const req = new HttpRequest('POST', `${this.apiUrl}/docs/upload`, formData, {
+                reportProgress: true
+            });
+            return this.http.request(req);
         });
-        return this.http.request(req);
     }
     deleteRagDocument(relativePath) {
-        return this.http.delete(`${this.apiUrl}/docs/file?path=${encodeURIComponent(relativePath)}`);
+        return this.trackLongRunningRequest(() => this.http.delete(`${this.apiUrl}/docs/file?path=${encodeURIComponent(relativePath)}`));
     }
 }
 AIService.ɵfac = function AIService_Factory(t) { return new (t || AIService)(i0.ɵɵinject(i1.HttpClient), i0.ɵɵinject(i2.AuthService)); };

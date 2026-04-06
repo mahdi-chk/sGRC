@@ -1,0 +1,47 @@
+.risk-subnav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px;
+  margin-bottom: 24px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(0, 74, 153, 0.08), rgba(59, 130, 246, 0.04));
+  border: 1px solid rgba(0, 74, 153, 0.12);
+}
+
+.risk-subnav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: #475569;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid transparent;
+  transition: all 0.25s ease;
+}
+
+.risk-subnav-tab:hover {
+  color: #004a99;
+  border-color: rgba(0, 74, 153, 0.18);
+  transform: translateY(-1px);
+}
+
+.risk-subnav-tab.active {
+  color: white;
+  background: linear-gradient(135deg, #004a99, #0066cc);
+  box-shadow: 0 10px 24px rgba(0, 74, 153, 0.22);
+}
+
+@media (max-width: 768px) {
+  .risk-subnav {
+    flex-direction: column;
+  }
+
+  .risk-subnav-tab {
+    width: 100%;
+    justify-content: center;
+  }
+}

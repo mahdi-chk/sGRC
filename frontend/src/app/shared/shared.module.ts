@@ -6,9 +6,11 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ModalComponent } from './modal/modal.component';
 import { AiAssistantComponent } from './components/ai-assistant/ai-assistant.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
+import { RiskModuleTabsComponent } from './components/risk-module-tabs/risk-module-tabs.component';
 import { UserManagementCardComponent } from '../dashboard/components/user-management-card/user-management-card.component';
 import { RiskManagementCardComponent } from '../dashboard/components/risk-management-card/risk-management-card.component';
 import { RagConfigComponent } from '../dashboard/components/rag-config/rag-config.component';
@@ -22,6 +24,7 @@ import { OrganigrammeManagementCardComponent } from '../dashboard/components/org
     ModalComponent,
     AiAssistantComponent,
     UserManagementComponent,
+    RiskModuleTabsComponent,
     UserManagementCardComponent,
     RiskManagementCardComponent,
     RagConfigComponent,
@@ -32,12 +35,14 @@ import { OrganigrammeManagementCardComponent } from '../dashboard/components/org
   ],
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    RouterModule
   ],
   exports: [
     ModalComponent,
     AiAssistantComponent,
     UserManagementComponent,
+    RiskModuleTabsComponent,
     UserManagementCardComponent,
     RiskManagementCardComponent,
     RagConfigComponent,
@@ -46,7 +51,8 @@ import { OrganigrammeManagementCardComponent } from '../dashboard/components/org
     AuditorMissionCardComponent,
     OrganigrammeManagementCardComponent,
     CommonModule,
-    FormsModule
+    FormsModule,
+    RouterModule
   ]
 })
 export class SharedModule { }

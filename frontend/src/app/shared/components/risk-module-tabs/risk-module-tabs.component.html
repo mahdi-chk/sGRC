@@ -1,0 +1,10 @@
+<nav class="risk-subnav" aria-label="Navigation des sous-modules risques">
+  <a
+    *ngFor="let tab of tabs"
+    class="risk-subnav-tab"
+    [routerLink]="tab.route"
+    [class.active]="isActive(tab.route)">
+    <i class="fas" [ngClass]="tab.icon"></i>
+    <span>{{ tab.label }}</span>
+  </a>
+</nav>

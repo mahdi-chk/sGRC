@@ -46,6 +46,67 @@ export class AIService {
     private static sessions = new Map<string, UserSession>();
     private static TTL = 30 * 60 * 1000; // 30 minutes
 
+    private static parseJsonArrayResponse(content: string): any[] {
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) {
+            return parsed;
+        }
+
+        if (Array.isArray(parsed?.evaluations)) {
+            return parsed.evaluations;
+        }
+
+        if (Array.isArray(parsed?.results)) {
+            return parsed.results;
+        }
+
+        if (Array.isArray(parsed?.items)) {
+            return parsed.items;
+        }
+
+        return [parsed];
+    }
+
+    private static toPositiveInteger(value: unknown): number | null {
+        const parsed = Number.parseInt(String(value), 10);
+        return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+    }
+
+    private static normalizeRiskEvaluations(evaluation: any[], risks: any[]): any[] {
+        const requestedRiskIds = risks
+            .map((risk) => this.toPositiveInteger(risk?.id))
+            .filter((riskId): riskId is number => riskId !== null);
+        const requestedRiskIdSet = new Set(requestedRiskIds);
+        const normalizedResults = new Map<number, any>();
+
+        evaluation.forEach((item, index) => {
+            const explicitRiskId = this.toPositiveInteger(item?.riskId);
+            const fallbackRiskId = evaluation.length === risks.length
+                ? requestedRiskIds[index] ?? null
+                : null;
+            const riskId = explicitRiskId && requestedRiskIdSet.has(explicitRiskId)
+                ? explicitRiskId
+                : fallbackRiskId;
+
+            if (!riskId) {
+                return;
+            }
+
+            normalizedResults.set(riskId, {
+                ...item,
+                riskId,
+                priorite: item?.priorite ? parseInt(item.priorite.toString(), 10) : 0,
+            });
+        });
+
+        return Array.from(normalizedResults.values());
+    }
+
     private static maskSessionId(sessionId: string): string {
         if (!sessionId) {
             return 'n/a';
@@ -402,15 +463,7 @@ export class AIService {
             appLogger.debug('AI', 'Risk generation raw response received', {
                 responseLength: content.length,
             });
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            let risks: any[] = [];
-
-            if (jsonMatch) {
-                risks = JSON.parse(jsonMatch[0]);
-            } else {
-                const parsed = JSON.parse(content);
-                risks = Array.isArray(parsed) ? parsed : [parsed];
-            }
+            const risks = this.parseJsonArrayResponse(content);
 
             return risks.map(risk => ({
                 ...risk,
@@ -496,15 +549,7 @@ export class AIService {
                 incidentId: incident.id,
                 responseLength: content.length,
             });
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            let risks: any[] = [];
-
-            if (jsonMatch) {
-                risks = JSON.parse(jsonMatch[0]);
-            } else {
-                const parsed = JSON.parse(content);
-                risks = Array.isArray(parsed) ? parsed : [parsed];
-            }
+            const risks = this.parseJsonArrayResponse(content);
 
             return risks.map(risk => ({
                 ...risk,
@@ -560,22 +605,17 @@ export class AIService {
             });
 
             const content = response.data.message.content;
-            let evaluation: any[] = [];
+            const evaluation = this.parseJsonArrayResponse(content);
+            const normalizedEvaluation = this.normalizeRiskEvaluations(evaluation, risks);
 
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                evaluation = JSON.parse(jsonMatch[0]);
-            } else {
-                // Tente de parser directement ou de transformer un objet unique en tableau
-                const parsed = JSON.parse(content);
-                evaluation = Array.isArray(parsed) ? parsed : [parsed];
+            if (normalizedEvaluation.length !== risks.length) {
+                appLogger.warn('AI', 'Strategic AI evaluation returned partial or unmatched results', {
+                    role,
+                    riskCount: risks.length,
+                    rawResultCount: evaluation.length,
+                    normalizedResultCount: normalizedEvaluation.length,
+                });
             }
-
-            // Normalisation des donnÃ©es pour Sequelize (Conversion string -> number pour priorite)
-            const normalizedEvaluation = evaluation.map(item => ({
-                ...item,
-                priorite: item.priorite ? parseInt(item.priorite.toString()) : 0
-            }));
 
             appLogger.info('AI', 'Strategic AI evaluation completed', {
                 role,
@@ -633,15 +673,7 @@ export class AIService {
             });
 
             const content = response.data.message.content;
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            let plan: any[] = [];
-
-            if (jsonMatch) {
-                plan = JSON.parse(jsonMatch[0]);
-            } else {
-                const parsed = JSON.parse(content);
-                plan = Array.isArray(parsed) ? parsed : [parsed];
-            }
+            const plan = this.parseJsonArrayResponse(content);
 
             return plan.map(item => ({
                 ...item,

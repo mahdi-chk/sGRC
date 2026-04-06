@@ -325,31 +325,71 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { riskIds } = req.body;
+        const requestedRiskIds = Array.isArray(riskIds)
+            ? riskIds
+                .map((riskId: unknown) => Number.parseInt(String(riskId), 10))
+                .filter((riskId: number) => Number.isInteger(riskId) && riskId > 0)
+            : [];
+
         appLogger.info('Risks', 'Strategic AI evaluation request received', {
             userId: req.user!.id,
             role: req.user!.role,
-            requestedRiskCount: Array.isArray(riskIds) ? riskIds.length : 0,
+            requestedRiskCount: requestedRiskIds.length,
         });
-        const risks = await Risk.findAll({ where: { id: riskIds } });
+
+        if (requestedRiskIds.length === 0) {
+            return res.status(400).json({ message: 'Aucun identifiant de risque valide fourni pour l\'evaluation IA.' });
+        }
+
+        const risks = await Risk.findAll({
+            where: {
+                id: {
+                    [Op.in]: requestedRiskIds,
+                },
+            },
+        });
+
+        if (risks.length === 0) {
+            return res.status(404).json({ message: 'Aucun risque correspondant n\'a ete trouve pour l\'evaluation IA.' });
+        }
+
         const evaluation = await AIService.evaluateRisks(risks, req.user!.role);
+        const evaluationDate = new Date();
+        let persistedResultCount = 0;
 
         // Persist AI evaluation results to the database
         for (const result of evaluation) {
-            await Risk.update({
+            if (!result?.riskId) {
+                continue;
+            }
+
+            const [updatedCount] = await Risk.update({
                 aiAnalysisScore: result.priorite,
                 aiAnalysisImpact: result.impact,
                 aiAnalysisTendance: result.tendance,
                 aiAnalysisSuggestion: result.suggestion,
-                aiAnalysisDate: new Date()
+                aiAnalysisDate: evaluationDate
             }, {
                 where: { id: result.riskId }
+            });
+
+            persistedResultCount += updatedCount;
+        }
+
+        if (evaluation.length !== risks.length) {
+            appLogger.warn('Risks', 'Strategic AI evaluation persisted partially', {
+                userId: req.user!.id,
+                requestedRiskCount: requestedRiskIds.length,
+                evaluatedRiskCount: risks.length,
+                returnedResultCount: evaluation.length,
+                persistedResultCount,
             });
         }
 
         appLogger.info('Risks', 'Strategic AI evaluation results persisted', {
             userId: req.user!.id,
             evaluatedRiskCount: risks.length,
-            persistedResultCount: evaluation.length,
+            persistedResultCount,
         });
         res.json(evaluation);
     } catch (error: any) {

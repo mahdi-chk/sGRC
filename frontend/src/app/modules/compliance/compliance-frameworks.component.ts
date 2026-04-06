@@ -104,7 +104,7 @@ export class ComplianceFrameworksComponent implements OnInit {
       jurisdiction: item.jurisdiction,
       description: item.description,
       entityKey: item.entityKey,
-      status: item.status,
+      status: item.statusCode || item.status,
       effectiveDate: this.toInputDate(item.effectiveDate),
       reviewDate: this.toInputDate(item.reviewDate)
     };
@@ -181,8 +181,8 @@ export class ComplianceFrameworksComponent implements OnInit {
       description: item.description,
       chapter: item.chapter,
       orderIndex: item.orderIndex,
-      applicability: item.applicability,
-      status: item.status,
+      applicability: item.applicabilityCode || item.applicability,
+      status: item.statusCode || item.status,
       weight: item.weight
     };
     this.feedback = `Edition de l exigence ${item.code}.`;

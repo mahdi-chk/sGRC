@@ -1,4 +1,5 @@
 import { Op, WhereOptions } from 'sequelize';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { UserRole } from '../users/user.roles';
 import { ComplianceFilters, ComplianceScope } from './compliance.types';
 
@@ -57,7 +58,10 @@ export const buildFrameworkWhere = (scope: ComplianceScope, filters: ComplianceF
     }
 
     if (filters.status) {
-        clauses.push({ status: filters.status });
+        const lookup = LookupResolutionService.getStaticValue('complianceFramework.status', filters.status);
+        if (lookup) {
+            clauses.push({ statusId: lookup.id });
+        }
     }
 
     if (scope.role === UserRole.SUPER_ADMIN || scope.role === UserRole.TOP_MANAGEMENT) {
@@ -87,10 +91,6 @@ export const buildChildWhere = (scope: ComplianceScope, filters: ComplianceFilte
 
     if (filters.entityKey) {
         clauses.push({ entityKey: filters.entityKey });
-    }
-
-    if (filters.status) {
-        clauses.push({ status: filters.status });
     }
 
     if (scope.role === UserRole.SUPER_ADMIN || scope.role === UserRole.TOP_MANAGEMENT) {

@@ -121,10 +121,10 @@
                         <small>{{ item.requirement?.title || 'Exigence chargee sans detail' }}</small>
                     </td>
                     <td>
-                        <strong>{{ item.sourceType }} - {{ getSourceLabel(item) }}</strong>
+                        <strong>{{ item.sourceTypeLabel || item.sourceType }} - {{ getSourceLabel(item) }}</strong>
                         <small>{{ item.relatedEntityKey || 'Aucune cle secondaire' }}</small>
                     </td>
-                    <td><span class="badge" [ngClass]="getStatusClass(item.coverageLevel)">{{ item.coverageLevel }}</span></td>
+                    <td><span class="badge" [ngClass]="getStatusClass(item.coverageLevelCode || item.coverageLevel)">{{ item.coverageLevelLabel || item.coverageLevel }}</span></td>
                     <td>
                         <strong>{{ item.entityKey || 'Global' }}</strong>
                         <small>{{ item.owner?.prenom }} {{ item.owner?.nom }}</small>

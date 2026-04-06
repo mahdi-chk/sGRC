@@ -189,7 +189,7 @@
                             <strong>Effet: {{ formatDate(framework.effectiveDate) }}</strong>
                             <small>Revue: {{ formatDate(framework.reviewDate) }}</small>
                         </td>
-                        <td><span class="badge" [ngClass]="getStatusClass(framework.status)">{{ framework.status }}</span></td>
+                        <td><span class="badge" [ngClass]="getStatusClass(framework.statusCode || framework.status)">{{ framework.statusLabel || framework.status }}</span></td>
                         <td class="action-cell">
                             <button class="table-action" type="button" (click)="editFramework(framework)">Modifier</button>
                             <button class="table-action danger" type="button" (click)="deleteFramework(framework)">Supprimer</button>
@@ -234,8 +234,8 @@
                             <strong>{{ requirement.chapter || 'Sans chapitre' }}</strong>
                             <small>Ordre {{ requirement.orderIndex }} - poids {{ requirement.weight }}</small>
                         </td>
-                        <td><span class="badge" [ngClass]="getStatusClass(requirement.applicability)">{{ requirement.applicability }}</span></td>
-                        <td><span class="badge" [ngClass]="getStatusClass(requirement.status)">{{ requirement.status }}</span></td>
+                        <td><span class="badge" [ngClass]="getStatusClass(requirement.applicabilityCode || requirement.applicability)">{{ requirement.applicabilityLabel || requirement.applicability }}</span></td>
+                        <td><span class="badge" [ngClass]="getStatusClass(requirement.statusCode || requirement.status)">{{ requirement.statusLabel || requirement.status }}</span></td>
                         <td class="action-cell">
                             <button class="table-action" type="button" (click)="editRequirement(requirement)">Modifier</button>
                             <button class="table-action danger" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>

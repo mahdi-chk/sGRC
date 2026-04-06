@@ -1,23 +1,46 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import {
+    buildLookupAttribute,
+    getRequiredLookupId,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 import { Department } from '../departments/department.model';
 import { User } from '../users/user.model';
 import { ComplianceRequirement } from './compliance-requirement.model';
 
-export class ComplianceGap extends Model {
+export const ComplianceGapSeverity = buildLookupCodeMap('complianceGap.severity');
+export type ComplianceGapSeverity = string;
+
+export const ComplianceGapStatus = buildLookupCodeMap('complianceGap.status');
+export type ComplianceGapStatus = string;
+
+export const ComplianceGapSourceType = buildLookupCodeMap('complianceGap.sourceType');
+export type ComplianceGapSourceType = string;
+
+export class ComplianceGap extends LookupAwareModel {
     public id!: number;
     public requirementId!: number | null;
     public title!: string;
     public description!: string | null;
-    public severity!: string;
-    public status!: string;
-    public sourceType!: string;
+    public severityId!: number;
+    public severity!: ComplianceGapSeverity;
+    public statusId!: number;
+    public status!: ComplianceGapStatus;
+    public sourceTypeId!: number;
+    public sourceType!: ComplianceGapSourceType;
     public sourceId!: number | null;
     public ownerUserId!: number | null;
     public departmentId!: number | null;
     public entityKey!: string | null;
     public dueDate!: Date | null;
     public remediationActionId!: string | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -46,20 +69,17 @@ ComplianceGap.init(
             type: DataTypes.TEXT,
             allowNull: true,
         },
-        severity: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
-            defaultValue: 'medium',
+        severityId: {
+            ...buildLookupAttribute('complianceGap.severity'),
+            defaultValue: getRequiredLookupId('complianceGap.severity', ComplianceGapSeverity.MEDIUM),
         },
-        status: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
-            defaultValue: 'open',
+        statusId: {
+            ...buildLookupAttribute('complianceGap.status'),
+            defaultValue: getRequiredLookupId('complianceGap.status', ComplianceGapStatus.OPEN),
         },
-        sourceType: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
-            defaultValue: 'assessment',
+        sourceTypeId: {
+            ...buildLookupAttribute('complianceGap.sourceType'),
+            defaultValue: getRequiredLookupId('complianceGap.sourceType', ComplianceGapSourceType.ASSESSMENT),
         },
         sourceId: {
             type: DataTypes.INTEGER,
@@ -93,15 +113,17 @@ ComplianceGap.init(
             type: DataTypes.STRING(100),
             allowNull: true,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'compliance_gaps',
         timestamps: true,
+        ...softDeleteModelOptions,
         indexes: [
             { fields: ['requirementId'] },
-            { fields: ['status'] },
-            { fields: ['severity'] },
+            { fields: ['statusId'] },
+            { fields: ['severityId'] },
             { fields: ['departmentId'] },
             { fields: ['ownerUserId'] },
         ],
@@ -112,3 +134,6 @@ ComplianceGap.belongsTo(ComplianceRequirement, { foreignKey: 'requirementId', as
 ComplianceRequirement.hasMany(ComplianceGap, { foreignKey: 'requirementId', as: 'gaps' });
 ComplianceGap.belongsTo(User, { foreignKey: 'ownerUserId', as: 'owner' });
 ComplianceGap.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+
+registerLookupAccessors('complianceGap', ComplianceGap);
+registerLookupAssociations('complianceGap', ComplianceGap);

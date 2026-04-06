@@ -1,8 +1,23 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import {
+    buildLookupAttribute,
+    getRequiredLookupId,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 import { ComplianceFramework } from './compliance-framework.model';
 
-export class ComplianceRequirement extends Model {
+export const ComplianceRequirementApplicability = buildLookupCodeMap('complianceRequirement.applicability');
+export type ComplianceRequirementApplicability = string;
+
+export const ComplianceRequirementStatus = buildLookupCodeMap('complianceRequirement.status');
+export type ComplianceRequirementStatus = string;
+
+export class ComplianceRequirement extends LookupAwareModel {
     public id!: number;
     public frameworkId!: number;
     public code!: string;
@@ -10,9 +25,13 @@ export class ComplianceRequirement extends Model {
     public description!: string | null;
     public chapter!: string | null;
     public orderIndex!: number;
-    public applicability!: string;
-    public status!: string;
+    public applicabilityId!: number;
+    public applicability!: ComplianceRequirementApplicability;
+    public statusId!: number;
+    public status!: ComplianceRequirementStatus;
     public weight!: number;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -54,33 +73,36 @@ ComplianceRequirement.init(
             allowNull: false,
             defaultValue: 0,
         },
-        applicability: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
-            defaultValue: 'applicable',
+        applicabilityId: {
+            ...buildLookupAttribute('complianceRequirement.applicability'),
+            defaultValue: getRequiredLookupId('complianceRequirement.applicability', ComplianceRequirementApplicability.APPLICABLE),
         },
-        status: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
-            defaultValue: 'active',
+        statusId: {
+            ...buildLookupAttribute('complianceRequirement.status'),
+            defaultValue: getRequiredLookupId('complianceRequirement.status', ComplianceRequirementStatus.ACTIVE),
         },
         weight: {
             type: DataTypes.FLOAT,
             allowNull: false,
             defaultValue: 1,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'compliance_requirements',
         timestamps: true,
+        ...softDeleteModelOptions,
         indexes: [
             { unique: true, fields: ['frameworkId', 'code'] },
-            { fields: ['status'] },
-            { fields: ['applicability'] },
+            { fields: ['statusId'] },
+            { fields: ['applicabilityId'] },
         ],
     }
 );
 
 ComplianceRequirement.belongsTo(ComplianceFramework, { foreignKey: 'frameworkId', as: 'framework' });
 ComplianceFramework.hasMany(ComplianceRequirement, { foreignKey: 'frameworkId', as: 'requirements', onDelete: 'CASCADE' });
+
+registerLookupAccessors('complianceRequirement', ComplianceRequirement);
+registerLookupAssociations('complianceRequirement', ComplianceRequirement);

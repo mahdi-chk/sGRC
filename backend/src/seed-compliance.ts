@@ -107,7 +107,7 @@ async function upsertFramework(seed: FrameworkSeed, ownerUserId: number | null, 
     });
 
     if (existing) {
-        await existing.update({
+        await existing.update(await LookupResolutionService.resolveEntityPayload('complianceFramework', {
             name: seed.name,
             jurisdiction: seed.jurisdiction,
             description: seed.description,
@@ -117,11 +117,11 @@ async function upsertFramework(seed: FrameworkSeed, ownerUserId: number | null, 
             status: seed.status,
             effectiveDate: new Date('2026-01-01'),
             reviewDate: new Date('2026-04-01'),
-        });
+        }));
         return existing;
     }
 
-    return ComplianceFramework.create({
+    return ComplianceFramework.create(await LookupResolutionService.resolveEntityPayload('complianceFramework', {
         code: seed.code,
         name: seed.name,
         version: seed.version,
@@ -133,7 +133,7 @@ async function upsertFramework(seed: FrameworkSeed, ownerUserId: number | null, 
         status: seed.status,
         effectiveDate: new Date('2026-01-01'),
         reviewDate: new Date('2026-04-01'),
-    } as any);
+    }) as any);
 }
 
 async function upsertRequirement(
@@ -145,18 +145,18 @@ async function upsertRequirement(
     });
 
     if (existing) {
-        await existing.update({
+        await existing.update(await LookupResolutionService.resolveEntityPayload('complianceRequirement', {
             title: requirement.title,
             description: requirement.description,
             chapter: requirement.chapter,
             applicability: 'applicable',
             status: 'active',
             weight: requirement.weight,
-        });
+        }));
         return existing;
     }
 
-    return ComplianceRequirement.create({
+    return ComplianceRequirement.create(await LookupResolutionService.resolveEntityPayload('complianceRequirement', {
         frameworkId,
         code: requirement.code,
         title: requirement.title,
@@ -166,7 +166,7 @@ async function upsertRequirement(
         applicability: 'applicable',
         status: 'active',
         weight: requirement.weight,
-    } as any);
+    }) as any);
 }
 
 async function upsertMapping(payload: {
@@ -188,13 +188,13 @@ async function upsertMapping(payload: {
     });
 
     if (existing) {
-        return existing.update(payload as any);
+        return existing.update(await LookupResolutionService.resolveEntityPayload('complianceMapping', payload as any));
     }
 
-    return ComplianceMapping.create({
+    return ComplianceMapping.create(await LookupResolutionService.resolveEntityPayload('complianceMapping', {
         ...payload,
         entityKey: 'seed-demo',
-    } as any);
+    }) as any);
 }
 
 async function upsertCampaign(payload: {
@@ -216,16 +216,16 @@ async function upsertCampaign(payload: {
     });
 
     if (existing) {
-        return existing.update({
+        return existing.update(await LookupResolutionService.resolveEntityPayload('complianceCampaign', {
             ...payload,
             entityKey: 'seed-demo',
-        } as any);
+        }) as any);
     }
 
-    return ComplianceCampaign.create({
+    return ComplianceCampaign.create(await LookupResolutionService.resolveEntityPayload('complianceCampaign', {
         ...payload,
         entityKey: 'seed-demo',
-    } as any);
+    }) as any);
 }
 
 async function upsertGap(payload: {
@@ -249,16 +249,16 @@ async function upsertGap(payload: {
     });
 
     if (existing) {
-        return existing.update({
+        return existing.update(await LookupResolutionService.resolveEntityPayload('complianceGap', {
             ...payload,
             entityKey: 'seed-demo',
-        } as any);
+        }) as any);
     }
 
-    return ComplianceGap.create({
+    return ComplianceGap.create(await LookupResolutionService.resolveEntityPayload('complianceGap', {
         ...payload,
         entityKey: 'seed-demo',
-    } as any);
+    }) as any);
 }
 
 async function upsertEvidence(payload: {
@@ -283,16 +283,16 @@ async function upsertEvidence(payload: {
     });
 
     if (existing) {
-        return existing.update({
+        return existing.update(await LookupResolutionService.resolveEntityPayload('complianceEvidence', {
             ...payload,
             entityKey: 'seed-demo',
-        } as any);
+        }) as any);
     }
 
-    return ComplianceEvidence.create({
+    return ComplianceEvidence.create(await LookupResolutionService.resolveEntityPayload('complianceEvidence', {
         ...payload,
         entityKey: 'seed-demo',
-    } as any);
+    }) as any);
 }
 
 async function seedCompliance() {

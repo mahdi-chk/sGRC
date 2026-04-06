@@ -341,6 +341,239 @@
         { "id": 4, "symbol": "HIGH", "code": "high", "label": "\u00c9lev\u00e9", "sortOrder": 4 },
         { "id": 5, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 5 }
       ]
+    },
+    {
+      "key": "complianceFramework.status",
+      "entityKey": "complianceFramework",
+      "entityTable": "compliance_frameworks",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "compliance_framework_statuses",
+      "lookupModelName": "ComplianceFrameworkStatusLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "status", "type": "string", "length": 40, "defaultLabel": "Brouillon" },
+      "values": [
+        { "id": 1, "symbol": "DRAFT", "code": "draft", "label": "Brouillon", "sortOrder": 1 },
+        { "id": 2, "symbol": "ACTIVE", "code": "active", "label": "Actif", "sortOrder": 2 },
+        { "id": 3, "symbol": "REVIEW_REQUIRED", "code": "review_required", "label": "Revue requise", "sortOrder": 3 },
+        { "id": 4, "symbol": "ARCHIVED", "code": "archived", "label": "Archive", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "complianceRequirement.applicability",
+      "entityKey": "complianceRequirement",
+      "entityTable": "compliance_requirements",
+      "fieldName": "applicability",
+      "foreignKey": "applicabilityId",
+      "foreignKeyColumn": "applicability_id",
+      "associationAlias": "applicabilityLookup",
+      "lookupTable": "compliance_requirement_applicabilities",
+      "lookupModelName": "ComplianceRequirementApplicabilityLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "applicability", "type": "string", "length": 40, "defaultLabel": "Applicable" },
+      "values": [
+        { "id": 1, "symbol": "APPLICABLE", "code": "applicable", "label": "Applicable", "sortOrder": 1 },
+        { "id": 2, "symbol": "PARTIALLY_APPLICABLE", "code": "partially_applicable", "label": "Partiellement applicable", "sortOrder": 2 },
+        { "id": 3, "symbol": "NOT_APPLICABLE", "code": "not_applicable", "label": "Non applicable", "sortOrder": 3 }
+      ]
+    },
+    {
+      "key": "complianceRequirement.status",
+      "entityKey": "complianceRequirement",
+      "entityTable": "compliance_requirements",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "compliance_requirement_statuses",
+      "lookupModelName": "ComplianceRequirementStatusLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "status", "type": "string", "length": 40, "defaultLabel": "Active" },
+      "values": [
+        { "id": 1, "symbol": "DRAFT", "code": "draft", "label": "Brouillon", "sortOrder": 1 },
+        { "id": 2, "symbol": "ACTIVE", "code": "active", "label": "Active", "sortOrder": 2 },
+        { "id": 3, "symbol": "RETIRED", "code": "retired", "label": "Retiree", "sortOrder": 3 }
+      ]
+    },
+    {
+      "key": "complianceMapping.sourceType",
+      "entityKey": "complianceMapping",
+      "entityTable": "compliance_mappings",
+      "fieldName": "sourceType",
+      "foreignKey": "sourceTypeId",
+      "foreignKeyColumn": "source_type_id",
+      "associationAlias": "sourceTypeLookup",
+      "lookupTable": "compliance_mapping_source_types",
+      "lookupModelName": "ComplianceMappingSourceTypeLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "sourceType", "type": "string", "length": 40, "defaultLabel": "Risque" },
+      "values": [
+        { "id": 1, "symbol": "RISK", "code": "risk", "label": "Risque", "sortOrder": 1 },
+        { "id": 2, "symbol": "AUDIT", "code": "audit", "label": "Audit", "sortOrder": 2 },
+        { "id": 3, "symbol": "INCIDENT", "code": "incident", "label": "Incident", "sortOrder": 3 },
+        { "id": 4, "symbol": "CONTROL", "code": "control", "label": "Controle", "sortOrder": 4 },
+        { "id": 5, "symbol": "POLICY", "code": "policy", "label": "Politique", "sortOrder": 5 },
+        { "id": 6, "symbol": "ACTION", "code": "action", "label": "Action", "sortOrder": 6 },
+        { "id": 7, "symbol": "MANUAL", "code": "manual", "label": "Manuel", "sortOrder": 7 }
+      ]
+    },
+    {
+      "key": "complianceMapping.coverageLevel",
+      "entityKey": "complianceMapping",
+      "entityTable": "compliance_mappings",
+      "fieldName": "coverageLevel",
+      "foreignKey": "coverageLevelId",
+      "foreignKeyColumn": "coverage_level_id",
+      "associationAlias": "coverageLevelLookup",
+      "lookupTable": "compliance_mapping_coverage_levels",
+      "lookupModelName": "ComplianceMappingCoverageLevelLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "coverageLevel", "type": "string", "length": 40, "defaultLabel": "Partielle" },
+      "values": [
+        { "id": 1, "symbol": "UNCOVERED", "code": "uncovered", "label": "Non couverte", "sortOrder": 1 },
+        { "id": 2, "symbol": "PARTIAL", "code": "partial", "label": "Partielle", "sortOrder": 2 },
+        { "id": 3, "symbol": "COVERED", "code": "covered", "label": "Couverte", "sortOrder": 3 }
+      ]
+    },
+    {
+      "key": "complianceCampaign.status",
+      "entityKey": "complianceCampaign",
+      "entityTable": "compliance_campaigns",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "compliance_campaign_statuses",
+      "lookupModelName": "ComplianceCampaignStatusLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "status", "type": "string", "length": 40, "defaultLabel": "Brouillon" },
+      "values": [
+        { "id": 1, "symbol": "DRAFT", "code": "draft", "label": "Brouillon", "sortOrder": 1 },
+        { "id": 2, "symbol": "IN_PROGRESS", "code": "in_progress", "label": "En cours", "sortOrder": 2 },
+        { "id": 3, "symbol": "COMPLETED", "code": "completed", "label": "Terminee", "sortOrder": 3 },
+        { "id": 4, "symbol": "CANCELLED", "code": "cancelled", "label": "Annulee", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "complianceGap.severity",
+      "entityKey": "complianceGap",
+      "entityTable": "compliance_gaps",
+      "fieldName": "severity",
+      "foreignKey": "severityId",
+      "foreignKeyColumn": "severity_id",
+      "associationAlias": "severityLookup",
+      "lookupTable": "compliance_gap_severities",
+      "lookupModelName": "ComplianceGapSeverityLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "severity", "type": "string", "length": 40, "defaultLabel": "Moyen" },
+      "values": [
+        { "id": 1, "symbol": "LOW", "code": "low", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "MEDIUM", "code": "medium", "label": "Moyen", "sortOrder": 2 },
+        { "id": 3, "symbol": "HIGH", "code": "high", "label": "Eleve", "sortOrder": 3 },
+        { "id": 4, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "complianceGap.status",
+      "entityKey": "complianceGap",
+      "entityTable": "compliance_gaps",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "compliance_gap_statuses",
+      "lookupModelName": "ComplianceGapStatusLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "status", "type": "string", "length": 40, "defaultLabel": "Ouvert" },
+      "values": [
+        { "id": 1, "symbol": "OPEN", "code": "open", "label": "Ouvert", "sortOrder": 1 },
+        { "id": 2, "symbol": "IN_PROGRESS", "code": "in_progress", "label": "En cours", "sortOrder": 2 },
+        { "id": 3, "symbol": "MITIGATED", "code": "mitigated", "label": "Mitige", "sortOrder": 3 },
+        { "id": 4, "symbol": "CLOSED", "code": "closed", "label": "Clos", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "complianceGap.sourceType",
+      "entityKey": "complianceGap",
+      "entityTable": "compliance_gaps",
+      "fieldName": "sourceType",
+      "foreignKey": "sourceTypeId",
+      "foreignKeyColumn": "source_type_id",
+      "associationAlias": "sourceTypeLookup",
+      "lookupTable": "compliance_gap_source_types",
+      "lookupModelName": "ComplianceGapSourceTypeLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "sourceType", "type": "string", "length": 40, "defaultLabel": "Evaluation" },
+      "values": [
+        { "id": 1, "symbol": "ASSESSMENT", "code": "assessment", "label": "Evaluation", "sortOrder": 1 },
+        { "id": 2, "symbol": "AUDIT", "code": "audit", "label": "Audit", "sortOrder": 2 },
+        { "id": 3, "symbol": "INCIDENT", "code": "incident", "label": "Incident", "sortOrder": 3 },
+        { "id": 4, "symbol": "MANUAL", "code": "manual", "label": "Manuel", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "complianceEvidence.sourceType",
+      "entityKey": "complianceEvidence",
+      "entityTable": "compliance_evidence",
+      "fieldName": "sourceType",
+      "foreignKey": "sourceTypeId",
+      "foreignKeyColumn": "source_type_id",
+      "associationAlias": "sourceTypeLookup",
+      "lookupTable": "compliance_evidence_source_types",
+      "lookupModelName": "ComplianceEvidenceSourceTypeLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "sourceType", "type": "string", "length": 40, "defaultLabel": "Document" },
+      "values": [
+        { "id": 1, "symbol": "DOCUMENT", "code": "document", "label": "Document", "sortOrder": 1 },
+        { "id": 2, "symbol": "AUDIT", "code": "audit", "label": "Audit", "sortOrder": 2 },
+        { "id": 3, "symbol": "INCIDENT", "code": "incident", "label": "Incident", "sortOrder": 3 },
+        { "id": 4, "symbol": "RISK", "code": "risk", "label": "Risque", "sortOrder": 4 },
+        { "id": 5, "symbol": "MANUAL", "code": "manual", "label": "Manuel", "sortOrder": 5 },
+        { "id": 6, "symbol": "SYSTEM_EXPORT", "code": "system_export", "label": "Export systeme", "sortOrder": 6 }
+      ]
+    },
+    {
+      "key": "complianceAuditTrail.entityType",
+      "entityKey": "complianceAuditTrail",
+      "entityTable": "compliance_audit_trail",
+      "fieldName": "entityType",
+      "foreignKey": "entityTypeId",
+      "foreignKeyColumn": "entity_type_id",
+      "associationAlias": "entityTypeLookup",
+      "lookupTable": "compliance_audit_entity_types",
+      "lookupModelName": "ComplianceAuditEntityTypeLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "entityType", "type": "string", "length": 60, "defaultLabel": "Framework" },
+      "values": [
+        { "id": 1, "symbol": "FRAMEWORK", "code": "framework", "label": "Framework", "sortOrder": 1 },
+        { "id": 2, "symbol": "REQUIREMENT", "code": "requirement", "label": "Requirement", "sortOrder": 2 },
+        { "id": 3, "symbol": "MAPPING", "code": "mapping", "label": "Mapping", "sortOrder": 3 },
+        { "id": 4, "symbol": "CAMPAIGN", "code": "campaign", "label": "Campaign", "sortOrder": 4 },
+        { "id": 5, "symbol": "GAP", "code": "gap", "label": "Gap", "sortOrder": 5 },
+        { "id": 6, "symbol": "EVIDENCE", "code": "evidence", "label": "Evidence", "sortOrder": 6 }
+      ]
+    },
+    {
+      "key": "complianceAuditTrail.action",
+      "entityKey": "complianceAuditTrail",
+      "entityTable": "compliance_audit_trail",
+      "fieldName": "action",
+      "foreignKey": "actionId",
+      "foreignKeyColumn": "action_id",
+      "associationAlias": "actionLookup",
+      "lookupTable": "compliance_audit_actions",
+      "lookupModelName": "ComplianceAuditActionLookup",
+      "allowNull": false,
+      "legacyColumn": { "name": "action", "type": "string", "length": 60, "defaultLabel": "Creation" },
+      "values": [
+        { "id": 1, "symbol": "CREATE", "code": "create", "label": "Creation", "sortOrder": 1 },
+        { "id": 2, "symbol": "UPDATE", "code": "update", "label": "Mise a jour", "sortOrder": 2 },
+        { "id": 3, "symbol": "DELETE", "code": "delete", "label": "Suppression", "sortOrder": 3 },
+        { "id": 4, "symbol": "RESTORE", "code": "restore", "label": "Restauration", "sortOrder": 4 },
+        { "id": 5, "symbol": "SEED_UPSERT", "code": "seed_upsert", "label": "Initialisation", "sortOrder": 5 }
+      ]
     }
   ]
 }

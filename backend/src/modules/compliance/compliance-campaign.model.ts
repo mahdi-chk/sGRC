@@ -1,14 +1,27 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import {
+    buildLookupAttribute,
+    getRequiredLookupId,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 import { Department } from '../departments/department.model';
 import { User } from '../users/user.model';
 import { ComplianceFramework } from './compliance-framework.model';
 
-export class ComplianceCampaign extends Model {
+export const ComplianceCampaignStatus = buildLookupCodeMap('complianceCampaign.status');
+export type ComplianceCampaignStatus = string;
+
+export class ComplianceCampaign extends LookupAwareModel {
     public id!: number;
     public frameworkId!: number;
     public title!: string;
-    public status!: string;
+    public statusId!: number;
+    public status!: ComplianceCampaignStatus;
     public ownerUserId!: number | null;
     public assignedUserId!: number | null;
     public departmentId!: number | null;
@@ -16,6 +29,8 @@ export class ComplianceCampaign extends Model {
     public dueDate!: Date | null;
     public startedAt!: Date | null;
     public completedAt!: Date | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -40,10 +55,9 @@ ComplianceCampaign.init(
             type: DataTypes.STRING(255),
             allowNull: false,
         },
-        status: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
-            defaultValue: 'draft',
+        statusId: {
+            ...buildLookupAttribute('complianceCampaign.status'),
+            defaultValue: getRequiredLookupId('complianceCampaign.status', ComplianceCampaignStatus.DRAFT),
         },
         ownerUserId: {
             type: DataTypes.INTEGER,
@@ -85,14 +99,16 @@ ComplianceCampaign.init(
             type: DataTypes.DATE,
             allowNull: true,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'compliance_campaigns',
         timestamps: true,
+        ...softDeleteModelOptions,
         indexes: [
             { fields: ['frameworkId'] },
-            { fields: ['status'] },
+            { fields: ['statusId'] },
             { fields: ['departmentId'] },
             { fields: ['ownerUserId'] },
             { fields: ['assignedUserId'] },
@@ -105,3 +121,6 @@ ComplianceFramework.hasMany(ComplianceCampaign, { foreignKey: 'frameworkId', as:
 ComplianceCampaign.belongsTo(User, { foreignKey: 'ownerUserId', as: 'owner' });
 ComplianceCampaign.belongsTo(User, { foreignKey: 'assignedUserId', as: 'assignee' });
 ComplianceCampaign.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+
+registerLookupAccessors('complianceCampaign', ComplianceCampaign);
+registerLookupAssociations('complianceCampaign', ComplianceCampaign);

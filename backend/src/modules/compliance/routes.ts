@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
+import { getSoftDeleteValues, softDeleteInstance } from '../../utils/soft-delete';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { UserRole } from '../users/user.roles';
 import { AuditMission } from '../auditing/audit-mission.model';
@@ -40,6 +42,38 @@ const mappingEditorRoles = [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRol
 const isComplianceSchemaMissing = (error: any): boolean => {
     const message = String(error?.message || '').toLowerCase();
     return message.includes('invalid object name') || message.includes('compliance_');
+};
+
+const toOptionalString = (value: unknown): string | null =>
+    value === undefined || value === null || String(value).trim() === '' ? null : String(value).trim();
+
+const toNullableNumber = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+const serializeCompliance = (item: any): any => {
+    if (!item) {
+        return item;
+    }
+
+    if (Array.isArray(item)) {
+        return item.map((entry) => serializeCompliance(entry));
+    }
+
+    const payload = typeof item.toJSON === 'function' ? item.toJSON() : item;
+
+    for (const field of ['status', 'applicability', 'sourceType', 'coverageLevel', 'severity', 'entityType', 'action']) {
+        const codeField = `${field}Code`;
+        const labelField = `${field}Label`;
+
+        if (payload[codeField]) {
+            payload[`${field}Label`] = payload[field];
+            payload[field] = payload[codeField];
+        } else if (!payload[labelField] && payload[field]) {
+            payload[labelField] = payload[field];
+        }
+    }
+
+    return payload;
 };
 
 const buildEmptyOverview = (role: string) => ({
@@ -107,7 +141,7 @@ router.get('/frameworks', authorizeRoles(...allowedRoles), async (req: AuthReque
             getComplianceScope(req),
             normalizeFilters(req.query)
         );
-        res.json(items);
+        res.json(serializeCompliance(items));
     } catch (error: any) {
         if (isComplianceSchemaMissing(error)) {
             return res.json([]);
@@ -137,7 +171,7 @@ router.get('/requirements', authorizeRoles(...allowedRoles), async (req: AuthReq
             order: [['frameworkId', 'ASC'], ['code', 'ASC']],
         });
 
-        res.json(items);
+        res.json(serializeCompliance(items));
     } catch (error: any) {
         if (isComplianceSchemaMissing(error)) {
             return res.json([]);
@@ -156,7 +190,7 @@ router.get('/campaigns', authorizeRoles(...allowedRoles), async (req: AuthReques
             getComplianceScope(req),
             normalizeFilters(req.query)
         );
-        res.json(items);
+        res.json(serializeCompliance(items));
     } catch (error: any) {
         if (isComplianceSchemaMissing(error)) {
             return res.json([]);
@@ -175,7 +209,7 @@ router.get('/gaps', authorizeRoles(...allowedRoles), async (req: AuthRequest, re
             getComplianceScope(req),
             normalizeFilters(req.query)
         );
-        res.json(items);
+        res.json(serializeCompliance(items));
     } catch (error: any) {
         if (isComplianceSchemaMissing(error)) {
             return res.json([]);
@@ -194,7 +228,7 @@ router.get('/evidence', authorizeRoles(...allowedRoles), async (req: AuthRequest
             getComplianceScope(req),
             normalizeFilters(req.query)
         );
-        res.json(items);
+        res.json(serializeCompliance(items));
     } catch (error: any) {
         if (isComplianceSchemaMissing(error)) {
             return res.json([]);
@@ -222,7 +256,7 @@ router.get('/mappings', authorizeRoles(...allowedRoles), async (_req: AuthReques
             ],
             order: [['updatedAt', 'DESC']],
         });
-        res.json(items);
+        res.json(serializeCompliance(items));
     } catch (error: any) {
         if (isComplianceSchemaMissing(error)) {
             return res.json([]);
@@ -258,19 +292,19 @@ router.get('/linkable-sources', authorizeRoles(...mappingEditorRoles), async (_r
 
 router.post('/frameworks', authorizeRoles(...adminRoles), async (req: AuthRequest, res) => {
     try {
-        const payload = {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceFramework', {
             code: String(req.body.code || '').trim(),
             name: String(req.body.name || '').trim(),
             version: String(req.body.version || '').trim(),
-            jurisdiction: req.body.jurisdiction ? String(req.body.jurisdiction).trim() : null,
-            description: req.body.description ? String(req.body.description).trim() : null,
+            jurisdiction: toOptionalString(req.body.jurisdiction),
+            description: toOptionalString(req.body.description),
             ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : req.user?.id || null,
             departmentId: req.body.departmentId ? Number(req.body.departmentId) : req.user?.departementId || null,
-            entityKey: req.body.entityKey ? String(req.body.entityKey).trim() : null,
+            entityKey: toOptionalString(req.body.entityKey),
             status: req.body.status ? String(req.body.status).trim() : 'draft',
             effectiveDate: req.body.effectiveDate || null,
             reviewDate: req.body.reviewDate || null,
-        };
+        }) as Record<string, unknown>;
 
         const item = await ComplianceFramework.create(payload as any);
         await ComplianceAuditService.log({
@@ -278,12 +312,12 @@ router.post('/frameworks', authorizeRoles(...adminRoles), async (req: AuthReques
             entityId: item.id,
             action: 'create',
             actorUserId: req.user?.id || null,
-            departmentId: payload.departmentId,
-            entityKey: payload.entityKey,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
             payload,
         });
 
-        res.status(201).json(item);
+        res.status(201).json(serializeCompliance(item));
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de la creation du referentiel',
@@ -299,19 +333,19 @@ router.put('/frameworks/:id', authorizeRoles(...adminRoles), async (req: AuthReq
             return res.status(404).json({ message: 'Referentiel introuvable' });
         }
 
-        const payload = {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceFramework', {
             code: String(req.body.code || item.code).trim(),
             name: String(req.body.name || item.name).trim(),
             version: String(req.body.version || item.version).trim(),
-            jurisdiction: req.body.jurisdiction !== undefined ? String(req.body.jurisdiction || '').trim() || null : item.jurisdiction,
-            description: req.body.description !== undefined ? String(req.body.description || '').trim() || null : item.description,
+            jurisdiction: req.body.jurisdiction !== undefined ? toOptionalString(req.body.jurisdiction) : item.jurisdiction,
+            description: req.body.description !== undefined ? toOptionalString(req.body.description) : item.description,
             ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : item.ownerUserId,
             departmentId: req.body.departmentId ? Number(req.body.departmentId) : item.departmentId,
-            entityKey: req.body.entityKey !== undefined ? String(req.body.entityKey || '').trim() || null : item.entityKey,
+            entityKey: req.body.entityKey !== undefined ? toOptionalString(req.body.entityKey) : item.entityKey,
             status: req.body.status ? String(req.body.status).trim() : item.status,
             effectiveDate: req.body.effectiveDate !== undefined ? req.body.effectiveDate || null : item.effectiveDate,
             reviewDate: req.body.reviewDate !== undefined ? req.body.reviewDate || null : item.reviewDate,
-        };
+        }) as Record<string, unknown>;
 
         await item.update(payload as any);
         await ComplianceAuditService.log({
@@ -319,12 +353,12 @@ router.put('/frameworks/:id', authorizeRoles(...adminRoles), async (req: AuthReq
             entityId: item.id,
             action: 'update',
             actorUserId: req.user?.id || null,
-            departmentId: payload.departmentId,
-            entityKey: payload.entityKey,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
             payload,
         });
 
-        res.json(item);
+        res.json(serializeCompliance(item));
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de la mise a jour du referentiel',
@@ -350,7 +384,20 @@ router.delete('/frameworks/:id', authorizeRoles(...adminRoles), async (req: Auth
             payload: { code: item.code, version: item.version },
         });
 
-        await item.destroy();
+        const frameworkIds = [item.id];
+        const requirementIds = (await ComplianceRequirement.findAll({
+            attributes: ['id'],
+            where: { frameworkId: item.id },
+        })).map((entry: any) => entry.id);
+
+        await ComplianceCampaign.update(getSoftDeleteValues(), { where: { frameworkId: frameworkIds } });
+        if (requirementIds.length > 0) {
+            await ComplianceMapping.update(getSoftDeleteValues(), { where: { requirementId: requirementIds } });
+            await ComplianceGap.update(getSoftDeleteValues(), { where: { requirementId: requirementIds } });
+            await ComplianceEvidence.update(getSoftDeleteValues(), { where: { requirementId: requirementIds } });
+            await ComplianceRequirement.update(getSoftDeleteValues(), { where: { id: requirementIds } });
+        }
+        await softDeleteInstance(item);
         res.json({ message: 'Referentiel supprime avec succes' });
     } catch (error: any) {
         res.status(500).json({
@@ -362,17 +409,17 @@ router.delete('/frameworks/:id', authorizeRoles(...adminRoles), async (req: Auth
 
 router.post('/requirements', authorizeRoles(...adminRoles), async (req: AuthRequest, res) => {
     try {
-        const payload = {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceRequirement', {
             frameworkId: Number(req.body.frameworkId),
             code: String(req.body.code || '').trim(),
             title: String(req.body.title || '').trim(),
-            description: req.body.description ? String(req.body.description).trim() : null,
-            chapter: req.body.chapter ? String(req.body.chapter).trim() : null,
+            description: toOptionalString(req.body.description),
+            chapter: toOptionalString(req.body.chapter),
             orderIndex: req.body.orderIndex ? Number(req.body.orderIndex) : 0,
             applicability: req.body.applicability ? String(req.body.applicability).trim() : 'applicable',
             status: req.body.status ? String(req.body.status).trim() : 'active',
             weight: req.body.weight ? Number(req.body.weight) : 1,
-        };
+        }) as Record<string, unknown>;
 
         const item = await ComplianceRequirement.create(payload as any);
         await ComplianceAuditService.log({
@@ -385,7 +432,7 @@ router.post('/requirements', authorizeRoles(...adminRoles), async (req: AuthRequ
             payload,
         });
 
-        res.status(201).json(item);
+        res.status(201).json(serializeCompliance(item));
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de la creation de l exigence',
@@ -401,17 +448,17 @@ router.put('/requirements/:id', authorizeRoles(...adminRoles), async (req: AuthR
             return res.status(404).json({ message: 'Exigence introuvable' });
         }
 
-        const payload = {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceRequirement', {
             frameworkId: req.body.frameworkId ? Number(req.body.frameworkId) : item.frameworkId,
             code: String(req.body.code || item.code).trim(),
             title: String(req.body.title || item.title).trim(),
-            description: req.body.description !== undefined ? String(req.body.description || '').trim() || null : item.description,
-            chapter: req.body.chapter !== undefined ? String(req.body.chapter || '').trim() || null : item.chapter,
+            description: req.body.description !== undefined ? toOptionalString(req.body.description) : item.description,
+            chapter: req.body.chapter !== undefined ? toOptionalString(req.body.chapter) : item.chapter,
             orderIndex: req.body.orderIndex !== undefined ? Number(req.body.orderIndex || 0) : item.orderIndex,
             applicability: req.body.applicability ? String(req.body.applicability).trim() : item.applicability,
             status: req.body.status ? String(req.body.status).trim() : item.status,
             weight: req.body.weight !== undefined ? Number(req.body.weight || 1) : item.weight,
-        };
+        }) as Record<string, unknown>;
 
         await item.update(payload as any);
         await ComplianceAuditService.log({
@@ -424,7 +471,7 @@ router.put('/requirements/:id', authorizeRoles(...adminRoles), async (req: AuthR
             payload,
         });
 
-        res.json(item);
+        res.json(serializeCompliance(item));
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de la mise a jour de l exigence',
@@ -450,7 +497,10 @@ router.delete('/requirements/:id', authorizeRoles(...adminRoles), async (req: Au
             payload: { frameworkId: item.frameworkId, code: item.code },
         });
 
-        await item.destroy();
+        await ComplianceMapping.update(getSoftDeleteValues(), { where: { requirementId: item.id } });
+        await ComplianceGap.update(getSoftDeleteValues(), { where: { requirementId: item.id } });
+        await ComplianceEvidence.update(getSoftDeleteValues(), { where: { requirementId: item.id } });
+        await softDeleteInstance(item);
         res.json({ message: 'Exigence supprimee avec succes' });
     } catch (error: any) {
         res.status(500).json({
@@ -462,17 +512,17 @@ router.delete('/requirements/:id', authorizeRoles(...adminRoles), async (req: Au
 
 router.post('/mappings', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
     try {
-        const payload = {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceMapping', {
             requirementId: Number(req.body.requirementId),
             sourceType: String(req.body.sourceType || '').trim(),
             sourceId: req.body.sourceId ? Number(req.body.sourceId) : null,
-            relatedEntityKey: req.body.relatedEntityKey ? String(req.body.relatedEntityKey).trim() : null,
+            relatedEntityKey: toOptionalString(req.body.relatedEntityKey),
             coverageLevel: req.body.coverageLevel ? String(req.body.coverageLevel).trim() : 'partial',
-            rationale: req.body.rationale ? String(req.body.rationale).trim() : null,
+            rationale: toOptionalString(req.body.rationale),
             ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : req.user?.id || null,
             departmentId: req.body.departmentId ? Number(req.body.departmentId) : req.user?.departementId || null,
-            entityKey: req.body.entityKey ? String(req.body.entityKey).trim() : null,
-        };
+            entityKey: toOptionalString(req.body.entityKey),
+        }) as Record<string, unknown>;
 
         const item = await ComplianceMapping.create(payload as any);
         await ComplianceAuditService.log({
@@ -480,12 +530,12 @@ router.post('/mappings', authorizeRoles(...mappingEditorRoles), async (req: Auth
             entityId: item.id,
             action: 'create',
             actorUserId: req.user?.id || null,
-            departmentId: payload.departmentId,
-            entityKey: payload.entityKey,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
             payload,
         });
 
-        res.status(201).json(item);
+        res.status(201).json(serializeCompliance(item));
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de la creation du mapping',
@@ -501,17 +551,17 @@ router.put('/mappings/:id', authorizeRoles(...mappingEditorRoles), async (req: A
             return res.status(404).json({ message: 'Mapping introuvable' });
         }
 
-        const payload = {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceMapping', {
             requirementId: req.body.requirementId ? Number(req.body.requirementId) : item.requirementId,
             sourceType: String(req.body.sourceType || item.sourceType).trim(),
             sourceId: req.body.sourceId !== undefined ? (req.body.sourceId ? Number(req.body.sourceId) : null) : item.sourceId,
-            relatedEntityKey: req.body.relatedEntityKey !== undefined ? String(req.body.relatedEntityKey || '').trim() || null : item.relatedEntityKey,
+            relatedEntityKey: req.body.relatedEntityKey !== undefined ? toOptionalString(req.body.relatedEntityKey) : item.relatedEntityKey,
             coverageLevel: req.body.coverageLevel ? String(req.body.coverageLevel).trim() : item.coverageLevel,
-            rationale: req.body.rationale !== undefined ? String(req.body.rationale || '').trim() || null : item.rationale,
+            rationale: req.body.rationale !== undefined ? toOptionalString(req.body.rationale) : item.rationale,
             ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : item.ownerUserId,
             departmentId: req.body.departmentId ? Number(req.body.departmentId) : item.departmentId,
-            entityKey: req.body.entityKey !== undefined ? String(req.body.entityKey || '').trim() || null : item.entityKey,
-        };
+            entityKey: req.body.entityKey !== undefined ? toOptionalString(req.body.entityKey) : item.entityKey,
+        }) as Record<string, unknown>;
 
         await item.update(payload as any);
         await ComplianceAuditService.log({
@@ -519,12 +569,12 @@ router.put('/mappings/:id', authorizeRoles(...mappingEditorRoles), async (req: A
             entityId: item.id,
             action: 'update',
             actorUserId: req.user?.id || null,
-            departmentId: payload.departmentId,
-            entityKey: payload.entityKey,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
             payload,
         });
 
-        res.json(item);
+        res.json(serializeCompliance(item));
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de la mise a jour du mapping',
@@ -554,7 +604,7 @@ router.delete('/mappings/:id', authorizeRoles(...mappingEditorRoles), async (req
             },
         });
 
-        await item.destroy();
+        await softDeleteInstance(item);
         res.json({ message: 'Mapping supprime avec succes' });
     } catch (error: any) {
         res.status(500).json({

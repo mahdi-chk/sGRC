@@ -1,14 +1,27 @@
-import { DataTypes, Model } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../../database';
+import { LookupAwareModel } from '../../database/lookups/lookup-aware.model';
+import { buildLookupCodeMap } from '../../database/lookups/lookup-registry';
+import {
+    buildLookupAttribute,
+    getRequiredLookupId,
+    registerLookupAccessors,
+    registerLookupAssociations,
+} from '../../database/lookups/lookup-models';
+import { softDeleteAttributes, softDeleteModelOptions } from '../../utils/soft-delete';
 import { Department } from '../departments/department.model';
 import { User } from '../users/user.model';
 import { ComplianceRequirement } from './compliance-requirement.model';
 
-export class ComplianceEvidence extends Model {
+export const ComplianceEvidenceSourceType = buildLookupCodeMap('complianceEvidence.sourceType');
+export type ComplianceEvidenceSourceType = string;
+
+export class ComplianceEvidence extends LookupAwareModel {
     public id!: number;
     public requirementId!: number | null;
     public title!: string;
-    public sourceType!: string;
+    public sourceTypeId!: number;
+    public sourceType!: ComplianceEvidenceSourceType;
     public sourceId!: number | null;
     public filename!: string | null;
     public filePath!: string | null;
@@ -17,6 +30,8 @@ export class ComplianceEvidence extends Model {
     public departmentId!: number | null;
     public entityKey!: string | null;
     public capturedAt!: Date | null;
+    public is_deleted!: boolean;
+    public deleted_at!: Date | null;
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -41,9 +56,9 @@ ComplianceEvidence.init(
             type: DataTypes.STRING(255),
             allowNull: false,
         },
-        sourceType: {
-            type: DataTypes.STRING(40),
-            allowNull: false,
+        sourceTypeId: {
+            ...buildLookupAttribute('complianceEvidence.sourceType'),
+            defaultValue: getRequiredLookupId('complianceEvidence.sourceType', ComplianceEvidenceSourceType.DOCUMENT),
         },
         sourceId: {
             type: DataTypes.INTEGER,
@@ -85,14 +100,16 @@ ComplianceEvidence.init(
             type: DataTypes.DATE,
             allowNull: true,
         },
+        ...softDeleteAttributes,
     },
     {
         sequelize,
         tableName: 'compliance_evidence',
         timestamps: true,
+        ...softDeleteModelOptions,
         indexes: [
             { fields: ['requirementId'] },
-            { fields: ['sourceType', 'sourceId'] },
+            { fields: ['sourceTypeId', 'sourceId'] },
             { fields: ['ownerUserId'] },
             { fields: ['departmentId'] },
         ],
@@ -103,3 +120,6 @@ ComplianceEvidence.belongsTo(ComplianceRequirement, { foreignKey: 'requirementId
 ComplianceRequirement.hasMany(ComplianceEvidence, { foreignKey: 'requirementId', as: 'evidence' });
 ComplianceEvidence.belongsTo(User, { foreignKey: 'ownerUserId', as: 'owner' });
 ComplianceEvidence.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+
+registerLookupAccessors('complianceEvidence', ComplianceEvidence);
+registerLookupAssociations('complianceEvidence', ComplianceEvidence);

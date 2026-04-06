@@ -117,6 +117,8 @@ export interface ComplianceFrameworkRecord {
   departmentId: number | null;
   entityKey: string | null;
   status: string;
+  statusCode?: string | null;
+  statusLabel?: string | null;
   effectiveDate: string | null;
   reviewDate: string | null;
   owner?: { id: number; prenom?: string; nom?: string } | null;
@@ -134,7 +136,11 @@ export interface ComplianceRequirementRecord {
   chapter: string | null;
   orderIndex: number;
   applicability: string;
+  applicabilityCode?: string | null;
+  applicabilityLabel?: string | null;
   status: string;
+  statusCode?: string | null;
+  statusLabel?: string | null;
   weight: number;
   framework?: ComplianceFrameworkRecord | null;
   createdAt?: string;
@@ -145,9 +151,13 @@ export interface ComplianceMappingRecord {
   id: number;
   requirementId: number;
   sourceType: string;
+  sourceTypeCode?: string | null;
+  sourceTypeLabel?: string | null;
   sourceId: number | null;
   relatedEntityKey: string | null;
   coverageLevel: string;
+  coverageLevelCode?: string | null;
+  coverageLevelLabel?: string | null;
   rationale: string | null;
   ownerUserId: number | null;
   departmentId: number | null;

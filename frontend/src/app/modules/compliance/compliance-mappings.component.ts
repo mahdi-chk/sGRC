@@ -182,10 +182,10 @@ export class ComplianceMappingsComponent implements OnInit {
     this.mappingEditingId = item.id;
     this.mappingForm = {
       requirementId: item.requirementId,
-      sourceType: item.sourceType,
+      sourceType: item.sourceTypeCode || item.sourceType,
       sourceId: item.sourceId,
       relatedEntityKey: item.relatedEntityKey,
-      coverageLevel: item.coverageLevel,
+      coverageLevel: item.coverageLevelCode || item.coverageLevel,
       rationale: item.rationale,
       entityKey: item.entityKey
     };
@@ -227,6 +227,10 @@ export class ComplianceMappingsComponent implements OnInit {
 
   getSourceLabel(item: ComplianceMappingRecord): string {
     const option = this.getSourceOptions(item.sourceType).find(source => source.id === item.sourceId);
+    if (!option && item.sourceTypeCode) {
+      const fallback = this.getSourceOptions(item.sourceTypeCode).find(source => source.id === item.sourceId);
+      return fallback?.label || `Element #${item.sourceId || 'n/a'}`;
+    }
     return option?.label || `Element #${item.sourceId || 'n/a'}`;
   }
 

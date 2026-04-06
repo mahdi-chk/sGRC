@@ -1,0 +1,256 @@
+<div class="compliance-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-book-open"></i> Referentiels integres</h1>
+                <p>Administrez les cadres de conformite, leurs exigences et la structure de travail utilisee dans les campagnes.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadFrameworks()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="content-card" *ngIf="feedback || error">
+        <p class="feedback-message success" *ngIf="feedback">{{ feedback }}</p>
+        <p class="feedback-message error" *ngIf="error">{{ error }}</p>
+    </div>
+
+    <div class="section-grid section-grid-wide">
+        <section class="content-card">
+            <div class="card-head">
+                <h2>{{ frameworkEditingId ? 'Modifier un referentiel' : 'Nouveau referentiel' }}</h2>
+                <p>Chaque referentiel devient une source officielle de pilotage et de preuve pour le module.</p>
+            </div>
+
+            <div class="form-grid">
+                <label class="filter-field">
+                    <span>Code</span>
+                    <input [(ngModel)]="frameworkForm.code" placeholder="ISO-27001" />
+                </label>
+                <label class="filter-field">
+                    <span>Nom</span>
+                    <input [(ngModel)]="frameworkForm.name" placeholder="ISO 27001" />
+                </label>
+                <label class="filter-field">
+                    <span>Version</span>
+                    <input [(ngModel)]="frameworkForm.version" placeholder="2022" />
+                </label>
+                <label class="filter-field">
+                    <span>Juridiction</span>
+                    <input [(ngModel)]="frameworkForm.jurisdiction" placeholder="Maroc" />
+                </label>
+                <label class="filter-field">
+                    <span>Entity Key</span>
+                    <input [(ngModel)]="frameworkForm.entityKey" placeholder="filiale-casa" />
+                </label>
+                <label class="filter-field">
+                    <span>Statut</span>
+                    <select [(ngModel)]="frameworkForm.status">
+                        <option value="draft">Brouillon</option>
+                        <option value="active">Actif</option>
+                        <option value="review_required">Revue requise</option>
+                        <option value="archived">Archive</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Date d effet</span>
+                    <input type="date" [(ngModel)]="frameworkForm.effectiveDate" />
+                </label>
+                <label class="filter-field">
+                    <span>Date de revue</span>
+                    <input type="date" [(ngModel)]="frameworkForm.reviewDate" />
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Description</span>
+                    <textarea [(ngModel)]="frameworkForm.description" rows="3" placeholder="Perimetre, objectifs, criticite et liens avec les audits."></textarea>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-refresh" (click)="saveFramework()" [disabled]="isSavingFramework">
+                    {{ frameworkEditingId ? 'Mettre a jour' : 'Creer le referentiel' }}
+                </button>
+                <button class="back-btn" type="button" (click)="resetFrameworkForm()">Reinitialiser</button>
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-head">
+                <h2>{{ requirementEditingId ? 'Modifier une exigence' : 'Nouvelle exigence' }}</h2>
+                <p *ngIf="selectedFrameworkId; else chooseFrameworkHint">Selectionnez un referentiel puis structurez ses exigences une par une.</p>
+                <ng-template #chooseFrameworkHint>
+                    <p>Ajoutez d abord un referentiel pour commencer a decrire ses exigences.</p>
+                </ng-template>
+            </div>
+
+            <div class="filter-field">
+                <label>Referentiel actif</label>
+                <select [ngModel]="selectedFrameworkId" (ngModelChange)="selectFramework($event)" [disabled]="frameworks.length === 0">
+                    <option [ngValue]="null">Choisir un referentiel</option>
+                    <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
+                        {{ framework.code }} - {{ framework.name }} v{{ framework.version }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-grid">
+                <label class="filter-field">
+                    <span>Code exigence</span>
+                    <input [(ngModel)]="requirementForm.code" placeholder="A.5.1" [disabled]="!selectedFrameworkId" />
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Titre</span>
+                    <input [(ngModel)]="requirementForm.title" placeholder="Politique de securite de l information" [disabled]="!selectedFrameworkId" />
+                </label>
+                <label class="filter-field">
+                    <span>Chapitre</span>
+                    <input [(ngModel)]="requirementForm.chapter" placeholder="Annexe A" [disabled]="!selectedFrameworkId" />
+                </label>
+                <label class="filter-field">
+                    <span>Ordre</span>
+                    <input type="number" [(ngModel)]="requirementForm.orderIndex" [disabled]="!selectedFrameworkId" />
+                </label>
+                <label class="filter-field">
+                    <span>Applicabilite</span>
+                    <select [(ngModel)]="requirementForm.applicability" [disabled]="!selectedFrameworkId">
+                        <option value="applicable">Applicable</option>
+                        <option value="partially_applicable">Partiellement applicable</option>
+                        <option value="not_applicable">Non applicable</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Statut</span>
+                    <select [(ngModel)]="requirementForm.status" [disabled]="!selectedFrameworkId">
+                        <option value="active">Active</option>
+                        <option value="draft">Brouillon</option>
+                        <option value="retired">Retiree</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Poids</span>
+                    <input type="number" step="0.1" [(ngModel)]="requirementForm.weight" [disabled]="!selectedFrameworkId" />
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Description</span>
+                    <textarea [(ngModel)]="requirementForm.description" rows="3" placeholder="Texte de l exigence, interpretation et points de controle attendus." [disabled]="!selectedFrameworkId"></textarea>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn-refresh" (click)="saveRequirement()" [disabled]="isSavingRequirement || !selectedFrameworkId">
+                    {{ requirementEditingId ? 'Mettre a jour' : 'Creer l exigence' }}
+                </button>
+                <button class="back-btn" type="button" (click)="resetRequirementForm()">Reinitialiser</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="section-grid section-grid-wide">
+        <section class="table-card" *ngIf="frameworks.length > 0; else emptyState">
+            <div class="card-head">
+                <h2>Cadres suivis</h2>
+                <p>Selectionnez un referentiel pour afficher et gerer ses exigences.</p>
+            </div>
+
+            <table class="compliance-table">
+                <thead>
+                    <tr>
+                        <th>Referentiel</th>
+                        <th>Portee</th>
+                        <th>Dates</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let framework of frameworks" [class.row-selected]="framework.id === selectedFrameworkId">
+                        <td (click)="selectFramework(framework.id)">
+                            <strong>{{ framework.name }}</strong>
+                            <small>{{ framework.code }} - version {{ framework.version }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ framework.jurisdiction || 'Non renseignee' }}</strong>
+                            <small>{{ framework.entityKey || 'Aucun entity key' }}</small>
+                        </td>
+                        <td>
+                            <strong>Effet: {{ formatDate(framework.effectiveDate) }}</strong>
+                            <small>Revue: {{ formatDate(framework.reviewDate) }}</small>
+                        </td>
+                        <td><span class="badge" [ngClass]="getStatusClass(framework.status)">{{ framework.status }}</span></td>
+                        <td class="action-cell">
+                            <button class="table-action" type="button" (click)="editFramework(framework)">Modifier</button>
+                            <button class="table-action danger" type="button" (click)="deleteFramework(framework)">Supprimer</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="table-card">
+            <div class="card-head">
+                <h2>Exigences du referentiel</h2>
+                <p *ngIf="selectedFrameworkId; else noSelectedFramework">Les exigences sont rattachees au referentiel actif pour alimenter campagnes et mappings.</p>
+                <ng-template #noSelectedFramework>
+                    <p>Choisissez un referentiel pour voir ses exigences.</p>
+                </ng-template>
+            </div>
+
+            <div class="empty-state compact" *ngIf="selectedFrameworkId && requirements.length === 0">
+                <i class="fas fa-list-check"></i>
+                <h3>Aucune exigence pour ce referentiel</h3>
+                <p>Commencez par saisir les clauses et controles attendus pour rendre le cadre exploitable.</p>
+            </div>
+
+            <table class="compliance-table" *ngIf="requirements.length > 0">
+                <thead>
+                    <tr>
+                        <th>Exigence</th>
+                        <th>Structure</th>
+                        <th>Applicabilite</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let requirement of requirements">
+                        <td>
+                            <strong>{{ requirement.code }}</strong>
+                            <small>{{ requirement.title }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ requirement.chapter || 'Sans chapitre' }}</strong>
+                            <small>Ordre {{ requirement.orderIndex }} - poids {{ requirement.weight }}</small>
+                        </td>
+                        <td><span class="badge" [ngClass]="getStatusClass(requirement.applicability)">{{ requirement.applicability }}</span></td>
+                        <td><span class="badge" [ngClass]="getStatusClass(requirement.status)">{{ requirement.status }}</span></td>
+                        <td class="action-cell">
+                            <button class="table-action" type="button" (click)="editRequirement(requirement)">Modifier</button>
+                            <button class="table-action danger" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">
+            <i class="fas fa-book"></i>
+            <h3>Aucun referentiel charge</h3>
+            <p>Creez votre premier referentiel pour commencer a structurer le module conformite.</p>
+        </div>
+    </ng-template>
+</div>

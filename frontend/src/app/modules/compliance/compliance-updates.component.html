@@ -1,0 +1,80 @@
+<div class="compliance-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-bell"></i> Mises a jour et preuves</h1>
+                <p>Lecture combinee des signaux de veille et des evidences utilisables pour un dossier de conformite.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Veille</h2>
+                <p>Premiere base de flux a partir de l activite recente et des points d attention detectes.</p>
+            </div>
+            <div class="item-list" *ngIf="updates.length > 0; else emptyUpdates">
+                <article class="list-item" *ngFor="let item of updates">
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.framework }}</p>
+                    <div class="meta-row">
+                        <span class="badge" [ngClass]="getStatusClass(item.impactLevel)">{{ item.impactLevel }}</span>
+                        <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+                        <span>Detection: {{ formatDate(item.detectedAt) }}</span>
+                        <span>{{ item.nextAction }}</span>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Preuves recentes</h2>
+                <p>Elements deja disponibles pour preparer un dossier de conformite ou d audit.</p>
+            </div>
+            <div class="item-list" *ngIf="evidence.length > 0; else emptyEvidence">
+                <article class="evidence-item" *ngFor="let item of evidence">
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.framework }} - {{ item.filename }}</p>
+                    <div class="meta-row">
+                        <span class="tag secondary">{{ item.sourceType }}</span>
+                        <span>Owner: {{ item.owner }}</span>
+                        <span>Ajoute le {{ formatDate(item.uploadedAt) }}</span>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </div>
+
+    <ng-template #emptyUpdates>
+        <div class="empty-state">
+            <i class="fas fa-satellite-dish"></i>
+            <h3>Aucune alerte de veille</h3>
+            <p>Les mises a jour reglementaires seront listees ici.</p>
+        </div>
+    </ng-template>
+
+    <ng-template #emptyEvidence>
+        <div class="empty-state">
+            <i class="fas fa-file-shield"></i>
+            <h3>Aucune preuve recente</h3>
+            <p>Les evidences de conformite apparaitront ici une fois reliees au perimetre du module.</p>
+        </div>
+    </ng-template>
+</div>

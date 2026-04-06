@@ -1,0 +1,47 @@
+<div class="compliance-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-list-check"></i> Auto-evaluations</h1>
+                <p>Campagnes de conformite, progression des reponses et suivi des questionnaires par cadre.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="item-list" *ngIf="assessments.length > 0; else emptyState">
+        <article class="list-item" *ngFor="let item of assessments">
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.framework }}</p>
+            <div class="meta-row">
+                <span class="tag">{{ item.completion }}% complete</span>
+                <span>{{ item.answered }}/{{ item.totalQuestions }} reponses</span>
+                <span>Responsable: {{ item.owner }}</span>
+                <span>Echeance: {{ formatDate(item.dueDate) }}</span>
+                <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+            </div>
+        </article>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">
+            <i class="fas fa-clipboard-check"></i>
+            <h3>Aucune campagne active</h3>
+            <p>Les auto-evaluations seront visibles ici une fois les campagnes initialisees.</p>
+        </div>
+    </ng-template>
+</div>

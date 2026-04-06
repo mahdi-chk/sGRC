@@ -8,6 +8,7 @@
     "dev": "nodemon --legacy-watch --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
     "test": "jest",
+    "seed:compliance": "ts-node src/seed-compliance.ts",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo"
   },

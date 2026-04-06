@@ -1,18 +1,117 @@
-<div class="compliance-page">
+<div class="compliance-workspace">
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-balance-scale"></i> Conformité & Statuts</h1>
-                <p>Assurez-vous que votre organisation respecte les normes et réglementations en vigueur.</p>
+                <h1><i class="fas fa-balance-scale"></i> Conformite</h1>
+                <p>Cockpit du module pour piloter couverture des exigences, campagnes, ecarts et preuves de conformite.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="content-card">
+        <div class="card-head">
+            <h2>Filtres dynamiques</h2>
+            <p>Le cockpit interroge maintenant les donnees reelles du backend avec filtrage de statut et de perimetre.</p>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-field">
+                <label for="compliance-status">Statut</label>
+                <select id="compliance-status" [(ngModel)]="filters.status">
+                    <option value="">Tous</option>
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                    <option value="review_required">Review required</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="open">Open</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="compliance-entity">Perimetre / Entity key</label>
+                <input id="compliance-entity" type="text" [(ngModel)]="filters.entityKey" placeholder="ex: filiale-maroc">
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">Appliquer</button>
+                <button class="back-btn" (click)="resetFilters()" [disabled]="isLoading">Reinitialiser</button>
             </div>
         </div>
     </div>
-    <div class="empty-state">
-        <i class="fas fa-construction"></i>
-        <h3>Module en cours de développement</h3>
-        <p>Cette interface sera bientôt disponible pour le suivi de la conformité.</p>
+
+    <div class="summary-grid" *ngIf="overview as data">
+        <div class="summary-card">
+            <span class="eyebrow">Referentiels</span>
+            <h3>{{ data.summary.frameworks }}</h3>
+            <p>{{ data.summary.activeRequirements }} exigences actives suivies dans le perimetre visible.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Couverture</span>
+            <h3>{{ data.summary.averageCoverage }}%</h3>
+            <p>{{ data.summary.uncoveredRequirements }} exigences restent sans couverture suffisante.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Campagnes</span>
+            <h3>{{ data.summary.campaignsInProgress }}</h3>
+            <p>Campagnes d auto-evaluation en cours d execution.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Ecarts ouverts</span>
+            <h3>{{ data.summary.openGaps }}</h3>
+            <p>{{ data.summary.criticalGaps }} ecarts prioritaires demandent une action rapide.</p>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Sous-modules</h2>
+                <p>Chaque domaine de travail dispose maintenant de sa page dediee avec filtrage RBAC.</p>
+            </div>
+
+            <div class="module-list">
+                <a *ngFor="let module of modules" [routerLink]="module.route" class="module-link">
+                    <strong>{{ module.title }}</strong>
+                    <p>{{ module.description }}</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="content-card" *ngIf="overview as data">
+            <div class="card-head">
+                <h2>Lecture rapide</h2>
+                <p>Le module s appuie deja sur les risques, audits, incidents et preuves existants pour construire une premiere vision de conformite.</p>
+            </div>
+
+            <div class="item-list">
+                <article class="list-item">
+                    <strong>Mapping</strong>
+                    <p>{{ data.summary.mappedRequirements }} exigences ont deja au moins un dispositif de couverture rattache.</p>
+                </article>
+                <article class="list-item">
+                    <strong>Preuves</strong>
+                    <p>{{ data.summary.evidenceCount }} evidences recentes peuvent etre mobilisees pour la preparation d audit.</p>
+                </article>
+                <article class="list-item">
+                    <strong>Veille</strong>
+                    <p>{{ data.summary.pendingUpdates }} sujets de veille ou points d attention sont en observation.</p>
+                </article>
+            </div>
+        </div>
     </div>
 </div>

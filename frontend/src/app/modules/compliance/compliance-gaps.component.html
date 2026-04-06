@@ -1,0 +1,48 @@
+<div class="compliance-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-triangle-exclamation"></i> Suivi des ecarts</h1>
+                <p>Registre initial des ecarts de conformite, priorites de traitement et liens de remediations.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="item-list" *ngIf="gaps.length > 0; else emptyState">
+        <article class="list-item" *ngFor="let gap of gaps">
+            <strong>{{ gap.title }}</strong>
+            <p>{{ gap.framework }}</p>
+            <div class="meta-row">
+                <span class="badge" [ngClass]="getStatusClass(gap.severity)">{{ gap.severity }}</span>
+                <span class="badge" [ngClass]="getStatusClass(gap.status)">{{ gap.status }}</span>
+                <span>Owner: {{ gap.owner }}</span>
+                <span>Echeance: {{ formatDate(gap.dueDate) }}</span>
+                <span>Source: {{ gap.source }}</span>
+                <span>{{ gap.remediationLink }}</span>
+            </div>
+        </article>
+    </div>
+
+    <ng-template #emptyState>
+        <div class="empty-state">
+            <i class="fas fa-shield-exclamation"></i>
+            <h3>Aucun ecart ouvert</h3>
+            <p>Le registre des ecarts s alimentera a partir des auto-evaluations et des incidents encore ouverts.</p>
+        </div>
+    </ng-template>
+</div>

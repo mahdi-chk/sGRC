@@ -5,6 +5,7 @@ import { UserRole } from '../models/user-role.enum';
 import { AuthService } from './auth.service';
 import { getControlsDashboardSubmodules } from '../../modules/controls/controls-navigation';
 import { getActionsDashboardSubmodules } from '../../modules/actions/actions-navigation';
+import { getComplianceDashboardSubmodules } from '../../modules/compliance/compliance-navigation';
 
 export interface Submodule {
     title: string;
@@ -184,8 +185,10 @@ export class DashboardService {
             m.roles && m.roles.some(r => r.toString() === roleStr)
         ).map(module => ({
             ...module,
-            submodules: module.key === 'controls'
+                submodules: module.key === 'controls'
                 ? getControlsDashboardSubmodules(roleStr)
+                : module.key === 'conformite'
+                    ? getComplianceDashboardSubmodules(roleStr)
                 : module.key === 'plans-actions'
                     ? getActionsDashboardSubmodules(roleStr)
                     : [...module.submodules]
@@ -276,6 +279,18 @@ export class DashboardService {
             this.router.navigate(['/dashboard/controls-effectiveness']);
         } else if (s.title === 'Suivi des Non-Conformites') {
             this.router.navigate(['/dashboard/controls-non-conformities']);
+        } else if (s.title === 'Referentiels Integres') {
+            this.router.navigate(['/dashboard/compliance-frameworks']);
+        } else if (s.title === 'Mapping et Liens') {
+            this.router.navigate(['/dashboard/compliance-mappings']);
+        } else if (s.title === 'Auto-Evaluations') {
+            this.router.navigate(['/dashboard/compliance-assessments']);
+        } else if (s.title === 'Suivi des Ecarts') {
+            this.router.navigate(['/dashboard/compliance-gaps']);
+        } else if (s.title === 'Mises a Jour et Preuves') {
+            this.router.navigate(['/dashboard/compliance-updates']);
+        } else if (m.key === 'conformite') {
+            this.router.navigate(['/dashboard/compliance']);
         } else if (m.key === 'controls') {
             this.router.navigate(['/dashboard/controls-referential']);
         } else if (s.title === 'Gestion Centralisee') {

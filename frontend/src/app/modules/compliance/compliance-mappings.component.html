@@ -1,0 +1,148 @@
+<div class="compliance-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-diagram-project"></i> Mapping et liens</h1>
+                <p>Creez des liaisons reelles entre exigences, risques, audits et incidents pour mesurer une couverture exploitable.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadData()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="content-card" *ngIf="feedback || error">
+        <p class="feedback-message success" *ngIf="feedback">{{ feedback }}</p>
+        <p class="feedback-message error" *ngIf="error">{{ error }}</p>
+    </div>
+
+    <section class="content-card">
+        <div class="card-head">
+            <h2>{{ mappingEditingId ? 'Modifier un mapping' : 'Nouveau mapping' }}</h2>
+            <p>Le mapping relie une exigence a une source metier existante pour rendre le score et l audit trail fiables.</p>
+        </div>
+
+        <div class="form-grid">
+            <label class="filter-field">
+                <span>Referentiel</span>
+                <select [(ngModel)]="selectedFrameworkId" (ngModelChange)="onFrameworkChange()">
+                    <option [ngValue]="null">Choisir un referentiel</option>
+                    <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
+                        {{ framework.code }} - {{ framework.name }}
+                    </option>
+                </select>
+            </label>
+            <label class="filter-field field-span-2">
+                <span>Exigence</span>
+                <select [(ngModel)]="mappingForm.requirementId" [disabled]="requirements.length === 0">
+                    <option [ngValue]="0">Choisir une exigence</option>
+                    <option *ngFor="let requirement of requirements" [ngValue]="requirement.id">
+                        {{ requirement.code }} - {{ requirement.title }}
+                    </option>
+                </select>
+            </label>
+            <label class="filter-field">
+                <span>Type de source</span>
+                <select [(ngModel)]="mappingForm.sourceType" (ngModelChange)="onSourceTypeChange()">
+                    <option *ngFor="let type of sourceTypes" [ngValue]="type">{{ type }}</option>
+                </select>
+            </label>
+            <label class="filter-field field-span-2">
+                <span>Source liee</span>
+                <select [(ngModel)]="mappingForm.sourceId">
+                    <option [ngValue]="null">Choisir un element existant</option>
+                    <option *ngFor="let option of getSourceOptions(mappingForm.sourceType)" [ngValue]="option.id">
+                        {{ option.label }}
+                    </option>
+                </select>
+            </label>
+            <label class="filter-field">
+                <span>Niveau de couverture</span>
+                <select [(ngModel)]="mappingForm.coverageLevel">
+                    <option value="partial">Partielle</option>
+                    <option value="covered">Couverte</option>
+                    <option value="uncovered">Non couverte</option>
+                </select>
+            </label>
+            <label class="filter-field">
+                <span>Entity Key</span>
+                <input [(ngModel)]="mappingForm.entityKey" placeholder="filiale-casa" />
+            </label>
+            <label class="filter-field field-span-2">
+                <span>Cle relationnelle</span>
+                <input [(ngModel)]="mappingForm.relatedEntityKey" placeholder="risk:12 / audit:4 / maroc-si" />
+            </label>
+            <label class="filter-field field-span-3">
+                <span>Justification</span>
+                <textarea [(ngModel)]="mappingForm.rationale" rows="3" placeholder="Pourquoi cette source couvre l exigence et quel est le niveau de preuve attendu."></textarea>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-refresh" (click)="saveMapping()" [disabled]="isSaving">
+                {{ mappingEditingId ? 'Mettre a jour' : 'Creer le mapping' }}
+            </button>
+            <button class="back-btn" type="button" (click)="resetForm()">Reinitialiser</button>
+        </div>
+    </section>
+
+    <section class="table-card" *ngIf="mappings.length > 0; else emptyState">
+        <div class="card-head">
+            <h2>Matrice de couverture</h2>
+            <p>Chaque ligne represente un lien persiste entre une exigence et un element reel du systeme.</p>
+        </div>
+
+        <table class="compliance-table">
+            <thead>
+                <tr>
+                    <th>Exigence</th>
+                    <th>Source</th>
+                    <th>Couverture</th>
+                    <th>Portee</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let item of mappings">
+                    <td>
+                        <strong>{{ item.requirement?.code || ('REQ-' + item.requirementId) }}</strong>
+                        <small>{{ item.requirement?.title || 'Exigence chargee sans detail' }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ item.sourceType }} - {{ getSourceLabel(item) }}</strong>
+                        <small>{{ item.relatedEntityKey || 'Aucune cle secondaire' }}</small>
+                    </td>
+                    <td><span class="badge" [ngClass]="getStatusClass(item.coverageLevel)">{{ item.coverageLevel }}</span></td>
+                    <td>
+                        <strong>{{ item.entityKey || 'Global' }}</strong>
+                        <small>{{ item.owner?.prenom }} {{ item.owner?.nom }}</small>
+                    </td>
+                    <td class="action-cell">
+                        <button class="table-action" type="button" (click)="editMapping(item)">Modifier</button>
+                        <button class="table-action danger" type="button" (click)="deleteMapping(item)">Supprimer</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <ng-template #emptyState>
+        <div class="empty-state">
+            <i class="fas fa-link"></i>
+            <h3>Aucun mapping visible</h3>
+            <p>Creez les premieres liaisons pour relier exigences et sources reelles du SI.</p>
+        </div>
+    </ng-template>
+</div>

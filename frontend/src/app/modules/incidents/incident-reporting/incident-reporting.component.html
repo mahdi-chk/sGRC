@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-chart-pie"></i> Reporting Consolidé</h1>
-                <p>Visualisez les indicateurs clés de performance (KPI) et l'évolution des incidents sur l'année.</p>
+                <h1><i class="fas fa-chart-pie"></i> Reporting Consolide</h1>
+                <p>Visualisez les indicateurs reels de performance et l evolution des incidents de maniere dynamique.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -16,8 +16,31 @@
         </div>
     </div>
 
-    <div class="reporting-container">
-        <!-- KPI Row -->
+    <nav class="incident-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="reporting-container" *ngIf="!isLoading; else loadingState">
+        <section class="insight-hero">
+            <div class="hero-copy">
+                <span class="eyebrow">Pilotage temps reel</span>
+                <h2>Vue consolidee basee sur les incidents reels enregistres dans la plateforme.</h2>
+                <p>Les KPI, delais et repartitions ci-dessous sont calcules dynamiquement a partir des declarations, des mises a jour de statut et des domaines renseignes.</p>
+            </div>
+            <div class="hero-metrics">
+                <div class="metric-pill">
+                    <span class="metric-label">Resolution moyenne</span>
+                    <strong>{{ formatDays(averageResolutionDays) }}</strong>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-label">Age moyen des incidents ouverts</span>
+                    <strong>{{ formatDays(averageOpenAgeDays) }}</strong>
+                </div>
+            </div>
+        </section>
+
         <div class="kpi-grid">
             <div class="kpi-card shadow-sm blue">
                 <div class="kpi-icon"><i class="fas fa-list-ul"></i></div>
@@ -37,9 +60,9 @@
             <div class="kpi-card shadow-sm green">
                 <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
                 <div class="kpi-info">
-                    <span class="kpi-label">Taux de Résolution</span>
+                    <span class="kpi-label">Taux de Resolution</span>
                     <span class="kpi-value">{{ getPercent(resolvedIncidents) }}%</span>
-                    <small>{{ resolvedIncidents }} incidents traités</small>
+                    <small>{{ resolvedIncidents }} incidents traites</small>
                 </div>
             </div>
             <div class="kpi-card shadow-sm red">
@@ -51,28 +74,82 @@
             </div>
         </div>
 
-        <!-- Charts Row -->
-        <div class="charts-grid mt-4">
+        <div class="charts-grid">
             <div class="chart-card card shadow-sm">
                 <h3><i class="fas fa-chart-bar"></i> Volume par Domaine</h3>
-                <div class="dummy-chart">
-                    <!-- Simuler un graphique à barres -->
-                    <div class="bar-row" *ngFor="let d of ['IT', 'RH', 'Finance', 'Opérations']">
-                        <span class="label">{{ d }}</span>
-                        <div class="bar-container"><div class="bar" [style.width.%]="40 + (d.length * 5)"></div></div>
+                <div class="empty-panel" *ngIf="domainDistribution.length === 0">
+                    <i class="fas fa-inbox"></i>
+                    <p>Aucun domaine disponible pour le moment.</p>
+                </div>
+                <div class="bar-chart" *ngIf="domainDistribution.length > 0">
+                    <div class="bar-row" *ngFor="let item of domainDistribution">
+                        <div class="bar-meta">
+                            <span class="label">{{ item.label }}</span>
+                            <strong>{{ item.count }}</strong>
+                        </div>
+                        <div class="bar-container">
+                            <div class="bar" [style.width.%]="getBarWidth(item.count, domainDistribution[0].count)"></div>
+                        </div>
                     </div>
                 </div>
             </div>
+
             <div class="chart-card card shadow-sm">
-                <h3><i class="fas fa-history"></i> Délais de Traitement Moyens</h3>
-                <div class="dummy-stats">
-                    <div class="stat-circle">
-                        <span class="val">4.2</span>
-                        <span class="lab">Jours</span>
+                <h3><i class="fas fa-tasks"></i> Repartition par Statut</h3>
+                <div class="status-list">
+                    <div class="status-row" *ngFor="let status of statusDistribution">
+                        <div class="status-copy">
+                            <span class="status-dot" [ngClass]="status.cssClass"></span>
+                            <span>{{ status.label }}</span>
+                        </div>
+                        <strong>{{ status.count }}</strong>
                     </div>
-                    <p>Temps moyen entre la déclaration et la clôture définitive.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-history"></i> Delais de Traitement</h3>
+                <div class="timing-grid">
+                    <div class="timing-card">
+                        <span class="timing-label">Temps moyen de resolution</span>
+                        <strong>{{ formatDays(averageResolutionDays) }}</strong>
+                        <p>Calcule sur les incidents traites ou clos a partir de `createdAt` et `updatedAt`.</p>
+                    </div>
+                    <div class="timing-card">
+                        <span class="timing-label">Vieillissement des dossiers ouverts</span>
+                        <strong>{{ formatDays(averageOpenAgeDays) }}</strong>
+                        <p>Mesure l anciennete moyenne des incidents qui necessitent encore un suivi.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-stream"></i> Dernieres Activites</h3>
+                <div class="empty-panel" *ngIf="recentIncidents.length === 0">
+                    <i class="fas fa-clipboard"></i>
+                    <p>Aucun incident enregistre.</p>
+                </div>
+                <div class="incident-feed" *ngIf="recentIncidents.length > 0">
+                    <div class="incident-feed-item" *ngFor="let incident of recentIncidents">
+                        <div class="incident-feed-copy">
+                            <strong>{{ incident.titre }}</strong>
+                            <span>{{ incident.domaine || 'Non renseigne' }} • Maj {{ (incident.updatedAt || incident.createdAt) | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <span class="status-chip" [ngClass]="getStatusClass(incident.statut)">
+                            {{ incident.statutLabel || getStatusLabel(incident.statut) }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <ng-template #loadingState>
+        <div class="loading-panel">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Chargement du reporting des incidents...</p>
+        </div>
+    </ng-template>
 </div>

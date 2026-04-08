@@ -4,6 +4,7 @@ import { Incident, IncidentService } from '../../../core/services/incident.servi
 import { Risk, RiskService } from '../../../core/services/risk.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserRole } from '../../../core/models/user-role.enum';
+import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
 
 @Component({
   selector: 'app-incident-analysis',
@@ -11,6 +12,7 @@ import { UserRole } from '../../../core/models/user-role.enum';
   styleUrls: ['./incident-analysis.component.scss']
 })
 export class IncidentAnalysisComponent implements OnInit {
+  currentUserRole = getStoredIncidentRole();
   incidents: Incident[] = [];
   risks: Risk[] = [];
   selectedIncident: Incident | null = null;
@@ -26,6 +28,10 @@ export class IncidentAnalysisComponent implements OnInit {
     private authService: AuthService,
     private router: Router
   ) {}
+
+  get navItems() {
+    return getIncidentNavItems(this.currentUserRole);
+  }
 
   get isReadOnlyRole(): boolean {
     return this.authService.getUserRole() === UserRole.TOP_MANAGEMENT;

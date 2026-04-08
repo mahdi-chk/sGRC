@@ -11,6 +11,12 @@
         </div>
     </div>
 
+    <nav class="incident-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
     <div class="dual-layout">
         <div class="sidebar card">
             <div class="sidebar-header">

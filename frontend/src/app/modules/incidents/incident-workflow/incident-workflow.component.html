@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-tasks"></i> Workflow de Traitement</h1>
-                <p>Suivez le cycle de vie des incidents, de la détection à la clôture.</p>
+                <p>Suivez le cycle de vie des incidents, de la detection a la cloture.</p>
             </div>
         </div>
         <div class="filters-bar premium mb-4">
@@ -28,16 +28,21 @@
                 </div>
 
                 <button class="btn-reset" (click)="clearFilters()" *ngIf="searchTerm || statusFilter">
-                    <i class="fas fa-undo"></i> Réinitialiser
+                    <i class="fas fa-undo"></i> Reinitialiser
                 </button>
             </div>
 
             <div class="results-info">
-                <span class="count-tag"><strong>{{ filteredIncidents.length }}</strong> incident(s) trouvé(s)</span>
+                <span class="count-tag"><strong>{{ filteredIncidents.length }}</strong> incident(s) trouve(s)</span>
             </div>
         </div>
-
     </div>
+
+    <nav class="incident-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
+            {{ item.label }}
+        </a>
+    </nav>
 
     <div class="workflow-container">
         <div class="loading-state" *ngIf="isLoading">
@@ -47,34 +52,33 @@
         <div class="incident-grid" *ngIf="!isLoading">
             <div class="incident-card card shadow-sm" *ngFor="let incident of filteredIncidents">
                 <div class="card-header">
-                    <span class="status-badge" [ngClass]="getStatusClass(incident)">{{ statusLabelMap[incident.statut] || incident.statut }}</span>
-
+                    <span class="status-badge" [ngClass]="getStatusClass(incident)">{{ getIncidentStatusLabel(incident) }}</span>
                     <span class="date">{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</span>
                 </div>
                 <div class="card-body">
                     <h3>{{ incident.titre }}</h3>
                     <p class="description">{{ incident.description | slice:0:100 }}{{ incident.description.length > 100 ? '...' : '' }}</p>
                     <div class="meta">
-                        <span><i class="fas fa-building"></i> {{ incident.departement?.nom || 'Non spécifié' }}</span>
+                        <span><i class="fas fa-building"></i> {{ incident.departement?.nom || 'Non specifie' }}</span>
                         <span><i class="fas fa-user-edit"></i> {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}</span>
                     </div>
                 </div>
                 <div class="card-footer">
                     <div class="status-actions">
-                        <button *ngIf="incident.statut === IncidentStatus.NOUVEAU" (click)="updateStatus(incident, IncidentStatus.EN_COURS)" class="btn-action start">
+                        <button *ngIf="getIncidentStatus(incident) === IncidentStatus.NOUVEAU" (click)="updateStatus(incident, IncidentStatus.EN_COURS)" class="btn-action start">
                             <i class="fas fa-play"></i> Prise en charge
                         </button>
-                        <button *ngIf="incident.statut === IncidentStatus.EN_COURS" (click)="updateStatus(incident, IncidentStatus.TRAITE)" class="btn-action resolve">
-                            <i class="fas fa-check"></i> Marquer comme Traité
+                        <button *ngIf="getIncidentStatus(incident) === IncidentStatus.EN_COURS" (click)="updateStatus(incident, IncidentStatus.TRAITE)" class="btn-action resolve">
+                            <i class="fas fa-check"></i> Marquer comme Traite
                         </button>
-                        <button *ngIf="incident.statut === IncidentStatus.TRAITE" (click)="updateStatus(incident, IncidentStatus.CLOS)" class="btn-action close">
-                            <i class="fas fa-lock"></i> Clôturer
+                        <button *ngIf="getIncidentStatus(incident) === IncidentStatus.TRAITE" (click)="updateStatus(incident, IncidentStatus.CLOS)" class="btn-action close">
+                            <i class="fas fa-lock"></i> Cloturer
                         </button>
                     </div>
 
                     <button type="button" class="btn-details" (click)="openDetailsModal(incident)">
                         <i class="fas fa-eye"></i>
-                        <span>Détails</span>
+                        <span>Details</span>
                     </button>
                 </div>
             </div>
@@ -82,12 +86,12 @@
 
         <div class="empty-state" *ngIf="!isLoading && filteredIncidents.length === 0">
             <i class="fas fa-clipboard-check"></i>
-            <p>Aucun incident à traiter pour ces critères.</p>
+            <p>Aucun incident a traiter pour ces criteres.</p>
         </div>
     </div>
 </div>
 
-<app-modal *ngIf="showDetailsModal && selectedIncident" title="Détails de l'incident" (close)="closeDetailsModal()">
+<app-modal *ngIf="showDetailsModal && selectedIncident" title="Details de l'incident" (close)="closeDetailsModal()">
     <div #projected modal-body class="modal-form">
         <div class="details-grid">
             <div class="detail-block full">
@@ -104,10 +108,9 @@
                 <span class="detail-label">Statut</span>
                 <p class="detail-value">
                     <span class="status-badge" [ngClass]="getStatusClass(selectedIncident)">
-                        {{ statusLabelMap[selectedIncident.statut] || selectedIncident.statut }}
+                        {{ getIncidentStatusLabel(selectedIncident) }}
                     </span>
                 </p>
-
             </div>
 
             <div class="detail-block">
@@ -116,12 +119,12 @@
             </div>
 
             <div class="detail-block" *ngIf="selectedIncident.departement?.nom">
-                <span class="detail-label">Département</span>
+                <span class="detail-label">Departement</span>
                 <p class="detail-value">{{ selectedIncident.departement?.nom }}</p>
             </div>
 
             <div class="detail-block" *ngIf="selectedIncident.declareur">
-                <span class="detail-label">Déclarant</span>
+                <span class="detail-label">Declarant</span>
                 <p class="detail-value">{{ selectedIncident.declareur?.prenom }} {{ selectedIncident.declareur?.nom }}</p>
             </div>
 
@@ -137,7 +140,6 @@
                         {{ levelLabelMap[selectedIncident.niveauRisque!] || selectedIncident.niveauRisque }}
                     </span>
                 </p>
-
             </div>
 
             <div class="detail-block" *ngIf="selectedIncident.macroProcessus">
@@ -151,7 +153,7 @@
             </div>
 
             <div class="detail-block full" *ngIf="selectedIncident.planActionTraitement">
-                <span class="detail-label">Plan d'action / remédiation initiale</span>
+                <span class="detail-label">Plan d'action / remediation initiale</span>
                 <p class="detail-value description-value plan-box">{{ selectedIncident.planActionTraitement }}</p>
             </div>
 
@@ -161,7 +163,7 @@
             </div>
 
             <div class="detail-block" *ngIf="selectedIncident.createdAt">
-                <span class="detail-label">Créé le</span>
+                <span class="detail-label">Cree le</span>
                 <p class="detail-value">{{ selectedIncident.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
             </div>
         </div>

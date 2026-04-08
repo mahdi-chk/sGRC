@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from '../../../core/services/incident.service';
-
 import { Router } from '@angular/router';
+import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
 
 @Component({
   selector: 'app-incident-workflow',
@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
   styleUrls: ['./incident-workflow.component.scss']
 })
 export class IncidentWorkflowComponent implements OnInit {
+  currentUserRole = getStoredIncidentRole();
   incidents: Incident[] = [];
   filteredIncidents: Incident[] = [];
   selectedIncident: Incident | null = null;
@@ -17,32 +18,33 @@ export class IncidentWorkflowComponent implements OnInit {
   searchTerm = '';
   statusFilter = '';
 
-  // Expose Enums
   IncidentStatus = IncidentStatus;
   IncidentNiveauRisque = IncidentNiveauRisque;
 
-  // Label mappings
   statusLabelMap: Record<string, string> = {
     [IncidentStatus.NOUVEAU]: 'Nouveau',
     [IncidentStatus.EN_COURS]: 'En cours',
-    [IncidentStatus.TRAITE]: 'Traité',
+    [IncidentStatus.TRAITE]: 'Traite',
     [IncidentStatus.CLOS]: 'Clos'
   };
 
   levelLabelMap: Record<string, string> = {
     [IncidentNiveauRisque.LOW]: 'Faible',
-    [IncidentNiveauRisque.LIMITED]: 'Limité',
+    [IncidentNiveauRisque.LIMITED]: 'Limite',
     [IncidentNiveauRisque.MEDIUM]: 'Moyen',
     [IncidentNiveauRisque.SIGNIFICANT]: 'Significatif',
-    [IncidentNiveauRisque.HIGH]: 'Élevé',
+    [IncidentNiveauRisque.HIGH]: 'Eleve',
     [IncidentNiveauRisque.CRITICAL]: 'Critique'
   };
-
 
   constructor(
     private incidentService: IncidentService,
     private router: Router
-  ) { }
+  ) {}
+
+  get navItems() {
+    return getIncidentNavItems(this.currentUserRole);
+  }
 
   ngOnInit(): void {
     this.loadIncidents();
@@ -52,7 +54,7 @@ export class IncidentWorkflowComponent implements OnInit {
     this.isLoading = true;
     this.incidentService.getIncidents().subscribe({
       next: (data) => {
-        this.incidents = data;
+        this.incidents = data.map(incident => this.mapIncidentCodes(incident));
         this.applyFilters();
         this.isLoading = false;
       },
@@ -65,17 +67,16 @@ export class IncidentWorkflowComponent implements OnInit {
 
   applyFilters() {
     this.filteredIncidents = this.incidents.filter(i => {
-      const matchSearch = !this.searchTerm || 
-                          i.titre.toLowerCase().includes(this.searchTerm.toLowerCase()) || 
-                          i.description.toLowerCase().includes(this.searchTerm.toLowerCase());
-      
-      const incidentStatut = ((i as any).statutCode || i.statut || '').toLowerCase();
-      const filterStatut = (this.statusFilter || '').toLowerCase();
+      const matchSearch = !this.searchTerm
+        || i.titre.toLowerCase().includes(this.searchTerm.toLowerCase())
+        || i.description.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+      const incidentStatut = this.getIncidentStatus(i);
+      const filterStatut = this.normalizeStatus(this.statusFilter);
       const matchStatus = !filterStatut || incidentStatut === filterStatut;
 
       return matchSearch && matchStatus;
     });
-
   }
 
   onFilterChange() {
@@ -88,18 +89,20 @@ export class IncidentWorkflowComponent implements OnInit {
     this.applyFilters();
   }
 
-
   updateStatus(incident: Incident, newStatus: IncidentStatus) {
     this.incidentService.updateIncident(incident.id, { statut: newStatus }).subscribe({
       next: (res) => {
-        const idx = this.incidents.findIndex(i => i.id === res.id);
-        if (idx !== -1) this.incidents[idx] = res;
+        const updated = this.mapIncidentCodes(res);
+        const idx = this.incidents.findIndex(i => i.id === updated.id);
+        if (idx !== -1) {
+          this.incidents[idx] = updated;
+        }
         this.applyFilters();
-        alert(`Statut mis à jour : ${newStatus}`);
+        alert(`Statut mis a jour : ${this.statusLabelMap[newStatus] || newStatus}`);
       },
       error: (err) => {
         console.error(err);
-        alert('Erreur lors de la mise à jour du statut.');
+        alert('Erreur lors de la mise a jour du statut.');
       }
     });
   }
@@ -114,9 +117,8 @@ export class IncidentWorkflowComponent implements OnInit {
     this.selectedIncident = null;
   }
 
-  getStatusClass(incident: any): string {
-    const status = incident?.statutCode || incident?.statut;
-    switch (status) {
+  getStatusClass(incident: Incident): string {
+    switch (this.getIncidentStatus(incident)) {
       case IncidentStatus.NOUVEAU: return 'status-new';
       case IncidentStatus.EN_COURS: return 'status-progress';
       case IncidentStatus.TRAITE: return 'status-resolved';
@@ -125,9 +127,19 @@ export class IncidentWorkflowComponent implements OnInit {
     }
   }
 
-  getImpactClass(incident: any): string {
-    const level = incident?.niveauRisqueCode || incident?.niveauRisque;
+  getIncidentStatus(incident: Incident): string {
+    return this.normalizeStatus((incident as any)?.statutCode || incident?.statut);
+  }
+
+  getIncidentStatusLabel(incident: Incident): string {
+    const normalized = this.getIncidentStatus(incident);
+    return incident.statutLabel || this.statusLabelMap[normalized] || incident.statut || '-';
+  }
+
+  getImpactClass(incident: Incident): string {
+    const level = this.normalizeLevel((incident as any)?.niveauRisqueCode || incident?.niveauRisque);
     if (!level) return '';
+
     switch (level) {
       case IncidentNiveauRisque.CRITICAL: return 'impact-critical';
       case IncidentNiveauRisque.SIGNIFICANT:
@@ -139,8 +151,35 @@ export class IncidentWorkflowComponent implements OnInit {
     }
   }
 
-
   goBack() {
     this.router.navigate(['/dashboard']);
+  }
+
+  private mapIncidentCodes(incident: Incident): Incident {
+    return {
+      ...incident,
+      statut: this.normalizeStatus((incident as any)?.statutCode || incident?.statut) as IncidentStatus,
+      niveauRisque: this.normalizeLevel((incident as any)?.niveauRisqueCode || incident?.niveauRisque) as IncidentNiveauRisque
+    };
+  }
+
+  private normalizeStatus(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
+  }
+
+  private normalizeLevel(value?: string | null): string {
+    return (value || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
   }
 }

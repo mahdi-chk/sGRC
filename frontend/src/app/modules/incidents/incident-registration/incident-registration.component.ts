@@ -4,6 +4,7 @@ import { IncidentImportDraft, IncidentService, IncidentStatus } from '../../../c
 import { Department, DepartmentService } from '../../../core/services/department.service';
 import { RiskService, Risk } from '../../../core/services/risk.service';
 import { Router } from '@angular/router';
+import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
 
 @Component({
   selector: 'app-incident-registration',
@@ -11,6 +12,7 @@ import { Router } from '@angular/router';
   styleUrls: ['./incident-registration.component.scss']
 })
 export class IncidentRegistrationComponent implements OnInit {
+  currentUserRole = getStoredIncidentRole();
   incidentForm: FormGroup;
   departments: Department[] = [];
   risks: Risk[] = [];
@@ -38,6 +40,10 @@ export class IncidentRegistrationComponent implements OnInit {
       statut: [IncidentStatus.NOUVEAU],
       riskId: [null]
     });
+  }
+
+  get navItems() {
+    return getIncidentNavItems(this.currentUserRole);
   }
 
   ngOnInit(): void {

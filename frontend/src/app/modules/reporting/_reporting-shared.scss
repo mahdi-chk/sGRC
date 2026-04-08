@@ -1,0 +1,47 @@
+.reporting-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0 20px;
+  padding: 8px;
+  border: 1px solid rgba(201, 214, 226, 0.92);
+  border-radius: 18px;
+  background: rgba(236, 243, 250, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.reporting-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: #61758a;
+  background: transparent;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.reporting-tab:hover {
+  color: #17324d;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.reporting-tab.active {
+  color: #17324d;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 768px) {
+  .reporting-tabs {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .reporting-tab {
+    width: 100%;
+    justify-content: center;
+  }
+}

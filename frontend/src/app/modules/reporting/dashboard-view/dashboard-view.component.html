@@ -16,6 +16,18 @@
         </div>
     </div>
 
+    <nav class="reporting-tabs" *ngIf="navItems.length > 0">
+        <a
+            *ngFor="let item of navItems"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="reporting-tab">
+            <i class="fas" [ngClass]="item.icon"></i>
+            <span>{{ item.label }}</span>
+        </a>
+    </nav>
+
     <div *ngIf="isLoading" class="loading-overlay">
         <div class="spinner"></div>
         <p>Chargement des donnees...</p>

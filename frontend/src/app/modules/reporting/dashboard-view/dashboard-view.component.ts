@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 
 import { KPI, ReportingService, ReportingStats } from '../../../core/services/reporting.service';
 import { RiskLevel, RiskStatus } from '../../../core/services/risk.service';
+import { REPORTING_NAV_ITEMS } from '../reporting-navigation';
 
 @Component({
     selector: 'app-dashboard-view',
@@ -14,6 +15,7 @@ export class DashboardViewComponent implements OnInit {
     stats: ReportingStats | null = null;
     kpis: KPI[] = [];
     isLoading = true;
+    readonly navItems = REPORTING_NAV_ITEMS;
 
     readonly riskLevelOrder = [
         RiskLevel.LOW,

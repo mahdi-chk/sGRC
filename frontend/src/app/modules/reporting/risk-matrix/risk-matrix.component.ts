@@ -8,6 +8,7 @@ import {
   RiskService,
   RiskStatus,
 } from '../../../core/services/risk.service';
+import { REPORTING_NAV_ITEMS } from '../reporting-navigation';
 
 @Component({
   selector: 'app-risk-matrix',
@@ -21,6 +22,7 @@ export class RiskMatrixComponent implements OnInit {
   risks: Risk[] = [];
   isLoading = true;
   loadError = '';
+  readonly navItems = REPORTING_NAV_ITEMS;
   matrixRowTotals: number[] = [0, 0, 0, 0];
   matrixColTotals: number[] = [0, 0, 0, 0];
   criticalExposureCount = 0;

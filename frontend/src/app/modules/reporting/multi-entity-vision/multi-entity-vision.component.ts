@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ReportingService, MultiEntityData } from '../../../core/services/reporting.service';
 import { Router } from '@angular/router';
+import { REPORTING_NAV_ITEMS } from '../reporting-navigation';
 
 @Component({
   selector: 'app-multi-entity-vision',
@@ -10,6 +11,7 @@ import { Router } from '@angular/router';
 export class MultiEntityVisionComponent implements OnInit {
   entities: MultiEntityData[] = [];
   isLoading = true;
+  readonly navItems = REPORTING_NAV_ITEMS;
 
   constructor(
     private reportingService: ReportingService,

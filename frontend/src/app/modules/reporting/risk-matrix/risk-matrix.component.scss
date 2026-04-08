@@ -1,5 +1,86 @@
+@import '../reporting-shared';
+
 .risk-matrix-page {
   padding: 20px;
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin: 0 0 24px;
+  }
+
+  .kpi-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 22px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid rgba(201, 214, 226, 0.92);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      border-radius: 18px 0 0 18px;
+      background: #94a3b8;
+    }
+
+    .kpi-value {
+      font-size: 2rem;
+      line-height: 1;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .kpi-label {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.02em;
+    }
+
+    &.kpi-open::before {
+      background: #64748b;
+    }
+
+    &.kpi-open .kpi-value {
+      color: #475569;
+    }
+
+    &.kpi-total::before {
+      background: #3b82f6;
+    }
+
+    &.kpi-total .kpi-value {
+      color: #2563eb;
+    }
+
+    &.kpi-progress::before {
+      background: #f59e0b;
+    }
+
+    &.kpi-progress .kpi-value {
+      color: #d97706;
+    }
+
+    &.kpi-closed::before {
+      background: #10b981;
+    }
+
+    &.kpi-closed .kpi-value {
+      color: #059669;
+    }
+  }
+
+  .reporting-tabs {
+    margin-top: 0;
+  }
 
   .risk-matrix-card {
     overflow: hidden;
@@ -38,6 +119,42 @@
       border: 1px solid #fecaca;
     }
   }
+
+  .risk-matrix-container {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  }
+
+  .risk-matrix-body {
+    padding-bottom: 4px;
+  }
+
+  .risk-matrix-table {
+    min-width: 720px;
+
+    th,
+    td {
+      min-height: 68px;
+    }
+
+    .impact-label,
+    .prob-label,
+    .total-label,
+    .total-cell {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    }
+
+    .cell {
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+
+      .cell-content {
+        min-height: 68px;
+      }
+    }
+  }
+
+  .matrix-risk-list {
+    scrollbar-gutter: stable;
+  }
 }
 
 @keyframes spin {
@@ -48,5 +165,26 @@
 @media (max-width: 768px) {
   .risk-matrix-page {
     padding: 14px;
+
+    .kpi-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .kpi-card {
+      padding: 16px 18px;
+    }
+
+    .risk-matrix-table {
+      min-width: 640px;
+    }
+  }
+}
+
+@media (max-width: 520px) {
+  .risk-matrix-page {
+    .kpi-row {
+      grid-template-columns: 1fr;
+    }
   }
 }

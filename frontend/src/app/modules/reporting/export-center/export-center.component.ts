@@ -12,6 +12,7 @@ import {
 } from '../../../core/services/reporting.service';
 import { Incident, IncidentService } from '../../../core/services/incident.service';
 import { Risk, RiskService } from '../../../core/services/risk.service';
+import { REPORTING_NAV_ITEMS } from '../reporting-navigation';
 
 @Component({
   selector: 'app-export-center',
@@ -24,6 +25,7 @@ export class ExportCenterComponent implements OnInit {
   selectedFormat: 'pdf' | 'xlsx' = 'xlsx';
   statusMessage = '';
   statusTone: 'success' | 'error' | '' = '';
+  readonly navItems = REPORTING_NAV_ITEMS;
 
   reports = [
     { id: 'global', title: 'Rapport Global de Performance', desc: 'Rapport consolide incluant risques, incidents, audits, KPIs et vision multi-entites.' },

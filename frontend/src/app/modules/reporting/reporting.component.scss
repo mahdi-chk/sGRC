@@ -1,62 +1,9 @@
 .reporting-shell {
-  --reporting-ink: #17324d;
-  --reporting-muted: #61758a;
-  --reporting-line: rgba(201, 214, 226, 0.92);
-  --reporting-tab-bg: rgba(255, 255, 255, 0.9);
-  padding: 18px 20px 0;
-  background:
-    radial-gradient(circle at top right, rgba(11, 116, 222, 0.08), transparent 26%),
-    linear-gradient(180deg, #f6f9fc 0%, #eef3f8 100%);
-}
-
-.reporting-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 18px;
-  padding: 10px;
-  border: 1px solid var(--reporting-line);
-  border-radius: 18px;
-  background: rgba(236, 243, 250, 0.9);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
-}
-
-.reporting-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
-  border-radius: 14px;
-  text-decoration: none;
-  color: var(--reporting-muted);
-  background: transparent;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.reporting-tab:hover {
-  color: var(--reporting-ink);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.reporting-tab.active {
-  color: var(--reporting-ink);
-  background: var(--reporting-tab-bg);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  display: block;
 }
 
 @media (max-width: 768px) {
   .reporting-shell {
-    padding: 14px 14px 0;
-  }
-
-  .reporting-tabs {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .reporting-tab {
-    width: 100%;
-    justify-content: center;
+    display: block;
   }
 }

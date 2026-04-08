@@ -18,6 +18,7 @@ import { RiskEvalActionCardComponent } from '../dashboard/components/risk-eval-a
 import { AuditPlanGenCardComponent } from '../dashboard/components/audit-plan-gen-card/audit-plan-gen-card.component';
 import { AuditorMissionCardComponent } from '../dashboard/components/auditor-mission-card/auditor-mission-card.component';
 import { OrganigrammeManagementCardComponent } from '../dashboard/components/organigramme-management-card/organigramme-management-card.component';
+import { PaginationComponent } from './components/pagination/pagination.component';
 
 @NgModule({
   declarations: [
@@ -31,7 +32,8 @@ import { OrganigrammeManagementCardComponent } from '../dashboard/components/org
     RiskEvalActionCardComponent,
     AuditPlanGenCardComponent,
     AuditorMissionCardComponent,
-    OrganigrammeManagementCardComponent
+    OrganigrammeManagementCardComponent,
+    PaginationComponent
   ],
   imports: [
     CommonModule,
@@ -50,6 +52,7 @@ import { OrganigrammeManagementCardComponent } from '../dashboard/components/org
     AuditPlanGenCardComponent,
     AuditorMissionCardComponent,
     OrganigrammeManagementCardComponent,
+    PaginationComponent,
     CommonModule,
     FormsModule,
     RouterModule

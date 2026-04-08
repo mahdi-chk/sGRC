@@ -65,7 +65,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let control of registry">
+                <tr *ngFor="let control of paginatedRegistry">
                     <td>{{ control.code }}</td>
                     <td>
                         <strong>{{ control.title }}</strong>
@@ -79,6 +79,13 @@
                 </tr>
             </tbody>
         </table>
+        
+        <app-pagination 
+            [totalItems]="registry.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <ng-template #emptyRegistry>

@@ -1,4 +1,4 @@
-﻿<div class="risk-page">
+<div class="risk-page">
 
     <!-- Page Header -->
     <div class="page-header">
@@ -64,17 +64,17 @@
     <div class="filters-bar">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" [(ngModel)]="searchText" placeholder="Rechercher par titre ou domaine...">
+            <input type="text" [(ngModel)]="searchText" (ngModelChange)="onFilterChange()" placeholder="Rechercher par titre ou domaine...">
         </div>
-        <select [(ngModel)]="filterStatut" class="filter-select">
+        <select [(ngModel)]="filterStatut" (ngModelChange)="onFilterChange()" class="filter-select">
             <option value="">Tous les statuts</option>
             <option *ngFor="let opt of statusOptions" [value]="opt.code">{{ opt.label }}</option>
         </select>
-        <select [(ngModel)]="filterNiveau" class="filter-select">
+        <select [(ngModel)]="filterNiveau" (ngModelChange)="onFilterChange()" class="filter-select">
             <option value="">Tous les niveaux</option>
             <option *ngFor="let opt of levelOptions" [value]="opt.code">{{ opt.label }}</option>
         </select>
-        <button class="btn-clear" (click)="filterStatut=''; filterNiveau=''; searchText=''">
+        <button class="btn-clear" (click)="filterStatut=''; filterNiveau=''; searchText=''; onFilterChange()">
             <i class="fas fa-times"></i> Réinitialiser
         </button>
     </div>
@@ -97,8 +97,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let risk of filteredRisks; let i = index">
-                    <td class="td-id">{{ i + 1 }}</td>
+                <tr *ngFor="let risk of paginatedRisks; let i = index">
+                    <td class="td-id">{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
                     <td class="td-title"><strong>{{ risk.titre }}</strong></td>
                     <td><span class="domain-tag">{{ risk.domaine }}</span></td>
                     <td><span [class]="getNiveauClass(risk)">{{ getNiveauLabel(risk) }}</span></td>
@@ -155,6 +155,12 @@
                 </tr>
             </tbody>
         </table>
+        <app-pagination 
+            [totalItems]="filteredRisks.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <!-- ====================== Create/Edit Modal ====================== -->

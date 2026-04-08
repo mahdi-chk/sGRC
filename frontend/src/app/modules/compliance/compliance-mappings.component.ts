@@ -27,6 +27,9 @@ export class ComplianceMappingsComponent implements OnInit {
   mappings: ComplianceMappingRecord[] = [];
   linkableSources: ComplianceLinkableSources = { risk: [], audit: [], incident: [] };
 
+  currentPage = 1;
+  itemsPerPage = 10;
+
   isLoading = false;
   isSaving = false;
   selectedFrameworkId: number | null = null;
@@ -96,12 +99,23 @@ export class ComplianceMappingsComponent implements OnInit {
     this.complianceService.getMappings().subscribe({
       next: items => {
         this.mappings = items;
+        this.currentPage = 1;
       },
       error: err => {
         this.mappings = [];
         this.error = err?.error?.message || 'Impossible de charger les mappings.';
       }
     });
+  }
+
+  get paginatedMappings(): ComplianceMappingRecord[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return this.mappings.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  onPageChanged(event: {page: number, pageSize: number}) {
+    this.currentPage = event.page;
+    this.itemsPerPage = event.pageSize;
   }
 
   loadLinkableSources(): void {

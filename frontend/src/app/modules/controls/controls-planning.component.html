@@ -53,7 +53,7 @@
         </div>
 
         <div class="agenda-list">
-            <article class="agenda-item" *ngFor="let item of planning">
+            <article class="agenda-item" *ngFor="let item of paginatedPlanning">
                 <div class="agenda-date">{{ formatDate(item.dueDate) }}</div>
                 <div class="agenda-copy">
                     <h3>{{ item.title }}</h3>
@@ -66,6 +66,13 @@
                 </div>
             </article>
         </div>
+        
+        <app-pagination 
+            [totalItems]="planning.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <ng-template #emptyPlanning>

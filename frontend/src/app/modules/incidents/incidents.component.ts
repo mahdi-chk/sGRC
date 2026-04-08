@@ -27,6 +27,10 @@ export class IncidentsComponent implements OnInit {
     filterStatus = '';
     filterLevel = '';
 
+    // Pagination
+    currentPage = 1;
+    itemsPerPage = 10;
+
 
     // Modals state
     showCreateModal = false;
@@ -131,8 +135,18 @@ export class IncidentsComponent implements OnInit {
 
             return matchSearch && matchStatus && matchLevel;
         });
+        this.currentPage = 1;
     }
 
+    get paginatedIncidents(): Incident[] {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.filteredIncidents.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    onPageChanged(event: {page: number, pageSize: number}) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
+    }
 
     onFilterChange() {
         this.applyFilters();

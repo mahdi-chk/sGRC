@@ -92,6 +92,10 @@ export class RiskManagementComponent implements OnInit {
     filterStatut = '';
     filterNiveau = '';
     searchText = '';
+    
+    // Pagination
+    currentPage = 1;
+    itemsPerPage = 10;
 
     constructor(
         private riskService: RiskService,
@@ -140,6 +144,20 @@ export class RiskManagementComponent implements OnInit {
 
             return matchSearch && matchLevel && matchStatus;
         });
+    }
+
+    get paginatedRisks(): Risk[] {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.filteredRisks.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    onPageChanged(event: {page: number, pageSize: number}) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
+    }
+
+    onFilterChange() {
+        this.currentPage = 1;
     }
 
     loadRisks() {

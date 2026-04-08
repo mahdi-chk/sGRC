@@ -18,6 +18,19 @@ export class OrganigrammeManagementComponent implements OnInit {
     editNom: string = '';
     showExportMenu = false;
 
+    currentPage = 1;
+    itemsPerPage = 10;
+
+    get paginatedItems(): any[] {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.items.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    onPageChanged(event: {page: number, pageSize: number}) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
+    }
+
     constructor(
         private organigrammeService: OrganigrammeService,
         private router: Router
@@ -34,6 +47,7 @@ export class OrganigrammeManagementComponent implements OnInit {
     refreshList() {
         this.organigrammeService.getAll().subscribe(data => {
             this.items = data;
+            this.currentPage = 1;
         });
     }
 

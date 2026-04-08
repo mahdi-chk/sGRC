@@ -62,7 +62,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let item of items">
+                    <tr *ngFor="let item of paginatedItems; let i = index">
                         <td class="id-cell">#{{ item.id }}</td>
                         <td>
                             <input *ngIf="editingId === item.id" type="text" [(ngModel)]="editNom" class="edit-input">
@@ -94,6 +94,12 @@
                     </tr>
                 </tbody>
             </table>
+            <app-pagination 
+                [totalItems]="items.length" 
+                [currentPage]="currentPage" 
+                [pageSize]="itemsPerPage" 
+                (pageChanged)="onPageChanged($event)">
+            </app-pagination>
         </div>
     </div>
 </div>

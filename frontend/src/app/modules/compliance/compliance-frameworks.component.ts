@@ -22,6 +22,10 @@ export class ComplianceFrameworksComponent implements OnInit {
   isLoading = false;
   isSavingFramework = false;
   isSavingRequirement = false;
+
+  reqCurrentPage = 1;
+  reqItemsPerPage = 10;
+
   selectedFrameworkId: number | null = null;
   frameworkEditingId: number | null = null;
   requirementEditingId: number | null = null;
@@ -77,6 +81,7 @@ export class ComplianceFrameworksComponent implements OnInit {
     this.complianceService.getRequirements(this.selectedFrameworkId).subscribe({
       next: items => {
         this.requirements = items;
+        this.reqCurrentPage = 1;
       },
       error: err => {
         this.requirements = [];
@@ -87,6 +92,16 @@ export class ComplianceFrameworksComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/dashboard/compliance']);
+  }
+
+  get paginatedRequirements(): ComplianceRequirementRecord[] {
+    const startIndex = (this.reqCurrentPage - 1) * this.reqItemsPerPage;
+    return this.requirements.slice(startIndex, startIndex + this.reqItemsPerPage);
+  }
+
+  onReqPageChanged(event: {page: number, pageSize: number}) {
+    this.reqCurrentPage = event.page;
+    this.reqItemsPerPage = event.pageSize;
   }
 
   selectFramework(frameworkId: number | null): void {

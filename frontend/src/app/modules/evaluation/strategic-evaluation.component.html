@@ -110,7 +110,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let risk of filteredRisks">
+                    <tr *ngFor="let risk of paginatedRisks">
                         <!-- Risk Basic Info -->
                         <td class="risk-cell">
                             <strong>{{ risk.titre }}</strong>
@@ -186,6 +186,13 @@
                 <p>Aucun risque ne correspond à vos critères de recherche.</p>
             </div>
         </div>
+        
+        <app-pagination 
+            [totalItems]="filteredRisks.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <!-- History Modal -->

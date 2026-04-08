@@ -53,7 +53,7 @@
         </div>
 
         <div class="evidence-list">
-            <article class="evidence-item" *ngFor="let item of evidence">
+            <article class="evidence-item" *ngFor="let item of paginatedEvidence">
                 <div class="evidence-icon">
                     <i class="fas fa-file-shield"></i>
                 </div>
@@ -70,6 +70,13 @@
                 <span class="tag">{{ item.sourceType }}</span>
             </article>
         </div>
+        
+        <app-pagination 
+            [totalItems]="evidence.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <ng-template #emptyEvidence>

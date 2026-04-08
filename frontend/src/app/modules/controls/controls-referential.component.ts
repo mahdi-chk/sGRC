@@ -13,6 +13,9 @@ export class ControlsReferentialComponent implements OnInit {
   overview: ControlsOverview | null = null;
   isLoading = false;
 
+  currentPage = 1;
+  itemsPerPage = 10;
+
   constructor(
     private router: Router,
     private controlsService: ControlsService
@@ -34,6 +37,7 @@ export class ControlsReferentialComponent implements OnInit {
         this.isLoading = false;
       }
     });
+    this.currentPage = 1;
   }
 
   goBack(): void {
@@ -42,6 +46,16 @@ export class ControlsReferentialComponent implements OnInit {
 
   get registry(): ControlRegistryItem[] {
     return this.overview?.registry || [];
+  }
+
+  get paginatedRegistry(): ControlRegistryItem[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return this.registry.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  onPageChanged(event: {page: number, pageSize: number}) {
+    this.currentPage = event.page;
+    this.itemsPerPage = event.pageSize;
   }
 
   get departmentCount(): number {

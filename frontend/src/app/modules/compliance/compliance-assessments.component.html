@@ -24,7 +24,7 @@
     </nav>
 
     <div class="item-list" *ngIf="assessments.length > 0; else emptyState">
-        <article class="list-item" *ngFor="let item of assessments">
+        <article class="list-item" *ngFor="let item of paginatedAssessments">
             <strong>{{ item.title }}</strong>
             <p>{{ item.framework }}</p>
             <div class="meta-row">
@@ -35,6 +35,13 @@
                 <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
             </div>
         </article>
+        
+        <app-pagination 
+            [totalItems]="assessments.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <ng-template #emptyState>

@@ -23,6 +23,9 @@ export class StrategicEvaluationComponent implements OnInit {
     isEvaluating = false;
     aiResults: any[] = [];
 
+    currentPage = 1;
+    itemsPerPage = 10;
+
     // Filtres
     searchTerm: string = '';
     statusFilter: string = '';
@@ -111,6 +114,17 @@ export class StrategicEvaluationComponent implements OnInit {
 
             return matchesSearch && matchesStatus && matchesLevel;
         });
+        this.currentPage = 1;
+    }
+
+    get paginatedRisks(): (Risk & { treatments?: any[] })[] {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.filteredRisks.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    onPageChanged(event: {page: number, pageSize: number}) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
     }
 
 

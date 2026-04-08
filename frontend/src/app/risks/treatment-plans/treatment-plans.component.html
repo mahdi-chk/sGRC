@@ -79,7 +79,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let plan of plans" [class.row-selected]="selectedPlan?.id === plan.id">
+                    <tr *ngFor="let plan of paginatedPlans; let i = index" [class.row-selected]="selectedPlan?.id === plan.id">
                         <td>
                             <div class="plan-name">{{ plan.name }}</div>
                         </td>
@@ -122,6 +122,12 @@
                     </tr>
                 </tbody>
             </table>
+            <app-pagination 
+                [totalItems]="plans.length" 
+                [currentPage]="currentPage" 
+                [pageSize]="itemsPerPage" 
+                (pageChanged)="onPageChanged($event)">
+            </app-pagination>
         </div>
     </div>
 

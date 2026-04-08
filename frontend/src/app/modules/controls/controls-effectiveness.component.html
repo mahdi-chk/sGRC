@@ -47,7 +47,7 @@
     </div>
 
     <div class="effectiveness-grid" *ngIf="effectiveness.length > 0; else emptyEffectiveness">
-        <article class="effectiveness-card" *ngFor="let item of effectiveness" [ngClass]="getToneClass(item.score)">
+        <article class="effectiveness-card" *ngFor="let item of paginatedEffectiveness" [ngClass]="getToneClass(item.score)">
             <div class="effectiveness-head">
                 <div>
                     <span class="eyebrow">{{ item.controlCode }}</span>
@@ -71,6 +71,14 @@
                 </div>
             </div>
         </article>
+        
+        <app-pagination 
+            [totalItems]="effectiveness.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)"
+            style="grid-column: 1 / -1;">
+        </app-pagination>
     </div>
 
     <ng-template #emptyEffectiveness>

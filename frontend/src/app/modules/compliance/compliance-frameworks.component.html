@@ -225,7 +225,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let requirement of requirements">
+                    <tr *ngFor="let requirement of paginatedRequirements">
                         <td>
                             <strong>{{ requirement.code }}</strong>
                             <small>{{ requirement.title }}</small>
@@ -243,6 +243,13 @@
                     </tr>
                 </tbody>
             </table>
+            
+            <app-pagination *ngIf="requirements.length > 0"
+                [totalItems]="requirements.length" 
+                [currentPage]="reqCurrentPage" 
+                [pageSize]="reqItemsPerPage" 
+                (pageChanged)="onReqPageChanged($event)">
+            </app-pagination>
         </section>
     </div>
 

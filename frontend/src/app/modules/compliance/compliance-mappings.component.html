@@ -115,7 +115,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let item of mappings">
+                <tr *ngFor="let item of paginatedMappings">
                     <td>
                         <strong>{{ item.requirement?.code || ('REQ-' + item.requirementId) }}</strong>
                         <small>{{ item.requirement?.title || 'Exigence chargee sans detail' }}</small>
@@ -136,6 +136,13 @@
                 </tr>
             </tbody>
         </table>
+        
+        <app-pagination 
+            [totalItems]="mappings.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </section>
 
     <ng-template #emptyState>

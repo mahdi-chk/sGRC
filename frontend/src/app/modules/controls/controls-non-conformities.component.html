@@ -53,7 +53,7 @@
         </div>
 
         <div class="nonconformity-list">
-            <article class="nonconformity-item" *ngFor="let item of items">
+            <article class="nonconformity-item" *ngFor="let item of paginatedItems">
                 <div class="nonconformity-head">
                     <h3>{{ item.title }}</h3>
                     <span class="tag" [ngClass]="getStatusClass(item.severity)">{{ item.severity }}</span>
@@ -66,6 +66,13 @@
                 </div>
             </article>
         </div>
+        
+        <app-pagination 
+            [totalItems]="items.length" 
+            [currentPage]="currentPage" 
+            [pageSize]="itemsPerPage" 
+            (pageChanged)="onPageChanged($event)">
+        </app-pagination>
     </div>
 
     <ng-template #emptyItems>

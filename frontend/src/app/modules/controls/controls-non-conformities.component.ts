@@ -13,6 +13,9 @@ export class ControlsNonConformitiesComponent implements OnInit {
   overview: ControlsOverview | null = null;
   isLoading = false;
 
+  currentPage = 1;
+  itemsPerPage = 10;
+
   constructor(
     private router: Router,
     private controlsService: ControlsService
@@ -34,6 +37,8 @@ export class ControlsNonConformitiesComponent implements OnInit {
         this.isLoading = false;
       }
     });
+
+    this.currentPage = 1;
   }
 
   goBack(): void {
@@ -42,6 +47,16 @@ export class ControlsNonConformitiesComponent implements OnInit {
 
   get items(): ControlNonConformityItem[] {
     return this.overview?.nonConformities || [];
+  }
+
+  get paginatedItems(): ControlNonConformityItem[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return this.items.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  onPageChanged(event: {page: number, pageSize: number}) {
+    this.currentPage = event.page;
+    this.itemsPerPage = event.pageSize;
   }
 
   get criticalCount(): number {

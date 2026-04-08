@@ -32,9 +32,8 @@ export class RiskListComponent implements OnInit {
     selectedRisk: Risk | null = null;
     showDetailModal = false;
 
-    pageSize = 10;
     currentPage = 1;
-    totalPages = 1;
+    itemsPerPage = 10;
 
     constructor(private riskService: RiskService, private router: Router) { }
 
@@ -73,13 +72,17 @@ export class RiskListComponent implements OnInit {
             return matchSearch && matchLevel && matchStatus && matchDomain;
         });
 
-        this.totalPages = Math.max(1, Math.ceil(this.filteredRisks.length / this.pageSize));
         this.currentPage = 1;
     }
 
-    getPaginatedRisks(): Risk[] {
-        const startIndex = (this.currentPage - 1) * this.pageSize;
-        return this.filteredRisks.slice(startIndex, startIndex + this.pageSize);
+    get paginatedRisks(): Risk[] {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.filteredRisks.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    onPageChanged(event: {page: number, pageSize: number}) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
     }
 
     onSearchChange(value: string) {
@@ -115,18 +118,6 @@ export class RiskListComponent implements OnInit {
 
     goBack() {
         this.router.navigate(['/dashboard']);
-    }
-
-    nextPage() {
-        if (this.currentPage < this.totalPages) {
-            this.currentPage += 1;
-        }
-    }
-
-    previousPage() {
-        if (this.currentPage > 1) {
-            this.currentPage -= 1;
-        }
     }
 
     getStatusClass(risk: any): string {

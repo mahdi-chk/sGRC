@@ -63,7 +63,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let risk of getPaginatedRisks()" class="risk-row" (click)="viewRiskDetails(risk)">
+                <tr *ngFor="let risk of paginatedRisks" class="risk-row" (click)="viewRiskDetails(risk)">
                     <td class="cell-title">{{ risk.titre }}</td>
                     <td class="cell-domain">{{ risk.domaine }}</td>
                     <td class="cell-level">
@@ -93,15 +93,14 @@
         </table>
     </div>
 
-    <div class="pagination-section" *ngIf="filteredRisks.length > 0">
-        <button class="btn-pagination" (click)="previousPage()" [disabled]="currentPage === 1">
-            <i class="fas fa-chevron-left"></i> Précédent
-        </button>
-        <span class="page-info">Page {{ currentPage }} sur {{ totalPages }}</span>
-        <button class="btn-pagination" (click)="nextPage()" [disabled]="currentPage === totalPages">
-            Suivant <i class="fas fa-chevron-right"></i>
-        </button>
     </div>
+
+    <app-pagination 
+        [totalItems]="filteredRisks.length" 
+        [currentPage]="currentPage" 
+        [pageSize]="itemsPerPage" 
+        (pageChanged)="onPageChanged($event)">
+    </app-pagination>
 </div>
 
 <app-modal *ngIf="showDetailModal"

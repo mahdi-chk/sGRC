@@ -18,6 +18,19 @@ export class TreatmentPlansComponent implements OnInit {
     showDetailPanel = false;
     isEditing = false;
 
+    currentPage = 1;
+    itemsPerPage = 10;
+
+    get paginatedPlans(): any[] {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.plans.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    onPageChanged(event: {page: number, pageSize: number}) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
+    }
+
     constructor(private riskService: RiskService, private router: Router) {}
 
     ngOnInit(): void {
@@ -76,6 +89,8 @@ export class TreatmentPlansComponent implements OnInit {
             this.overdueRate = this.metrics.total > 0
                 ? Math.round((this.metrics.enRetard / this.metrics.total) * 100)
                 : 0;
+                
+            this.currentPage = 1;
         });
     }
 

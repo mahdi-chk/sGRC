@@ -74,7 +74,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let incident of filteredIncidents">
+                    <tr *ngFor="let incident of paginatedIncidents; let i = index">
 
                         <td class="td-title"><strong>{{ incident.titre }}</strong></td>
                         <td>{{ incident.domaine || 'Non defini' }}</td>
@@ -110,6 +110,12 @@
                     </tr>
                 </tbody>
             </table>
+            <app-pagination 
+                [totalItems]="filteredIncidents.length" 
+                [currentPage]="currentPage" 
+                [pageSize]="itemsPerPage" 
+                (pageChanged)="onPageChanged($event)">
+            </app-pagination>
         </div>
     </div>
 

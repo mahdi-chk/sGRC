@@ -13,6 +13,9 @@ export class ControlsPlanningComponent implements OnInit {
   overview: ControlsOverview | null = null;
   isLoading = false;
 
+  currentPage = 1;
+  itemsPerPage = 10;
+
   constructor(
     private router: Router,
     private controlsService: ControlsService
@@ -34,6 +37,8 @@ export class ControlsPlanningComponent implements OnInit {
         this.isLoading = false;
       }
     });
+
+    this.currentPage = 1;
   }
 
   goBack(): void {
@@ -42,6 +47,16 @@ export class ControlsPlanningComponent implements OnInit {
 
   get planning(): ControlPlanningItem[] {
     return this.overview?.planning || [];
+  }
+
+  get paginatedPlanning(): ControlPlanningItem[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return this.planning.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  onPageChanged(event: {page: number, pageSize: number}) {
+    this.currentPage = event.page;
+    this.itemsPerPage = event.pageSize;
   }
 
   get auditCount(): number {

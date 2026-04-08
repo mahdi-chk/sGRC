@@ -5,12 +5,9 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-tasks"></i> Modeles de Check-Lists</h1>
-                <p>Parametrez les checklists utilisees dans les missions d'audit et centralisez leur maintenance.</p>
+                <h1><i class="fas fa-list-check"></i> Plans d'actions d'audit</h1>
+                <p>Chaque mission porte désormais son propre plan d'actions DNSSI, avec saisie manuelle ou import Excel.</p>
             </div>
-        </div>
-        <div class="header-actions">
-            <button class="btn-primary" (click)="openCreateModal()"><i class="fas fa-plus"></i> Nouveau Modele</button>
         </div>
     </div>
 
@@ -20,62 +17,176 @@
         </a>
     </nav>
 
-    <div class="loader" *ngIf="isLoading">Chargement...</div>
+    <div class="feedback-card" *ngIf="feedback || error">
+        <p class="success" *ngIf="feedback">{{ feedback }}</p>
+        <p class="error" *ngIf="error">{{ error }}</p>
+    </div>
 
-    <div class="templates-grid" *ngIf="!isLoading">
-        <div *ngIf="templates.length === 0" class="empty-state">
-            <p>Aucun modele de checklist pour le moment.</p>
-        </div>
+    <div class="layout-grid">
+        <aside class="panel mission-panel">
+            <div class="panel-head">
+                <h2>Missions</h2>
+                <p>Sélectionnez une mission pour piloter son plan d'actions.</p>
+            </div>
 
-        <div class="card" *ngFor="let template of templates">
-            <div class="card-header">
-                <h3>{{ template.titre }}</h3>
-                <button class="icon-btn delete" (click)="deleteTemplate(template.id)" title="Supprimer">
-                    <i class="fas fa-trash"></i>
+            <label class="field">
+                <span>Mission active</span>
+                <select [ngModel]="selectedMissionId" (ngModelChange)="selectMission($event)">
+                    <option [ngValue]="null">Choisir une mission</option>
+                    <option *ngFor="let mission of missions" [ngValue]="mission.id">
+                        {{ mission.titre }}
+                    </option>
+                </select>
+            </label>
+
+            <div class="mission-summary" *ngIf="selectedMission">
+                <span class="summary-label">Mission sélectionnée</span>
+                <strong>{{ selectedMission.titre }}</strong>
+                <small>Echéance: {{ selectedMission.delai | date:'dd/MM/yyyy' }}</small>
+            </div>
+
+            <div class="import-box">
+                <label class="field">
+                    <span>Importer Excel DNSSI</span>
+                    <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)">
+                </label>
+                <small class="file-hint" *ngIf="importFile">{{ importFile.name }}</small>
+                <button class="btn-primary" (click)="importExcel()" [disabled]="!selectedMissionId || !importFile || isSaving">
+                    {{ isSaving ? 'Import...' : 'Importer le plan' }}
                 </button>
             </div>
-            <div class="card-body">
-                <p class="desc" *ngIf="template.description">{{ template.description }}</p>
-                <ul class="items-list">
-                    <li *ngFor="let item of template.items">
-                        <i class="far fa-square" style="color:#004a99"></i> {{ item.texte }}
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
+        </aside>
 
-<div class="modal-overlay" *ngIf="showModal" (click)="showModal=false">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-            <h2>Creer un modele de checklist</h2>
-            <button class="close-btn" (click)="showModal=false"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body form-container">
-            <div class="form-group">
-                <label>Titre du modele</label>
-                <input type="text" [(ngModel)]="newTemplate.titre" placeholder="Ex: Checklist Audit Informatique" />
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea [(ngModel)]="newTemplate.description" rows="2" placeholder="Description du modele..."></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Elements a verifier</label>
-                <div class="item-input-row" *ngFor="let item of newTemplate.items; let i = index; trackBy: trackByFn">
-                    <input type="text" [(ngModel)]="newTemplate.items[i]" placeholder="Point de controle..." />
-                    <button class="icon-btn remove" (click)="removeItem(i)" *ngIf="newTemplate.items.length > 1">
-                        <i class="fas fa-minus-circle"></i>
-                    </button>
+        <section class="panel content-panel">
+            <ng-container *ngIf="selectedMissionId; else noMissionSelected">
+                <div class="panel-head hero-head">
+                    <div>
+                        <h2>Plan d'actions de la mission</h2>
+                        <p>{{ selectedMission?.titre }}</p>
+                    </div>
+                    <div class="hero-meta">
+                        <span class="meta-label">Echéance mission</span>
+                        <strong>{{ selectedMission?.delai | date:'dd/MM/yyyy' }}</strong>
+                    </div>
                 </div>
-                <button class="btn-secondary" (click)="addItem()"><i class="fas fa-plus"></i> Ajouter un point</button>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-cancel" (click)="showModal=false">Annuler</button>
-            <button class="btn-primary" (click)="saveTemplate()">Enregistrer</button>
-        </div>
+
+                <div class="composer-card">
+                    <div class="composer-head">
+                        <div>
+                            <h3>Nouvelle ligne</h3>
+                            <p>Ajoutez une action complémentaire au plan courant.</p>
+                        </div>
+                        <button class="btn-primary" (click)="saveNewItem()" [disabled]="isSaving">Ajouter au plan</button>
+                    </div>
+
+                    <div class="form-grid">
+                        <label class="field compact">
+                            <span>Ordre</span>
+                            <input type="number" [(ngModel)]="newItem.ordre">
+                        </label>
+                        <label class="field compact">
+                            <span>Règle DNSSI</span>
+                            <input [(ngModel)]="newItem.regleDnssi" placeholder="POL-RISQUE">
+                        </label>
+                        <label class="field compact">
+                            <span>Horizon</span>
+                            <select [(ngModel)]="newItem.horizon">
+                                <option value="court_terme">Court terme</option>
+                                <option value="moyen_terme">Moyen terme</option>
+                                <option value="long_terme">Long terme</option>
+                            </select>
+                        </label>
+                        <label class="field compact">
+                            <span>Priorité</span>
+                            <input type="number" [(ngModel)]="newItem.priorite">
+                        </label>
+                        <label class="field field-wide">
+                            <span>Recommandations</span>
+                            <textarea rows="4" [(ngModel)]="newItem.recommandations" placeholder="Décrivez l'action ou la recommandation à mettre en oeuvre."></textarea>
+                        </label>
+                        <label class="field compact">
+                            <span>Responsable</span>
+                            <input [(ngModel)]="newItem.responsableNom" placeholder="Nom du responsable">
+                        </label>
+                        <label class="field compact">
+                            <span>Echéance</span>
+                            <input type="date" [(ngModel)]="newItem.echeance">
+                        </label>
+                        <label class="field compact">
+                            <span>Etat d'avancement</span>
+                            <select [(ngModel)]="newItem.etatAvancement">
+                                <option value="nok">NOK</option>
+                                <option value="en_cours">En cours</option>
+                                <option value="ok">OK</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="panel-head section-head">
+                    <h2>Lignes du plan</h2>
+                    <p>{{ planItems.length }} action(s) suivie(s)</p>
+                </div>
+
+                <div class="empty-state" *ngIf="!isLoading && planItems.length === 0">
+                    <p>Aucune ligne de plan d'actions pour cette mission.</p>
+                </div>
+
+                <div class="action-plan-list" *ngIf="planItems.length > 0">
+                    <article class="action-card" *ngFor="let item of planItems">
+                        <div class="action-card-head">
+                            <div class="action-title">
+                                <span class="rule-kicker">Règle DNSSI</span>
+                                <h3>{{ item.regleDnssi }}</h3>
+                            </div>
+                            <div class="action-badges">
+                                <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
+                                <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="recommendation-box">
+                            {{ item.recommandations }}
+                        </div>
+
+                        <div class="editor-grid">
+                            <label class="field compact">
+                                <span>Ordre</span>
+                                <input type="number" [(ngModel)]="item.ordre">
+                            </label>
+                            <label class="field compact">
+                                <span>Responsable</span>
+                                <input [(ngModel)]="item.responsableNom">
+                            </label>
+                            <label class="field compact">
+                                <span>Echéance</span>
+                                <input type="date" [(ngModel)]="item.echeance">
+                            </label>
+                            <label class="field compact">
+                                <span>Etat</span>
+                                <select [(ngModel)]="item.etatAvancement">
+                                    <option value="nok">NOK</option>
+                                    <option value="en_cours">En cours</option>
+                                    <option value="ok">OK</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="row-actions">
+                            <button class="btn-secondary" (click)="saveRow(item)">Enregistrer</button>
+                            <button class="btn-danger" (click)="deleteRow(item)">Supprimer</button>
+                        </div>
+                    </article>
+                </div>
+            </ng-container>
+
+            <ng-template #noMissionSelected>
+                <div class="empty-state empty-stage">
+                    <i class="fas fa-diagram-project"></i>
+                    <h3>Aucune mission sélectionnée</h3>
+                    <p>Choisissez une mission dans la colonne de gauche pour afficher et piloter son plan d'actions.</p>
+                </div>
+            </ng-template>
+        </section>
     </div>
 </div>

@@ -30,7 +30,7 @@
         <div class="stat-card pending">
             <div class="stat-icon"><i class="fas fa-clock"></i></div>
             <div class="stat-info">
-                <span class="label">En Cours</span>
+                <span class="label">Actives</span>
                 <span class="value">{{ pendingCount }}</span>
             </div>
         </div>
@@ -42,10 +42,10 @@
             </div>
         </div>
         <div class="stat-card risks">
-            <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="stat-icon"><i class="fas fa-hourglass-end"></i></div>
             <div class="stat-info">
-                <span class="label">Risques Couverts</span>
-                <span class="value">{{ missions.length }}</span>
+                <span class="label">En Retard</span>
+                <span class="value">{{ overdueCount }}</span>
             </div>
         </div>
     </div>
@@ -130,7 +130,7 @@
                             <i class="fas fa-eye"></i>
                         </button>
                         <button class="action-btn btn-checklist" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
-                            (click)="openChecklistModal(mission)" title="Ouvrir Checklist">
+                            (click)="openChecklistModal(mission)" title="Ouvrir Plan d actions">
                             <i class="fas fa-tasks"></i>
                         </button>
                         <button class="action-btn btn-evidence" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
@@ -176,26 +176,37 @@
         </div>
     </app-modal>
 
-    <!-- Checklist Modal -->
-    <app-modal *ngIf="showChecklistModal" title="Checklist de la Mission" (close)="showChecklistModal = false">
+    <!-- Plan d actions Modal -->
+    <app-modal *ngIf="showChecklistModal" title="Plan d actions de la Mission" (close)="showChecklistModal = false">
         <div #projected modal-body class="modal-form">
             <div *ngIf="isLoading" class="table-loading">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement...
             </div>
             
             <div *ngIf="!isLoading && currentChecklistItems.length === 0" class="empty-state" style="padding: 2rem; text-align: center;">
-                <p>Aucune checklist associée à cette mission.</p>
+                <p>Aucun plan d actions associé à cette mission.</p>
             </div>
 
-            <ul class="checklist-items" *ngIf="!isLoading && currentChecklistItems.length > 0">
-                <li *ngFor="let item of currentChecklistItems" class="checklist-item" [class.completed]="item.estFait">
-                    <label class="checkbox-container">
-                        <input type="checkbox" [checked]="item.estFait" (change)="toggleChecklistItem(item, $event.target.checked)">
-                        <span class="checkmark"></span>
-                        <span class="item-text">{{ item.texte }}</span>
-                    </label>
-                </li>
-            </ul>
+            <table class="audit-table" *ngIf="!isLoading && currentChecklistItems.length > 0">
+                <thead>
+                    <tr>
+                        <th>Règle</th>
+                        <th>Recommandations</th>
+                        <th>Responsable</th>
+                        <th>Echéance</th>
+                        <th>Etat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of currentChecklistItems">
+                        <td>{{ item.regleDnssi }}</td>
+                        <td>{{ item.recommandations }}</td>
+                        <td>{{ item.responsableNom || '-' }}</td>
+                        <td>{{ item.echeance | date:'dd/MM/yyyy' }}</td>
+                        <td>{{ item.etatAvancement }}</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <div class="form-footer">
                 <button class="btn-save" (click)="showChecklistModal = false">Fermer</button>

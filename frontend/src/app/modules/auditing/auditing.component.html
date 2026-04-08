@@ -34,6 +34,37 @@
         </a>
     </nav>
 
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="stat-info">
+                <span class="label">Total missions</span>
+                <span class="value">{{ totalMissions }}</span>
+            </div>
+        </div>
+        <div class="stat-card pending">
+            <div class="stat-icon"><i class="fas fa-play-circle"></i></div>
+            <div class="stat-info">
+                <span class="label">En cours</span>
+                <span class="value">{{ inProgressCount }}</span>
+            </div>
+        </div>
+        <div class="stat-card completed">
+            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-info">
+                <span class="label">Terminées</span>
+                <span class="value">{{ completedCount }}</span>
+            </div>
+        </div>
+        <div class="stat-card risks">
+            <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
+            <div class="stat-info">
+                <span class="label">Non assignées</span>
+                <span class="value">{{ unassignedCount }}</span>
+            </div>
+        </div>
+    </div>
+
 
 
     <!-- Missions List Content -->
@@ -117,12 +148,8 @@
                                 (click)="openAssignModal(mission)" [title]="mission.auditeur ? 'Réassigner un auditeur' : 'Assigner un auditeur'">
                                 <i class="fas fa-user-plus"></i>
                             </button>
-                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.statut !== AuditMissionStatus.TERMINE"
-                                (click)="openAssignChecklistModal(mission)" title="Assigner Checklist">
-                                <i class="fas fa-tasks" style="color:#004a99"></i>
-                            </button>
-                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.checklistTemplateId"
-                                (click)="openChecklistModal(mission)" title="Voir Checklist">
+                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor"
+                                (click)="openChecklistModal(mission)" title="Voir Plan d actions">
                                 <i class="fas fa-list-check" style="color:#10b981"></i>
                             </button>
                             <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === AuditMissionStatus.EN_COURS"
@@ -304,23 +331,37 @@
         </div>
     </app-modal>
 
-    <!-- Visualiser Checklist Modal (Read-Only pour Senior) -->
-    <app-modal *ngIf="showChecklistModal" title="Avancement de la Checklist" (close)="showChecklistModal = false">
+    <!-- Visualiser Plan d actions Modal -->
+    <app-modal *ngIf="showChecklistModal" title="Plan d actions de la mission" (close)="showChecklistModal = false">
         <div #projected modal-body class="modal-form">
             <div *ngIf="isLoadingMissions" class="table-loading">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement...
             </div>
             
             <div *ngIf="!isLoadingMissions && currentChecklistItems.length === 0" class="empty-state">
-                <p>Aucun élément dans cette checklist.</p>
+                <p>Aucune action dans ce plan.</p>
             </div>
 
-            <ul class="checklist-items" *ngIf="!isLoadingMissions && currentChecklistItems.length > 0" style="list-style: none; padding: 0;">
-                <li *ngFor="let item of currentChecklistItems" style="padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px;">
-                    <i [ngClass]="item.estFait ? 'fas fa-check-square' : 'far fa-square'" [style.color]="item.estFait ? '#10b981' : '#94a3b8'" style="font-size: 1.2rem;"></i>
-                    <span [style.textDecoration]="item.estFait ? 'line-through' : 'none'" [style.color]="item.estFait ? '#64748b' : '#334155'">{{ item.texte }}</span>
-                </li>
-            </ul>
+            <table class="audit-table" *ngIf="!isLoadingMissions && currentChecklistItems.length > 0">
+                <thead>
+                    <tr>
+                        <th>Règle</th>
+                        <th>Recommandations</th>
+                        <th>Responsable</th>
+                        <th>Echéance</th>
+                        <th>Etat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of currentChecklistItems">
+                        <td>{{ item.regleDnssi }}</td>
+                        <td>{{ item.recommandations }}</td>
+                        <td>{{ item.responsableNom || '-' }}</td>
+                        <td>{{ item.echeance | date:'dd/MM/yyyy' }}</td>
+                        <td>{{ item.etatAvancement }}</td>
+                    </tr>
+                </tbody>
+            </table>
 
             <div class="form-footer" style="margin-top: 20px;">
                 <button class="btn-save" (click)="showChecklistModal = false">Fermer</button>

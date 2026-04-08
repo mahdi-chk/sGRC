@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-tasks"></i> {{ isSuperAdmin ? 'Check-Lists d Audit' : 'Mes Check-Lists' }}</h1>
-                <p>Complétez les points de contrôle pour vos missions d'audit.</p>
+                <h1><i class="fas fa-list-check"></i> {{ isSuperAdmin ? 'Plans d actions d audit' : 'Mon Plan d actions' }}</h1>
+                <p>Renseignez l'avancement, le responsable et l'échéance des actions liées à vos missions.</p>
             </div>
         </div>
     </div>
@@ -18,69 +18,95 @@
     </nav>
 
     <div class="dual-layout">
-        <!-- Sidebar: Mission List -->
-        <div class="sidebar-list card">
+        <aside class="sidebar-list card">
             <div class="list-header">
-                <h3>Missions Assignées</h3>
+                <h3>Missions assignées</h3>
             </div>
-            <div class="loading-state" *ngIf="isLoading && missions.length === 0">
-                <i class="fas fa-circle-notch fa-spin"></i>
-            </div>
+
             <ul class="item-list">
-                <li *ngFor="let mission of missions" 
-                    [class.active]="selectedMission?.id === mission.id"
-                    (click)="selectMission(mission)">
+                <li *ngFor="let mission of missions" [class.active]="selectedMission?.id === mission.id" (click)="selectMission(mission)">
                     <div class="item-icon"><i class="fas fa-briefcase"></i></div>
                     <div class="item-info">
                         <strong>{{ mission.titre }}</strong>
-                        <span class="status-tag" [class]="mission.statut.toLowerCase()">{{ mission.statut }}</span>
+                        <span class="status-tag">{{ mission.statut }}</span>
                     </div>
-                    <i class="fas fa-chevron-right scroll-icon"></i>
                 </li>
             </ul>
+
             <div class="empty-list" *ngIf="!isLoading && missions.length === 0">
                 <p>Aucune mission assignée.</p>
             </div>
-        </div>
+        </aside>
 
-        <!-- Main Content: Checklist Items -->
-        <div class="main-content card">
+        <section class="main-content card">
             <div *ngIf="selectedMission; else selectPrompt">
                 <div class="content-header">
-                    <h2>Checklist : {{ selectedMission.titre }}</h2>
-                    <span class="mission-date">Échéance : {{ selectedMission.delai | date:'dd/MM/yyyy' }}</span>
-                </div>
-
-                <div class="loading-overlay" *ngIf="isLoading">
-                    <i class="fas fa-circle-notch fa-spin"></i>
-                </div>
-
-                <div class="checklist-container" *ngIf="!isLoading">
-                    <div class="empty-checklist" *ngIf="checklistItems.length === 0">
-                        <i class="fas fa-list-ul"></i>
-                        <p>Aucun point de contrôle défini pour cette mission.</p>
+                    <div>
+                        <h2>Plan d'actions</h2>
+                        <p class="mission-title">{{ selectedMission.titre }}</p>
                     </div>
+                    <div class="mission-deadline">
+                        <span class="deadline-label">Echéance mission</span>
+                        <strong>{{ selectedMission.delai | date:'dd/MM/yyyy' }}</strong>
+                    </div>
+                </div>
 
-                    <ul class="checklist-items" *ngIf="checklistItems.length > 0">
-                        <li *ngFor="let item of checklistItems" class="checklist-item" [class.completed]="item.estFait">
-                            <label class="checkbox-container">
-                                <input type="checkbox" [checked]="item.estFait" (change)="toggleChecklistItem(item, $event.target.checked)">
-                                <span class="checkmark"></span>
-                                <div class="item-content">
-                                    <span class="item-text">{{ item.texte }}</span>
-                                    <small *ngIf="item.estFait" class="done-tag">Complété</small>
-                                </div>
+                <div class="empty-checklist" *ngIf="!isLoading && actionPlanItems.length === 0">
+                    <i class="fas fa-list-ul"></i>
+                    <p>Aucune action renseignée pour cette mission.</p>
+                </div>
+
+                <div class="action-plan-list" *ngIf="actionPlanItems.length > 0">
+                    <article class="action-card" *ngFor="let item of actionPlanItems">
+                        <div class="action-card-head">
+                            <div>
+                                <span class="rule-kicker">Règle DNSSI</span>
+                                <h3>{{ item.regleDnssi }}</h3>
+                            </div>
+                            <div class="action-badges">
+                                <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
+                                <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="recommendation-box">
+                            {{ item.recommandations }}
+                        </div>
+
+                        <div class="action-editor">
+                            <label class="editor-field">
+                                <span>Responsable</span>
+                                <input [(ngModel)]="item.responsableNom">
                             </label>
-                        </li>
-                    </ul>
+
+                            <label class="editor-field">
+                                <span>Echéance</span>
+                                <input type="date" [(ngModel)]="item.echeance">
+                            </label>
+
+                            <label class="editor-field">
+                                <span>Etat</span>
+                                <select [(ngModel)]="item.etatAvancement">
+                                    <option value="nok">NOK</option>
+                                    <option value="en_cours">En cours</option>
+                                    <option value="ok">OK</option>
+                                </select>
+                            </label>
+
+                            <div class="editor-actions">
+                                <button class="btn-save" (click)="saveItem(item)">Enregistrer</button>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
+
             <ng-template #selectPrompt>
                 <div class="select-prompt">
                     <i class="fas fa-mouse-pointer"></i>
-                    <p>Veuillez sélectionner une mission dans la liste pour afficher sa checklist.</p>
+                    <p>Veuillez sélectionner une mission pour afficher son plan d'actions.</p>
                 </div>
             </ng-template>
-        </div>
+        </section>
     </div>
 </div>

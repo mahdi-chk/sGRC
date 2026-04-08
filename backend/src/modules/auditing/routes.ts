@@ -17,6 +17,7 @@ const router = Router();
  * Middleware d'upload sécurisé pour les preuves d'audit
  */
 const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'], 'evidenceFile', 15 * 1024 * 1024);
+const uploadActionPlanFile = secureUpload(['xlsx', 'xls'], 'file', 15 * 1024 * 1024);
 
 /**
  * Helper to save buffer to storage
@@ -279,6 +280,62 @@ router.put('/missions/:id/checklists/:itemId', authorizeRoles(UserRole.SUPER_ADM
         res.json(item);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la modification', error: error.message });
+    }
+});
+
+router.get('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const items = await AuditingService.getMissionActionPlanItems(parseInt(req.params.id as string));
+        res.json(items);
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors du chargement du plan d actions', error: error.message });
+    }
+});
+
+router.post('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const item = await AuditingService.createMissionActionPlanItem(parseInt(req.params.id as string), req.body);
+        res.status(201).json(item);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la creation de la ligne du plan d actions', error: error.message });
+    }
+});
+
+router.put('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const item = await AuditingService.updateMissionActionPlanItem(
+            parseInt(req.params.id as string),
+            parseInt(req.params.itemId as string),
+            req.body
+        );
+        res.json(item);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la mise a jour du plan d actions', error: error.message });
+    }
+});
+
+router.delete('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+    try {
+        const result = await AuditingService.deleteMissionActionPlanItem(
+            parseInt(req.params.id as string),
+            parseInt(req.params.itemId as string)
+        );
+        res.json(result);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression de la ligne du plan d actions', error: error.message });
+    }
+});
+
+router.post('/missions/:id/action-plans/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), uploadActionPlanFile, async (req: AuthRequest, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun fichier fourni' });
+        }
+
+        const items = await AuditingService.importMissionActionPlan(parseInt(req.params.id as string), req.file);
+        res.status(201).json(items);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de l import du plan d actions', error: error.message });
     }
 });
 

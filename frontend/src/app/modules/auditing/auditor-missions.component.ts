@@ -20,6 +20,7 @@ export class AuditorMissionsComponent implements OnInit {
     totalAssigned = 0;
     pendingCount = 0;
     completedCount = 0;
+    overdueCount = 0;
 
     // Filter properties
     filterSearch = '';
@@ -122,9 +123,26 @@ export class AuditorMissionsComponent implements OnInit {
 
 
     calculateStats() {
-        this.totalAssigned = this.missions.length;
-        this.pendingCount = this.missions.filter(m => m.statut === AuditMissionStatus.EN_COURS).length;
-        this.completedCount = this.missions.filter(m => m.statut === AuditMissionStatus.TERMINE).length;
+        const normalizedStatuses = this.missions.map((mission) =>
+            this.normalizeMissionStatus((mission as any).statutCode || mission.statut)
+        );
+
+        this.totalAssigned = normalizedStatuses.filter((status) => status !== AuditMissionStatus.ANNULE).length;
+        this.pendingCount = normalizedStatuses.filter((status) =>
+            status === AuditMissionStatus.EN_COURS || status === AuditMissionStatus.A_VENIR
+        ).length;
+        this.completedCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.TERMINE).length;
+        this.overdueCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.EN_RETARD).length;
+    }
+
+    private normalizeMissionStatus(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
 
     openDetailModal(mission: AuditMission) {
@@ -144,16 +162,16 @@ export class AuditorMissionsComponent implements OnInit {
     openChecklistModal(mission: AuditMission) {
         this.selectedMission = mission;
         this.isLoading = true;
-        this.auditingService.getMissionChecklistItems(mission.id).subscribe({
+        this.auditingService.getMissionActionPlanItems(mission.id).subscribe({
             next: (items) => {
-                this.currentChecklistItems = items;
+                this.currentChecklistItems = items as any[];
                 this.isLoading = false;
                 this.showChecklistModal = true;
             },
             error: (err) => {
                 console.error(err);
                 this.isLoading = false;
-                alert('Erreur lors du chargement de la checklist.');
+                alert('Erreur lors du chargement du plan d actions.');
             }
         });
     }

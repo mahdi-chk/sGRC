@@ -46,16 +46,33 @@ export class AuditSeniorDashboardComponent implements OnInit {
     }
 
     calculatePerformance(missions: AuditMission[]) {
-        this.stats.total = missions.length;
-        this.stats.completed = missions.filter(m => m.statut === AuditMissionStatus.TERMINE).length;
-        this.stats.inProgress = missions.filter(m => m.statut === AuditMissionStatus.EN_COURS).length;
-        this.stats.overdue = missions.filter(m => m.statut === AuditMissionStatus.EN_RETARD).length;
+        const normalizedStatuses = missions.map((mission) =>
+            this.normalizeMissionStatus((mission as any).statutCode || mission.statut)
+        );
+        const scopedStatuses = normalizedStatuses.filter((status) => status !== AuditMissionStatus.ANNULE);
 
-        if (this.stats.total > 0) {
-            this.stats.completionRate = Math.round((this.stats.completed / this.stats.total) * 100);
+        this.stats.total = scopedStatuses.length;
+        this.stats.completed = scopedStatuses.filter((status) => status === AuditMissionStatus.TERMINE).length;
+        this.stats.inProgress = scopedStatuses.filter((status) =>
+            status === AuditMissionStatus.EN_COURS || status === AuditMissionStatus.A_VENIR
+        ).length;
+        this.stats.overdue = scopedStatuses.filter((status) => status === AuditMissionStatus.EN_RETARD).length;
+
+        if (scopedStatuses.length > 0) {
+            this.stats.completionRate = Math.round((this.stats.completed / scopedStatuses.length) * 100);
         } else {
             this.stats.completionRate = 0;
         }
+    }
+
+    private normalizeMissionStatus(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
 
     onOpenModule(m: any, s: any) {

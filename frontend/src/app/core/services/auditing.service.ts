@@ -66,6 +66,36 @@ export interface AuditMissionChecklistItem {
     estFait: boolean;
 }
 
+export interface AuditMissionActionPlanItem {
+    id: number;
+    missionId: number;
+    ordre: number;
+    regleDnssi: string;
+    recommandations: string;
+    horizon: string | null;
+    priorite: number | null;
+    responsableId: number | null;
+    responsableNom: string | null;
+    echeance: string | null;
+    etatAvancement: string;
+    sourceExcelFile?: string | null;
+    sourceExcelSheet?: string | null;
+    sourceExcelRow?: number | null;
+    responsable?: any;
+}
+
+export interface AuditMissionActionPlanPayload {
+    ordre?: number;
+    regleDnssi: string;
+    recommandations: string;
+    horizon?: string | null;
+    priorite?: number | null;
+    responsableId?: number | null;
+    responsableNom?: string | null;
+    echeance?: string | null;
+    etatAvancement?: string;
+}
+
 export interface AuditEvidence {
     id: number;
     missionId: number;
@@ -171,6 +201,28 @@ export class AuditingService {
 
     toggleMissionChecklistItem(missionId: number, itemId: number, estFait: boolean): Observable<AuditMissionChecklistItem> {
         return this.http.put<AuditMissionChecklistItem>(`${this.apiUrl}/missions/${missionId}/checklists/${itemId}`, { estFait });
+    }
+
+    getMissionActionPlanItems(missionId: number): Observable<AuditMissionActionPlanItem[]> {
+        return this.http.get<AuditMissionActionPlanItem[]>(`${this.apiUrl}/missions/${missionId}/action-plans`);
+    }
+
+    createMissionActionPlanItem(missionId: number, payload: AuditMissionActionPlanPayload): Observable<AuditMissionActionPlanItem> {
+        return this.http.post<AuditMissionActionPlanItem>(`${this.apiUrl}/missions/${missionId}/action-plans`, payload);
+    }
+
+    updateMissionActionPlanItem(missionId: number, itemId: number, payload: Partial<AuditMissionActionPlanPayload>): Observable<AuditMissionActionPlanItem> {
+        return this.http.put<AuditMissionActionPlanItem>(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}`, payload);
+    }
+
+    deleteMissionActionPlanItem(missionId: number, itemId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}`);
+    }
+
+    importMissionActionPlan(missionId: number, file: File): Observable<AuditMissionActionPlanItem[]> {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post<AuditMissionActionPlanItem[]>(`${this.apiUrl}/missions/${missionId}/action-plans/import`, formData);
     }
 
     /**

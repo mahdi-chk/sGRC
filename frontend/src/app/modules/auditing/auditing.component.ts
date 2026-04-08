@@ -1,10 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditMission, AuditMissionStatus, AuditChecklistTemplate, AuditEvidence } from '../../core/services/auditing.service';
+import { AuditingService, AuditMission, AuditMissionStatus, AuditChecklistTemplate, AuditEvidence, AuditMissionActionPlanItem } from '../../core/services/auditing.service';
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { AuditMissionChecklistItem } from '../../core/services/auditing.service';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -28,6 +27,11 @@ export class AuditingComponent implements OnInit {
   filterSearch = '';
   filterStatus = '';
 
+  totalMissions = 0;
+  inProgressCount = 0;
+  completedCount = 0;
+  unassignedCount = 0;
+
 
   // UI States
   isLoadingMissions = false;
@@ -46,7 +50,7 @@ export class AuditingComponent implements OnInit {
   selectedMission: AuditMission | null = null;
   selectedAuditorId = '';
   currentEvidences: AuditEvidence[] = [];
-  currentChecklistItems: AuditMissionChecklistItem[] = [];
+  currentChecklistItems: AuditMissionActionPlanItem[] = [];
   backendUrl = environment.apiUrl.replace('/api', '');
 
   // Report Form
@@ -110,6 +114,7 @@ export class AuditingComponent implements OnInit {
       next: (data) => {
         this.missions = data;
         this.applyFilters();
+        this.calculateStats();
         this.isLoadingMissions = false;
       },
       error: (err) => {
@@ -142,6 +147,13 @@ export class AuditingComponent implements OnInit {
     this.filterSearch = '';
     this.filterStatus = '';
     this.applyFilters();
+  }
+
+  calculateStats() {
+    this.totalMissions = this.missions.length;
+    this.inProgressCount = this.missions.filter(m => this.normalizeMissionStatus((m as any).statutCode || m.statut) === AuditMissionStatus.EN_COURS).length;
+    this.completedCount = this.missions.filter(m => this.normalizeMissionStatus((m as any).statutCode || m.statut) === AuditMissionStatus.TERMINE).length;
+    this.unassignedCount = this.missions.filter(m => !m.auditeurId).length;
   }
 
 
@@ -297,16 +309,16 @@ export class AuditingComponent implements OnInit {
   openChecklistModal(mission: AuditMission) {
     this.selectedMission = mission;
     this.isLoadingMissions = true; 
-    this.auditingService.getMissionChecklistItems(mission.id).subscribe({
+    this.auditingService.getMissionActionPlanItems(mission.id).subscribe({
       next: (data) => {
-        this.currentChecklistItems = data;
+        this.currentChecklistItems = data as any[];
         this.isLoadingMissions = false;
         this.showChecklistModal = true;
       },
       error: (err) => {
         console.error(err);
         this.isLoadingMissions = false;
-        alert('Erreur lors du chargement de la checklist');
+        alert('Erreur lors du chargement du plan d actions');
       }
     });
   }

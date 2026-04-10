@@ -1,0 +1,60 @@
+<div class="section-header">
+  <div>
+    <h2>Assistance Experte</h2>
+    <p>
+      Orientez rapidement les utilisateurs vers le bon canal de support, les questions
+      frequentes et les playbooks de remediations les plus utiles.
+    </p>
+  </div>
+  <div class="section-note">
+    Utilisez ce volet pour accompagner l adoption et reduire le temps de resolution.
+  </div>
+</div>
+
+<div class="card-grid">
+  <article class="data-card" *ngFor="let channel of channels">
+    <div class="meta-line">
+      <span class="pill">{{ channel.responseTime }}</span>
+    </div>
+    <h3>{{ channel.title }}</h3>
+    <p class="muted">{{ channel.scope }}</p>
+    <p class="muted"><strong>Action :</strong> {{ channel.actionLabel }}</p>
+  </article>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>FAQ contextuelle</h2>
+    <p>Reponses rapides aux questions les plus frequentes sur la lecture du cockpit et les priorites.</p>
+  </div>
+</div>
+
+<div class="list-stack">
+  <article class="list-item" *ngFor="let faq of faqs">
+    <div class="item-topline">
+      <h3>{{ faq.question }}</h3>
+      <button type="button" class="pill" (click)="toggleFaq(faq.id)">
+        {{ openedFaqId === faq.id ? 'Masquer' : 'Afficher' }}
+      </button>
+    </div>
+    <p class="muted" *ngIf="openedFaqId === faq.id">{{ faq.answer }}</p>
+  </article>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>Playbooks</h2>
+    <p>Parcours courts pour lancer une revue, debloquer un sujet ou realigner les acteurs.</p>
+  </div>
+</div>
+
+<div class="card-grid">
+  <article class="data-card" *ngFor="let playbook of playbooks">
+    <div class="meta-line">
+      <span class="pill">{{ playbook.duration }}</span>
+      <span class="pill tone-good">{{ playbook.linkedModule }}</span>
+    </div>
+    <h3>{{ playbook.title }}</h3>
+    <p class="muted"><strong>Resultat :</strong> {{ playbook.outcome }}</p>
+  </article>
+</div>

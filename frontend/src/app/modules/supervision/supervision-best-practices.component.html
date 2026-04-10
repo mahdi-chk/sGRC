@@ -1,0 +1,42 @@
+<div class="section-header">
+  <div>
+    <h2>Bibliotheque de Bonnes Pratiques</h2>
+    <p>
+      Centralisez les cadres ISO, NIST, COBIT et les modeles d execution qui aident
+      les equipes a normaliser les decisions et accelerer les plans de remediations.
+    </p>
+  </div>
+  <div class="section-note">
+    Priorisez d abord les pratiques rattachees aux risques critiques et aux audits en retard.
+  </div>
+</div>
+
+<div class="toolbar">
+  <input
+    type="text"
+    [(ngModel)]="query"
+    placeholder="Rechercher une pratique, un referentiel ou un tag" />
+</div>
+
+<div class="card-grid" *ngIf="filteredPractices.length > 0; else noPractices">
+  <article class="data-card" *ngFor="let practice of filteredPractices">
+    <div class="meta-line">
+      <span class="pill">{{ practice.framework }}</span>
+      <span class="pill" [ngClass]="{
+        'tone-critical': practice.priority === 'haute',
+        'tone-good': practice.priority !== 'haute'
+      }">{{ practice.category }}</span>
+    </div>
+    <h3>{{ practice.title }}</h3>
+    <p class="muted">{{ practice.summary }}</p>
+    <p class="muted"><strong>Applicabilite :</strong> {{ practice.applicability }}</p>
+    <p class="muted"><strong>Module rattache :</strong> {{ practice.linkedModule }}</p>
+    <div class="tag-list">
+      <span class="tag" *ngFor="let tag of practice.tags">{{ tag }}</span>
+    </div>
+  </article>
+</div>
+
+<ng-template #noPractices>
+  <p class="empty-copy">Aucune bonne pratique ne correspond a votre recherche.</p>
+</ng-template>

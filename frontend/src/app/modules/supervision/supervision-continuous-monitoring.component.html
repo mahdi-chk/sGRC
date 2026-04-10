@@ -1,0 +1,116 @@
+<div class="section-header">
+  <div>
+    <h2>Supervision Continue</h2>
+    <p>
+      Le cockpit concentre les signaux de sante GRC les plus sensibles pour guider
+      les arbitrages, prevenir la degradation et prioriser les revues de gouvernance.
+    </p>
+  </div>
+  <div class="section-note">
+    {{ status }}<br />
+    {{ focus }}
+  </div>
+</div>
+
+<div class="metric-grid">
+  <article class="metric-card">
+    <div class="muted">Alertes prioritaires</div>
+    <strong>{{ alerts.length }}</strong>
+    <p class="muted">Elements a traiter ou escalader rapidement.</p>
+  </article>
+  <article class="metric-card">
+    <div class="muted">Tendance sante</div>
+    <strong>{{ trend.length > 0 ? trend[trend.length - 1].score : 0 }}</strong>
+    <p class="muted">Score le plus recent sur la fenetre observee.</p>
+  </article>
+  <article class="metric-card">
+    <div class="muted">Zones suivies</div>
+    <strong>{{ breakdown.length }}</strong>
+    <p class="muted">Piliers consolides dans le cockpit de supervision.</p>
+  </article>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>Alertes</h2>
+    <p>Vue courte des signaux faibles ou forts qui meritent une action immediate.</p>
+  </div>
+</div>
+
+<div class="list-stack">
+  <article class="list-item" *ngFor="let alert of alerts">
+    <div class="item-topline">
+      <h3>{{ alert.title }}</h3>
+      <span class="pill" [ngClass]="{
+        'tone-critical': alert.severity === 'critique',
+        'tone-high': alert.severity === 'haute',
+        'tone-good': alert.severity !== 'critique' && alert.severity !== 'haute'
+      }">{{ alert.severity | titlecase }}</span>
+    </div>
+    <p class="muted">{{ alert.detail }}</p>
+    <div class="meta-line">
+      <span class="pill">{{ alert.owner }}</span>
+      <span class="pill">{{ alert.route }}</span>
+    </div>
+  </article>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>Evolution du health score</h2>
+    <p>Lecture rapide de la dynamique recente pour verifier si le dispositif se stabilise.</p>
+  </div>
+</div>
+
+<div class="bar-list">
+  <div class="bar-row" *ngFor="let point of trend">
+    <div class="item-topline">
+      <strong>{{ point.label }}</strong>
+      <span class="muted">{{ point.score }}/100</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" [style.width.%]="point.score"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>Breakdown par domaine</h2>
+    <p>Comparaison du niveau observe avec la cible attendue pour chaque pilier.</p>
+  </div>
+</div>
+
+<div class="card-grid">
+  <article class="data-card" *ngFor="let item of breakdown">
+    <h3>{{ item.label }}</h3>
+    <div class="meta-line">
+      <span class="pill">{{ item.score }}/100</span>
+      <span class="pill">Cible {{ item.target }}/100</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" [style.width.%]="item.score"></div>
+    </div>
+  </article>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>Watchlist</h2>
+    <p>Points de controle a verifier dans la prochaine revue ou avant escalation.</p>
+  </div>
+</div>
+
+<div class="card-grid">
+  <article class="data-card" *ngFor="let item of watchlist">
+    <div class="meta-line">
+      <span class="pill" [ngClass]="{
+        'tone-critical': item.tone === 'alert',
+        'tone-high': item.tone === 'watch',
+        'tone-good': item.tone === 'good'
+      }">{{ item.tone }}</span>
+    </div>
+    <h3>{{ item.title }}</h3>
+    <p class="muted">{{ item.detail }}</p>
+  </article>
+</div>

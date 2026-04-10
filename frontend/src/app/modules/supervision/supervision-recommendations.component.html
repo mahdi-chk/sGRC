@@ -1,0 +1,46 @@
+<div class="section-header">
+  <div>
+    <h2>Recommandations Contextualisees</h2>
+    <p>
+      Ces recommandations sont prioritisees a partir des signaux de risque, des retards
+      d execution, des audits ouverts et des ecarts de conformite encore actifs.
+    </p>
+  </div>
+  <div class="section-note">
+    Commencez par les recommandations critiques avec impact transversal sur plusieurs modules.
+  </div>
+</div>
+
+<div class="toolbar">
+  <select [(ngModel)]="priorityFilter">
+    <option value="all">Toutes les priorites</option>
+    <option value="critique">Critiques</option>
+    <option value="haute">Hautes</option>
+    <option value="moyenne">Moyennes</option>
+  </select>
+</div>
+
+<div class="list-stack" *ngIf="filteredRecommendations.length > 0; else noRecommendations">
+  <article class="list-item" *ngFor="let recommendation of filteredRecommendations">
+    <div class="item-topline">
+      <h3>{{ recommendation.title }}</h3>
+      <span class="pill" [ngClass]="{
+        'tone-critical': recommendation.priority === 'critique',
+        'tone-high': recommendation.priority === 'haute',
+        'tone-good': recommendation.priority === 'moyenne'
+      }">{{ recommendation.priority | titlecase }}</span>
+    </div>
+    <p class="muted">{{ recommendation.rationale }}</p>
+    <div class="meta-line">
+      <span class="pill">{{ recommendation.sourceModule }}</span>
+      <span class="pill">{{ recommendation.owner }}</span>
+      <span class="pill">{{ recommendation.status }}</span>
+    </div>
+    <p class="muted"><strong>Impact attendu :</strong> {{ recommendation.expectedImpact }}</p>
+    <p class="muted"><strong>Route cible :</strong> {{ recommendation.route }}</p>
+  </article>
+</div>
+
+<ng-template #noRecommendations>
+  <p class="empty-copy">Aucune recommandation n est disponible pour ce filtre.</p>
+</ng-template>

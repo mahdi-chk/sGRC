@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { getControlsDashboardSubmodules } from '../../modules/controls/controls-navigation';
 import { getActionsDashboardSubmodules } from '../../modules/actions/actions-navigation';
 import { getComplianceDashboardSubmodules } from '../../modules/compliance/compliance-navigation';
+import { getSupervisionDashboardSubmodules } from '../../modules/supervision/supervision-navigation';
 
 export interface Submodule {
     title: string;
@@ -162,7 +163,7 @@ export class DashboardService {
                 { title: 'Assistance Experte' },
                 { title: 'Supervision Continue' }
             ],
-            roles: [UserRole.TOP_MANAGEMENT]
+            roles: [UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI]
         }
     ];
 
@@ -191,6 +192,8 @@ export class DashboardService {
                     ? getComplianceDashboardSubmodules(roleStr)
                 : module.key === 'plans-actions'
                     ? getActionsDashboardSubmodules(roleStr)
+                : module.key === 'supervision'
+                    ? getSupervisionDashboardSubmodules(roleStr)
                     : [...module.submodules]
         }));
 
@@ -321,6 +324,16 @@ export class DashboardService {
             this.router.navigate(['/dashboard/reporting/multi-entity']);
         } else if (s.title === 'Exports') {
             this.router.navigate(['/dashboard/reporting/exports']);
+        } else if (s.title === 'Bibliotheque de Bonnes Pratiques') {
+            this.router.navigate(['/dashboard/supervision/best-practices']);
+        } else if (s.title === 'Recommandations Contextualisees') {
+            this.router.navigate(['/dashboard/supervision/recommendations']);
+        } else if (s.title === 'Benchmarks Sectoriels') {
+            this.router.navigate(['/dashboard/supervision/benchmarks']);
+        } else if (s.title === 'Assistance Experte') {
+            this.router.navigate(['/dashboard/supervision/expert-assistance']);
+        } else if (s.title === 'Supervision Continue') {
+            this.router.navigate(['/dashboard/supervision/continuous-monitoring']);
         } else {
             this.openModalSource.next({ m, s });
         }

@@ -1,0 +1,42 @@
+<div class="section-header">
+  <div>
+    <h2>Benchmarks Sectoriels</h2>
+    <p>
+      Comparez la posture actuelle du dispositif sGRC avec des reperes sectoriels afin
+      de calibrer l effort de remediations et les arbitrages de gouvernance.
+    </p>
+  </div>
+  <div class="section-note">
+    Referentiel observe : {{ sector }}
+  </div>
+</div>
+
+<div class="metric-grid">
+  <article class="metric-card" *ngFor="let indicator of indicators">
+    <div class="muted">{{ indicator.label }}</div>
+    <strong>{{ indicator.organizationValue }}{{ indicator.unit }}</strong>
+    <p class="muted">Benchmark : {{ indicator.benchmarkValue }}{{ indicator.unit }}</p>
+    <p class="muted">Gap : {{ indicator.gap > 0 ? '+' : '' }}{{ indicator.gap }}{{ indicator.unit }}</p>
+    <p class="muted">{{ indicator.interpretation }}</p>
+  </article>
+</div>
+
+<div class="section-header" style="margin-top: 24px;">
+  <div>
+    <h2>Maturite relative</h2>
+    <p>Vue simplifiee des domaines ou l organisation est en ligne, en retrait ou en avance.</p>
+  </div>
+</div>
+
+<div class="bar-list">
+  <div class="bar-row" *ngFor="let item of maturity">
+    <div class="item-topline">
+      <strong>{{ item.domain }}</strong>
+      <span class="muted">{{ item.organizationScore }} / {{ item.benchmarkScore }}</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" [style.width.%]="item.organizationScore"></div>
+    </div>
+    <div class="muted">Repere secteur : {{ item.benchmarkScore }}/100</div>
+  </div>
+</div>

@@ -189,6 +189,11 @@ const routes: Routes = [
         path: 'reporting',
         loadChildren: () => import('./modules/reporting/reporting.module').then(m => m.ReportingModule),
         data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] }
+      },
+      {
+        path: 'supervision',
+        loadChildren: () => import('./modules/supervision/supervision.module').then(m => m.SupervisionModule),
+        data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] }
       }
     ]
   },

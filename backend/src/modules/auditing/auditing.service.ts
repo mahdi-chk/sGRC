@@ -539,7 +539,7 @@ export class AuditingService {
         }));
     }
 
-    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_SENIOR, type: string = AuditRecordType.PLAN_ACTION_AUDIT) {
+    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_SENIOR, type: string = AuditRecordType.MISSION_AUDIT) {
         const risks = await Risk.findAll({
             where: {
                 statutId: [

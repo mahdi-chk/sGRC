@@ -28,7 +28,7 @@ router.use(authenticateToken);
 
 router.post('/suggest-plan', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
     try {
-        const requestedType = String(req.body?.type || req.query?.type || AuditRecordType.PLAN_ACTION_AUDIT);
+        const requestedType = String(req.body?.type || req.query?.type || AuditRecordType.MISSION_AUDIT);
         appLogger.info('Auditing', 'Suggested AI planning request received', {
             userId: req.user!.id,
             role: req.user!.role,

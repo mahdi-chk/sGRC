@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-magic"></i> Plans d'Actions Suggérés (IA)</h1>
-                <p>Utilisez l'intelligence artificielle pour générer des plans d'actions d'audit autonomes basés sur vos risques.</p>
+                <h1><i class="fas fa-magic"></i> Missions Suggerees (IA)</h1>
+                <p>Utilisez l'intelligence artificielle pour generer des missions d'audit a partir de vos risques et du nouveau format mission.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -25,11 +25,11 @@
 
     <div class="plan-content" *ngIf="suggestedPlan.length > 0">
         <div class="plan-header-row">
-            <h3>Suggestions IA pour les plans d'actions</h3>
+            <h3>Suggestions IA pour les missions</h3>
             <div class="plan-actions">
                 <button class="btn-cancel" (click)="suggestedPlan = []">Effacer</button>
                 <button class="btn-save" (click)="createMissions()" [disabled]="isCreatingMissions">
-                    <i class="fas fa-check-circle"></i> Valider et Créer Plans
+                    <i class="fas fa-check-circle"></i> Valider et Creer Missions
                 </button>
             </div>
         </div>
@@ -42,12 +42,12 @@
                 <div class="card-body">
                     <div class="card-top">
                         <h4>{{ suggestion.regleDnssi || suggestion.titre }}</h4>
-                        <span class="risk-ref">Risque #{{ suggestion.riskId }}</span>
+                        <span class="risk-ref" *ngIf="suggestion.riskId">Risque #{{ suggestion.riskId }}</span>
                     </div>
-                    <p class="obj"><strong>Recommandation:</strong> {{ suggestion.recommandations || suggestion.objectifs }}</p>
+                    <p class="obj"><strong>Objectif:</strong> {{ suggestion.recommandations || suggestion.objectifs }}</p>
                     <p class="resp"><strong>Responsable:</strong> {{ suggestion.responsabilites || 'A definir' }}</p>
                     <div class="card-footer">
-                        <i class="far fa-calendar-alt"></i> Délai suggéré: {{ suggestion.delaiSuggestion || 30 }} jours
+                        <i class="far fa-calendar-alt"></i> Delai suggere: {{ suggestion.delaiSuggestion || 30 }} jours
                     </div>
                 </div>
             </div>
@@ -56,9 +56,9 @@
 
     <div class="empty-state-ai" *ngIf="suggestedPlan.length === 0 && !isGeneratingPlan">
         <i class="fas fa-robot"></i>
-        <h3>Besoin d'aide pour structurer vos plans d'actions ?</h3>
-        <p>Cliquez sur "Nouvelle Suggestion" pour laisser l'IA proposer des plans d'actions d'audit prioritaires.</p>
-        <button class="btn-primary-ghost" (click)="generatePlan()">Générer des suggestions</button>
+        <h3>Besoin d'aide pour structurer vos missions ?</h3>
+        <p>Cliquez sur "Nouvelle Suggestion" pour laisser l'IA proposer des missions d'audit prioritaires.</p>
+        <button class="btn-primary-ghost" (click)="generatePlan()">Generer des suggestions</button>
     </div>
 
     <div class="loading-ai" *ngIf="isGeneratingPlan">

@@ -40,7 +40,7 @@ export class PlanificationComponent implements OnInit {
   generatePlan() {
     this.isGeneratingPlan = true;
     this.suggestedPlan = [];
-    this.auditingService.suggestPlan(AuditRecordType.PLAN_ACTION_AUDIT).subscribe({
+    this.auditingService.suggestPlan(AuditRecordType.MISSION_AUDIT).subscribe({
       next: (plan) => {
         this.suggestedPlan = plan.map((item) => ({ ...item, selected: true }));
         this.isGeneratingPlan = false;
@@ -48,7 +48,7 @@ export class PlanificationComponent implements OnInit {
       error: (err) => {
         console.error(err);
         this.isGeneratingPlan = false;
-        alert('Erreur lors de la suggestion du plan d actions.');
+        alert('Erreur lors de la suggestion des missions.');
       }
     });
   }
@@ -60,17 +60,17 @@ export class PlanificationComponent implements OnInit {
     }
 
     this.isCreatingMissions = true;
-    this.auditingService.createMissionsFromPlan(selected, AuditRecordType.PLAN_ACTION_AUDIT).subscribe({
+    this.auditingService.createMissionsFromPlan(selected, AuditRecordType.MISSION_AUDIT).subscribe({
       next: () => {
         this.isCreatingMissions = false;
         this.suggestedPlan = [];
-        alert('Plans d actions créés avec succès.');
-        this.router.navigate(['/dashboard/audit-checklists']);
+        alert('Missions creees avec succes.');
+        this.router.navigate(['/dashboard/auditing']);
       },
       error: (err) => {
         console.error(err);
         this.isCreatingMissions = false;
-        alert('Erreur lors de la création des plans d actions.');
+        alert('Erreur lors de la creation des missions.');
       }
     });
   }

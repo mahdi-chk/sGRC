@@ -142,7 +142,7 @@ export class AuditingService {
         return this.http.get<AuditMission[]>(`${this.apiUrl}/missions`, { params });
     }
 
-    suggestPlan(type: AuditRecordType = AuditRecordType.PLAN_ACTION_AUDIT): Observable<any[]> {
+    suggestPlan(type: AuditRecordType = AuditRecordType.MISSION_AUDIT): Observable<any[]> {
         return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, { type });
     }
 

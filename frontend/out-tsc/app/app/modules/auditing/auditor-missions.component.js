@@ -256,53 +256,85 @@ function AuditorMissionsComponent_app_modal_75_div_3_Template(rf, ctx) { if (rf 
     i0.ɵɵelementEnd();
 } }
 function AuditorMissionsComponent_app_modal_75_div_4_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 82);
+    i0.ɵɵelementStart(0, "div", 81);
     i0.ɵɵelementStart(1, "p");
-    i0.ɵɵtext(2, "Aucune checklist associ\u00E9e \u00E0 cette mission.");
+    i0.ɵɵtext(2, "Aucun plan d actions associ\u00E9 \u00E0 cette mission.");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } }
-function AuditorMissionsComponent_app_modal_75_ul_5_li_1_Template(rf, ctx) { if (rf & 1) {
-    const _r45 = i0.ɵɵgetCurrentView();
-    i0.ɵɵelementStart(0, "li", 85);
-    i0.ɵɵelementStart(1, "label", 86);
-    i0.ɵɵelementStart(2, "input", 87);
-    i0.ɵɵlistener("change", function AuditorMissionsComponent_app_modal_75_ul_5_li_1_Template_input_change_2_listener($event) { const restoredCtx = i0.ɵɵrestoreView(_r45); const item_r43 = restoredCtx.$implicit; const ctx_r44 = i0.ɵɵnextContext(3); return ctx_r44.toggleChecklistItem(item_r43, $event.target.checked); });
+function AuditorMissionsComponent_app_modal_75_table_5_tr_14_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "tr");
+    i0.ɵɵelementStart(1, "td");
+    i0.ɵɵtext(2);
     i0.ɵɵelementEnd();
-    i0.ɵɵelement(3, "span", 88);
-    i0.ɵɵelementStart(4, "span", 89);
-    i0.ɵɵtext(5);
+    i0.ɵɵelementStart(3, "td");
+    i0.ɵɵtext(4);
     i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(5, "td");
+    i0.ɵɵtext(6);
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(7, "td");
+    i0.ɵɵtext(8);
+    i0.ɵɵpipe(9, "date");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(10, "td");
+    i0.ɵɵtext(11);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const item_r43 = ctx.$implicit;
-    i0.ɵɵclassProp("completed", item_r43.estFait);
     i0.ɵɵadvance(2);
-    i0.ɵɵproperty("checked", item_r43.estFait);
+    i0.ɵɵtextInterpolate(item_r43.regleDnssi);
+    i0.ɵɵadvance(2);
+    i0.ɵɵtextInterpolate(item_r43.recommandations);
+    i0.ɵɵadvance(2);
+    i0.ɵɵtextInterpolate(item_r43.responsableNom || "-");
+    i0.ɵɵadvance(2);
+    i0.ɵɵtextInterpolate(i0.ɵɵpipeBind2(9, 5, item_r43.echeance, "dd/MM/yyyy"));
     i0.ɵɵadvance(3);
-    i0.ɵɵtextInterpolate(item_r43.texte);
+    i0.ɵɵtextInterpolate(item_r43.etatAvancement);
 } }
-function AuditorMissionsComponent_app_modal_75_ul_5_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "ul", 83);
-    i0.ɵɵtemplate(1, AuditorMissionsComponent_app_modal_75_ul_5_li_1_Template, 6, 4, "li", 84);
+function AuditorMissionsComponent_app_modal_75_table_5_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "table", 45);
+    i0.ɵɵelementStart(1, "thead");
+    i0.ɵɵelementStart(2, "tr");
+    i0.ɵɵelementStart(3, "th");
+    i0.ɵɵtext(4, "R\u00E8gle");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(5, "th");
+    i0.ɵɵtext(6, "Recommandations");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(7, "th");
+    i0.ɵɵtext(8, "Responsable");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(9, "th");
+    i0.ɵɵtext(10, "Ech\u00E9ance");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(11, "th");
+    i0.ɵɵtext(12, "Etat");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(13, "tbody");
+    i0.ɵɵtemplate(14, AuditorMissionsComponent_app_modal_75_table_5_tr_14_Template, 12, 8, "tr", 46);
+    i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const ctx_r41 = i0.ɵɵnextContext(2);
-    i0.ɵɵadvance(1);
+    i0.ɵɵadvance(14);
     i0.ɵɵproperty("ngForOf", ctx_r41.currentChecklistItems);
 } }
 function AuditorMissionsComponent_app_modal_75_Template(rf, ctx) { if (rf & 1) {
-    const _r47 = i0.ɵɵgetCurrentView();
+    const _r45 = i0.ɵɵgetCurrentView();
     i0.ɵɵelementStart(0, "app-modal", 78);
-    i0.ɵɵlistener("close", function AuditorMissionsComponent_app_modal_75_Template_app_modal_close_0_listener() { i0.ɵɵrestoreView(_r47); const ctx_r46 = i0.ɵɵnextContext(); return ctx_r46.showChecklistModal = false; });
+    i0.ɵɵlistener("close", function AuditorMissionsComponent_app_modal_75_Template_app_modal_close_0_listener() { i0.ɵɵrestoreView(_r45); const ctx_r44 = i0.ɵɵnextContext(); return ctx_r44.showChecklistModal = false; });
     i0.ɵɵelementStart(1, "div", 69, 70);
     i0.ɵɵtemplate(3, AuditorMissionsComponent_app_modal_75_div_3_Template, 3, 0, "div", 32);
     i0.ɵɵtemplate(4, AuditorMissionsComponent_app_modal_75_div_4_Template, 3, 0, "div", 79);
-    i0.ɵɵtemplate(5, AuditorMissionsComponent_app_modal_75_ul_5_Template, 2, 1, "ul", 80);
+    i0.ɵɵtemplate(5, AuditorMissionsComponent_app_modal_75_table_5_Template, 15, 1, "table", 33);
     i0.ɵɵelementStart(6, "div", 75);
-    i0.ɵɵelementStart(7, "button", 81);
-    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_75_Template_button_click_7_listener() { i0.ɵɵrestoreView(_r47); const ctx_r48 = i0.ɵɵnextContext(); return ctx_r48.showChecklistModal = false; });
+    i0.ɵɵelementStart(7, "button", 80);
+    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_75_Template_button_click_7_listener() { i0.ɵɵrestoreView(_r45); const ctx_r46 = i0.ɵɵnextContext(); return ctx_r46.showChecklistModal = false; });
     i0.ɵɵtext(8, "Fermer");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -324,68 +356,68 @@ function AuditorMissionsComponent_app_modal_76_div_8_Template(rf, ctx) { if (rf 
     i0.ɵɵelementEnd();
 } }
 function AuditorMissionsComponent_app_modal_76_div_9_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 97);
+    i0.ɵɵelementStart(0, "div", 89);
     i0.ɵɵelementStart(1, "p");
     i0.ɵɵtext(2, "Aucune preuve t\u00E9l\u00E9vers\u00E9e pour cette mission.");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } }
 function AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template(rf, ctx) { if (rf & 1) {
-    const _r56 = i0.ɵɵgetCurrentView();
-    i0.ɵɵelementStart(0, "li", 100);
-    i0.ɵɵelementStart(1, "div", 101);
-    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template_div_click_1_listener() { const restoredCtx = i0.ɵɵrestoreView(_r56); const ev_r54 = restoredCtx.$implicit; const ctx_r55 = i0.ɵɵnextContext(3); return ctx_r55.downloadEvidence(ev_r54.path); });
-    i0.ɵɵelement(2, "i", 102);
-    i0.ɵɵelementStart(3, "span", 103);
+    const _r54 = i0.ɵɵgetCurrentView();
+    i0.ɵɵelementStart(0, "li", 92);
+    i0.ɵɵelementStart(1, "div", 93);
+    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template_div_click_1_listener() { const restoredCtx = i0.ɵɵrestoreView(_r54); const ev_r52 = restoredCtx.$implicit; const ctx_r53 = i0.ɵɵnextContext(3); return ctx_r53.downloadEvidence(ev_r52.path); });
+    i0.ɵɵelement(2, "i", 94);
+    i0.ɵɵelementStart(3, "span", 95);
     i0.ɵɵtext(4);
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(5, "small", 104);
+    i0.ɵɵelementStart(5, "small", 96);
     i0.ɵɵtext(6);
     i0.ɵɵpipe(7, "date");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(8, "button", 105);
-    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template_button_click_8_listener() { const restoredCtx = i0.ɵɵrestoreView(_r56); const ev_r54 = restoredCtx.$implicit; const ctx_r57 = i0.ɵɵnextContext(3); return ctx_r57.deleteEvidence(ev_r54.id); });
-    i0.ɵɵelement(9, "i", 106);
+    i0.ɵɵelementStart(8, "button", 97);
+    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template_button_click_8_listener() { const restoredCtx = i0.ɵɵrestoreView(_r54); const ev_r52 = restoredCtx.$implicit; const ctx_r55 = i0.ɵɵnextContext(3); return ctx_r55.deleteEvidence(ev_r52.id); });
+    i0.ɵɵelement(9, "i", 98);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const ev_r54 = ctx.$implicit;
+    const ev_r52 = ctx.$implicit;
     i0.ɵɵadvance(4);
-    i0.ɵɵtextInterpolate(ev_r54.filename);
+    i0.ɵɵtextInterpolate(ev_r52.filename);
     i0.ɵɵadvance(2);
-    i0.ɵɵtextInterpolate(i0.ɵɵpipeBind2(7, 2, ev_r54.createdAt, "dd/MM/yyyy HH:mm"));
+    i0.ɵɵtextInterpolate(i0.ɵɵpipeBind2(7, 2, ev_r52.createdAt, "dd/MM/yyyy HH:mm"));
 } }
 function AuditorMissionsComponent_app_modal_76_ul_10_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "ul", 98);
-    i0.ɵɵtemplate(1, AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template, 10, 5, "li", 99);
+    i0.ɵɵelementStart(0, "ul", 90);
+    i0.ɵɵtemplate(1, AuditorMissionsComponent_app_modal_76_ul_10_li_1_Template, 10, 5, "li", 91);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const ctx_r52 = i0.ɵɵnextContext(2);
+    const ctx_r50 = i0.ɵɵnextContext(2);
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("ngForOf", ctx_r52.currentEvidences);
+    i0.ɵɵproperty("ngForOf", ctx_r50.currentEvidences);
 } }
 function AuditorMissionsComponent_app_modal_76_Template(rf, ctx) { if (rf & 1) {
-    const _r59 = i0.ɵɵgetCurrentView();
-    i0.ɵɵelementStart(0, "app-modal", 90);
-    i0.ɵɵlistener("close", function AuditorMissionsComponent_app_modal_76_Template_app_modal_close_0_listener() { i0.ɵɵrestoreView(_r59); const ctx_r58 = i0.ɵɵnextContext(); return ctx_r58.showEvidenceModal = false; });
+    const _r57 = i0.ɵɵgetCurrentView();
+    i0.ɵɵelementStart(0, "app-modal", 82);
+    i0.ɵɵlistener("close", function AuditorMissionsComponent_app_modal_76_Template_app_modal_close_0_listener() { i0.ɵɵrestoreView(_r57); const ctx_r56 = i0.ɵɵnextContext(); return ctx_r56.showEvidenceModal = false; });
     i0.ɵɵelementStart(1, "div", 69, 70);
-    i0.ɵɵelementStart(3, "div", 91);
-    i0.ɵɵelementStart(4, "input", 92);
-    i0.ɵɵlistener("change", function AuditorMissionsComponent_app_modal_76_Template_input_change_4_listener($event) { i0.ɵɵrestoreView(_r59); const ctx_r60 = i0.ɵɵnextContext(); return ctx_r60.onFileSelected($event); });
+    i0.ɵɵelementStart(3, "div", 83);
+    i0.ɵɵelementStart(4, "input", 84);
+    i0.ɵɵlistener("change", function AuditorMissionsComponent_app_modal_76_Template_input_change_4_listener($event) { i0.ɵɵrestoreView(_r57); const ctx_r58 = i0.ɵɵnextContext(); return ctx_r58.onFileSelected($event); });
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(5, "button", 93);
-    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_Template_button_click_5_listener() { i0.ɵɵrestoreView(_r59); const ctx_r61 = i0.ɵɵnextContext(); return ctx_r61.uploadEvidence(); });
-    i0.ɵɵelement(6, "i", 94);
+    i0.ɵɵelementStart(5, "button", 85);
+    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_Template_button_click_5_listener() { i0.ɵɵrestoreView(_r57); const ctx_r59 = i0.ɵɵnextContext(); return ctx_r59.uploadEvidence(); });
+    i0.ɵɵelement(6, "i", 86);
     i0.ɵɵtext(7);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵtemplate(8, AuditorMissionsComponent_app_modal_76_div_8_Template, 3, 0, "div", 32);
-    i0.ɵɵtemplate(9, AuditorMissionsComponent_app_modal_76_div_9_Template, 3, 0, "div", 95);
-    i0.ɵɵtemplate(10, AuditorMissionsComponent_app_modal_76_ul_10_Template, 2, 1, "ul", 96);
+    i0.ɵɵtemplate(9, AuditorMissionsComponent_app_modal_76_div_9_Template, 3, 0, "div", 87);
+    i0.ɵɵtemplate(10, AuditorMissionsComponent_app_modal_76_ul_10_Template, 2, 1, "ul", 88);
     i0.ɵɵelementStart(11, "div", 75);
-    i0.ɵɵelementStart(12, "button", 81);
-    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_Template_button_click_12_listener() { i0.ɵɵrestoreView(_r59); const ctx_r62 = i0.ɵɵnextContext(); return ctx_r62.showEvidenceModal = false; });
+    i0.ɵɵelementStart(12, "button", 80);
+    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_76_Template_button_click_12_listener() { i0.ɵɵrestoreView(_r57); const ctx_r60 = i0.ɵɵnextContext(); return ctx_r60.showEvidenceModal = false; });
     i0.ɵɵtext(13, "Fermer");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -405,26 +437,26 @@ function AuditorMissionsComponent_app_modal_76_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵproperty("ngIf", !ctx_r6.isLoading && ctx_r6.currentEvidences.length > 0);
 } }
 function AuditorMissionsComponent_app_modal_77_div_30_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 110);
+    i0.ɵɵelementStart(0, "div", 102);
     i0.ɵɵelementStart(1, "label");
     i0.ɵɵtext(2, "Votre Rapport");
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(3, "div", 112);
+    i0.ɵɵelementStart(3, "div", 104);
     i0.ɵɵtext(4);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const ctx_r64 = i0.ɵɵnextContext(2);
+    const ctx_r62 = i0.ɵɵnextContext(2);
     i0.ɵɵadvance(4);
-    i0.ɵɵtextInterpolate(ctx_r64.selectedMission == null ? null : ctx_r64.selectedMission.rapport);
+    i0.ɵɵtextInterpolate(ctx_r62.selectedMission == null ? null : ctx_r62.selectedMission.rapport);
 } }
 function AuditorMissionsComponent_app_modal_77_Template(rf, ctx) { if (rf & 1) {
-    const _r66 = i0.ɵɵgetCurrentView();
-    i0.ɵɵelementStart(0, "app-modal", 107);
-    i0.ɵɵlistener("close", function AuditorMissionsComponent_app_modal_77_Template_app_modal_close_0_listener() { i0.ɵɵrestoreView(_r66); const ctx_r65 = i0.ɵɵnextContext(); return ctx_r65.showDetailModal = false; });
+    const _r64 = i0.ɵɵgetCurrentView();
+    i0.ɵɵelementStart(0, "app-modal", 99);
+    i0.ɵɵlistener("close", function AuditorMissionsComponent_app_modal_77_Template_app_modal_close_0_listener() { i0.ɵɵrestoreView(_r64); const ctx_r63 = i0.ɵɵnextContext(); return ctx_r63.showDetailModal = false; });
     i0.ɵɵelementStart(1, "div", 69, 70);
-    i0.ɵɵelementStart(3, "div", 108);
-    i0.ɵɵelementStart(4, "div", 109);
+    i0.ɵɵelementStart(3, "div", 100);
+    i0.ɵɵelementStart(4, "div", 101);
     i0.ɵɵelementStart(5, "label");
     i0.ɵɵtext(6, "Titre");
     i0.ɵɵelementEnd();
@@ -432,7 +464,7 @@ function AuditorMissionsComponent_app_modal_77_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtext(8);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(9, "div", 109);
+    i0.ɵɵelementStart(9, "div", 101);
     i0.ɵɵelementStart(10, "label");
     i0.ɵɵtext(11, "Statut");
     i0.ɵɵelementEnd();
@@ -440,7 +472,7 @@ function AuditorMissionsComponent_app_modal_77_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtext(13);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(14, "div", 110);
+    i0.ɵɵelementStart(14, "div", 102);
     i0.ɵɵelementStart(15, "label");
     i0.ɵɵtext(16, "Objectifs");
     i0.ɵɵelementEnd();
@@ -448,7 +480,7 @@ function AuditorMissionsComponent_app_modal_77_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtext(18);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(19, "div", 110);
+    i0.ɵɵelementStart(19, "div", 102);
     i0.ɵɵelementStart(20, "label");
     i0.ɵɵtext(21, "Responsabilit\u00E9s");
     i0.ɵɵelementEnd();
@@ -456,7 +488,7 @@ function AuditorMissionsComponent_app_modal_77_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtext(23);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(24, "div", 109);
+    i0.ɵɵelementStart(24, "div", 101);
     i0.ɵɵelementStart(25, "label");
     i0.ɵɵtext(26, "\u00C9ch\u00E9ance");
     i0.ɵɵelementEnd();
@@ -465,11 +497,11 @@ function AuditorMissionsComponent_app_modal_77_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵpipe(29, "date");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵtemplate(30, AuditorMissionsComponent_app_modal_77_div_30_Template, 5, 1, "div", 111);
+    i0.ɵɵtemplate(30, AuditorMissionsComponent_app_modal_77_div_30_Template, 5, 1, "div", 103);
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(31, "div", 75);
-    i0.ɵɵelementStart(32, "button", 81);
-    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_77_Template_button_click_32_listener() { i0.ɵɵrestoreView(_r66); const ctx_r67 = i0.ɵɵnextContext(); return ctx_r67.showDetailModal = false; });
+    i0.ɵɵelementStart(32, "button", 80);
+    i0.ɵɵlistener("click", function AuditorMissionsComponent_app_modal_77_Template_button_click_32_listener() { i0.ɵɵrestoreView(_r64); const ctx_r65 = i0.ɵɵnextContext(); return ctx_r65.showDetailModal = false; });
     i0.ɵɵtext(33, "Fermer");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -504,6 +536,7 @@ export class AuditorMissionsComponent {
         this.totalAssigned = 0;
         this.pendingCount = 0;
         this.completedCount = 0;
+        this.overdueCount = 0;
         // Filter properties
         this.filterSearch = '';
         this.filterStatus = '';
@@ -583,9 +616,20 @@ export class AuditorMissionsComponent {
         this.applyFilters();
     }
     calculateStats() {
-        this.totalAssigned = this.missions.length;
-        this.pendingCount = this.missions.filter(m => m.statut === AuditMissionStatus.EN_COURS).length;
-        this.completedCount = this.missions.filter(m => m.statut === AuditMissionStatus.TERMINE).length;
+        const normalizedStatuses = this.missions.map((mission) => this.normalizeMissionStatus(mission.statutCode || mission.statut));
+        this.totalAssigned = normalizedStatuses.filter((status) => status !== AuditMissionStatus.ANNULE).length;
+        this.pendingCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.EN_COURS || status === AuditMissionStatus.A_VENIR).length;
+        this.completedCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.TERMINE).length;
+        this.overdueCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.EN_RETARD).length;
+    }
+    normalizeMissionStatus(value) {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
     }
     openDetailModal(mission) {
         this.selectedMission = mission;
@@ -602,7 +646,7 @@ export class AuditorMissionsComponent {
     openChecklistModal(mission) {
         this.selectedMission = mission;
         this.isLoading = true;
-        this.auditingService.getMissionChecklistItems(mission.id).subscribe({
+        this.auditingService.getMissionActionPlanItems(mission.id).subscribe({
             next: (items) => {
                 this.currentChecklistItems = items;
                 this.isLoading = false;
@@ -611,7 +655,7 @@ export class AuditorMissionsComponent {
             error: (err) => {
                 console.error(err);
                 this.isLoading = false;
-                alert('Erreur lors du chargement de la checklist.');
+                alert('Erreur lors du chargement du plan d actions.');
             }
         });
     }
@@ -720,7 +764,7 @@ export class AuditorMissionsComponent {
     }
 }
 AuditorMissionsComponent.ɵfac = function AuditorMissionsComponent_Factory(t) { return new (t || AuditorMissionsComponent)(i0.ɵɵdirectiveInject(i1.AuditingService), i0.ɵɵdirectiveInject(i2.Router)); };
-AuditorMissionsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: AuditorMissionsComponent, selectors: [["app-auditor-missions"]], decls: 78, vars: 26, consts: [[1, "audit-page", "auditor-view"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-tasks"], ["class", "audit-tabs", 4, "ngIf"], [1, "stats-grid"], [1, "stat-card", "total"], [1, "stat-icon"], [1, "fas", "fa-clipboard-list"], [1, "stat-info"], [1, "label"], [1, "value"], [1, "stat-card", "pending"], [1, "fas", "fa-clock"], [1, "stat-card", "completed"], [1, "fas", "fa-check-double"], [1, "stat-card", "risks"], [1, "fas", "fa-shield-alt"], [1, "filters-bar", "premium", "mb-4"], [1, "filter-controls"], [1, "filter-group"], [1, "fas", "fa-search"], ["type", "text", "placeholder", "Rechercher...", 3, "ngModel", "ngModelChange"], [3, "ngModel", "ngModelChange", "change"], ["value", ""], [3, "value"], ["class", "btn-reset", 3, "click", 4, "ngIf"], [1, "results-info"], [1, "count-tag"], [1, "missions-card"], ["class", "table-loading", 4, "ngIf"], ["class", "audit-table", 4, "ngIf"], ["title", "Soumettre Rapport d'Audit", 3, "close", 4, "ngIf"], ["title", "Checklist de la Mission", 3, "close", 4, "ngIf"], ["title", "Tra\u00E7abilit\u00E9 des Preuves", 3, "close", 4, "ngIf"], ["title", "D\u00E9tails de la Mission", 3, "close", 4, "ngIf"], [1, "audit-tabs"], ["routerLinkActive", "active", "class", "audit-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["routerLinkActive", "active", 1, "audit-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "btn-reset", 3, "click"], [1, "fas", "fa-undo"], [1, "table-loading"], [1, "fas", "fa-circle-notch", "fa-spin"], [1, "audit-table"], [4, "ngFor", "ngForOf"], [4, "ngIf"], [1, "mission-info"], ["class", "senior-info", 4, "ngIf"], [1, "risk-info-cell", 3, "title"], [1, "risk-id"], [1, "risk-name"], [1, "actions-cell"], ["title", "Voir d\u00E9tails", 1, "action-btn", "btn-view", 3, "click"], [1, "fas", "fa-eye"], ["class", "action-btn btn-checklist", "title", "Ouvrir Checklist", 3, "click", 4, "ngIf"], ["class", "action-btn btn-evidence", "title", "Tra\u00E7abilit\u00E9 des Preuves", 3, "click", 4, "ngIf"], ["class", "action-btn btn-report", "title", "Soumettre Rapport", 3, "click", 4, "ngIf"], [1, "senior-info"], [1, "fas", "fa-user-tie"], ["title", "Ouvrir Checklist", 1, "action-btn", "btn-checklist", 3, "click"], ["title", "Tra\u00E7abilit\u00E9 des Preuves", 1, "action-btn", "btn-evidence", 3, "click"], [1, "fas", "fa-paperclip"], ["title", "Soumettre Rapport", 1, "action-btn", "btn-report", 3, "click"], [1, "fas", "fa-file-signature"], ["colspan", "5", 1, "empty-state"], [1, "fas", "fa-check-circle"], ["title", "Soumettre Rapport d'Audit", 3, "close"], ["modal-body", "", 1, "modal-form"], ["projected", ""], [1, "form-group", "full"], [1, "req"], ["rows", "6", "placeholder", "D\u00E9crivez les r\u00E9sultats de l'audit...", 1, "finput", 3, "ngModel", "ngModelChange"], ["rows", "4", "placeholder", "Actions correctives sugg\u00E9r\u00E9es...", 1, "finput", 3, "ngModel", "ngModelChange"], [1, "form-footer"], [1, "btn-cancel", 3, "click"], [1, "btn-save", 3, "disabled", "click"], ["title", "Checklist de la Mission", 3, "close"], ["class", "empty-state", "style", "padding: 2rem; text-align: center;", 4, "ngIf"], ["class", "checklist-items", 4, "ngIf"], [1, "btn-save", 3, "click"], [1, "empty-state", 2, "padding", "2rem", "text-align", "center"], [1, "checklist-items"], ["class", "checklist-item", 3, "completed", 4, "ngFor", "ngForOf"], [1, "checklist-item"], [1, "checkbox-container"], ["type", "checkbox", 3, "checked", "change"], [1, "checkmark"], [1, "item-text"], ["title", "Tra\u00E7abilit\u00E9 des Preuves", 3, "close"], [1, "evidence-upload-section"], ["type", "file", "accept", ".pdf,.docx,.xlsx,.jpg,.jpeg,.png", 3, "change"], [1, "btn-primary", 3, "disabled", "click"], [1, "fas", "fa-upload"], ["class", "empty-state", 4, "ngIf"], ["class", "evidence-list", 4, "ngIf"], [1, "empty-state"], [1, "evidence-list"], ["class", "evidence-item", 4, "ngFor", "ngForOf"], [1, "evidence-item"], [1, "ev-info", 3, "click"], [1, "fas", "fa-file-alt"], [1, "ev-name"], [1, "ev-date"], ["title", "Supprimer", 1, "icon-btn", "delete", 3, "click"], [1, "fas", "fa-trash-alt"], ["title", "D\u00E9tails de la Mission", 3, "close"], [1, "detail-grid"], [1, "detail-item"], [1, "detail-item", "full"], ["class", "detail-item full", 4, "ngIf"], [1, "report-preview"]], template: function AuditorMissionsComponent_Template(rf, ctx) { if (rf & 1) {
+AuditorMissionsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: AuditorMissionsComponent, selectors: [["app-auditor-missions"]], decls: 78, vars: 26, consts: [[1, "audit-page", "auditor-view"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-tasks"], ["class", "audit-tabs", 4, "ngIf"], [1, "stats-grid"], [1, "stat-card", "total"], [1, "stat-icon"], [1, "fas", "fa-clipboard-list"], [1, "stat-info"], [1, "label"], [1, "value"], [1, "stat-card", "pending"], [1, "fas", "fa-clock"], [1, "stat-card", "completed"], [1, "fas", "fa-check-double"], [1, "stat-card", "risks"], [1, "fas", "fa-hourglass-end"], [1, "filters-bar", "premium", "mb-4"], [1, "filter-controls"], [1, "filter-group"], [1, "fas", "fa-search"], ["type", "text", "placeholder", "Rechercher...", 3, "ngModel", "ngModelChange"], [3, "ngModel", "ngModelChange", "change"], ["value", ""], [3, "value"], ["class", "btn-reset", 3, "click", 4, "ngIf"], [1, "results-info"], [1, "count-tag"], [1, "missions-card"], ["class", "table-loading", 4, "ngIf"], ["class", "audit-table", 4, "ngIf"], ["title", "Soumettre Rapport d'Audit", 3, "close", 4, "ngIf"], ["title", "Plan d actions de la Mission", 3, "close", 4, "ngIf"], ["title", "Tra\u00E7abilit\u00E9 des Preuves", 3, "close", 4, "ngIf"], ["title", "D\u00E9tails de la Mission", 3, "close", 4, "ngIf"], [1, "audit-tabs"], ["routerLinkActive", "active", "class", "audit-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["routerLinkActive", "active", 1, "audit-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "btn-reset", 3, "click"], [1, "fas", "fa-undo"], [1, "table-loading"], [1, "fas", "fa-circle-notch", "fa-spin"], [1, "audit-table"], [4, "ngFor", "ngForOf"], [4, "ngIf"], [1, "mission-info"], ["class", "senior-info", 4, "ngIf"], [1, "risk-info-cell", 3, "title"], [1, "risk-id"], [1, "risk-name"], [1, "actions-cell"], ["title", "Voir d\u00E9tails", 1, "action-btn", "btn-view", 3, "click"], [1, "fas", "fa-eye"], ["class", "action-btn btn-checklist", "title", "Ouvrir Plan d actions", 3, "click", 4, "ngIf"], ["class", "action-btn btn-evidence", "title", "Tra\u00E7abilit\u00E9 des Preuves", 3, "click", 4, "ngIf"], ["class", "action-btn btn-report", "title", "Soumettre Rapport", 3, "click", 4, "ngIf"], [1, "senior-info"], [1, "fas", "fa-user-tie"], ["title", "Ouvrir Plan d actions", 1, "action-btn", "btn-checklist", 3, "click"], ["title", "Tra\u00E7abilit\u00E9 des Preuves", 1, "action-btn", "btn-evidence", 3, "click"], [1, "fas", "fa-paperclip"], ["title", "Soumettre Rapport", 1, "action-btn", "btn-report", 3, "click"], [1, "fas", "fa-file-signature"], ["colspan", "5", 1, "empty-state"], [1, "fas", "fa-check-circle"], ["title", "Soumettre Rapport d'Audit", 3, "close"], ["modal-body", "", 1, "modal-form"], ["projected", ""], [1, "form-group", "full"], [1, "req"], ["rows", "6", "placeholder", "D\u00E9crivez les r\u00E9sultats de l'audit...", 1, "finput", 3, "ngModel", "ngModelChange"], ["rows", "4", "placeholder", "Actions correctives sugg\u00E9r\u00E9es...", 1, "finput", 3, "ngModel", "ngModelChange"], [1, "form-footer"], [1, "btn-cancel", 3, "click"], [1, "btn-save", 3, "disabled", "click"], ["title", "Plan d actions de la Mission", 3, "close"], ["class", "empty-state", "style", "padding: 2rem; text-align: center;", 4, "ngIf"], [1, "btn-save", 3, "click"], [1, "empty-state", 2, "padding", "2rem", "text-align", "center"], ["title", "Tra\u00E7abilit\u00E9 des Preuves", 3, "close"], [1, "evidence-upload-section"], ["type", "file", "accept", ".pdf,.docx,.xlsx,.jpg,.jpeg,.png", 3, "change"], [1, "btn-primary", 3, "disabled", "click"], [1, "fas", "fa-upload"], ["class", "empty-state", 4, "ngIf"], ["class", "evidence-list", 4, "ngIf"], [1, "empty-state"], [1, "evidence-list"], ["class", "evidence-item", 4, "ngFor", "ngForOf"], [1, "evidence-item"], [1, "ev-info", 3, "click"], [1, "fas", "fa-file-alt"], [1, "ev-name"], [1, "ev-date"], ["title", "Supprimer", 1, "icon-btn", "delete", 3, "click"], [1, "fas", "fa-trash-alt"], ["title", "D\u00E9tails de la Mission", 3, "close"], [1, "detail-grid"], [1, "detail-item"], [1, "detail-item", "full"], ["class", "detail-item full", 4, "ngIf"], [1, "report-preview"]], template: function AuditorMissionsComponent_Template(rf, ctx) { if (rf & 1) {
         i0.ɵɵelementStart(0, "div", 0);
         i0.ɵɵelementStart(1, "div", 1);
         i0.ɵɵelementStart(2, "div", 2);
@@ -760,7 +804,7 @@ AuditorMissionsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: Au
         i0.ɵɵelementEnd();
         i0.ɵɵelementStart(24, "div", 11);
         i0.ɵɵelementStart(25, "span", 12);
-        i0.ɵɵtext(26, "En Cours");
+        i0.ɵɵtext(26, "Actives");
         i0.ɵɵelementEnd();
         i0.ɵɵelementStart(27, "span", 13);
         i0.ɵɵtext(28);
@@ -786,7 +830,7 @@ AuditorMissionsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: Au
         i0.ɵɵelementEnd();
         i0.ɵɵelementStart(40, "div", 11);
         i0.ɵɵelementStart(41, "span", 12);
-        i0.ɵɵtext(42, "Risques Couverts");
+        i0.ɵɵtext(42, "En Retard");
         i0.ɵɵelementEnd();
         i0.ɵɵelementStart(43, "span", 13);
         i0.ɵɵtext(44);
@@ -858,7 +902,7 @@ AuditorMissionsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: Au
         i0.ɵɵadvance(8);
         i0.ɵɵtextInterpolate(ctx.completedCount);
         i0.ɵɵadvance(8);
-        i0.ɵɵtextInterpolate(ctx.missions.length);
+        i0.ɵɵtextInterpolate(ctx.overdueCount);
         i0.ɵɵadvance(5);
         i0.ɵɵproperty("ngModel", ctx.filterSearch);
         i0.ɵɵadvance(3);

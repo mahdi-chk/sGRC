@@ -1,6 +1,4 @@
 <div class="audit-page">
-
-    <!-- Page Header -->
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
@@ -8,21 +6,23 @@
             </button>
             <div>
                 <h1><i class="fas fa-clipboard-check"></i> Gestion des Audits</h1>
-                <p>Planifiez vos missions annuelles et suivez les rapports d'audit.</p>
+                <p>Vue unique des audits avec règle DNSSI, recommandations, horizon, priorité, responsable, échéance et état d'avancement.</p>
             </div>
         </div>
         <div class="header-actions">
+            <button class="btn-ai-plan" *ngIf="isSeniorAuditor" (click)="openCreateModal()">
+                <i class="fas fa-plus"></i> Nouvel audit
+            </button>
+            <button class="btn-ai-plan btn-import" *ngIf="isSeniorAuditor" (click)="openImportModal()">
+                <i class="fas fa-file-import"></i> Import Excel
+            </button>
             <div class="export-dropdown">
-                <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
-                    <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
+                <button class="btn-export" (click)="showExportMenu = !showExportMenu">
+                    <i class="fas fa-file-download"></i> Exporter <i class="fas fa-chevron-down"></i>
                 </button>
                 <div class="dropdown-menu" [class.show]="showExportMenu">
-                    <button (click)="exportToXLSX()">
-                        <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
-                    </button>
-                    <button (click)="exportToPDF()">
-                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
-                    </button>
+                    <button (click)="exportToXLSX()"><i class="fas fa-file-excel" style="color:#16a34a;"></i> Excel</button>
+                    <button (click)="exportToPDF()"><i class="fas fa-file-pdf" style="color:#ef4444;"></i> PDF</button>
                 </div>
             </div>
         </div>
@@ -36,9 +36,9 @@
 
     <div class="stats-grid">
         <div class="stat-card total">
-            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
             <div class="stat-info">
-                <span class="label">Total missions</span>
+                <span class="label">Total</span>
                 <span class="value">{{ totalMissions }}</span>
             </div>
         </div>
@@ -52,40 +52,34 @@
         <div class="stat-card completed">
             <div class="stat-icon"><i class="fas fa-check-double"></i></div>
             <div class="stat-info">
-                <span class="label">Terminées</span>
+                <span class="label">OK</span>
                 <span class="value">{{ completedCount }}</span>
             </div>
         </div>
         <div class="stat-card risks">
             <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
             <div class="stat-info">
-                <span class="label">Non assignées</span>
+                <span class="label">Non assignés</span>
                 <span class="value">{{ unassignedCount }}</span>
             </div>
         </div>
     </div>
 
-
-
-    <!-- Missions List Content -->
     <div class="tab-content">
-        <!-- Filters Bar Premium -->
         <div class="filters-bar premium mb-4">
             <div class="filter-controls">
                 <div class="filter-group">
                     <i class="fas fa-search"></i>
-                    <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher...">
+                    <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher par ID, règle, recommandation ou responsable...">
                 </div>
 
                 <div class="filter-group">
                     <i class="fas fa-tasks"></i>
                     <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
-                        <option value="">Tous les statuts</option>
-                        <option [value]="AuditMissionStatus.A_VENIR">{{ statusLabelMap[AuditMissionStatus.A_VENIR] }}</option>
+                        <option value="">Tous les états</option>
+                        <option [value]="AuditMissionStatus.NOK">{{ statusLabelMap[AuditMissionStatus.NOK] }}</option>
                         <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
-                        <option [value]="AuditMissionStatus.TERMINE">{{ statusLabelMap[AuditMissionStatus.TERMINE] }}</option>
-                        <option [value]="AuditMissionStatus.EN_RETARD">{{ statusLabelMap[AuditMissionStatus.EN_RETARD] }}</option>
-                        <option [value]="AuditMissionStatus.ANNULE">{{ statusLabelMap[AuditMissionStatus.ANNULE] }}</option>
+                        <option [value]="AuditMissionStatus.OK">{{ statusLabelMap[AuditMissionStatus.OK] }}</option>
                     </select>
                 </div>
 
@@ -95,156 +89,148 @@
             </div>
 
             <div class="results-info">
-                <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> mission(s) trouvée(s)</span>
+                <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> enregistrement(s)</span>
             </div>
         </div>
 
         <div class="missions-card">
-
             <div class="table-loading" *ngIf="isLoadingMissions">
-                <i class="fas fa-circle-notch fa-spin"></i> Chargement des missions...
+                <i class="fas fa-circle-notch fa-spin"></i> Chargement...
             </div>
 
             <table class="audit-table" *ngIf="!isLoadingMissions">
                 <thead>
                     <tr>
-                        <th>Mission</th>
-                        <th>Risque Associé</th>
-                        <th>Auditeur</th>
-                        <th>Échéance</th>
-                        <th>Statut</th>
+                        <th class="cell-id">ID</th>
+                        <th>Règle DNSSI</th>
+                        <th>Recommandations</th>
+                        <th>Horizon</th>
+                        <th class="cell-priority">Priorité</th>
+                        <th>Responsable</th>
+                        <th>Echéance</th>
+                        <th>Etat d'avancement</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let mission of filteredMissions">
-
-                        <td>
-                            <div class="mission-info">
-                                <strong>{{ mission.titre }}</strong>
-                                <small>{{ mission.objectifs | slice:0:60 }}...</small>
-                            </div>
+                    <tr *ngFor="let mission of pagedMissions">
+                        <td class="cell-id">{{ mission.id }}</td>
+                        <td class="cell-rule">{{ mission.regleDnssi || mission.titre }}</td>
+                        <td class="cell-recommendation">
+                            <span class="recommendation-preview" [title]="mission.recommandations || mission.objectifs || ''">
+                                {{ getRecommendationPreview(mission.recommandations || mission.objectifs, 10) }}
+                            </span>
                         </td>
-                        <td>
-                            <div class="risk-info-cell" [title]="mission.risk?.titre">
-                                <span class="risk-id">#{{ mission.riskId }}</span>
-                                <span class="risk-name">{{ mission.risk?.titre || 'Chargement...' }}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="auditor-chip" *ngIf="mission.auditeur; else unassigned">
+                        <td class="cell-horizon">{{ horizonLabelMap[mission.horizon || ''] || '-' }}</td>
+                        <td class="cell-priority">{{ mission.priorite ?? '-' }}</td>
+                        <td class="cell-owner">
+                            <div class="auditor-chip" *ngIf="mission.auditeur; else responsibleText">
                                 <i class="fas fa-user-tie"></i>
                                 {{ mission.auditeur.prenom }} {{ mission.auditeur.nom }}
                             </div>
-                            <ng-template #unassigned><em class="text-muted">Non assignée</em></ng-template>
+                            <ng-template #responsibleText><em class="text-muted responsible-text">{{ mission.responsabilites || 'Non assigné' }}</em></ng-template>
                         </td>
-                        <td>{{ mission.delai | date:'dd/MM/yyyy' }}</td>
-                        <td><span [class]="'badge status-' + mission.statut.replace('_', '-')">{{ statusLabelMap[mission.statut] || mission.statut }}</span></td>
+                        <td class="cell-date">{{ mission.delai ? (mission.delai | date:'dd/MM/yyyy') : '-' }}</td>
+                        <td class="cell-status"><span [class]="'badge status-' + ((mission.statut || '').toString().replace('_', '-'))">{{ statusLabelMap[(mission.statut || '').toString()] || ((mission.statut || '').toString()) }}</span></td>
                         <td class="actions-cell">
                             <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir détails">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="action-btn btn-assign" *ngIf="canAssignAuditor(mission)"
-                                (click)="openAssignModal(mission)" [title]="mission.auditeur ? 'Réassigner un auditeur' : 'Assigner un auditeur'">
+                            <button class="action-btn btn-assign" *ngIf="canAssignAuditor(mission)" (click)="openAssignModal(mission)" title="Assigner">
                                 <i class="fas fa-user-plus"></i>
                             </button>
-                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor"
-                                (click)="openChecklistModal(mission)" title="Voir Plan d actions">
+                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.type === 'mission_audit'" (click)="openChecklistModal(mission)" title="Historique plan lié">
                                 <i class="fas fa-list-check" style="color:#10b981"></i>
                             </button>
-                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === AuditMissionStatus.EN_COURS"
-                                (click)="openReportModal(mission)" title="Faire le rapport">
+                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.type === 'mission_audit' && mission.statut === AuditMissionStatus.EN_COURS" (click)="openReportModal(mission)" title="Faire le rapport">
                                 <i class="fas fa-file-signature"></i>
                             </button>
-                            <button class="action-btn btn-edit" *ngIf="isSeniorAuditor"
-                                (click)="openEditModal(mission)" title="Modifier la mission">
+                            <button class="action-btn btn-edit" *ngIf="isSeniorAuditor" (click)="openEditModal(mission)" title="Modifier">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="action-btn btn-evidence"
-                                (click)="openEvidenceModal(mission)" title="Preuves">
+                            <button class="action-btn btn-evidence" *ngIf="mission.type === 'mission_audit'" (click)="openEvidenceModal(mission)" title="Preuves">
                                 <i class="fas fa-paperclip"></i>
                             </button>
-                            <!-- New Actions for Senior Auditor -->
-                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.statut === AuditMissionStatus.TERMINE"
-                                (click)="resetMission(mission.id)" title="Réinitialiser la mission">
+                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.type === 'mission_audit' && mission.statut === AuditMissionStatus.OK" (click)="resetMission(mission.id)" title="Réinitialiser">
                                 <i class="fas fa-undo"></i>
                             </button>
-                            <button class="action-btn btn-delete" *ngIf="isSeniorAuditor"
-                                (click)="deleteMission(mission.id)" title="Supprimer la mission">
+                            <button class="action-btn btn-delete" *ngIf="isSeniorAuditor" (click)="deleteMission(mission.id)" title="Supprimer">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </td>
                     </tr>
-                    <tr *ngIf="missions.length === 0">
-                        <td colspan="6" class="empty-state">
+                    <tr *ngIf="filteredMissions.length === 0">
+                        <td colspan="9" class="empty-state">
                             <i class="fas fa-folder-open"></i>
-                            <p>Aucune mission d'audit enregistrée.</p>
+                            <p>Aucun enregistrement trouvé.</p>
                         </td>
                     </tr>
                 </tbody>
             </table>
+
+            <app-pagination
+                *ngIf="!isLoadingMissions && filteredMissions.length > 0"
+                [totalItems]="filteredMissions.length"
+                [currentPage]="currentPage"
+                [pageSize]="pageSize"
+                [pageSizeOptions]="pageSizeOptions"
+                (pageChanged)="onPaginationChange($event)">
+            </app-pagination>
         </div>
     </div>
 
-
-
-    <!-- Assign Modal -->
-    <app-modal *ngIf="showAssignModal" [title]="getAssignAuditorModalTitle()" (close)="showAssignModal = false">
+    <app-modal *ngIf="showImportModal" title="Importer des audits via Excel" (close)="showImportModal = false">
         <div #projected modal-body class="modal-form">
-            <p>Assignez un auditeur qualifié pour la mission : <br><strong>{{ selectedMission?.titre }}</strong></p>
+            <p>Importez un fichier Excel pour crÃ©er des missions d'audit Ã  partir du plan.</p>
+            <div class="form-group full" *ngIf="false">
+                <label>Risque de rattachement</label>
+                <select class="finput" *ngIf="false">
+                    <option [ngValue]="null">SÃ©lectionner un risque</option>
+                    <option *ngFor="let risk of risks" [ngValue]="risk.id">{{ risk.titre }}</option>
+                </select>
+            </div>
+            <div class="form-group full">
+                <label>Fichier Excel</label>
+                <input type="file" class="finput" accept=".xlsx,.xls" (change)="onImportFileSelected($event)">
+                <small class="field-hint" *ngIf="importFile">{{ importFile.name }}</small>
+            </div>
+            <div class="form-footer">
+                <button class="btn-cancel" (click)="showImportModal = false">Annuler</button>
+                <button class="btn-save" (click)="importFromExcel()" [disabled]="!importFile || isImporting">
+                    {{ isImporting ? 'Import...' : 'Importer' }}
+                </button>
+            </div>
+        </div>
+    </app-modal>
+
+    <app-modal *ngIf="showAssignModal" title="Affecter un responsable" (close)="showAssignModal = false">
+        <div #projected modal-body class="modal-form">
+            <p>Sélectionnez le responsable pour <strong>{{ selectedMission?.regleDnssi || selectedMission?.titre }}</strong></p>
             <div class="form-group">
-                <label>Choisir un Auditeur</label>
+                <label>Responsable</label>
                 <select class="finput" [(ngModel)]="selectedAuditorId">
                     <option value="">Sélectionner...</option>
                     <option *ngFor="let u of auditors" [value]="u.id">{{ u.prenom }} {{ u.nom }}</option>
                 </select>
             </div>
-            <p class="hint error" *ngIf="auditors.length === 0">
-                Aucun auditeur assignable n'a ete charge pour le moment.
-            </p>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showAssignModal = false">Annuler</button>
-                <button class="btn-save" (click)="assignMission()"
-                    [disabled]="!selectedAuditorId || isAssigning || auditors.length === 0">
-                    {{ isAssigning ? 'Assignation...' : getAssignAuditorActionLabel() }}
+                <button class="btn-save" (click)="assignMission()" [disabled]="!selectedAuditorId || isAssigning">
+                    {{ isAssigning ? 'Affectation...' : 'Affecter' }}
                 </button>
             </div>
         </div>
     </app-modal>
 
-    <!-- Assign Checklist Modal -->
-    <app-modal *ngIf="showAssignChecklistModal" title="Assigner une Checklist" (close)="showAssignChecklistModal = false">
-        <div #projected modal-body class="modal-form">
-            <p>Choisissez un modèle de checklist pour la mission : <br><strong>{{ selectedMission?.titre }}</strong></p>
-            <div class="form-group">
-                <label>Modèle de Checklist</label>
-                <select #checklistSelect class="finput" [ngModel]="selectedMission?.checklistTemplateId">
-                    <option value="">Sélectionner un modèle...</option>
-                    <option *ngFor="let t of checklistTemplates" [value]="t.id">{{ t.titre }}</option>
-                </select>
-            </div>
-            <div class="form-footer">
-                <button class="btn-cancel" (click)="showAssignChecklistModal = false">Annuler</button>
-                <button class="btn-save" (click)="assignChecklistToMission(checklistSelect.value)"
-                    [disabled]="!checklistSelect.value">
-                    Assigner
-                </button>
-            </div>
-        </div>
-    </app-modal>
-
-    <!-- Report Modal -->
     <app-modal *ngIf="showReportModal" title="Soumettre Rapport d'Audit" (close)="showReportModal = false">
         <div #projected modal-body class="modal-form">
             <div class="form-group full">
-                <label>Rapport Final d'Audit <span class="req">*</span></label>
-                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Décrivez les résultats de l'audit..."
-                    class="finput"></textarea>
+                <label>Rapport Final d'Audit</label>
+                <textarea [(ngModel)]="reportData.rapport" rows="6" class="finput"></textarea>
             </div>
             <div class="form-group full">
-                <label>Recommandations <span class="req">*</span></label>
-                <textarea [(ngModel)]="reportData.recommandations" rows="4"
-                    placeholder="Actions correctives suggérées..." class="finput"></textarea>
+                <label>Recommandations</label>
+                <textarea [(ngModel)]="reportData.recommandations" rows="4" class="finput"></textarea>
             </div>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showReportModal = false">Annuler</button>
@@ -255,45 +241,17 @@
         </div>
     </app-modal>
 
-    <!-- Detail Modal -->
-    <app-modal *ngIf="showDetailModal" title="Détails de la Mission" (close)="showDetailModal = false">
+    <app-modal *ngIf="showDetailModal" title="Détails" (close)="showDetailModal = false">
         <div #projected modal-body class="modal-form">
             <div class="detail-grid">
-                <div class="detail-item">
-                    <label>Titre</label>
-                    <span>{{ selectedMission?.titre }}</span>
-                </div>
-                <div class="detail-item">
-                    <label>Statut</label>
-                    <span [class]="'badge status-' + selectedMission?.statut?.replace('_', '-')">
-                        {{ statusLabelMap[selectedMission?.statut!] || selectedMission?.statut }}
-                    </span>
-                </div>
-                <div class="detail-item full">
-                    <label>Objectifs</label>
-                    <p>{{ selectedMission?.objectifs }}</p>
-                </div>
-                <div class="detail-item full">
-                    <label>Responsabilités</label>
-                    <p>{{ selectedMission?.responsabilites }}</p>
-                </div>
-                <div class="detail-item">
-                    <label>Échéance</label>
-                    <span>{{ selectedMission?.delai | date:'dd/MM/yyyy' }}</span>
-                </div>
-                <div class="detail-item">
-                    <label>Auditeur</label>
-                    <span>{{ selectedMission?.auditeur ? (selectedMission?.auditeur.prenom + ' ' +
-                        selectedMission?.auditeur.nom) : 'Non assigné' }}</span>
-                </div>
-                <div class="detail-item full" *ngIf="selectedMission?.rapport">
-                    <label>Rapport d'Audit</label>
-                    <div class="suggestion-box">{{ selectedMission?.rapport }}</div>
-                </div>
-                <div class="detail-item full" *ngIf="selectedMission?.recommandations">
-                    <label>Recommandations</label>
-                    <div class="suggestion-box">{{ selectedMission?.recommandations }}</div>
-                </div>
+                <div class="detail-item"><label>ID</label><span>{{ selectedMission?.id }}</span></div>
+                <div class="detail-item"><label>Priorité</label><span>{{ selectedMission?.priorite ?? '-' }}</span></div>
+                <div class="detail-item full"><label>Règle DNSSI</label><p>{{ selectedMission?.regleDnssi || selectedMission?.titre }}</p></div>
+                <div class="detail-item full"><label>Recommandations</label><p>{{ selectedMission?.recommandations || selectedMission?.objectifs || '-' }}</p></div>
+                <div class="detail-item"><label>Horizon</label><span>{{ horizonLabelMap[selectedMission?.horizon || ''] || '-' }}</span></div>
+                <div class="detail-item"><label>Responsable</label><span>{{ selectedMission?.auditeur ? (selectedMission?.auditeur.prenom + ' ' + selectedMission?.auditeur.nom) : (selectedMission?.responsabilites || 'Non assigné') }}</span></div>
+                <div class="detail-item"><label>Echéance</label><span>{{ selectedMission?.delai ? (selectedMission?.delai | date:'dd/MM/yyyy') : '-' }}</span></div>
+                <div class="detail-item"><label>Etat d'avancement</label><span>{{ statusLabelMap[(selectedMission?.statut || '').toString()] || selectedMission?.statut }}</span></div>
             </div>
             <div class="form-footer">
                 <button class="btn-save" (click)="showDetailModal = false">Fermer</button>
@@ -301,48 +259,37 @@
         </div>
     </app-modal>
 
-    <!-- Evidence Modal -->
     <app-modal *ngIf="showEvidenceModal" title="Traçabilité des Preuves" (close)="showEvidenceModal = false">
         <div #projected modal-body class="modal-form">
             <div *ngIf="isLoadingMissions" class="table-loading">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement des preuves...
             </div>
-            
             <div *ngIf="!isLoadingMissions && currentEvidences.length === 0" class="empty-state">
-                <p>Aucune preuve téléversée pour cette mission.</p>
+                <p>Aucune preuve téléversée.</p>
             </div>
-
             <ul class="evidence-list" *ngIf="!isLoadingMissions && currentEvidences.length > 0">
                 <li *ngFor="let ev of currentEvidences" class="evidence-item">
-                    <div class="ev-info" (click)="downloadEvidence(ev.path)" style="cursor: pointer; display: flex; align-items: center; gap: 10px; flex-grow: 1;">
-                        <i class="fas fa-file-alt" style="color: #004a99; font-size: 1.2rem;"></i>
-                        <span class="ev-name" style="font-weight: 500; color: #334155;">{{ ev.filename }}</span>
-                        <small class="ev-date" style="color: #94a3b8;">{{ ev.createdAt | date:'dd/MM/yyyy HH:mm' }} par {{ ev.uploader?.prenom }} {{ ev.uploader?.nom }}</small>
+                    <div class="ev-info" (click)="downloadEvidence(ev.path)" style="cursor:pointer; display:flex; align-items:center; gap:10px; flex-grow:1;">
+                        <i class="fas fa-file-alt" style="color:#004a99; font-size:1.2rem;"></i>
+                        <span class="ev-name">{{ ev.filename }}</span>
                     </div>
-                    <!-- Seul le super admin ou celui qui l'a uploadé devrait pouvoir supprimer, mais en tant que Senior on l'autorise -->
-                    <button class="icon-btn delete" *ngIf="isSeniorAuditor" (click)="deleteEvidence(ev.id)" title="Supprimer" style="color: #ef4444; background: none; border: none; cursor: pointer; padding: 5px;">
+                    <button class="icon-btn delete" *ngIf="isSeniorAuditor" (click)="deleteEvidence(ev.id)" title="Supprimer" style="color:#ef4444; background:none; border:none; cursor:pointer; padding:5px;">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </li>
             </ul>
-            <div class="form-footer" style="margin-top: 20px;">
+            <div class="form-footer" style="margin-top:20px;">
                 <button class="btn-save" (click)="showEvidenceModal = false">Fermer</button>
             </div>
         </div>
     </app-modal>
 
-    <!-- Visualiser Plan d actions Modal -->
-    <app-modal *ngIf="showChecklistModal" title="Plan d actions de la mission" (close)="showChecklistModal = false">
+    <app-modal *ngIf="showChecklistModal" title="Plans liés historiquement à la mission" (close)="showChecklistModal = false">
         <div #projected modal-body class="modal-form">
-            <div *ngIf="isLoadingMissions" class="table-loading">
-                <i class="fas fa-circle-notch fa-spin"></i> Chargement...
-            </div>
-            
             <div *ngIf="!isLoadingMissions && currentChecklistItems.length === 0" class="empty-state">
-                <p>Aucune action dans ce plan.</p>
+                <p>Aucun plan lié à cette mission.</p>
             </div>
-
-            <table class="audit-table" *ngIf="!isLoadingMissions && currentChecklistItems.length > 0">
+            <table class="audit-table" *ngIf="currentChecklistItems.length > 0">
                 <thead>
                     <tr>
                         <th>Règle</th>
@@ -362,51 +309,62 @@
                     </tr>
                 </tbody>
             </table>
-
-            <div class="form-footer" style="margin-top: 20px;">
-                <button class="btn-save" (click)="showChecklistModal = false">Fermer</button>
-            </div>
         </div>
     </app-modal>
 
-    <!-- Edit Modal -->
-    <app-modal *ngIf="showEditModal" title="Modifier la Mission" (close)="showEditModal = false">
+    <app-modal *ngIf="showEditModal" [title]="isCreateMode ? 'Créer un audit' : 'Modifier l audit'" (close)="showEditModal = false">
         <div #projected modal-body class="modal-form" *ngIf="selectedMission">
             <div class="form-group full">
-                <label>Titre de la Mission <span class="req">*</span></label>
-                <input type="text" [(ngModel)]="selectedMission.titre" class="finput" placeholder="Titre...">
+                <label>Règle DNSSI</label>
+                <input type="text" [(ngModel)]="selectedMission.regleDnssi" class="finput">
             </div>
+
             <div class="form-group full">
-                <label>Objectifs <span class="req">*</span></label>
-                <textarea [(ngModel)]="selectedMission.objectifs" class="finput" rows="3" placeholder="Objectifs..."></textarea>
+                <label>Recommandations</label>
+                <textarea [(ngModel)]="selectedMission.recommandations" class="finput" rows="3"></textarea>
             </div>
+
             <div class="form-group full">
-                <label>Responsabilités <span class="req">*</span></label>
-                <textarea [(ngModel)]="selectedMission.responsabilites" class="finput" rows="2" placeholder="Responsabilités..."></textarea>
+                <label>Responsable</label>
+                <textarea [(ngModel)]="selectedMission.responsabilites" class="finput" rows="2"></textarea>
             </div>
+
             <div class="detail-grid">
                 <div class="form-group">
-                    <label>Échéance <span class="req">*</span></label>
+                    <label>Horizon</label>
+                    <select [(ngModel)]="selectedMission.horizon" class="finput">
+                        <option [value]="AuditMissionHorizon.COURT_TERME">{{ horizonLabelMap[AuditMissionHorizon.COURT_TERME] }}</option>
+                        <option [value]="AuditMissionHorizon.MOYEN_TERME">{{ horizonLabelMap[AuditMissionHorizon.MOYEN_TERME] }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priorité</label>
+                    <select [(ngModel)]="selectedMission.priorite" class="finput">
+                        <option [ngValue]="1">1</option>
+                        <option [ngValue]="2">2</option>
+                        <option [ngValue]="3">3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Echéance</label>
                     <input type="date" [(ngModel)]="selectedMission.delai" class="finput">
                 </div>
                 <div class="form-group">
-                    <label>Statut</label>
+                    <label>Etat d'avancement</label>
                     <select [(ngModel)]="selectedMission.statut" class="finput">
-                        <option [value]="AuditMissionStatus.A_VENIR">{{ statusLabelMap[AuditMissionStatus.A_VENIR] }}</option>
+                        <option [value]="AuditMissionStatus.NOK">{{ statusLabelMap[AuditMissionStatus.NOK] }}</option>
                         <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
-                        <option [value]="AuditMissionStatus.TERMINE">{{ statusLabelMap[AuditMissionStatus.TERMINE] }}</option>
-                        <option [value]="AuditMissionStatus.EN_RETARD">{{ statusLabelMap[AuditMissionStatus.EN_RETARD] }}</option>
-                        <option [value]="AuditMissionStatus.ANNULE">{{ statusLabelMap[AuditMissionStatus.ANNULE] }}</option>
+                        <option [value]="AuditMissionStatus.OK">{{ statusLabelMap[AuditMissionStatus.OK] }}</option>
                     </select>
                 </div>
             </div>
+
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showEditModal = false">Annuler</button>
-                <button class="btn-save" (click)="updateMission()">
-                    Sauvegarder les modifications
+                <button class="btn-save" (click)="saveRecord()" [disabled]="isSaving">
+                    {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
                 </button>
             </div>
         </div>
     </app-modal>
-
 </div>

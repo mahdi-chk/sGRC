@@ -77,26 +77,26 @@ function ControlsNonConformitiesComponent_div_17_Template(rf, ctx) { if (rf & 1)
     i0.ɵɵtextInterpolate(ctx_r1.items.length);
 } }
 function ControlsNonConformitiesComponent_div_18_article_7_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "article", 22);
-    i0.ɵɵelementStart(1, "div", 23);
+    i0.ɵɵelementStart(0, "article", 23);
+    i0.ɵɵelementStart(1, "div", 24);
     i0.ɵɵelementStart(2, "h3");
     i0.ɵɵtext(3);
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(4, "span", 24);
+    i0.ɵɵelementStart(4, "span", 25);
     i0.ɵɵtext(5);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(6, "p");
     i0.ɵɵtext(7);
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(8, "div", 25);
+    i0.ɵɵelementStart(8, "div", 26);
     i0.ɵɵelementStart(9, "span");
     i0.ɵɵtext(10);
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(11, "span");
     i0.ɵɵtext(12);
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(13, "span", 26);
+    i0.ɵɵelementStart(13, "span", 27);
     i0.ɵɵtext(14);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -122,6 +122,7 @@ function ControlsNonConformitiesComponent_div_18_article_7_Template(rf, ctx) { i
     i0.ɵɵtextInterpolate(item_r8.status);
 } }
 function ControlsNonConformitiesComponent_div_18_Template(rf, ctx) { if (rf & 1) {
+    const _r10 = i0.ɵɵgetCurrentView();
     i0.ɵɵelementStart(0, "div", 18);
     i0.ɵɵelementStart(1, "div", 19);
     i0.ɵɵelementStart(2, "h2");
@@ -134,14 +135,19 @@ function ControlsNonConformitiesComponent_div_18_Template(rf, ctx) { if (rf & 1)
     i0.ɵɵelementStart(6, "div", 20);
     i0.ɵɵtemplate(7, ControlsNonConformitiesComponent_div_18_article_7_Template, 15, 9, "article", 21);
     i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(8, "app-pagination", 22);
+    i0.ɵɵlistener("pageChanged", function ControlsNonConformitiesComponent_div_18_Template_app_pagination_pageChanged_8_listener($event) { i0.ɵɵrestoreView(_r10); const ctx_r9 = i0.ɵɵnextContext(); return ctx_r9.onPageChanged($event); });
+    i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const ctx_r2 = i0.ɵɵnextContext();
     i0.ɵɵadvance(7);
-    i0.ɵɵproperty("ngForOf", ctx_r2.items);
+    i0.ɵɵproperty("ngForOf", ctx_r2.paginatedItems);
+    i0.ɵɵadvance(1);
+    i0.ɵɵproperty("totalItems", ctx_r2.items.length)("currentPage", ctx_r2.currentPage)("pageSize", ctx_r2.itemsPerPage);
 } }
 function ControlsNonConformitiesComponent_ng_template_19_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 27);
+    i0.ɵɵelementStart(0, "div", 28);
     i0.ɵɵtext(1, "Aucune non-conformite ouverte dans ce perimetre.");
     i0.ɵɵelementEnd();
 } }
@@ -152,6 +158,8 @@ export class ControlsNonConformitiesComponent {
         this.navItems = getControlsNavItems(getStoredControlsRole());
         this.overview = null;
         this.isLoading = false;
+        this.currentPage = 1;
+        this.itemsPerPage = 10;
     }
     ngOnInit() {
         this.loadOverview();
@@ -168,6 +176,7 @@ export class ControlsNonConformitiesComponent {
                 this.isLoading = false;
             }
         });
+        this.currentPage = 1;
     }
     goBack() {
         this.router.navigate(['/dashboard/controls']);
@@ -175,6 +184,14 @@ export class ControlsNonConformitiesComponent {
     get items() {
         var _a;
         return ((_a = this.overview) === null || _a === void 0 ? void 0 : _a.nonConformities) || [];
+    }
+    get paginatedItems() {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.items.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+    onPageChanged(event) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
     }
     get criticalCount() {
         return this.items.filter(item => /critical|critique|high|eleve/i.test(item.severity || '')).length;
@@ -194,7 +211,7 @@ export class ControlsNonConformitiesComponent {
     }
 }
 ControlsNonConformitiesComponent.ɵfac = function ControlsNonConformitiesComponent_Factory(t) { return new (t || ControlsNonConformitiesComponent)(i0.ɵɵdirectiveInject(i1.Router), i0.ɵɵdirectiveInject(i2.ControlsService)); };
-ControlsNonConformitiesComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ControlsNonConformitiesComponent, selectors: [["app-controls-non-conformities"]], decls: 21, vars: 6, consts: [[1, "controls-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-shield-exclamation"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "controls-tabs"], ["routerLinkActive", "active", "class", "controls-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "summary-grid", 4, "ngIf"], ["class", "content-card", 4, "ngIf", "ngIfElse"], ["emptyItems", ""], ["routerLinkActive", "active", 1, "controls-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "summary-grid"], [1, "summary-card"], [1, "eyebrow"], [1, "content-card"], [1, "card-head"], [1, "nonconformity-list"], ["class", "nonconformity-item", 4, "ngFor", "ngForOf"], [1, "nonconformity-item"], [1, "nonconformity-head"], [1, "tag", 3, "ngClass"], [1, "nonconformity-meta"], [3, "ngClass"], [1, "empty-state"]], template: function ControlsNonConformitiesComponent_Template(rf, ctx) { if (rf & 1) {
+ControlsNonConformitiesComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ControlsNonConformitiesComponent, selectors: [["app-controls-non-conformities"]], decls: 21, vars: 6, consts: [[1, "controls-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-shield-exclamation"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "controls-tabs"], ["routerLinkActive", "active", "class", "controls-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "summary-grid", 4, "ngIf"], ["class", "content-card", 4, "ngIf", "ngIfElse"], ["emptyItems", ""], ["routerLinkActive", "active", 1, "controls-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "summary-grid"], [1, "summary-card"], [1, "eyebrow"], [1, "content-card"], [1, "card-head"], [1, "nonconformity-list"], ["class", "nonconformity-item", 4, "ngFor", "ngForOf"], [3, "totalItems", "currentPage", "pageSize", "pageChanged"], [1, "nonconformity-item"], [1, "nonconformity-head"], [1, "tag", 3, "ngClass"], [1, "nonconformity-meta"], [3, "ngClass"], [1, "empty-state"]], template: function ControlsNonConformitiesComponent_Template(rf, ctx) { if (rf & 1) {
         i0.ɵɵelementStart(0, "div", 0);
         i0.ɵɵelementStart(1, "div", 1);
         i0.ɵɵelementStart(2, "div", 2);
@@ -224,7 +241,7 @@ ControlsNonConformitiesComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ 
         i0.ɵɵtemplate(16, ControlsNonConformitiesComponent_a_16_Template, 2, 4, "a", 10);
         i0.ɵɵelementEnd();
         i0.ɵɵtemplate(17, ControlsNonConformitiesComponent_div_17_Template, 29, 4, "div", 11);
-        i0.ɵɵtemplate(18, ControlsNonConformitiesComponent_div_18_Template, 8, 1, "div", 12);
+        i0.ɵɵtemplate(18, ControlsNonConformitiesComponent_div_18_Template, 9, 4, "div", 12);
         i0.ɵɵtemplate(19, ControlsNonConformitiesComponent_ng_template_19_Template, 2, 0, "ng-template", null, 13, i0.ɵɵtemplateRefExtractor);
         i0.ɵɵelementEnd();
     } if (rf & 2) {

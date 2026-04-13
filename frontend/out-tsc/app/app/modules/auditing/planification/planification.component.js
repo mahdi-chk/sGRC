@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { AuditingService } from '../../../core/services/auditing.service';
+import { AuditingService, AuditRecordType } from '../../../core/services/auditing.service';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
@@ -44,13 +44,13 @@ function PlanificationComponent_div_16_div_11_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(9, "p", 29);
     i0.ɵɵelementStart(10, "strong");
-    i0.ɵɵtext(11, "Objectif:");
+    i0.ɵɵtext(11, "Recommandation:");
     i0.ɵɵelementEnd();
     i0.ɵɵtext(12);
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(13, "p", 30);
     i0.ɵɵelementStart(14, "strong");
-    i0.ɵɵtext(15, "Responsabilit\u00E9s:");
+    i0.ɵɵtext(15, "Responsable:");
     i0.ɵɵelementEnd();
     i0.ɵɵtext(16);
     i0.ɵɵelementEnd();
@@ -66,13 +66,13 @@ function PlanificationComponent_div_16_div_11_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵadvance(2);
     i0.ɵɵclassProp("fa-check-square", suggestion_r7.selected)("fa-square", !suggestion_r7.selected);
     i0.ɵɵadvance(4);
-    i0.ɵɵtextInterpolate(suggestion_r7.titre);
+    i0.ɵɵtextInterpolate(suggestion_r7.regleDnssi || suggestion_r7.titre);
     i0.ɵɵadvance(2);
     i0.ɵɵtextInterpolate1("Risque #", suggestion_r7.riskId, "");
     i0.ɵɵadvance(4);
-    i0.ɵɵtextInterpolate1(" ", suggestion_r7.objectifs, "");
+    i0.ɵɵtextInterpolate1(" ", suggestion_r7.recommandations || suggestion_r7.objectifs, "");
     i0.ɵɵadvance(4);
-    i0.ɵɵtextInterpolate1(" ", suggestion_r7.responsabilites, "");
+    i0.ɵɵtextInterpolate1(" ", suggestion_r7.responsabilites || "A definir", "");
     i0.ɵɵadvance(3);
     i0.ɵɵtextInterpolate1(" D\u00E9lai sugg\u00E9r\u00E9: ", suggestion_r7.delaiSuggestion || 30, " jours ");
 } }
@@ -81,7 +81,7 @@ function PlanificationComponent_div_16_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵelementStart(0, "div", 16);
     i0.ɵɵelementStart(1, "div", 17);
     i0.ɵɵelementStart(2, "h3");
-    i0.ɵɵtext(3, "Suggestions IA pour le Plan Annuel");
+    i0.ɵɵtext(3, "Suggestions IA pour les plans d'actions");
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(4, "div", 18);
     i0.ɵɵelementStart(5, "button", 19);
@@ -91,7 +91,7 @@ function PlanificationComponent_div_16_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵelementStart(7, "button", 20);
     i0.ɵɵlistener("click", function PlanificationComponent_div_16_Template_button_click_7_listener() { i0.ɵɵrestoreView(_r10); const ctx_r11 = i0.ɵɵnextContext(); return ctx_r11.createMissions(); });
     i0.ɵɵelement(8, "i", 21);
-    i0.ɵɵtext(9, " Valider et Cr\u00E9er Missions ");
+    i0.ɵɵtext(9, " Valider et Cr\u00E9er Plans ");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -111,10 +111,10 @@ function PlanificationComponent_div_17_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵelementStart(0, "div", 33);
     i0.ɵɵelement(1, "i", 34);
     i0.ɵɵelementStart(2, "h3");
-    i0.ɵɵtext(3, "Besoin d'aide pour planifier ?");
+    i0.ɵɵtext(3, "Besoin d'aide pour structurer vos plans d'actions ?");
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(4, "p");
-    i0.ɵɵtext(5, "Cliquez sur le bouton \"Nouvelle Suggestion\" pour laisser l'IA analyser vos risques et proposer des missions d'audit prioritaires.");
+    i0.ɵɵtext(5, "Cliquez sur \"Nouvelle Suggestion\" pour laisser l'IA proposer des plans d'actions d'audit prioritaires.");
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(6, "button", 35);
     i0.ɵɵlistener("click", function PlanificationComponent_div_17_Template_button_click_6_listener() { i0.ɵɵrestoreView(_r13); const ctx_r12 = i0.ɵɵnextContext(); return ctx_r12.generatePlan(); });
@@ -156,34 +156,35 @@ export class PlanificationComponent {
     generatePlan() {
         this.isGeneratingPlan = true;
         this.suggestedPlan = [];
-        this.auditingService.suggestPlan().subscribe({
+        this.auditingService.suggestPlan(AuditRecordType.PLAN_ACTION_AUDIT).subscribe({
             next: (plan) => {
-                this.suggestedPlan = plan.map(p => (Object.assign(Object.assign({}, p), { selected: true })));
+                this.suggestedPlan = plan.map((item) => (Object.assign(Object.assign({}, item), { selected: true })));
                 this.isGeneratingPlan = false;
             },
             error: (err) => {
                 console.error(err);
                 this.isGeneratingPlan = false;
-                alert('Erreur lors de la suggestion du plan d\'audit.');
+                alert('Erreur lors de la suggestion du plan d actions.');
             }
         });
     }
     createMissions() {
-        const selected = this.suggestedPlan.filter(p => p.selected);
-        if (selected.length === 0)
+        const selected = this.suggestedPlan.filter((item) => item.selected);
+        if (selected.length === 0) {
             return;
+        }
         this.isCreatingMissions = true;
-        this.auditingService.createMissionsFromPlan(selected).subscribe({
+        this.auditingService.createMissionsFromPlan(selected, AuditRecordType.PLAN_ACTION_AUDIT).subscribe({
             next: () => {
                 this.isCreatingMissions = false;
                 this.suggestedPlan = [];
-                alert('Missions créées avec succès ! Redirection vers la liste...');
-                this.router.navigate(['/dashboard/auditing']);
+                alert('Plans d actions créés avec succès.');
+                this.router.navigate(['/dashboard/audit-checklists']);
             },
             error: (err) => {
                 console.error(err);
                 this.isCreatingMissions = false;
-                alert('Erreur lors de la création des missions.');
+                alert('Erreur lors de la création des plans d actions.');
             }
         });
     }
@@ -203,10 +204,10 @@ PlanificationComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: Plan
         i0.ɵɵelementStart(5, "div");
         i0.ɵɵelementStart(6, "h1");
         i0.ɵɵelement(7, "i", 5);
-        i0.ɵɵtext(8, " Planification Sugg\u00E9r\u00E9e (IA)");
+        i0.ɵɵtext(8, " Plans d'Actions Sugg\u00E9r\u00E9s (IA)");
         i0.ɵɵelementEnd();
         i0.ɵɵelementStart(9, "p");
-        i0.ɵɵtext(10, "Utilisez notre moteur d'intelligence artificielle pour g\u00E9n\u00E9rer des suggestions de missions bas\u00E9es sur vos risques.");
+        i0.ɵɵtext(10, "Utilisez l'intelligence artificielle pour g\u00E9n\u00E9rer des plans d'actions d'audit autonomes bas\u00E9s sur vos risques.");
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();

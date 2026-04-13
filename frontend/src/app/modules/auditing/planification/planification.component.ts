@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditChecklistTemplate } from '../../../core/services/auditing.service';
+import { AuditingService, AuditRecordType } from '../../../core/services/auditing.service';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
@@ -40,35 +40,37 @@ export class PlanificationComponent implements OnInit {
   generatePlan() {
     this.isGeneratingPlan = true;
     this.suggestedPlan = [];
-    this.auditingService.suggestPlan().subscribe({
+    this.auditingService.suggestPlan(AuditRecordType.PLAN_ACTION_AUDIT).subscribe({
       next: (plan) => {
-        this.suggestedPlan = plan.map(p => ({ ...p, selected: true }));
+        this.suggestedPlan = plan.map((item) => ({ ...item, selected: true }));
         this.isGeneratingPlan = false;
       },
       error: (err) => {
         console.error(err);
         this.isGeneratingPlan = false;
-        alert('Erreur lors de la suggestion du plan d\'audit.');
+        alert('Erreur lors de la suggestion du plan d actions.');
       }
     });
   }
 
   createMissions() {
-    const selected = this.suggestedPlan.filter(p => p.selected);
-    if (selected.length === 0) return;
+    const selected = this.suggestedPlan.filter((item) => item.selected);
+    if (selected.length === 0) {
+      return;
+    }
 
     this.isCreatingMissions = true;
-    this.auditingService.createMissionsFromPlan(selected).subscribe({
+    this.auditingService.createMissionsFromPlan(selected, AuditRecordType.PLAN_ACTION_AUDIT).subscribe({
       next: () => {
         this.isCreatingMissions = false;
         this.suggestedPlan = [];
-        alert('Missions créées avec succès ! Redirection vers la liste...');
-        this.router.navigate(['/dashboard/auditing']);
+        alert('Plans d actions créés avec succès.');
+        this.router.navigate(['/dashboard/audit-checklists']);
       },
       error: (err) => {
         console.error(err);
         this.isCreatingMissions = false;
-        alert('Erreur lors de la création des missions.');
+        alert('Erreur lors de la création des plans d actions.');
       }
     });
   }

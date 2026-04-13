@@ -7,7 +7,7 @@ import { Department } from '../departments/department.model';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { Incident } from '../incidents/incident.model';
 import { User } from '../users/user.model';
-import { AuditMission } from '../auditing/audit-mission.model';
+import { AuditMission, AuditRecordType } from '../auditing/audit-mission.model';
 import { Notification, NotificationType } from '../notifications/notification.model';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { AuditingService } from '../auditing/auditing.service';
@@ -617,17 +617,18 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     const normalizedStatus = normalizeLookupValue(mission.statut);
                     const owner = buildDisplayName(mission.auditeur) || buildDisplayName(mission.auditSenior) || 'Non assigne';
                     const dueDate = toIsoString(mission.delai);
-                    const recommendations = cleanText(mission.recommandations);
+                    const isPlanAction = mission.type === AuditRecordType.PLAN_ACTION_AUDIT;
+                    const recommendations = cleanText(mission.recommandations || mission.objectifs);
                     const priority = normalizePriority(mission.risk?.niveauRisqueCode || mission.risk?.niveauRisque);
                     const status = deriveActionStatus(normalizedStatus, dueDate, owner);
 
                     return {
                         id: `audit-${mission.id}`,
-                        reference: `PA-AUD-${mission.id}`,
-                        title: recommendations || `Suivi des recommandations: ${mission.titre}`,
-                        sourceModule: 'Audit',
+                        reference: `${isPlanAction ? 'PA-AUD' : 'AUD'}-${mission.code || mission.id}`,
+                        title: isPlanAction ? (recommendations || cleanText(mission.regleDnssi) || cleanText(mission.titre)) : (recommendations || `Suivi des recommandations: ${mission.titre}`),
+                        sourceModule: isPlanAction ? 'Plan action audit' : 'Audit',
                         sourceReference: `AUD-${mission.id}`,
-                        sourceRoute: '/dashboard/audit-report-review',
+                        sourceRoute: isPlanAction ? '/dashboard/audit-checklists' : '/dashboard/audit-report-review',
                         priority,
                         status,
                         dueDate,
@@ -638,7 +639,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                             owner,
                             dueDate,
                             hasActionPlan: Boolean(recommendations),
-                            hasEvidence: Boolean(mission.rapport),
+                            hasEvidence: isPlanAction ? true : Boolean(mission.rapport),
                         }),
                         displayActions: buildDisplayActions(status, priority, owner),
                         lastUpdate: toIsoString(mission.updatedAt) || new Date().toISOString(),
@@ -954,6 +955,9 @@ router.put('/:actionId/assign', authorizeRoles(...allowedRoles), async (req: Aut
         }
 
         const mission = await AuditingService.assignMission(parsed.entityId, assigneeUserId);
+        if (!mission) {
+            return res.status(404).json({ message: 'Enregistrement audit introuvable' });
+        }
 
         return res.json({
             message: 'Action affectee avec succes',

@@ -7,7 +7,7 @@ import { Department } from '../departments/department.model';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { Incident } from '../incidents/incident.model';
 import { User } from '../users/user.model';
-import { AuditMission } from '../auditing/audit-mission.model';
+import { AuditMission, AuditRecordType } from '../auditing/audit-mission.model';
 import { AuditEvidence } from '../auditing/audit-evidence.model';
 
 const router = Router();
@@ -116,7 +116,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
 
         if (role === UserRole.AUDIT_SENIOR) {
             missions = await AuditMission.findAll({
-                where: { auditSeniorId: userId },
+                where: { auditSeniorId: userId, type: AuditRecordType.MISSION_AUDIT },
                 include: [
                     {
                         model: Risk,
@@ -162,6 +162,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
 
             const riskIds = risks.map((risk) => risk.id);
             const missionWhere: Record<string, unknown> = {};
+            missionWhere.type = AuditRecordType.MISSION_AUDIT;
 
             if ((role === UserRole.RISK_MANAGER || role === UserRole.RISK_AGENT) && riskIds.length) {
                 missionWhere.riskId = { [Op.in]: riskIds };

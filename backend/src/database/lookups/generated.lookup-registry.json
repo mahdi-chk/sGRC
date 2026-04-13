@@ -116,14 +116,12 @@
         "name": "statut",
         "type": "string",
         "length": 255,
-        "defaultLabel": "\u00c0 venir"
+        "defaultLabel": "NOK"
       },
       "values": [
-        { "id": 1, "symbol": "A_VENIR", "code": "a_venir", "label": "\u00c0 venir", "sortOrder": 1 },
+        { "id": 1, "symbol": "NOK", "code": "nok", "label": "NOK", "sortOrder": 1 },
         { "id": 2, "symbol": "EN_COURS", "code": "en_cours", "label": "En cours", "sortOrder": 2 },
-        { "id": 3, "symbol": "TERMINE", "code": "termine", "label": "Termin\u00e9", "sortOrder": 3 },
-        { "id": 4, "symbol": "EN_RETARD", "code": "en_retard", "label": "En retard", "sortOrder": 4 },
-        { "id": 5, "symbol": "ANNULE", "code": "annule", "label": "Annul\u00e9", "sortOrder": 5 }
+        { "id": 3, "symbol": "OK", "code": "ok", "label": "OK", "sortOrder": 3 }
       ]
     },
     {

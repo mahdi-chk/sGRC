@@ -1,4 +1,4 @@
-﻿import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { execFile } from 'child_process';
 import fs from 'fs';
 import http from 'http';
@@ -648,7 +648,8 @@ export class AIService {
             let standardsContext = '';
 
             if (isIndexed) {
-                const query = `ProcÃ©dures d'audit pour : ${risks.map(r => r.domaine).join(', ')}`;
+                const uniqueDomaines = Array.from(new Set(risks.map(r => r.domaine).filter(Boolean)));
+                const query = `Procédures d'audit pour les domaines : ${uniqueDomaines.join(', ')}`;
                 const contextChunks = await RAGEngine.searchContext(query, role, 5);
                 if (contextChunks.length > 0) {
                     standardsContext = this.formatStandardsContext(contextChunks);
@@ -664,10 +665,9 @@ export class AIService {
                     { role: 'user', content: auditPlanPrompt }
                 ],
                 stream: false,
-                format: 'json',
                 options: {
-                    num_ctx: 4096,
-                    num_predict: 1000,
+                    num_ctx: 8192,
+                    num_predict: 2000,
                     temperature: 0.4
                 }
             });

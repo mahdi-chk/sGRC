@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-list-check"></i> Plans d'actions d'audit</h1>
-                <p>Chaque mission porte désormais son propre plan d'actions DNSSI, avec saisie manuelle ou import Excel.</p>
+                <p>Gérez directement les plans d'actions d'audit autonomes, sans rattachement obligatoire à une mission.</p>
             </div>
         </div>
     </div>
@@ -25,168 +25,160 @@
     <div class="layout-grid">
         <aside class="panel mission-panel">
             <div class="panel-head">
-                <h2>Missions</h2>
-                <p>Sélectionnez une mission pour piloter son plan d'actions.</p>
-            </div>
-
-            <label class="field">
-                <span>Mission active</span>
-                <select [ngModel]="selectedMissionId" (ngModelChange)="selectMission($event)">
-                    <option [ngValue]="null">Choisir une mission</option>
-                    <option *ngFor="let mission of missions" [ngValue]="mission.id">
-                        {{ mission.titre }}
-                    </option>
-                </select>
-            </label>
-
-            <div class="mission-summary" *ngIf="selectedMission">
-                <span class="summary-label">Mission sélectionnée</span>
-                <strong>{{ selectedMission.titre }}</strong>
-                <small>Echéance: {{ selectedMission.delai | date:'dd/MM/yyyy' }}</small>
+                <h2>Import Excel</h2>
+                <p>Chargez un fichier DNSSI pour créer plusieurs plans d'actions d'un coup.</p>
             </div>
 
             <div class="import-box">
+                <label class="field">
+                    <span>Risque de rattachement</span>
+                    <select [(ngModel)]="selectedImportRiskId">
+                        <option [ngValue]="null">SÃ©lectionner un risque</option>
+                        <option *ngFor="let risk of risks" [ngValue]="risk.id">{{ risk.titre }}</option>
+                    </select>
+                </label>
                 <label class="field">
                     <span>Importer Excel DNSSI</span>
                     <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)">
                 </label>
                 <small class="file-hint" *ngIf="importFile">{{ importFile.name }}</small>
-                <button class="btn-primary" (click)="importExcel()" [disabled]="!selectedMissionId || !importFile || isSaving">
+                <button class="btn-primary" (click)="importExcel()" [disabled]="!importFile || !selectedImportRiskId || isSaving">
                     {{ isSaving ? 'Import...' : 'Importer le plan' }}
                 </button>
+            </div>
+
+            <div class="mission-summary">
+                <span class="summary-label">Total</span>
+                <strong>{{ planItems.length }} plan(s)</strong>
+                <small>Plans d'actions d'audit actuellement disponibles.</small>
             </div>
         </aside>
 
         <section class="panel content-panel">
-            <ng-container *ngIf="selectedMissionId; else noMissionSelected">
-                <div class="panel-head hero-head">
+            <div class="panel-head hero-head">
+                <div>
+                    <h2>Nouveau plan d'actions</h2>
+                    <p>Ajoutez une action autonome directement dans le registre d'audit.</p>
+                </div>
+            </div>
+
+            <div class="composer-card">
+                <div class="composer-head">
                     <div>
-                        <h2>Plan d'actions de la mission</h2>
-                        <p>{{ selectedMission?.titre }}</p>
+                        <h3>Création manuelle</h3>
+                        <p>Chaque ligne crée un nouvel enregistrement autonome dans `audit_missions`.</p>
                     </div>
-                    <div class="hero-meta">
-                        <span class="meta-label">Echéance mission</span>
-                        <strong>{{ selectedMission?.delai | date:'dd/MM/yyyy' }}</strong>
-                    </div>
+                    <button class="btn-primary" (click)="saveNewItem()" [disabled]="isSaving">Créer le plan</button>
                 </div>
 
-                <div class="composer-card">
-                    <div class="composer-head">
-                        <div>
-                            <h3>Nouvelle ligne</h3>
-                            <p>Ajoutez une action complémentaire au plan courant.</p>
+                <div class="form-grid">
+                    <label class="field compact">
+                        <span>Ordre</span>
+                        <input type="number" [(ngModel)]="newItem.ordre">
+                    </label>
+                    <label class="field compact">
+                        <span>Règle DNSSI</span>
+                        <input [(ngModel)]="newItem.regleDnssi" placeholder="POL-RISQUE">
+                    </label>
+                    <label class="field compact">
+                        <span>Horizon</span>
+                        <select [(ngModel)]="newItem.horizon">
+                            <option value="court_terme">Court terme</option>
+                            <option value="moyen_terme">Moyen terme</option>
+                            <option value="long_terme">Long terme</option>
+                        </select>
+                    </label>
+                    <label class="field compact">
+                        <span>Priorité</span>
+                        <input type="number" [(ngModel)]="newItem.priorite">
+                    </label>
+                    <label class="field compact">
+                        <span>Risque</span>
+                        <select [(ngModel)]="newItem.riskId">
+                            <option [ngValue]="null">SÃ©lectionner un risque</option>
+                            <option *ngFor="let risk of risks" [ngValue]="risk.id">{{ risk.titre }}</option>
+                        </select>
+                    </label>
+                    <label class="field field-wide">
+                        <span>Recommandations</span>
+                        <textarea rows="4" [(ngModel)]="newItem.recommandations" placeholder="Décrivez l'action ou la recommandation à mettre en œuvre."></textarea>
+                    </label>
+                    <label class="field compact">
+                        <span>Responsable</span>
+                        <input [(ngModel)]="newItem.responsableNom" placeholder="Nom du responsable">
+                    </label>
+                    <label class="field compact">
+                        <span>Echéance</span>
+                        <input type="date" [(ngModel)]="newItem.echeance">
+                    </label>
+                    <label class="field compact">
+                        <span>Etat d'avancement</span>
+                        <select [(ngModel)]="newItem.etatAvancement">
+                            <option value="a_venir">A venir</option>
+                            <option value="en_cours">En cours</option>
+                            <option value="termine">Terminé</option>
+                            <option value="en_retard">En retard</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel-head section-head">
+                <h2>Registre des plans</h2>
+                <p>{{ planItems.length }} plan(s) d'actions suivis</p>
+            </div>
+
+            <div class="empty-state" *ngIf="!isLoading && planItems.length === 0">
+                <p>Aucun plan d'actions d'audit disponible.</p>
+            </div>
+
+            <div class="action-plan-list" *ngIf="planItems.length > 0">
+                <article class="action-card" *ngFor="let item of planItems">
+                    <div class="action-card-head">
+                        <div class="action-title">
+                            <span class="rule-kicker">Code {{ item.code || item.id }}</span>
+                            <h3>{{ item.regleDnssi || item.titre }}</h3>
                         </div>
-                        <button class="btn-primary" (click)="saveNewItem()" [disabled]="isSaving">Ajouter au plan</button>
+                        <div class="action-badges">
+                            <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
+                            <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
+                        </div>
                     </div>
 
-                    <div class="form-grid">
+                    <div class="recommendation-box">
+                        {{ item.recommandations || item.objectifs }}
+                    </div>
+
+                    <div class="editor-grid">
                         <label class="field compact">
                             <span>Ordre</span>
-                            <input type="number" [(ngModel)]="newItem.ordre">
-                        </label>
-                        <label class="field compact">
-                            <span>Règle DNSSI</span>
-                            <input [(ngModel)]="newItem.regleDnssi" placeholder="POL-RISQUE">
-                        </label>
-                        <label class="field compact">
-                            <span>Horizon</span>
-                            <select [(ngModel)]="newItem.horizon">
-                                <option value="court_terme">Court terme</option>
-                                <option value="moyen_terme">Moyen terme</option>
-                                <option value="long_terme">Long terme</option>
-                            </select>
-                        </label>
-                        <label class="field compact">
-                            <span>Priorité</span>
-                            <input type="number" [(ngModel)]="newItem.priorite">
-                        </label>
-                        <label class="field field-wide">
-                            <span>Recommandations</span>
-                            <textarea rows="4" [(ngModel)]="newItem.recommandations" placeholder="Décrivez l'action ou la recommandation à mettre en oeuvre."></textarea>
+                            <input type="number" [(ngModel)]="item.ordre">
                         </label>
                         <label class="field compact">
                             <span>Responsable</span>
-                            <input [(ngModel)]="newItem.responsableNom" placeholder="Nom du responsable">
+                            <input [(ngModel)]="item.responsabilites">
                         </label>
                         <label class="field compact">
                             <span>Echéance</span>
-                            <input type="date" [(ngModel)]="newItem.echeance">
+                            <input type="date" [(ngModel)]="item.delai">
                         </label>
                         <label class="field compact">
-                            <span>Etat d'avancement</span>
-                            <select [(ngModel)]="newItem.etatAvancement">
-                                <option value="nok">NOK</option>
+                            <span>Etat</span>
+                            <select [(ngModel)]="item.statut">
+                                <option value="a_venir">A venir</option>
                                 <option value="en_cours">En cours</option>
-                                <option value="ok">OK</option>
+                                <option value="termine">Terminé</option>
+                                <option value="en_retard">En retard</option>
                             </select>
                         </label>
                     </div>
-                </div>
 
-                <div class="panel-head section-head">
-                    <h2>Lignes du plan</h2>
-                    <p>{{ planItems.length }} action(s) suivie(s)</p>
-                </div>
-
-                <div class="empty-state" *ngIf="!isLoading && planItems.length === 0">
-                    <p>Aucune ligne de plan d'actions pour cette mission.</p>
-                </div>
-
-                <div class="action-plan-list" *ngIf="planItems.length > 0">
-                    <article class="action-card" *ngFor="let item of planItems">
-                        <div class="action-card-head">
-                            <div class="action-title">
-                                <span class="rule-kicker">Règle DNSSI</span>
-                                <h3>{{ item.regleDnssi }}</h3>
-                            </div>
-                            <div class="action-badges">
-                                <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
-                                <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
-                            </div>
-                        </div>
-
-                        <div class="recommendation-box">
-                            {{ item.recommandations }}
-                        </div>
-
-                        <div class="editor-grid">
-                            <label class="field compact">
-                                <span>Ordre</span>
-                                <input type="number" [(ngModel)]="item.ordre">
-                            </label>
-                            <label class="field compact">
-                                <span>Responsable</span>
-                                <input [(ngModel)]="item.responsableNom">
-                            </label>
-                            <label class="field compact">
-                                <span>Echéance</span>
-                                <input type="date" [(ngModel)]="item.echeance">
-                            </label>
-                            <label class="field compact">
-                                <span>Etat</span>
-                                <select [(ngModel)]="item.etatAvancement">
-                                    <option value="nok">NOK</option>
-                                    <option value="en_cours">En cours</option>
-                                    <option value="ok">OK</option>
-                                </select>
-                            </label>
-                        </div>
-
-                        <div class="row-actions">
-                            <button class="btn-secondary" (click)="saveRow(item)">Enregistrer</button>
-                            <button class="btn-danger" (click)="deleteRow(item)">Supprimer</button>
-                        </div>
-                    </article>
-                </div>
-            </ng-container>
-
-            <ng-template #noMissionSelected>
-                <div class="empty-state empty-stage">
-                    <i class="fas fa-diagram-project"></i>
-                    <h3>Aucune mission sélectionnée</h3>
-                    <p>Choisissez une mission dans la colonne de gauche pour afficher et piloter son plan d'actions.</p>
-                </div>
-            </ng-template>
+                    <div class="row-actions">
+                        <button class="btn-secondary" (click)="saveRow(item)">Enregistrer</button>
+                        <button class="btn-danger" (click)="deleteRow(item)">Supprimer</button>
+                    </div>
+                </article>
+            </div>
         </section>
     </div>
 </div>

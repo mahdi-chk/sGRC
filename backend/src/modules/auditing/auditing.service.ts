@@ -1,9 +1,10 @@
 /**
  * @file auditing.service.ts
- * @description Service de gestion des missions d'audit et du plan annuel.
+ * @description Service de gestion des missions d'audit et des plans d'actions d'audit.
  */
 
-import { AuditMission, AuditMissionStatus } from './audit-mission.model';
+import { Op } from 'sequelize';
+import { AuditMission, AuditMissionStatus, AuditRecordType } from './audit-mission.model';
 import { Risk } from '../risk/risk.model';
 import { AIService } from '../ai/ai.service';
 import { User } from '../users/user.model';
@@ -12,15 +13,36 @@ import { Notification, NotificationType } from '../notifications/notification.mo
 import { emailService } from '../../utils/email.service';
 import { AuditChecklistTemplate, AuditChecklistTemplateItem } from './audit-checklist-template.model';
 import { AuditMissionChecklistItem } from './audit-mission-checklist.model';
-import { AuditMissionActionPlanItem } from './audit-mission-action-plan.model';
 import { AuditEvidence } from './audit-evidence.model';
-import fs from 'fs';
 import * as XLSX from 'xlsx';
 import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 import { appLogger } from '../../utils/app-logger';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
+type MissionListFilter = {
+    type?: string | null;
+};
+
+type ActionPlanImportOptions = {
+    sourceMissionId?: number | null;
+    riskId?: number | null;
+    replaceExisting?: boolean;
+};
+
 export class AuditingService {
+    private static normalizeRecordType(value: unknown): string {
+        const normalized = String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
+
+        return normalized === AuditRecordType.PLAN_ACTION_AUDIT
+            ? AuditRecordType.PLAN_ACTION_AUDIT
+            : AuditRecordType.MISSION_AUDIT;
+    }
+
     private static normalizeProgressStatus(value: unknown): string {
         const normalized = String(value || '')
             .trim()
@@ -29,15 +51,44 @@ export class AuditingService {
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/[\s-]+/g, '_');
 
-        if (normalized === 'ok') {
-            return 'ok';
+        if (normalized === 'ok' || normalized === AuditMissionStatus.OK || normalized === AuditMissionStatus.TERMINE) {
+            return AuditMissionStatus.OK;
         }
 
-        if (normalized === 'en_cours' || normalized === 'in_progress') {
-            return 'en_cours';
+        if (normalized === 'en_cours' || normalized === 'in_progress' || normalized === AuditMissionStatus.EN_COURS) {
+            return AuditMissionStatus.EN_COURS;
         }
 
-        return 'nok';
+        if (
+            normalized === 'nok'
+            || normalized === AuditMissionStatus.NOK
+            || normalized === AuditMissionStatus.A_VENIR
+            || normalized === AuditMissionStatus.EN_RETARD
+            || normalized === AuditMissionStatus.ANNULE
+        ) {
+            return AuditMissionStatus.NOK;
+        }
+
+        return AuditMissionStatus.NOK;
+    }
+
+    private static toLegacyProgressStatus(value: unknown): string {
+        const normalized = String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
+
+        if (normalized === AuditMissionStatus.OK || normalized === AuditMissionStatus.TERMINE) {
+            return 'OK';
+        }
+
+        if (normalized === AuditMissionStatus.EN_COURS) {
+            return 'En cours';
+        }
+
+        return 'NOK';
     }
 
     private static normalizeHorizon(value: unknown): string | null {
@@ -60,11 +111,7 @@ export class AuditingService {
             return 'moyen_terme';
         }
 
-        if (normalized.includes('long')) {
-            return 'long_terme';
-        }
-
-        return normalized.replace(/[\s-]+/g, '_');
+        return null;
     }
 
     private static parseExcelDate(value: unknown): Date | null {
@@ -89,6 +136,29 @@ export class AuditingService {
         return Number.isNaN(date.getTime()) ? null : date;
     }
 
+    private static cleanString(value: unknown): string | null {
+        const cleaned = String(value || '').trim();
+        return cleaned ? cleaned : null;
+    }
+
+    private static toInteger(value: unknown): number | null {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+
+        const parsed = Number(value);
+        return Number.isInteger(parsed) ? parsed : null;
+    }
+
+    private static normalizePriority(value: unknown): number | null {
+        const parsed = this.toInteger(value);
+        if (parsed === null) {
+            return null;
+        }
+
+        return [1, 2, 3].includes(parsed) ? parsed : null;
+    }
+
     private static async resolveResponsibleName(responsableNom: string | null): Promise<number | null> {
         if (!responsableNom) {
             return null;
@@ -107,11 +177,369 @@ export class AuditingService {
         return matched?.id ?? null;
     }
 
-    /**
-     * Suggérer un plan d'audit annuel via l'IA.
-     */
-    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_SENIOR) {
-        // Récupérer tous les risques non clôturés
+    private static ensureMissionRecord(record: AuditMission) {
+        if (record.type !== AuditRecordType.MISSION_AUDIT) {
+            throw new Error('Cette operation est reservee aux missions d audit');
+        }
+    }
+
+    private static buildActionPlanTitle(data: any): string {
+        return this.cleanString(data.titre)
+            || this.cleanString(data.regleDnssi)
+            || this.cleanString(data.code)
+            || 'Plan d action audit';
+    }
+
+    private static async resolveActionPlanAssignee(data: any, fallbackResponsableNom?: string | null): Promise<number | null> {
+        if (data.auditeurId !== undefined) {
+            return this.toInteger(data.auditeurId);
+        }
+
+        if (data.responsableId !== undefined) {
+            return this.toInteger(data.responsableId);
+        }
+
+        const responsibleName = data.responsableNom !== undefined
+            ? this.cleanString(data.responsableNom)
+            : fallbackResponsableNom || null;
+
+        return this.resolveResponsibleName(responsibleName);
+    }
+
+    private static async buildActionPlanPayload(data: any, defaults: Partial<AuditMission> = {}): Promise<any> {
+        const merged = { ...defaults, ...data, type: AuditRecordType.PLAN_ACTION_AUDIT };
+        const responsableNom = this.cleanString(
+            merged.responsableNom !== undefined ? merged.responsableNom : merged.responsabilites
+        );
+        const recommandations = this.cleanString(
+            merged.recommandations !== undefined ? merged.recommandations : merged.objectifs
+        );
+        const delai = merged.delai !== undefined ? merged.delai : merged.echeance;
+
+        return {
+            type: AuditRecordType.PLAN_ACTION_AUDIT,
+            code: this.cleanString(merged.code),
+            titre: this.buildActionPlanTitle(merged),
+            objectifs: recommandations,
+            responsabilites: responsableNom,
+            delai: this.parseExcelDate(delai),
+            statut: this.normalizeProgressStatus(merged.statut !== undefined ? merged.statut : merged.etatAvancement),
+            auditSeniorId: this.toInteger(merged.auditSeniorId),
+            auditeurId: await this.resolveActionPlanAssignee(merged, responsableNom),
+            riskId: this.toInteger(merged.riskId),
+            checklistTemplateId: null,
+            ordre: this.toInteger(merged.ordre) ?? 0,
+            regleDnssi: this.cleanString(merged.regleDnssi),
+            horizon: this.normalizeHorizon(merged.horizon),
+            priorite: this.normalizePriority(merged.priorite),
+            rapport: null,
+            recommandations,
+            sourceExcelFile: this.cleanString(merged.sourceExcelFile),
+            sourceExcelSheet: this.cleanString(merged.sourceExcelSheet),
+            sourceExcelRow: this.toInteger(merged.sourceExcelRow),
+            sourceMissionId: this.toInteger(merged.sourceMissionId),
+        };
+    }
+
+    private static buildMissionPayload(data: any, defaults: Partial<AuditMission> = {}): any {
+        const merged = { ...defaults, ...data, type: AuditRecordType.MISSION_AUDIT };
+
+        return {
+            type: AuditRecordType.MISSION_AUDIT,
+            code: this.cleanString(merged.code),
+            titre: this.cleanString(merged.titre),
+            objectifs: this.cleanString(merged.objectifs),
+            responsabilites: this.cleanString(merged.responsabilites),
+            delai: this.parseExcelDate(merged.delai),
+            statut: this.normalizeProgressStatus(merged.statut),
+            auditSeniorId: this.toInteger(merged.auditSeniorId),
+            auditeurId: this.toInteger(merged.auditeurId),
+            riskId: this.toInteger(merged.riskId),
+            checklistTemplateId: this.toInteger(merged.checklistTemplateId),
+            ordre: this.toInteger(merged.ordre) ?? 0,
+            regleDnssi: this.cleanString(merged.regleDnssi),
+            horizon: this.normalizeHorizon(merged.horizon),
+            priorite: this.normalizePriority(merged.priorite),
+            rapport: merged.rapport !== undefined ? merged.rapport : defaults.rapport ?? null,
+            recommandations: merged.recommandations !== undefined ? merged.recommandations : defaults.recommandations ?? null,
+            sourceExcelFile: this.cleanString(merged.sourceExcelFile),
+            sourceExcelSheet: this.cleanString(merged.sourceExcelSheet),
+            sourceExcelRow: this.toInteger(merged.sourceExcelRow),
+            sourceMissionId: null,
+        };
+    }
+
+    private static validatePayload(payload: any, isCreate: boolean): void {
+        const type = this.normalizeRecordType(payload.type);
+        const missingFields: string[] = [];
+
+        if (!payload.auditSeniorId) {
+            missingFields.push('auditSeniorId');
+        }
+
+        if (type === AuditRecordType.MISSION_AUDIT) {
+            if (!payload.titre) missingFields.push('titre');
+            if (!payload.objectifs) missingFields.push('objectifs');
+            if (!payload.responsabilites) missingFields.push('responsabilites');
+            if (!payload.delai) missingFields.push('delai');
+        } else {
+            if (!payload.titre) missingFields.push('titre');
+            if (!payload.recommandations) missingFields.push('recommandations');
+        }
+
+        if (isCreate && missingFields.length > 0) {
+            throw new Error(`Champs obligatoires manquants: ${missingFields.join(', ')}`);
+        }
+    }
+
+    private static async ensureCode(record: AuditMission): Promise<AuditMission> {
+        if (record.code && String(record.code).trim()) {
+            return record;
+        }
+
+        await record.update({ code: String(record.id) });
+        return record;
+    }
+
+    private static buildListWhere(role: UserRole, userId: number, filter: MissionListFilter = {}): Record<string, unknown> {
+        const where: Record<string, unknown> = {};
+        const normalizedType = filter.type ? this.normalizeRecordType(filter.type) : null;
+
+        if (normalizedType) {
+            where.type = normalizedType;
+        }
+
+        if (role === UserRole.AUDIT_SENIOR) {
+            where.auditSeniorId = userId;
+        } else if (role === UserRole.AUDITEUR) {
+            where.auditeurId = userId;
+        }
+
+        return where;
+    }
+
+    private static sortRecordsForDisplay(records: AuditMission[]) {
+        return [...records].sort((first, second) => {
+            const firstType = this.normalizeRecordType(first.type);
+            const secondType = this.normalizeRecordType(second.type);
+            if (firstType !== secondType) {
+                return firstType === AuditRecordType.MISSION_AUDIT ? -1 : 1;
+            }
+
+            const firstDate = first.delai ? new Date(first.delai).getTime() : Number.MAX_SAFE_INTEGER;
+            const secondDate = second.delai ? new Date(second.delai).getTime() : Number.MAX_SAFE_INTEGER;
+            if (firstDate !== secondDate) {
+                return firstDate - secondDate;
+            }
+
+            return new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime();
+        });
+    }
+
+    private static mapActionPlanRecordToLegacyItem(record: any) {
+        const responsibleName = record.responsabilites
+            || `${record.auditeur?.prenom || ''} ${record.auditeur?.nom || ''}`.trim()
+            || null;
+
+        return {
+            id: record.id,
+            missionId: record.sourceMissionId ?? null,
+            ordre: record.ordre ?? 0,
+            regleDnssi: record.regleDnssi || record.titre,
+            recommandations: record.recommandations || record.objectifs || '',
+            horizon: record.horizon || null,
+            priorite: record.priorite ?? null,
+            responsableId: record.auditeurId ?? null,
+            responsableNom: responsibleName,
+            echeance: record.delai || null,
+            etatAvancement: this.toLegacyProgressStatus(record.statutCode || record.statut),
+            sourceExcelFile: record.sourceExcelFile || null,
+            sourceExcelSheet: record.sourceExcelSheet || null,
+            sourceExcelRow: record.sourceExcelRow ?? null,
+            responsable: record.auditeur || null,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
+        };
+    }
+
+    private static normalizeExcelHeader(value: unknown): string {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    private static resolveActionPlanColumnIndexes(headerRow: any[]) {
+        const normalizedHeaders = headerRow.map((cell) => this.normalizeExcelHeader(cell));
+        const findIndex = (...candidates: string[]) => normalizedHeaders.findIndex((value) =>
+            candidates.some((candidate) => value.includes(candidate))
+        );
+
+        return {
+            ordre: findIndex('ordre', 'numero'),
+            regleDnssi: findIndex('regle dnssi', 'dnssi', 'regle'),
+            recommandations: findIndex('recommandations', 'recommendations', 'action', 'mesure', 'description'),
+            horizon: findIndex('horizon'),
+            priorite: findIndex('priorite', 'priority'),
+            responsableNom: findIndex('responsable', 'owner'),
+            echeance: findIndex('echeance', 'date echeance', 'deadline', 'date limite'),
+            etatAvancement: findIndex('etat d avancement', 'avancement', 'etat', 'statut', 'status'),
+        };
+    }
+
+    private static async parseActionPlanImportRows(file: Express.Multer.File, baseDefaults: Record<string, unknown>) {
+        const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: true });
+        const sheetName = workbook.SheetNames.find((name) => name.toLowerCase().includes('pa_dnssi')) || workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) throw new Error('Feuille Excel introuvable');
+
+        const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
+            header: 1,
+            raw: true,
+            defval: '',
+        });
+        const headerIndex = rows.findIndex((row) => Array.isArray(row) && row.some((cell) => String(cell || '').includes('Règle DNSSI') || String(cell || '').includes('RÃ¨gle DNSSI')));
+        if (headerIndex === -1) throw new Error('Colonnes du plan d actions introuvables dans le fichier Excel');
+
+        const dataRows = rows.slice(headerIndex + 1).filter((row) =>
+            Array.isArray(row) && row.some((cell) => String(cell || '').trim() !== '')
+        );
+
+        const payloads: any[] = [];
+        for (let index = 0; index < dataRows.length; index += 1) {
+            const row = dataRows[index];
+            const regleDnssi = String(row[2] || '').trim();
+            const recommandations = String(row[3] || '').trim();
+
+            if (!regleDnssi || !recommandations) {
+                continue;
+            }
+
+            payloads.push({
+                ...baseDefaults,
+                ordre: row[1] ? Number(row[1]) : index + 1,
+                regleDnssi,
+                titre: regleDnssi,
+                objectifs: recommandations,
+                recommandations,
+                horizon: this.normalizeHorizon(row[4]),
+                priorite: row[5] !== '' ? Number(row[5]) : null,
+                responsableNom: String(row[6] || '').trim() || null,
+                delai: this.parseExcelDate(row[7]),
+                echeance: this.parseExcelDate(row[7]),
+                etatAvancement: this.normalizeProgressStatus(row[8]),
+                sourceExcelFile: file.originalname,
+                sourceExcelSheet: sheetName,
+                sourceExcelRow: headerIndex + index + 2,
+            });
+        }
+
+        if (payloads.length === 0) {
+            throw new Error('Aucune ligne exploitable trouvée dans le fichier Excel');
+        }
+
+        return payloads;
+    }
+
+    private static async parseActionPlanImportRowsRobust(file: Express.Multer.File, baseDefaults: Record<string, unknown>) {
+        const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: true });
+        const sheetName = workbook.SheetNames.find((name) => name.toLowerCase().includes('pa_dnssi')) || workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) throw new Error('Feuille Excel introuvable');
+
+        const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
+            header: 1,
+            raw: true,
+            defval: '',
+        });
+        const headerIndex = rows.findIndex((row) => {
+            if (!Array.isArray(row)) {
+                return false;
+            }
+
+            const normalizedRow = row.map((cell) => this.normalizeExcelHeader(cell));
+            return normalizedRow.some((cell) => cell.includes('regle dnssi') || cell === 'dnssi')
+                && normalizedRow.some((cell) => cell.includes('recommandation') || cell.includes('action') || cell.includes('mesure'));
+        });
+        if (headerIndex === -1) throw new Error('Colonnes du plan d actions introuvables dans le fichier Excel');
+
+        const columnIndexes = this.resolveActionPlanColumnIndexes(rows[headerIndex] as any[]);
+        const dataRows = rows.slice(headerIndex + 1).filter((row) =>
+            Array.isArray(row) && row.some((cell) => String(cell || '').trim() !== '')
+        );
+
+        const payloads: any[] = [];
+        for (let index = 0; index < dataRows.length; index += 1) {
+            const row = dataRows[index];
+            const readCell = (columnIndex: number, fallbackIndex: number) => {
+                const resolvedIndex = columnIndex >= 0 ? columnIndex : fallbackIndex;
+                return row[resolvedIndex];
+            };
+
+            const regleDnssi = String(readCell(columnIndexes.regleDnssi, 2) || '').trim();
+            const recommandations = String(readCell(columnIndexes.recommandations, 3) || '').trim();
+
+            if (!regleDnssi || !recommandations) {
+                continue;
+            }
+
+            payloads.push({
+                ...baseDefaults,
+                ordre: readCell(columnIndexes.ordre, 1) ? Number(readCell(columnIndexes.ordre, 1)) : index + 1,
+                regleDnssi,
+                titre: regleDnssi,
+                objectifs: recommandations,
+                recommandations,
+                horizon: this.normalizeHorizon(readCell(columnIndexes.horizon, 4)),
+                priorite: readCell(columnIndexes.priorite, 5) !== '' ? Number(readCell(columnIndexes.priorite, 5)) : null,
+                responsableNom: String(readCell(columnIndexes.responsableNom, 6) || '').trim() || null,
+                delai: this.parseExcelDate(readCell(columnIndexes.echeance, 7)),
+                echeance: this.parseExcelDate(readCell(columnIndexes.echeance, 7)),
+                etatAvancement: this.normalizeProgressStatus(readCell(columnIndexes.etatAvancement, 8)),
+                sourceExcelFile: file.originalname,
+                sourceExcelSheet: sheetName,
+                sourceExcelRow: headerIndex + index + 2,
+            });
+        }
+
+        if (payloads.length === 0) {
+            throw new Error('Aucune ligne exploitable trouvÃ©e dans le fichier Excel');
+        }
+
+        return payloads;
+    }
+
+    private static async createActionPlanRecords(payloads: any[]) {
+        const createdRecords: AuditMission[] = [];
+
+        for (const payload of payloads) {
+            const planPayload = await this.buildActionPlanPayload(payload);
+            this.validatePayload(planPayload, true);
+            const created = await AuditMission.create(await LookupResolutionService.resolveEntityPayload('auditMission', planPayload));
+            createdRecords.push(await this.ensureCode(created));
+        }
+
+        return createdRecords;
+    }
+
+    static async getRecordsForUser(role: UserRole, userId: number, filter: MissionListFilter = {}) {
+        const where = this.buildListWhere(role, userId, filter);
+        return this.sortRecordsForDisplay(await AuditMission.findAll({
+            where,
+            include: [
+                { model: User, as: 'auditSenior', required: false },
+                { model: User, as: 'auditeur', required: false },
+                { model: Risk, as: 'risk', required: false },
+                { model: AuditMission, as: 'sourceMission', required: false },
+            ] as any,
+        }));
+    }
+
+    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_SENIOR, type: string = AuditRecordType.PLAN_ACTION_AUDIT) {
         const risks = await Risk.findAll({
             where: {
                 statutId: [
@@ -123,73 +551,112 @@ export class AuditingService {
         });
 
         if (risks.length === 0) {
-            throw new Error('Aucun risque disponible pour générer un plan d\'audit');
+            throw new Error('Aucun risque disponible pour générer un plan d audit');
         }
 
-        // Utiliser l'IA pour générer des suggestions de missions
-        const suggestions = await AIService.generateAuditPlan(risks, role);
-        return suggestions;
+        const normalizedType = this.normalizeRecordType(type);
+        const sortedRisks = [...risks].sort((a, b) => (b.niveauCotationRisqueNet || 0) - (a.niveauCotationRisqueNet || 0));
+        const suggestions = await AIService.generateAuditPlan(sortedRisks, role);
+        return suggestions.map((item) => ({
+            ...item,
+            type: normalizedType,
+            regleDnssi: item.regleDnssi || item.titre || null,
+            recommandations: item.recommandations || item.objectifs || item.titre || null,
+        }));
     }
 
-    /**
-     * Créer des missions d'audit à partir du plan généré.
-     */
-    static async createMissionsFromPlan(seniorId: number, missionsData: any[]) {
-        const missions = [];
+    static async createMissionsFromPlan(seniorId: number, missionsData: any[], type: string = AuditRecordType.MISSION_AUDIT) {
+        const normalizedType = this.normalizeRecordType(type);
+        const created: AuditMission[] = [];
+
         for (const data of missionsData) {
-            const mission = await AuditMission.create(await LookupResolutionService.resolveEntityPayload('auditMission', {
-                ...data,
-                auditSeniorId: seniorId,
-                statut: AuditMissionStatus.A_VENIR,
-                delai: new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000),
-                is_deleted: false,
-                deleted_at: null,
-            }));
-            missions.push(mission);
+            const payload = normalizedType === AuditRecordType.PLAN_ACTION_AUDIT
+                ? await this.buildActionPlanPayload({
+                    ...data,
+                    auditSeniorId: seniorId,
+                    type: normalizedType,
+                    titre: data.titre || data.regleDnssi || data.code,
+                    regleDnssi: data.regleDnssi || data.titre || null,
+                    recommandations: data.recommandations || data.objectifs || data.titre || '',
+                    objectifs: data.recommandations || data.objectifs || data.titre || '',
+                    delai: data.delai || new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000),
+                    etatAvancement: data.etatAvancement || AuditMissionStatus.NOK,
+                })
+                : this.buildMissionPayload({
+                    ...data,
+                    auditSeniorId: seniorId,
+                    type: normalizedType,
+                    statut: AuditMissionStatus.NOK,
+                    delai: data.delai || new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000),
+                });
+
+            this.validatePayload(payload, true);
+            const createdRecord = await AuditMission.create(await LookupResolutionService.resolveEntityPayload('auditMission', payload));
+            created.push(await this.ensureCode(createdRecord));
         }
-        return missions;
+
+        return created;
     }
 
-    /**
-     * Assigner une mission à un auditeur.
-     */
+    static async createRecord(actorId: number, data: any) {
+        const type = this.normalizeRecordType(data.type);
+        const payload = type === AuditRecordType.PLAN_ACTION_AUDIT
+            ? await this.buildActionPlanPayload({
+                ...data,
+                auditSeniorId: data.auditSeniorId || actorId,
+            })
+            : this.buildMissionPayload({
+                ...data,
+                auditSeniorId: data.auditSeniorId || actorId,
+            });
+
+        this.validatePayload(payload, true);
+        const createdRecord = await AuditMission.create(await LookupResolutionService.resolveEntityPayload('auditMission', payload));
+        return this.ensureCode(createdRecord);
+    }
+
     static async assignMission(missionId: number, auditeurId: number) {
         const mission = await AuditMission.findByPk(missionId);
-        if (!mission) throw new Error('Mission non trouvée');
+        if (!mission) throw new Error('Enregistrement introuvable');
+
+        const targetStatus = mission.type === AuditRecordType.PLAN_ACTION_AUDIT
+            ? (mission.statut === AuditMissionStatus.OK ? AuditMissionStatus.OK : AuditMissionStatus.EN_COURS)
+            : AuditMissionStatus.EN_COURS;
 
         await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
             auditeurId,
-            statut: AuditMissionStatus.EN_COURS
+            statut: targetStatus
         }));
 
-        // Notifications & Emails
         try {
             const auditeur = await User.findByPk(auditeurId);
             if (auditeur) {
-                // Internal notification
+                const isPlan = mission.type === AuditRecordType.PLAN_ACTION_AUDIT;
+                const content = isPlan
+                    ? `Un plan d actions d audit vous a été affecté : ${mission.titre}`
+                    : `Une nouvelle mission d audit vous a été assignée : ${mission.titre}`;
+
                 await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
                     userId: auditeurId,
                     type: NotificationType.AUDIT_MISSION_ASSIGNED,
-                    content: `Une nouvelle mission d'audit vous a été assignée : ${mission.titre}`,
+                    content,
                     auditMissionId: missionId
                 }));
 
-                // Email notification
-                await emailService.sendAuditMissionAssignedEmail(
-                    { mail: auditeur.mail, nom: auditeur.nom, prenom: auditeur.prenom },
-                    { titre: mission.titre, id: mission.id }
-                );
+                if (!isPlan) {
+                    await emailService.sendAuditMissionAssignedEmail(
+                        { mail: auditeur.mail, nom: auditeur.nom, prenom: auditeur.prenom },
+                        { titre: mission.titre, id: mission.id }
+                    );
+                }
             }
         } catch (error) {
             appLogger.error('Auditing', 'Assignment notifications failed', error);
         }
 
-        return mission;
+        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior'] });
     }
 
-    /**
-     * Mettre à jour le rapport d'audit.
-     */
     static async submitReport(
         missionId: number,
         actorId: number,
@@ -197,29 +664,28 @@ export class AuditingService {
         reportData: { rapport: string, recommandations: string }
     ) {
         const mission = await AuditMission.findByPk(missionId);
-        const auditeurId = actorRole === UserRole.SUPER_ADMIN ? mission?.auditeurId ?? actorId : actorId;
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
+
+        const auditeurId = actorRole === UserRole.SUPER_ADMIN ? mission.auditeurId ?? actorId : actorId;
         if (mission.auditeurId !== auditeurId) throw new Error('Action non autorisée');
 
         await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
             ...reportData,
-            statut: AuditMissionStatus.TERMINE
+            statut: AuditMissionStatus.OK
         }));
 
-        // Notifications & Emails
         try {
             const senior = await User.findByPk(mission.auditSeniorId);
             const actor = await User.findByPk(actorId);
             if (senior && actor) {
-                // Internal notification
                 await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
                     userId: senior.id,
                     type: NotificationType.AUDIT_REPORT_SUBMITTED,
-                    content: `Un rapport d'audit a été soumis pour la mission : ${mission.titre}`,
+                    content: `Un rapport d audit a été soumis pour la mission : ${mission.titre}`,
                     auditMissionId: missionId
                 }));
 
-                // Email notification
                 await emailService.sendAuditReportSubmittedEmail(
                     { mail: senior.mail, nom: senior.nom, prenom: senior.prenom },
                     { titre: mission.titre, auditeurNom: `${actor.prenom} ${actor.nom}` }
@@ -232,173 +698,214 @@ export class AuditingService {
         return mission;
     }
 
-    /**
-     * Supprimer une mission d'audit.
-     */
     static async updateMission(missionId: number, data: any) {
         const mission = await AuditMission.findByPk(missionId);
-        if (!mission) throw new Error('Mission non trouvée');
-        
-        // Autoriser la modification du titre, objectifs, responsabilités, délai et statut
-        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', data));
-        
-        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk'] });
+        if (!mission) throw new Error('Enregistrement introuvable');
+
+        const payload = mission.type === AuditRecordType.PLAN_ACTION_AUDIT
+            ? await this.buildActionPlanPayload(data, mission.get({ plain: true }) as Partial<AuditMission>)
+            : this.buildMissionPayload(data, mission.get({ plain: true }) as Partial<AuditMission>);
+
+        this.validatePayload(payload, false);
+        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', payload));
+        await this.ensureCode(mission);
+
+        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior', 'sourceMission'] });
     }
 
     static async deleteMission(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
-        if (!mission) throw new Error('Mission non trouvée');
+        if (!mission) throw new Error('Enregistrement introuvable');
 
         await softDeleteInstance(mission);
-        await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
-            where: {
-                missionId,
-                is_deleted: false
-            }
-        });
-        await AuditEvidence.update(getSoftDeleteValues(), {
-            where: {
-                missionId,
-                is_deleted: false
-            }
-        });
-        await AuditMissionActionPlanItem.update(getSoftDeleteValues(), {
-            where: {
-                missionId,
-                is_deleted: false
-            }
-        });
 
-        return { message: 'Mission supprimée avec succès' };
+        if (mission.type === AuditRecordType.MISSION_AUDIT) {
+            await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
+                where: { missionId, is_deleted: false }
+            });
+            await AuditEvidence.update(getSoftDeleteValues(), {
+                where: { missionId, is_deleted: false }
+            });
+        }
+
+        return { message: 'Enregistrement supprimé avec succès' };
     }
 
     static async restoreMission(missionId: number) {
         const mission = await AuditMission.scope('withDeleted').findByPk(missionId);
-        if (!mission || !mission.is_deleted) throw new Error('Mission non trouvée');
+        if (!mission || !mission.is_deleted) throw new Error('Enregistrement introuvable');
 
         await restoreSoftDeletedInstance(mission);
-        await AuditMissionChecklistItem.scope('withDeleted').update(getRestoreValues(), {
-            where: {
-                missionId,
-                is_deleted: true
-            }
-        });
-        await AuditEvidence.scope('withDeleted').update(getRestoreValues(), {
-            where: {
-                missionId,
-                is_deleted: true
-            }
-        });
-        await AuditMissionActionPlanItem.scope('withDeleted').update(getRestoreValues(), {
-            where: {
-                missionId,
-                is_deleted: true
-            }
-        });
 
-        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk'] });
+        if (mission.type === AuditRecordType.MISSION_AUDIT) {
+            await AuditMissionChecklistItem.scope('withDeleted').update(getRestoreValues(), {
+                where: { missionId, is_deleted: true }
+            });
+            await AuditEvidence.scope('withDeleted').update(getRestoreValues(), {
+                where: { missionId, is_deleted: true }
+            });
+        }
+
+        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior'] });
     }
 
-    /**
-     * Remettre une mission à zéro (reset).
-     */
     static async resetMission(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
         await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
             auditeurId: null,
             rapport: null,
             recommandations: null,
-            statut: AuditMissionStatus.A_VENIR
+            statut: AuditMissionStatus.NOK
         }));
-        
-        // Supprimer aussi les checklists instanciées
+
         await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
-            where: {
-                missionId,
-                is_deleted: false
-            }
+            where: { missionId, is_deleted: false }
         });
-        await AuditMissionActionPlanItem.update(getSoftDeleteValues(), {
-            where: {
-                missionId,
-                is_deleted: false
-            }
-        });
-        
+
         return mission;
+    }
+
+    static async getActionPlanRecords(filter: { auditSeniorId?: number; auditeurId?: number } = {}) {
+        const where: Record<string, unknown> = {
+            type: AuditRecordType.PLAN_ACTION_AUDIT,
+        };
+
+        if (filter.auditSeniorId) {
+            where.auditSeniorId = filter.auditSeniorId;
+        }
+
+        if (filter.auditeurId) {
+            where.auditeurId = filter.auditeurId;
+        }
+
+        return await AuditMission.findAll({
+            where,
+            include: [
+                { model: User, as: 'auditSenior', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: Risk, as: 'risk', required: false },
+                { model: AuditMission, as: 'sourceMission', required: false },
+            ] as any,
+            order: [['ordre', 'ASC'], ['updatedAt', 'DESC']]
+        });
+    }
+
+    static async importActionPlans(actorId: number, file: Express.Multer.File, options: ActionPlanImportOptions = {}) {
+        const rows = await this.parseActionPlanImportRowsRobust(file, {
+            auditSeniorId: actorId,
+            type: AuditRecordType.PLAN_ACTION_AUDIT,
+            riskId: options.riskId ?? null,
+            sourceMissionId: options.sourceMissionId ?? null,
+        });
+
+        if (options.replaceExisting) {
+            const replaceWhere: Record<string, unknown> = {
+                type: AuditRecordType.PLAN_ACTION_AUDIT,
+                auditSeniorId: actorId,
+                is_deleted: false,
+            };
+
+            if (options.sourceMissionId) {
+                replaceWhere.sourceMissionId = options.sourceMissionId;
+            } else {
+                replaceWhere.sourceExcelFile = file.originalname;
+            }
+
+            await AuditMission.update(getSoftDeleteValues(), { where: replaceWhere });
+        }
+
+        return this.createActionPlanRecords(rows);
+    }
+
+    static async importMissionsFromExcel(actorId: number, file: Express.Multer.File, riskId: number | null = null) {
+        const rows = await this.parseActionPlanImportRowsRobust(file, {
+            auditSeniorId: actorId,
+            type: AuditRecordType.MISSION_AUDIT,
+            riskId,
+        });
+
+        const createdRecords: AuditMission[] = [];
+
+        for (const row of rows) {
+            const missionPayload = this.buildMissionPayload({
+                ...row,
+                type: AuditRecordType.MISSION_AUDIT,
+                titre: row.titre || row.regleDnssi || 'Mission d audit',
+                objectifs: row.recommandations || row.objectifs || row.titre || row.regleDnssi,
+                responsabilites: row.responsableNom || row.responsabilites || 'A definir',
+                delai: row.delai || row.echeance || new Date(),
+                statut: row.etatAvancement || row.statut || AuditMissionStatus.NOK,
+                recommandations: row.recommandations || row.objectifs || null,
+            });
+
+            this.validatePayload(missionPayload, true);
+            const created = await AuditMission.create(await LookupResolutionService.resolveEntityPayload('auditMission', missionPayload));
+            createdRecords.push(await this.ensureCode(created));
+        }
+
+        return createdRecords;
     }
 
     static async getMissionActionPlanItems(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
 
-        return await AuditMissionActionPlanItem.findAll({
-            where: { missionId },
-            include: [{ model: User, as: 'responsable', attributes: ['id', 'prenom', 'nom'], required: false }],
+        const records = await AuditMission.findAll({
+            where: {
+                type: AuditRecordType.PLAN_ACTION_AUDIT,
+                sourceMissionId: missionId,
+            },
+            include: [{ model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false }],
             order: [['ordre', 'ASC'], ['createdAt', 'ASC']]
         });
+
+        return records.map((record) => this.mapActionPlanRecordToLegacyItem(record));
     }
 
     static async createMissionActionPlanItem(missionId: number, data: any) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
-        const responsableNom = String(data.responsableNom || '').trim() || null;
-        const item = await AuditMissionActionPlanItem.create({
-            missionId,
-            ordre: Number(data.ordre || 0),
-            regleDnssi: String(data.regleDnssi || '').trim(),
-            recommandations: String(data.recommandations || '').trim(),
-            horizon: this.normalizeHorizon(data.horizon),
-            priorite: data.priorite !== undefined && data.priorite !== null && data.priorite !== '' ? Number(data.priorite) : null,
-            responsableId: data.responsableId ? Number(data.responsableId) : await this.resolveResponsibleName(responsableNom),
-            responsableNom,
-            echeance: this.parseExcelDate(data.echeance),
-            etatAvancement: this.normalizeProgressStatus(data.etatAvancement),
-            sourceExcelFile: data.sourceExcelFile ? String(data.sourceExcelFile) : null,
-            sourceExcelSheet: data.sourceExcelSheet ? String(data.sourceExcelSheet) : null,
-            sourceExcelRow: data.sourceExcelRow ? Number(data.sourceExcelRow) : null,
+        const created = await this.createRecord(mission.auditSeniorId, {
+            ...data,
+            type: AuditRecordType.PLAN_ACTION_AUDIT,
+            sourceMissionId: missionId,
+            riskId: mission.riskId,
         });
 
-        return await AuditMissionActionPlanItem.findByPk(item.id, {
-            include: [{ model: User, as: 'responsable', attributes: ['id', 'prenom', 'nom'], required: false }]
+        const reloaded = await AuditMission.findByPk(created.id, {
+            include: [{ model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false }]
         });
+
+        return this.mapActionPlanRecordToLegacyItem(reloaded);
     }
 
     static async updateMissionActionPlanItem(missionId: number, itemId: number, data: any) {
-        const item = await AuditMissionActionPlanItem.findOne({
-            where: { id: itemId, missionId }
+        const item = await AuditMission.findOne({
+            where: { id: itemId, type: AuditRecordType.PLAN_ACTION_AUDIT, sourceMissionId: missionId }
         });
         if (!item) throw new Error('Ligne du plan d actions introuvable');
 
-        const responsableNom = data.responsableNom !== undefined
-            ? (String(data.responsableNom || '').trim() || null)
-            : item.responsableNom;
-
-        await item.update({
-            ordre: data.ordre !== undefined ? Number(data.ordre || 0) : item.ordre,
-            regleDnssi: data.regleDnssi !== undefined ? String(data.regleDnssi || '').trim() : item.regleDnssi,
-            recommandations: data.recommandations !== undefined ? String(data.recommandations || '').trim() : item.recommandations,
-            horizon: data.horizon !== undefined ? this.normalizeHorizon(data.horizon) : item.horizon,
-            priorite: data.priorite !== undefined ? (data.priorite === '' || data.priorite === null ? null : Number(data.priorite)) : item.priorite,
-            responsableId: data.responsableId !== undefined
-                ? (data.responsableId ? Number(data.responsableId) : await this.resolveResponsibleName(responsableNom))
-                : item.responsableId,
-            responsableNom,
-            echeance: data.echeance !== undefined ? this.parseExcelDate(data.echeance) : item.echeance,
-            etatAvancement: data.etatAvancement !== undefined ? this.normalizeProgressStatus(data.etatAvancement) : item.etatAvancement,
+        await this.updateMission(itemId, {
+            ...data,
+            type: AuditRecordType.PLAN_ACTION_AUDIT,
+            sourceMissionId: missionId,
         });
 
-        return await AuditMissionActionPlanItem.findByPk(item.id, {
-            include: [{ model: User, as: 'responsable', attributes: ['id', 'prenom', 'nom'], required: false }]
+        const updated = await AuditMission.findByPk(itemId, {
+            include: [{ model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false }]
         });
+
+        return this.mapActionPlanRecordToLegacyItem(updated);
     }
 
     static async deleteMissionActionPlanItem(missionId: number, itemId: number) {
-        const item = await AuditMissionActionPlanItem.findOne({
-            where: { id: itemId, missionId }
+        const item = await AuditMission.findOne({
+            where: { id: itemId, type: AuditRecordType.PLAN_ACTION_AUDIT, sourceMissionId: missionId }
         });
         if (!item) throw new Error('Ligne du plan d actions introuvable');
 
@@ -409,70 +916,24 @@ export class AuditingService {
     static async importMissionActionPlan(missionId: number, file: Express.Multer.File) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
-        const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: true });
-        const sheetName = workbook.SheetNames.find((name) => name.toLowerCase().includes('pa_dnssi')) || workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        if (!worksheet) throw new Error('Feuille Excel introuvable');
-
-        const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
-            header: 1,
-            raw: true,
-            defval: '',
-        });
-        const headerIndex = rows.findIndex((row) => Array.isArray(row) && row.some((cell) => String(cell || '').includes('Règle DNSSI')));
-        if (headerIndex === -1) throw new Error('Colonnes du plan d actions introuvables dans le fichier Excel');
-
-        const dataRows = rows.slice(headerIndex + 1).filter((row) =>
-            Array.isArray(row) && row.some((cell) => String(cell || '').trim() !== '')
-        );
-
-        const createdItems = [];
-        for (let index = 0; index < dataRows.length; index += 1) {
-            const row = dataRows[index];
-            const regleDnssi = String(row[2] || '').trim();
-            const recommandations = String(row[3] || '').trim();
-
-            if (!regleDnssi || !recommandations) {
-                continue;
-            }
-
-            const responsableNom = String(row[6] || '').trim() || null;
-            createdItems.push({
-                missionId,
-                ordre: row[1] ? Number(row[1]) : index + 1,
-                regleDnssi,
-                recommandations,
-                horizon: this.normalizeHorizon(row[4]),
-                priorite: row[5] !== '' ? Number(row[5]) : null,
-                responsableId: await this.resolveResponsibleName(responsableNom),
-                responsableNom,
-                echeance: this.parseExcelDate(row[7]),
-                etatAvancement: this.normalizeProgressStatus(row[8]),
-                sourceExcelFile: file.originalname,
-                sourceExcelSheet: sheetName,
-                sourceExcelRow: headerIndex + index + 2,
-            });
-        }
-
-        if (createdItems.length === 0) {
-            throw new Error('Aucune ligne exploitable trouvée dans le fichier Excel');
-        }
-
-        await AuditMissionActionPlanItem.update(getSoftDeleteValues(), {
+        await AuditMission.update(getSoftDeleteValues(), {
             where: {
-                missionId,
+                type: AuditRecordType.PLAN_ACTION_AUDIT,
+                sourceMissionId: missionId,
                 is_deleted: false
             }
         });
 
-        await AuditMissionActionPlanItem.bulkCreate(createdItems);
-        return await this.getMissionActionPlanItems(missionId);
-    }
+        await this.importActionPlans(mission.auditSeniorId, file, {
+            sourceMissionId: missionId,
+            riskId: mission.riskId,
+            replaceExisting: false,
+        });
 
-    /**
-     * --- CHECKLISTS TEMPLATES ---
-     */
+        return this.getMissionActionPlanItems(missionId);
+    }
 
     static async getChecklistTemplates() {
         return await AuditChecklistTemplate.findAll({
@@ -488,7 +949,7 @@ export class AuditingService {
         });
 
         if (data.items && data.items.length > 0) {
-            const itemsData = data.items.map(texte => ({ templateId: template.id, texte }));
+            const itemsData = data.items.map((texte) => ({ templateId: template.id, texte }));
             await AuditChecklistTemplateItem.bulkCreate(itemsData);
         }
 
@@ -503,10 +964,7 @@ export class AuditingService {
 
         await softDeleteInstance(template);
         await AuditChecklistTemplateItem.update(getSoftDeleteValues(), {
-            where: {
-                templateId,
-                is_deleted: false
-            }
+            where: { templateId, is_deleted: false }
         });
 
         return { message: 'Template supprimé avec succès' };
@@ -518,10 +976,7 @@ export class AuditingService {
 
         await restoreSoftDeletedInstance(template);
         await AuditChecklistTemplateItem.scope('withDeleted').update(getRestoreValues(), {
-            where: {
-                templateId,
-                is_deleted: true
-            }
+            where: { templateId, is_deleted: true }
         });
 
         return await AuditChecklistTemplate.findByPk(template.id, {
@@ -529,13 +984,10 @@ export class AuditingService {
         });
     }
 
-    /**
-     * --- MISSION CHECKLISTS ---
-     */
-
     static async getMissionChecklistItems(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
         return await AuditMissionChecklistItem.findAll({
             where: { missionId },
@@ -546,6 +998,7 @@ export class AuditingService {
     static async assignTemplateToMission(missionId: number, templateId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
         const template = await AuditChecklistTemplate.findByPk(templateId, {
             include: [{ model: AuditChecklistTemplateItem, as: 'items' }]
@@ -553,12 +1006,12 @@ export class AuditingService {
         if (!template) throw new Error('Template non trouvé');
 
         const existingItems = await AuditMissionChecklistItem.findAll({ where: { missionId } });
-        const existingTexts = existingItems.map(i => i.texte.toLowerCase().trim());
+        const existingTexts = existingItems.map((item) => item.texte.toLowerCase().trim());
 
         const itemsToCreate = (template as any).items
             .filter((item: any) => !existingTexts.includes(item.texte.toLowerCase().trim()))
             .map((item: any) => ({
-                missionId: missionId,
+                missionId,
                 texte: item.texte,
                 estFait: false
             }));
@@ -567,13 +1020,15 @@ export class AuditingService {
             await AuditMissionChecklistItem.bulkCreate(itemsToCreate);
         }
 
-        // Link the template directly to the mission
         await mission.update({ checklistTemplateId: templateId });
-
         return await this.getMissionChecklistItems(missionId);
     }
 
     static async toggleMissionChecklistItem(missionId: number, itemId: number, estFait: boolean) {
+        const mission = await AuditMission.findByPk(missionId);
+        if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
+
         const item = await AuditMissionChecklistItem.findOne({
             where: { id: itemId, missionId }
         });
@@ -583,13 +1038,10 @@ export class AuditingService {
         return item;
     }
 
-    /**
-     * --- TRAÇABILITÉ DES PREUVES ---
-     */
-
     static async getMissionEvidence(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
         return await AuditEvidence.findAll({
             where: { missionId },
@@ -598,26 +1050,26 @@ export class AuditingService {
         });
     }
 
-    /**
-     * Récupérer TOUTES les preuves d'audit (pour Senior/Admin).
-     */
     static async getAllEvidence() {
         return await AuditEvidence.findAll({
             include: [
                 { model: User, as: 'uploader', attributes: ['id', 'prenom', 'nom'] },
-                { model: AuditMission, as: 'mission', attributes: ['id', 'titre'] }
+                {
+                    model: AuditMission,
+                    as: 'mission',
+                    attributes: ['id', 'titre', 'type'],
+                    where: { type: AuditRecordType.MISSION_AUDIT },
+                }
             ],
             order: [['createdAt', 'DESC']]
         });
     }
 
-    /**
-     * Récupérer les missions ayant un rapport soumis (pour Review).
-     */
     static async getMissionsWithReports() {
         return await AuditMission.findAll({
             where: {
-                rapport: { [Symbol.for('ne')]: null }
+                type: AuditRecordType.MISSION_AUDIT,
+                rapport: { [Op.ne]: null }
             },
             include: ['auditeur', 'auditSenior', 'risk'],
             order: [['updatedAt', 'DESC']]
@@ -627,6 +1079,7 @@ export class AuditingService {
     static async addMissionEvidence(missionId: number, filename: string, path: string, uploadedById: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
+        this.ensureMissionRecord(mission);
 
         const evidence = await AuditEvidence.create({
             missionId,
@@ -663,4 +1116,3 @@ export class AuditingService {
         });
     }
 }
-

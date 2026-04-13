@@ -1,5 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditMission, AuditMissionStatus, AuditChecklistTemplate, AuditEvidence, AuditMissionActionPlanItem } from '../../core/services/auditing.service';
+import {
+  AuditingService,
+  AuditMission,
+  AuditMissionStatus,
+  AuditMissionHorizon,
+  AuditChecklistTemplate,
+  AuditEvidence,
+  AuditMissionActionPlanItem,
+  AuditRecordType
+} from '../../core/services/auditing.service';
 import { HttpClient } from '@angular/common/http';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
@@ -21,54 +30,59 @@ export class AuditingComponent implements OnInit {
   auditors: any[] = [];
   checklistTemplates: AuditChecklistTemplate[] = [];
   filteredMissions: AuditMission[] = [];
+  pagedMissions: AuditMission[] = [];
   showExportMenu = false;
 
-  // Filter properties
   filterSearch = '';
   filterStatus = '';
+  currentPage = 1;
+  pageSize = 10;
+  readonly pageSizeOptions = [10, 25, 50, 100];
 
   totalMissions = 0;
   inProgressCount = 0;
   completedCount = 0;
   unassignedCount = 0;
 
-
-  // UI States
   isLoadingMissions = false;
-  isCreatingMissions = false;
   isAssigning = false;
   isReporting = false;
+  isSaving = false;
+  isImporting = false;
+  isCreateMode = false;
 
-  // Modals
   showAssignModal = false;
-  showAssignChecklistModal = false;
   showReportModal = false;
   showDetailModal = false;
   showEvidenceModal = false;
   showChecklistModal = false;
   showEditModal = false;
+  showImportModal = false;
   selectedMission: AuditMission | null = null;
   selectedAuditorId = '';
   currentEvidences: AuditEvidence[] = [];
   currentChecklistItems: AuditMissionActionPlanItem[] = [];
   backendUrl = environment.apiUrl.replace('/api', '');
+  importFile: File | null = null;
+  risks: any[] = [];
 
-  // Report Form
   reportData = {
     rapport: '',
     recommandations: ''
   };
 
-  // Expose Enum to template
   AuditMissionStatus = AuditMissionStatus;
+  AuditMissionHorizon = AuditMissionHorizon;
 
-  // Label mappings for UI
   statusLabelMap: Record<string, string> = {
-    [AuditMissionStatus.A_VENIR]: 'À venir',
+    [AuditMissionStatus.NOK]: 'NOK',
     [AuditMissionStatus.EN_COURS]: 'En cours',
-    [AuditMissionStatus.TERMINE]: 'Terminé',
-    [AuditMissionStatus.EN_RETARD]: 'En retard',
-    [AuditMissionStatus.ANNULE]: 'Annulé'
+    [AuditMissionStatus.OK]: 'OK'
+  };
+
+  horizonLabelMap: Record<string, string> = {
+    [AuditMissionHorizon.COURT_TERME]: 'A court terme',
+    [AuditMissionHorizon.MOYEN_TERME]: 'A moyen terme'
   };
 
   constructor(
@@ -89,6 +103,7 @@ export class AuditingComponent implements OnInit {
     this.loadMissions();
     this.loadUsers();
     this.loadTemplates();
+    this.loadRisks();
   }
 
   loadTemplates() {
@@ -110,7 +125,7 @@ export class AuditingComponent implements OnInit {
 
   loadMissions() {
     this.isLoadingMissions = true;
-    this.auditingService.getMissions().subscribe({
+    this.auditingService.getMissions('all').subscribe({
       next: (data) => {
         this.missions = data;
         this.applyFilters();
@@ -125,19 +140,25 @@ export class AuditingComponent implements OnInit {
   }
 
   applyFilters() {
-    this.filteredMissions = this.missions.filter(m => {
-      const matchSearch = !this.filterSearch || 
-        m.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
-        (m.auditeur && `${m.auditeur.prenom} ${m.auditeur.nom}`.toLowerCase().includes(this.filterSearch.toLowerCase()));
-      
-      const missionStatut = ((m as any).statutCode || m.statut || '').toLowerCase();
-      const filterStatut = (this.filterStatus || '').toLowerCase();
+    this.filteredMissions = this.missions.filter((m) => {
+      const q = this.filterSearch.toLowerCase();
+      const matchSearch = !this.filterSearch
+        || String(m.id).includes(q)
+        || (m.titre || '').toLowerCase().includes(q)
+        || (m.regleDnssi || '').toLowerCase().includes(q)
+        || (m.recommandations || m.objectifs || '').toLowerCase().includes(q)
+        || (m.auditeur && `${m.auditeur.prenom} ${m.auditeur.nom}`.toLowerCase().includes(q))
+        || (m.responsabilites || '').toLowerCase().includes(q);
+
+      const missionStatut = this.normalizeMissionStatus((m as any).statutCode || m.statut);
+      const filterStatut = this.normalizeMissionStatus(this.filterStatus);
       const matchStatus = !filterStatut || missionStatut === filterStatut;
 
       return matchSearch && matchStatus;
     });
+    this.currentPage = 1;
+    this.updatePagedMissions();
   }
-
 
   onFilterChange() {
     this.applyFilters();
@@ -149,26 +170,118 @@ export class AuditingComponent implements OnInit {
     this.applyFilters();
   }
 
-  calculateStats() {
-    this.totalMissions = this.missions.length;
-    this.inProgressCount = this.missions.filter(m => this.normalizeMissionStatus((m as any).statutCode || m.statut) === AuditMissionStatus.EN_COURS).length;
-    this.completedCount = this.missions.filter(m => this.normalizeMissionStatus((m as any).statutCode || m.statut) === AuditMissionStatus.TERMINE).length;
-    this.unassignedCount = this.missions.filter(m => !m.auditeurId).length;
+  onPaginationChange(event: { page: number; pageSize: number }) {
+    this.currentPage = event.page;
+    this.pageSize = event.pageSize;
+    this.updatePagedMissions();
   }
 
+  getRecommendationPreview(value?: string | null, maxWords: number = 10): string {
+    const text = (value || '').trim();
+    if (!text) {
+      return '-';
+    }
+
+    const words = text.split(/\s+/);
+    if (words.length <= maxWords) {
+      return text;
+    }
+
+    return `${words.slice(0, maxWords).join(' ')}...`;
+  }
+
+  calculateStats() {
+    this.totalMissions = this.missions.length;
+    this.inProgressCount = this.missions.filter((m) => this.normalizeMissionStatus((m as any).statutCode || m.statut) === AuditMissionStatus.EN_COURS).length;
+    this.completedCount = this.missions.filter((m) => this.normalizeMissionStatus((m as any).statutCode || m.statut) === AuditMissionStatus.OK).length;
+    this.unassignedCount = this.missions.filter((m) => !m.auditeurId).length;
+  }
+
+  private updatePagedMissions() {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    this.pagedMissions = this.filteredMissions.slice(startIndex, startIndex + this.pageSize);
+  }
 
   loadUsers() {
-    this.http.get<any[]>(`${environment.apiUrl}/users/assignable/auditors`).subscribe(users => {
+    this.http.get<any[]>(`${environment.apiUrl}/users/assignable/auditors`).subscribe((users) => {
       this.allUsers = users;
       this.auditors = [...users];
     });
   }
 
-
+  loadRisks() {
+    this.http.get<any[]>(`${environment.apiUrl}/risk`).subscribe({
+      next: (risks) => {
+        this.risks = risks;
+      },
+      error: (err) => console.error(err)
+    });
+  }
 
   openDetailModal(mission: AuditMission) {
     this.selectedMission = mission;
     this.showDetailModal = true;
+  }
+
+  openCreateModal() {
+    this.isCreateMode = true;
+    this.selectedMission = {
+      id: 0,
+      type: AuditRecordType.PLAN_ACTION_AUDIT,
+      titre: '',
+      objectifs: '',
+      responsabilites: '',
+      statut: AuditMissionStatus.NOK,
+      riskId: null,
+      auditSeniorId: 0,
+      auditeurId: null,
+      delai: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      regleDnssi: '',
+      recommandations: '',
+      ordre: 0,
+      horizon: AuditMissionHorizon.COURT_TERME,
+      priorite: 1
+    };
+    this.showEditModal = true;
+  }
+
+  openImportModal() {
+    this.importFile = null;
+    this.showImportModal = true;
+  }
+
+  onImportFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.importFile = input.files?.[0] || null;
+  }
+
+  importFromExcel() {
+    if (!this.importFile) {
+      alert('Veuillez sélectionner un fichier Excel.');
+      return;
+    }
+
+    if (false) {
+      alert('Veuillez sÃ©lectionner un risque avant l import.');
+      return;
+    }
+
+    this.isImporting = true;
+    this.auditingService.importMissions(this.importFile).subscribe({
+      next: () => {
+        this.isImporting = false;
+        this.showImportModal = false;
+        this.importFile = null;
+        this.loadMissions();
+      },
+      error: (err) => {
+        console.error(err);
+        this.isImporting = false;
+        alert(err?.error?.error || err?.error?.message || 'Erreur lors de l import Excel.');
+      }
+    });
   }
 
   openAssignModal(mission: AuditMission) {
@@ -178,24 +291,42 @@ export class AuditingComponent implements OnInit {
   }
 
   openEditModal(mission: AuditMission) {
+    this.isCreateMode = false;
     this.selectedMission = JSON.parse(JSON.stringify(mission));
     if (this.selectedMission?.delai) {
-      // Format date to YYYY-MM-DD for input type="date"
       this.selectedMission.delai = new Date(this.selectedMission.delai).toISOString().split('T')[0] as any;
+    }
+    if (!this.selectedMission?.type) {
+      this.selectedMission!.type = AuditRecordType.PLAN_ACTION_AUDIT;
     }
     this.showEditModal = true;
   }
 
-  updateMission() {
+  saveRecord() {
     if (!this.selectedMission) return;
-    this.auditingService.updateMission(this.selectedMission.id, this.selectedMission).subscribe({
+
+    this.isSaving = true;
+    const payload = {
+      ...this.selectedMission,
+      type: this.selectedMission.type || AuditRecordType.PLAN_ACTION_AUDIT,
+      titre: this.selectedMission.regleDnssi || this.selectedMission.titre || '',
+      objectifs: this.selectedMission.recommandations || this.selectedMission.objectifs || '',
+      recommandations: this.selectedMission.recommandations || this.selectedMission.objectifs || ''
+    };
+    const request = this.isCreateMode
+      ? this.auditingService.createMission(payload)
+      : this.auditingService.updateMission(this.selectedMission.id, payload);
+
+    request.subscribe({
       next: () => {
+        this.isSaving = false;
         this.showEditModal = false;
         this.loadMissions();
       },
       error: (err) => {
         console.error(err);
-        alert('Erreur lors de la modification.');
+        this.isSaving = false;
+        alert('Erreur lors de la sauvegarde.');
       }
     });
   }
@@ -203,7 +334,7 @@ export class AuditingComponent implements OnInit {
   assignMission(auditeurId: string = this.selectedAuditorId) {
     if (!this.selectedMission || !auditeurId) return;
     this.isAssigning = true;
-    this.auditingService.assignMission(this.selectedMission.id, parseInt(auditeurId)).subscribe({
+    this.auditingService.assignMission(this.selectedMission.id, parseInt(auditeurId, 10)).subscribe({
       next: () => {
         this.isAssigning = false;
         this.showAssignModal = false;
@@ -217,17 +348,9 @@ export class AuditingComponent implements OnInit {
     });
   }
 
-  getAssignAuditorModalTitle(): string {
-    return this.selectedMission?.auditeurId ? 'Réassigner un auditeur' : 'Assigner un auditeur';
-  }
-
-  getAssignAuditorActionLabel(): string {
-    return this.selectedMission?.auditeurId ? 'Réassigner' : 'Assigner';
-  }
-
   canAssignAuditor(mission: AuditMission): boolean {
     const missionStatus = this.normalizeMissionStatus((mission as any).statutCode || mission.statut);
-    return this.isSeniorAuditor && missionStatus !== AuditMissionStatus.TERMINE && missionStatus !== AuditMissionStatus.ANNULE;
+    return this.isSeniorAuditor && missionStatus !== AuditMissionStatus.OK;
   }
 
   private normalizeMissionStatus(value?: string | null): string {
@@ -240,10 +363,9 @@ export class AuditingComponent implements OnInit {
       .replace(/[\s-]+/g, '_');
   }
 
-  // --- EVIDENCE MANAGEMENT ---
   openEvidenceModal(mission: AuditMission) {
     this.selectedMission = mission;
-    this.isLoadingMissions = true; // Use this to show a loading state
+    this.isLoadingMissions = true;
     this.auditingService.getMissionEvidence(mission.id).subscribe({
       next: (data) => {
         this.currentEvidences = data;
@@ -261,11 +383,8 @@ export class AuditingComponent implements OnInit {
     const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
     const normalizedPath = path.replace(/\\/g, '/');
     const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
-    
-    // Get token for authorization (backend allows token in query string)
     const token = sessionStorage.getItem('sgrc_token');
     const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-    
     window.open(urlWithToken, '_blank');
   }
 
@@ -273,7 +392,7 @@ export class AuditingComponent implements OnInit {
     if (!this.selectedMission || !confirm('Voulez-vous vraiment supprimer cette preuve ?')) return;
     this.auditingService.deleteMissionEvidence(this.selectedMission.id, evidenceId).subscribe({
       next: () => {
-        this.currentEvidences = this.currentEvidences.filter(e => e.id !== evidenceId);
+        this.currentEvidences = this.currentEvidences.filter((e) => e.id !== evidenceId);
       },
       error: (err) => {
         console.error(err);
@@ -282,33 +401,9 @@ export class AuditingComponent implements OnInit {
     });
   }
 
-  openAssignChecklistModal(mission: AuditMission) {
-    this.selectedMission = mission;
-    // To support automatic pre-selection in HTML, we will bind [value] or [(ngModel)] to selectedMission.checklistTemplateId
-    this.showAssignChecklistModal = true;
-  }
-
-  assignChecklistToMission(templateIdStr: string) {
-    const templateId = parseInt(templateIdStr, 10);
-    if (!this.selectedMission || isNaN(templateId)) return;
-
-    this.auditingService.assignTemplateToMission(this.selectedMission.id, templateId).subscribe({
-      next: () => {
-        if (this.selectedMission) this.selectedMission.checklistTemplateId = templateId; // Local update
-        this.showAssignChecklistModal = false;
-        alert('Checklist assignée avec succès');
-      },
-      error: (err) => {
-        console.error(err);
-        alert('Erreur lors de l\'assignation de la checklist');
-      }
-    });
-  }
-
-  // --- VIEW CHECKLIST (SENIOR) ---
   openChecklistModal(mission: AuditMission) {
     this.selectedMission = mission;
-    this.isLoadingMissions = true; 
+    this.isLoadingMissions = true;
     this.auditingService.getMissionActionPlanItems(mission.id).subscribe({
       next: (data) => {
         this.currentChecklistItems = data as any[];
@@ -349,12 +444,9 @@ export class AuditingComponent implements OnInit {
   }
 
   deleteMission(id: number) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette mission ?')) return;
-
+    if (!confirm('Etes-vous sur de vouloir supprimer cet enregistrement ?')) return;
     this.auditingService.deleteMission(id).subscribe({
-      next: () => {
-        this.loadMissions();
-      },
+      next: () => this.loadMissions(),
       error: (err) => {
         console.error(err);
         alert('Erreur lors de la suppression.');
@@ -363,15 +455,12 @@ export class AuditingComponent implements OnInit {
   }
 
   resetMission(id: number) {
-    if (!confirm('Réinitialiser cette mission (effacer rapport et assignation) ?')) return;
-
+    if (!confirm('Reinitialiser cette mission ?')) return;
     this.auditingService.resetMission(id).subscribe({
-      next: () => {
-        this.loadMissions();
-      },
+      next: () => this.loadMissions(),
       error: (err) => {
         console.error(err);
-        alert('Erreur lors de la réinitialisation.');
+        alert('Erreur lors de la reinitialisation.');
       }
     });
   }
@@ -381,40 +470,40 @@ export class AuditingComponent implements OnInit {
   }
 
   exportToXLSX() {
-    const dataToExport = this.missions.map(m => ({
-      'Mission': m.titre,
-      'Objectifs': m.objectifs,
-      'Risque Associé': m.risk?.titre || `ID: ${m.riskId}`,
-      'Auditeur': m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : 'Non assigné',
-      'Échéance': new Date(m.delai).toLocaleDateString(),
-      'Statut': this.statusLabelMap[m.statut] || m.statut
+    const dataToExport = this.filteredMissions.map((m) => ({
+      'ID': m.id,
+      'Règle DNSSI': m.regleDnssi || m.titre,
+      'Recommandations': m.recommandations || m.objectifs || '',
+      'Horizon': this.horizonLabelMap[String(m.horizon || '')] || '',
+      'Priorité': m.priorite ?? '',
+      'Responsable': m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : (m.responsabilites || 'Non assigne'),
+      'Echéance': m.delai ? new Date(m.delai).toLocaleDateString() : '',
+      'Etat d\'avancement': this.statusLabelMap[this.normalizeMissionStatus((m as any).statutCode || m.statut)] || m.statut
     }));
 
     const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
     const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Missions_Audit');
-    XLSX.writeFile(wb, `Export_Audit_Missions_${new Date().getTime()}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Audit');
+    XLSX.writeFile(wb, `Export_Audit_${new Date().getTime()}.xlsx`);
     this.showExportMenu = false;
   }
 
   exportToPDF() {
     const doc = new jsPDF('l', 'mm', 'a4');
-
     doc.setFontSize(18);
     doc.setTextColor(0, 74, 153);
     doc.text('Rapport de Gestion des Audits', 14, 22);
 
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
-
-    const columns = ['Mission', 'Risque Associé', 'Auditeur', 'Échéance', 'Statut'];
-    const rows = this.missions.map(m => [
-      m.titre,
-      m.risk?.titre || `ID: ${m.riskId}`,
-      m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : 'Non assigné',
-      new Date(m.delai).toLocaleDateString(),
-      this.statusLabelMap[m.statut] || m.statut
+    const columns = ['ID', 'Règle DNSSI', 'Recommandations', 'Horizon', 'Priorité', 'Responsable', 'Échéance', 'Etat d\'avancement'];
+    const rows = this.filteredMissions.map((m) => [
+      String(m.id),
+      m.regleDnssi || m.titre,
+      m.recommandations || m.objectifs || '',
+      this.horizonLabelMap[String(m.horizon || '')] || '',
+      m.priorite ?? '',
+      m.auditeur ? `${m.auditeur.prenom} ${m.auditeur.nom}` : (m.responsabilites || 'Non assigne'),
+      m.delai ? new Date(m.delai).toLocaleDateString() : '',
+      this.statusLabelMap[this.normalizeMissionStatus((m as any).statutCode || m.statut)] || m.statut
     ]);
 
     autoTable(doc, {
@@ -423,11 +512,10 @@ export class AuditingComponent implements OnInit {
       startY: 40,
       theme: 'striped',
       headStyles: { fillColor: [0, 74, 153], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 10, cellPadding: 4 },
-      alternateRowStyles: { fillColor: [245, 247, 250] }
+      styles: { fontSize: 10, cellPadding: 4 }
     });
 
-    doc.save(`Export_Audit_Missions_${new Date().getTime()}.pdf`);
+    doc.save(`Export_Audit_${new Date().getTime()}.pdf`);
     this.showExportMenu = false;
   }
 }

@@ -4,44 +4,60 @@
  */
 
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-/**
- * Énumération des statuts de mission d'audit (synchronisée avec le backend)
- */
 export enum AuditMissionStatus {
-    A_VENIR = 'a_venir',
+    NOK = 'nok',
+    A_VENIR = 'nok',
     EN_COURS = 'en_cours',
-    TERMINE = 'termine',
-    EN_RETARD = 'en_retard',
-    ANNULE = 'annule',
+    OK = 'ok',
+    TERMINE = 'ok',
+    EN_RETARD = 'nok',
+    ANNULE = 'nok',
 }
 
+export enum AuditMissionHorizon {
+    COURT_TERME = 'court_terme',
+    MOYEN_TERME = 'moyen_terme',
+}
 
-/**
- * Interface représentant une Mission d'Audit côté frontend.
- */
+export enum AuditRecordType {
+    MISSION_AUDIT = 'mission_audit',
+    PLAN_ACTION_AUDIT = 'plan_action_audit',
+}
+
 export interface AuditMission {
     id: number;
+    type?: AuditRecordType;
+    code?: string | null;
     titre: string;
-    objectifs: string;
-    responsabilites: string;
-    description: string | null;
-    statut: AuditMissionStatus;
-    riskId: number;
+    objectifs?: string | null;
+    responsabilites?: string | null;
+    description?: string | null;
+    statut: AuditMissionStatus | string;
+    riskId?: number | null;
     auditSeniorId: number;
-    auditeurId?: number;
-    checklistTemplateId?: number;
-    delai: Date;
-    rapport?: string;
-    recommandations?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    auditeurId?: number | null;
+    checklistTemplateId?: number | null;
+    delai: any;
+    rapport?: string | null;
+    recommandations?: string | null;
+    ordre?: number | null;
+    regleDnssi?: string | null;
+    horizon?: string | null;
+    priorite?: number | null;
+    sourceExcelFile?: string | null;
+    sourceExcelSheet?: string | null;
+    sourceExcelRow?: number | null;
+    sourceMissionId?: number | null;
+    createdAt: string | Date;
+    updatedAt: string | Date;
     risk?: any;
     auditSenior?: any;
     auditeur?: any;
+    sourceMission?: any;
 }
 
 export interface AuditChecklistTemplate {
@@ -68,7 +84,7 @@ export interface AuditMissionChecklistItem {
 
 export interface AuditMissionActionPlanItem {
     id: number;
-    missionId: number;
+    missionId: number | null;
     ordre: number;
     regleDnssi: string;
     recommandations: string;
@@ -85,6 +101,8 @@ export interface AuditMissionActionPlanItem {
 }
 
 export interface AuditMissionActionPlanPayload {
+    code?: string | null;
+    titre?: string | null;
     ordre?: number;
     regleDnssi: string;
     recommandations: string;
@@ -94,6 +112,7 @@ export interface AuditMissionActionPlanPayload {
     responsableNom?: string | null;
     echeance?: string | null;
     etatAvancement?: string;
+    riskId?: number | null;
 }
 
 export interface AuditEvidence {
@@ -115,65 +134,76 @@ export class AuditingService {
 
     constructor(private http: HttpClient) { }
 
-    /**
-     * Récupère la liste des missions d'audit.
-     */
-    getMissions(): Observable<AuditMission[]> {
-        return this.http.get<AuditMission[]>(`${this.apiUrl}/missions`);
+    getMissions(type: AuditRecordType | 'all' = AuditRecordType.MISSION_AUDIT): Observable<AuditMission[]> {
+        let params = new HttpParams();
+        if (type !== 'all') {
+            params = params.set('type', type);
+        }
+        return this.http.get<AuditMission[]>(`${this.apiUrl}/missions`, { params });
     }
 
-    /**
-     * Suggère un plan d'audit annuel via l'IA.
-     */
-    suggestPlan(): Observable<any[]> {
-        return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, {});
+    suggestPlan(type: AuditRecordType = AuditRecordType.PLAN_ACTION_AUDIT): Observable<any[]> {
+        return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, { type });
     }
 
-    /**
-     * Crée des missions à partir d'un plan suggéré.
-     */
-    createMissionsFromPlan(missions: any[]): Observable<any> {
-        return this.http.post(`${this.apiUrl}/create-missions`, { missions });
+    createMissionsFromPlan(missions: any[], type: AuditRecordType = AuditRecordType.MISSION_AUDIT): Observable<any> {
+        return this.http.post(`${this.apiUrl}/create-missions`, { missions, type });
     }
 
-    /**
-     * Assigne une mission à un auditeur.
-     */
+    createMission(data: Partial<AuditMission>): Observable<AuditMission> {
+        return this.http.post<AuditMission>(`${this.apiUrl}/missions`, data);
+    }
+
     assignMission(missionId: number, auditeurId: number): Observable<AuditMission> {
         return this.http.put<AuditMission>(`${this.apiUrl}/missions/${missionId}/assign`, { auditeurId });
     }
 
-    /**
-     * Met à jour les détails d'une mission d'audit.
-     */
     updateMission(missionId: number, data: Partial<AuditMission>): Observable<AuditMission> {
         return this.http.put<AuditMission>(`${this.apiUrl}/missions/${missionId}`, data);
     }
 
-    /**
-     * Soumet un rapport d'audit.
-     */
     submitReport(missionId: number, data: { rapport: string, recommandations: string }): Observable<AuditMission> {
         return this.http.put<AuditMission>(`${this.apiUrl}/missions/${missionId}/report`, data);
     }
 
-    /**
-     * Supprime une mission d'audit.
-     */
     deleteMission(missionId: number): Observable<any> {
         return this.http.delete(`${this.apiUrl}/missions/${missionId}`);
     }
 
-    /**
-     * Réinitialise une mission d'audit.
-     */
     resetMission(missionId: number): Observable<AuditMission> {
         return this.http.put<AuditMission>(`${this.apiUrl}/missions/${missionId}/reset`, {});
     }
 
-    /**
-     * --- CHECKLISTS TEMPLATES ---
-     */
+    getActionPlans(): Observable<AuditMission[]> {
+        return this.http.get<AuditMission[]>(`${this.apiUrl}/action-plans`);
+    }
+
+    createActionPlan(payload: AuditMissionActionPlanPayload): Observable<AuditMission> {
+        return this.http.post<AuditMission>(`${this.apiUrl}/action-plans`, payload);
+    }
+
+    updateActionPlan(actionPlanId: number, payload: Partial<AuditMissionActionPlanPayload & AuditMission>): Observable<AuditMission> {
+        return this.http.put<AuditMission>(`${this.apiUrl}/action-plans/${actionPlanId}`, payload);
+    }
+
+    deleteActionPlan(actionPlanId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/action-plans/${actionPlanId}`);
+    }
+
+    importActionPlans(file: File, riskId?: number | null): Observable<AuditMission[]> {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (riskId) {
+            formData.append('riskId', String(riskId));
+        }
+        return this.http.post<AuditMission[]>(`${this.apiUrl}/action-plans/import`, formData);
+    }
+
+    importMissions(file: File): Observable<AuditMission[]> {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post<AuditMission[]>(`${this.apiUrl}/missions/import`, formData);
+    }
 
     getChecklistTemplates(): Observable<AuditChecklistTemplate[]> {
         return this.http.get<AuditChecklistTemplate[]>(`${this.apiUrl}/checklists`);
@@ -186,10 +216,6 @@ export class AuditingService {
     deleteChecklistTemplate(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrl}/checklists/${id}`);
     }
-
-    /**
-     * --- MISSION CHECKLISTS ---
-     */
 
     getMissionChecklistItems(missionId: number): Observable<AuditMissionChecklistItem[]> {
         return this.http.get<AuditMissionChecklistItem[]>(`${this.apiUrl}/missions/${missionId}/checklists`);
@@ -225,10 +251,6 @@ export class AuditingService {
         return this.http.post<AuditMissionActionPlanItem[]>(`${this.apiUrl}/missions/${missionId}/action-plans/import`, formData);
     }
 
-    /**
-     * --- TRAÇABILITÉ DES PREUVES ---
-     */
-
     getMissionEvidence(missionId: number): Observable<AuditEvidence[]> {
         return this.http.get<AuditEvidence[]>(`${this.apiUrl}/missions/${missionId}/evidence`);
     }
@@ -243,16 +265,10 @@ export class AuditingService {
         return this.http.delete(`${this.apiUrl}/missions/${missionId}/evidence/${evidenceId}`);
     }
 
-    /**
-     * Récupère TOUTES les preuves d'audit (Global Explorer).
-     */
     getAllEvidence(): Observable<AuditEvidence[]> {
         return this.http.get<AuditEvidence[]>(`${this.apiUrl}/evidence`);
     }
 
-    /**
-     * Récupère les missions avec rapports soumis (Review Center).
-     */
     getReportsToReview(): Observable<AuditMission[]> {
         return this.http.get<AuditMission[]>(`${this.apiUrl}/reports`);
     }

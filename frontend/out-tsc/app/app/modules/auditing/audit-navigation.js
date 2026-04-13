@@ -11,7 +11,7 @@ export const AUDIT_NAV_ITEMS = [
         roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
     },
     {
-        label: 'Checklists',
+        label: 'Plans d actions',
         route: '/dashboard/audit-checklists',
         roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
     },
@@ -31,7 +31,7 @@ export const AUDIT_NAV_ITEMS = [
         roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
     },
     {
-        label: 'Ma Checklist',
+        label: 'Mon Plan d actions',
         route: '/dashboard/auditor-checklist',
         roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
     },

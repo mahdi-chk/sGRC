@@ -77,8 +77,8 @@ function ControlsEffectivenessComponent_div_17_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtextInterpolate(ctx_r1.alertCount);
 } }
 function ControlsEffectivenessComponent_div_18_article_1_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "article", 20);
-    i0.ɵɵelementStart(1, "div", 21);
+    i0.ɵɵelementStart(0, "article", 21);
+    i0.ɵɵelementStart(1, "div", 22);
     i0.ɵɵelementStart(2, "div");
     i0.ɵɵelementStart(3, "span", 17);
     i0.ɵɵtext(4);
@@ -94,7 +94,7 @@ function ControlsEffectivenessComponent_div_18_article_1_Template(rf, ctx) { if 
     i0.ɵɵelementStart(9, "p");
     i0.ɵɵtext(10);
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(11, "div", 22);
+    i0.ɵɵelementStart(11, "div", 23);
     i0.ɵɵelementStart(12, "div");
     i0.ɵɵelementStart(13, "span");
     i0.ɵɵtext(14, "Avant");
@@ -115,7 +115,7 @@ function ControlsEffectivenessComponent_div_18_article_1_Template(rf, ctx) { if 
     i0.ɵɵelementStart(23, "span");
     i0.ɵɵtext(24, "Tendance");
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(25, "strong", 23);
+    i0.ɵɵelementStart(25, "strong", 24);
     i0.ɵɵtext(26);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -143,16 +143,22 @@ function ControlsEffectivenessComponent_div_18_article_1_Template(rf, ctx) { if 
     i0.ɵɵtextInterpolate(ctx_r7.getTrendLabel(item_r8.recurrenceTrend));
 } }
 function ControlsEffectivenessComponent_div_18_Template(rf, ctx) { if (rf & 1) {
+    const _r10 = i0.ɵɵgetCurrentView();
     i0.ɵɵelementStart(0, "div", 18);
     i0.ɵɵtemplate(1, ControlsEffectivenessComponent_div_18_article_1_Template, 27, 9, "article", 19);
+    i0.ɵɵelementStart(2, "app-pagination", 20);
+    i0.ɵɵlistener("pageChanged", function ControlsEffectivenessComponent_div_18_Template_app_pagination_pageChanged_2_listener($event) { i0.ɵɵrestoreView(_r10); const ctx_r9 = i0.ɵɵnextContext(); return ctx_r9.onPageChanged($event); });
+    i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const ctx_r2 = i0.ɵɵnextContext();
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("ngForOf", ctx_r2.effectiveness);
+    i0.ɵɵproperty("ngForOf", ctx_r2.paginatedEffectiveness);
+    i0.ɵɵadvance(1);
+    i0.ɵɵproperty("totalItems", ctx_r2.effectiveness.length)("currentPage", ctx_r2.currentPage)("pageSize", ctx_r2.itemsPerPage);
 } }
 function ControlsEffectivenessComponent_ng_template_19_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 24);
+    i0.ɵɵelementStart(0, "div", 25);
     i0.ɵɵtext(1, "Pas assez de donnees pour evaluer l efficacite.");
     i0.ɵɵelementEnd();
 } }
@@ -163,6 +169,8 @@ export class ControlsEffectivenessComponent {
         this.navItems = getControlsNavItems(getStoredControlsRole());
         this.overview = null;
         this.isLoading = false;
+        this.currentPage = 1;
+        this.itemsPerPage = 10;
     }
     ngOnInit() {
         this.loadOverview();
@@ -179,6 +187,7 @@ export class ControlsEffectivenessComponent {
                 this.isLoading = false;
             }
         });
+        this.currentPage = 1;
     }
     goBack() {
         this.router.navigate(['/dashboard/controls']);
@@ -186,6 +195,14 @@ export class ControlsEffectivenessComponent {
     get effectiveness() {
         var _a;
         return ((_a = this.overview) === null || _a === void 0 ? void 0 : _a.effectiveness) || [];
+    }
+    get paginatedEffectiveness() {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.effectiveness.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+    onPageChanged(event) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
     }
     get strongCount() {
         return this.effectiveness.filter(item => item.score >= 80).length;
@@ -225,7 +242,7 @@ export class ControlsEffectivenessComponent {
     }
 }
 ControlsEffectivenessComponent.ɵfac = function ControlsEffectivenessComponent_Factory(t) { return new (t || ControlsEffectivenessComponent)(i0.ɵɵdirectiveInject(i1.Router), i0.ɵɵdirectiveInject(i2.ControlsService)); };
-ControlsEffectivenessComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ControlsEffectivenessComponent, selectors: [["app-controls-effectiveness"]], decls: 21, vars: 6, consts: [[1, "controls-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-chart-line"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "controls-tabs"], ["routerLinkActive", "active", "class", "controls-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "summary-grid", 4, "ngIf"], ["class", "effectiveness-grid", 4, "ngIf", "ngIfElse"], ["emptyEffectiveness", ""], ["routerLinkActive", "active", 1, "controls-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "summary-grid"], [1, "summary-card"], [1, "eyebrow"], [1, "effectiveness-grid"], ["class", "effectiveness-card", 3, "ngClass", 4, "ngFor", "ngForOf"], [1, "effectiveness-card", 3, "ngClass"], [1, "effectiveness-head"], [1, "effectiveness-metrics"], [3, "ngClass"], [1, "empty-state"]], template: function ControlsEffectivenessComponent_Template(rf, ctx) { if (rf & 1) {
+ControlsEffectivenessComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ControlsEffectivenessComponent, selectors: [["app-controls-effectiveness"]], decls: 21, vars: 6, consts: [[1, "controls-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-chart-line"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "controls-tabs"], ["routerLinkActive", "active", "class", "controls-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "summary-grid", 4, "ngIf"], ["class", "effectiveness-grid", 4, "ngIf", "ngIfElse"], ["emptyEffectiveness", ""], ["routerLinkActive", "active", 1, "controls-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "summary-grid"], [1, "summary-card"], [1, "eyebrow"], [1, "effectiveness-grid"], ["class", "effectiveness-card", 3, "ngClass", 4, "ngFor", "ngForOf"], [2, "grid-column", "1 / -1", 3, "totalItems", "currentPage", "pageSize", "pageChanged"], [1, "effectiveness-card", 3, "ngClass"], [1, "effectiveness-head"], [1, "effectiveness-metrics"], [3, "ngClass"], [1, "empty-state"]], template: function ControlsEffectivenessComponent_Template(rf, ctx) { if (rf & 1) {
         i0.ɵɵelementStart(0, "div", 0);
         i0.ɵɵelementStart(1, "div", 1);
         i0.ɵɵelementStart(2, "div", 2);
@@ -255,7 +272,7 @@ ControlsEffectivenessComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ ty
         i0.ɵɵtemplate(16, ControlsEffectivenessComponent_a_16_Template, 2, 4, "a", 10);
         i0.ɵɵelementEnd();
         i0.ɵɵtemplate(17, ControlsEffectivenessComponent_div_17_Template, 29, 4, "div", 11);
-        i0.ɵɵtemplate(18, ControlsEffectivenessComponent_div_18_Template, 2, 1, "div", 12);
+        i0.ɵɵtemplate(18, ControlsEffectivenessComponent_div_18_Template, 3, 4, "div", 12);
         i0.ɵɵtemplate(19, ControlsEffectivenessComponent_ng_template_19_Template, 2, 0, "ng-template", null, 13, i0.ɵɵtemplateRefExtractor);
         i0.ɵɵelementEnd();
     } if (rf & 2) {

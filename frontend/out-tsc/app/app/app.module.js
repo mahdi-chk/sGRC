@@ -57,6 +57,13 @@ import { GovernanceWorkflowsComponent } from './modules/governance/governance-wo
 import { GovernanceMaturityComponent } from './modules/governance/governance-maturity.component';
 import { GovernanceAdoptionComponent } from './modules/governance/governance-adoption.component';
 import { GovernanceModule } from './modules/governance/governance.module';
+import { ComplianceModule } from './modules/compliance/compliance.module';
+import { ComplianceComponent } from './modules/compliance/compliance.component';
+import { ComplianceFrameworksComponent } from './modules/compliance/compliance-frameworks.component';
+import { ComplianceMappingsComponent } from './modules/compliance/compliance-mappings.component';
+import { ComplianceAssessmentsComponent } from './modules/compliance/compliance-assessments.component';
+import { ComplianceGapsComponent } from './modules/compliance/compliance-gaps.component';
+import { ComplianceUpdatesComponent } from './modules/compliance/compliance-updates.component';
 import { ControlsModule } from './modules/controls/controls.module';
 import { ControlsReferentialComponent } from './modules/controls/controls-referential.component';
 import { ControlsPlanningComponent } from './modules/controls/controls-planning.component';
@@ -64,6 +71,7 @@ import { ControlsEvidenceComponent } from './modules/controls/controls-evidence.
 import { ControlsEffectivenessComponent } from './modules/controls/controls-effectiveness.component';
 import { ControlsNonConformitiesComponent } from './modules/controls/controls-non-conformities.component';
 import { getControlsRolesByRoute } from './modules/controls/controls-navigation';
+import { getComplianceRolesByRoute } from './modules/compliance/compliance-navigation';
 import { ActionsModule } from './modules/actions/actions.module';
 import { ActionsComponent } from './modules/actions/actions.component';
 import { ActionsCentralizedComponent } from './modules/actions/actions-centralized.component';
@@ -113,6 +121,12 @@ const routes = [
             { path: 'controls-evidence', component: ControlsEvidenceComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-evidence') } },
             { path: 'controls-effectiveness', component: ControlsEffectivenessComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-effectiveness') } },
             { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-non-conformities') } },
+            { path: 'compliance', component: ComplianceComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance') } },
+            { path: 'compliance-frameworks', component: ComplianceFrameworksComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-frameworks') } },
+            { path: 'compliance-mappings', component: ComplianceMappingsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-mappings') } },
+            { path: 'compliance-assessments', component: ComplianceAssessmentsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-assessments') } },
+            { path: 'compliance-gaps', component: ComplianceGapsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-gaps') } },
+            { path: 'compliance-updates', component: ComplianceUpdatesComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-updates') } },
             { path: 'actions', component: ActionsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions') } },
             { path: 'actions-centralized', component: ActionsCentralizedComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-centralized') } },
             { path: 'actions-deadlines', component: ActionsDeadlinesComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-deadlines') } },
@@ -172,6 +186,11 @@ const routes = [
                 path: 'reporting',
                 loadChildren: () => import('./modules/reporting/reporting.module').then(m => m.ReportingModule),
                 data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] }
+            },
+            {
+                path: 'supervision',
+                loadChildren: () => import('./modules/supervision/supervision.module').then(m => m.SupervisionModule),
+                data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.ADMIN_SI] }
             }
         ]
     },
@@ -192,6 +211,7 @@ AppModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ providers: [
             AuditingModule,
             IncidentsModule,
             GovernanceModule,
+            ComplianceModule,
             ControlsModule,
             ActionsModule,
             RouterModule.forRoot(routes)
@@ -230,6 +250,7 @@ AppModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ providers: [
                     AuditingModule,
                     IncidentsModule,
                     GovernanceModule,
+                    ComplianceModule,
                     ControlsModule,
                     ActionsModule,
                     RouterModule.forRoot(routes)
@@ -267,6 +288,7 @@ AppModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ providers: [
         AuditingModule,
         IncidentsModule,
         GovernanceModule,
+        ComplianceModule,
         ControlsModule,
         ActionsModule, i1.RouterModule] }); })();
 //# sourceMappingURL=app.module.js.map

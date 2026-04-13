@@ -7,40 +7,66 @@ import autoTable from 'jspdf-autotable';
 import { ReportingService, } from '../../../core/services/reporting.service';
 import { IncidentService } from '../../../core/services/incident.service';
 import { RiskService } from '../../../core/services/risk.service';
+import { REPORTING_NAV_ITEMS } from '../reporting-navigation';
 import * as i0 from "@angular/core";
 import * as i1 from "../../../core/services/reporting.service";
 import * as i2 from "../../../core/services/risk.service";
 import * as i3 from "../../../core/services/incident.service";
 import * as i4 from "@angular/router";
 import * as i5 from "@angular/common";
-function ExportCenterComponent_div_27_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 18);
-    i0.ɵɵelement(1, "i", 19);
+const _c0 = function () { return { exact: true }; };
+function ExportCenterComponent_nav_11_a_1_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "a", 21);
+    i0.ɵɵelement(1, "i", 22);
     i0.ɵɵelementStart(2, "span");
     i0.ɵɵtext(3);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const ctx_r0 = i0.ɵɵnextContext();
-    i0.ɵɵproperty("ngClass", ctx_r0.statusTone);
+    const item_r4 = ctx.$implicit;
+    i0.ɵɵproperty("routerLink", item_r4.route)("routerLinkActiveOptions", i0.ɵɵpureFunction0(4, _c0));
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("ngClass", ctx_r0.statusTone === "success" ? "fa-circle-check" : "fa-circle-exclamation");
+    i0.ɵɵproperty("ngClass", item_r4.icon);
     i0.ɵɵadvance(2);
-    i0.ɵɵtextInterpolate(ctx_r0.statusMessage);
+    i0.ɵɵtextInterpolate(item_r4.label);
 } }
-function ExportCenterComponent_div_29_i_9_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelement(0, "i", 27);
-} }
-function ExportCenterComponent_div_29_i_10_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelement(0, "i", 28);
-} }
-function ExportCenterComponent_div_29_Template(rf, ctx) { if (rf & 1) {
-    const _r6 = i0.ɵɵgetCurrentView();
-    i0.ɵɵelementStart(0, "div", 20);
-    i0.ɵɵelementStart(1, "div", 21);
-    i0.ɵɵelement(2, "i", 22);
+function ExportCenterComponent_nav_11_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "nav", 19);
+    i0.ɵɵtemplate(1, ExportCenterComponent_nav_11_a_1_Template, 4, 5, "a", 20);
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(3, "div", 23);
+} if (rf & 2) {
+    const ctx_r0 = i0.ɵɵnextContext();
+    i0.ɵɵadvance(1);
+    i0.ɵɵproperty("ngForOf", ctx_r0.navItems);
+} }
+function ExportCenterComponent_div_28_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "div", 23);
+    i0.ɵɵelement(1, "i", 22);
+    i0.ɵɵelementStart(2, "span");
+    i0.ɵɵtext(3);
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementEnd();
+} if (rf & 2) {
+    const ctx_r1 = i0.ɵɵnextContext();
+    i0.ɵɵproperty("ngClass", ctx_r1.statusTone);
+    i0.ɵɵadvance(1);
+    i0.ɵɵproperty("ngClass", ctx_r1.statusTone === "success" ? "fa-circle-check" : "fa-circle-exclamation");
+    i0.ɵɵadvance(2);
+    i0.ɵɵtextInterpolate(ctx_r1.statusMessage);
+} }
+function ExportCenterComponent_div_30_i_9_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelement(0, "i", 31);
+} }
+function ExportCenterComponent_div_30_i_10_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelement(0, "i", 32);
+} }
+function ExportCenterComponent_div_30_Template(rf, ctx) { if (rf & 1) {
+    const _r9 = i0.ɵɵgetCurrentView();
+    i0.ɵɵelementStart(0, "div", 24);
+    i0.ɵɵelementStart(1, "div", 25);
+    i0.ɵɵelement(2, "i", 26);
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(3, "div", 27);
     i0.ɵɵelementStart(4, "h4");
     i0.ɵɵtext(5);
     i0.ɵɵelementEnd();
@@ -48,28 +74,28 @@ function ExportCenterComponent_div_29_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtext(7);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(8, "button", 24);
-    i0.ɵɵlistener("click", function ExportCenterComponent_div_29_Template_button_click_8_listener() { const restoredCtx = i0.ɵɵrestoreView(_r6); const report_r2 = restoredCtx.$implicit; const ctx_r5 = i0.ɵɵnextContext(); return ctx_r5.generateReport(report_r2.id); });
-    i0.ɵɵtemplate(9, ExportCenterComponent_div_29_i_9_Template, 1, 0, "i", 25);
-    i0.ɵɵtemplate(10, ExportCenterComponent_div_29_i_10_Template, 1, 0, "i", 26);
+    i0.ɵɵelementStart(8, "button", 28);
+    i0.ɵɵlistener("click", function ExportCenterComponent_div_30_Template_button_click_8_listener() { const restoredCtx = i0.ɵɵrestoreView(_r9); const report_r5 = restoredCtx.$implicit; const ctx_r8 = i0.ɵɵnextContext(); return ctx_r8.generateReport(report_r5.id); });
+    i0.ɵɵtemplate(9, ExportCenterComponent_div_30_i_9_Template, 1, 0, "i", 29);
+    i0.ɵɵtemplate(10, ExportCenterComponent_div_30_i_10_Template, 1, 0, "i", 30);
     i0.ɵɵtext(11);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const report_r2 = ctx.$implicit;
-    const ctx_r1 = i0.ɵɵnextContext();
+    const report_r5 = ctx.$implicit;
+    const ctx_r2 = i0.ɵɵnextContext();
     i0.ɵɵadvance(5);
-    i0.ɵɵtextInterpolate(report_r2.title);
+    i0.ɵɵtextInterpolate(report_r5.title);
     i0.ɵɵadvance(2);
-    i0.ɵɵtextInterpolate(report_r2.desc);
+    i0.ɵɵtextInterpolate(report_r5.desc);
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("disabled", ctx_r1.isExporting);
+    i0.ɵɵproperty("disabled", ctx_r2.isExporting);
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("ngIf", ctx_r1.exportingReportId !== report_r2.id);
+    i0.ɵɵproperty("ngIf", ctx_r2.exportingReportId !== report_r5.id);
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("ngIf", ctx_r1.exportingReportId === report_r2.id);
+    i0.ɵɵproperty("ngIf", ctx_r2.exportingReportId === report_r5.id);
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate1(" ", ctx_r1.exportingReportId === report_r2.id ? "Generation..." : "Generer", " ");
+    i0.ɵɵtextInterpolate1(" ", ctx_r2.exportingReportId === report_r5.id ? "Generation..." : "Generer", " ");
 } }
 export class ExportCenterComponent {
     constructor(reportingService, riskService, incidentService, router) {
@@ -82,6 +108,7 @@ export class ExportCenterComponent {
         this.selectedFormat = 'xlsx';
         this.statusMessage = '';
         this.statusTone = '';
+        this.navItems = REPORTING_NAV_ITEMS;
         this.reports = [
             { id: 'global', title: 'Rapport Global de Performance', desc: 'Rapport consolide incluant risques, incidents, audits, KPIs et vision multi-entites.' },
             { id: 'risks', title: 'Registre des Risques Consolide', desc: 'Liste complete des risques avec cotations, statuts et plans de traitement.' },
@@ -305,7 +332,7 @@ export class ExportCenterComponent {
     }
 }
 ExportCenterComponent.ɵfac = function ExportCenterComponent_Factory(t) { return new (t || ExportCenterComponent)(i0.ɵɵdirectiveInject(i1.ReportingService), i0.ɵɵdirectiveInject(i2.RiskService), i0.ɵɵdirectiveInject(i3.IncidentService), i0.ɵɵdirectiveInject(i4.Router)); };
-ExportCenterComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ExportCenterComponent, selectors: [["app-export-center"]], decls: 30, vars: 6, consts: [[1, "role-dashboard", "reporting-dashboard", "export-page"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-file-export"], [1, "export-container"], [1, "module-card", "premium", "export-config", "mb-4"], [1, "fas", "fa-cog"], [1, "config-row"], [1, "config-item"], [1, "format-toggle"], [3, "click"], [1, "fas", "fa-file-excel"], [1, "fas", "fa-file-pdf"], ["class", "status-line", 3, "ngClass", 4, "ngIf"], [1, "report-grid"], ["class", "report-card premium", 4, "ngFor", "ngForOf"], [1, "status-line", 3, "ngClass"], [1, "fas", 3, "ngClass"], [1, "report-card", "premium"], [1, "report-icon"], [1, "fas", "fa-file-signature"], [1, "report-info"], [1, "btn-download", 3, "disabled", "click"], ["class", "fas fa-download", 4, "ngIf"], ["class", "fas fa-spinner fa-spin", 4, "ngIf"], [1, "fas", "fa-download"], [1, "fas", "fa-spinner", "fa-spin"]], template: function ExportCenterComponent_Template(rf, ctx) { if (rf & 1) {
+ExportCenterComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ExportCenterComponent, selectors: [["app-export-center"]], decls: 31, vars: 7, consts: [[1, "role-dashboard", "reporting-dashboard", "export-page"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-file-export"], ["class", "reporting-tabs", 4, "ngIf"], [1, "export-container"], [1, "module-card", "premium", "export-config", "mb-4"], [1, "fas", "fa-cog"], [1, "config-row"], [1, "config-item"], [1, "format-toggle"], [3, "click"], [1, "fas", "fa-file-excel"], [1, "fas", "fa-file-pdf"], ["class", "status-line", 3, "ngClass", 4, "ngIf"], [1, "report-grid"], ["class", "report-card premium", 4, "ngFor", "ngForOf"], [1, "reporting-tabs"], ["routerLinkActive", "active", "class", "reporting-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["routerLinkActive", "active", 1, "reporting-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "fas", 3, "ngClass"], [1, "status-line", 3, "ngClass"], [1, "report-card", "premium"], [1, "report-icon"], [1, "fas", "fa-file-signature"], [1, "report-info"], [1, "btn-download", 3, "disabled", "click"], ["class", "fas fa-download", 4, "ngIf"], ["class", "fas fa-spinner fa-spin", 4, "ngIf"], [1, "fas", "fa-download"], [1, "fas", "fa-spinner", "fa-spin"]], template: function ExportCenterComponent_Template(rf, ctx) { if (rf & 1) {
         i0.ɵɵelementStart(0, "div", 0);
         i0.ɵɵelementStart(1, "div", 1);
         i0.ɵɵelementStart(2, "div", 2);
@@ -324,40 +351,43 @@ ExportCenterComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: Expor
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(11, "div", 6);
+        i0.ɵɵtemplate(11, ExportCenterComponent_nav_11_Template, 2, 1, "nav", 6);
         i0.ɵɵelementStart(12, "div", 7);
-        i0.ɵɵelementStart(13, "h3");
-        i0.ɵɵelement(14, "i", 8);
-        i0.ɵɵtext(15, " Configuration de l'Export");
+        i0.ɵɵelementStart(13, "div", 8);
+        i0.ɵɵelementStart(14, "h3");
+        i0.ɵɵelement(15, "i", 9);
+        i0.ɵɵtext(16, " Configuration de l'Export");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(16, "div", 9);
         i0.ɵɵelementStart(17, "div", 10);
-        i0.ɵɵelementStart(18, "label");
-        i0.ɵɵtext(19, "Format de sortie");
+        i0.ɵɵelementStart(18, "div", 11);
+        i0.ɵɵelementStart(19, "label");
+        i0.ɵɵtext(20, "Format de sortie");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(20, "div", 11);
-        i0.ɵɵelementStart(21, "button", 12);
-        i0.ɵɵlistener("click", function ExportCenterComponent_Template_button_click_21_listener() { return ctx.selectedFormat = "xlsx"; });
-        i0.ɵɵelement(22, "i", 13);
-        i0.ɵɵtext(23, " Excel (.xlsx) ");
+        i0.ɵɵelementStart(21, "div", 12);
+        i0.ɵɵelementStart(22, "button", 13);
+        i0.ɵɵlistener("click", function ExportCenterComponent_Template_button_click_22_listener() { return ctx.selectedFormat = "xlsx"; });
+        i0.ɵɵelement(23, "i", 14);
+        i0.ɵɵtext(24, " Excel (.xlsx) ");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(24, "button", 12);
-        i0.ɵɵlistener("click", function ExportCenterComponent_Template_button_click_24_listener() { return ctx.selectedFormat = "pdf"; });
-        i0.ɵɵelement(25, "i", 14);
-        i0.ɵɵtext(26, " PDF (.pdf) ");
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(25, "button", 13);
+        i0.ɵɵlistener("click", function ExportCenterComponent_Template_button_click_25_listener() { return ctx.selectedFormat = "pdf"; });
+        i0.ɵɵelement(26, "i", 15);
+        i0.ɵɵtext(27, " PDF (.pdf) ");
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
-        i0.ɵɵtemplate(27, ExportCenterComponent_div_27_Template, 4, 3, "div", 15);
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(28, "div", 16);
-        i0.ɵɵtemplate(29, ExportCenterComponent_div_29_Template, 12, 6, "div", 17);
+        i0.ɵɵelementEnd();
+        i0.ɵɵtemplate(28, ExportCenterComponent_div_28_Template, 4, 3, "div", 16);
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(29, "div", 17);
+        i0.ɵɵtemplate(30, ExportCenterComponent_div_30_Template, 12, 6, "div", 18);
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
     } if (rf & 2) {
-        i0.ɵɵadvance(21);
+        i0.ɵɵadvance(11);
+        i0.ɵɵproperty("ngIf", ctx.navItems.length > 0);
+        i0.ɵɵadvance(11);
         i0.ɵɵclassProp("active", ctx.selectedFormat === "xlsx");
         i0.ɵɵadvance(3);
         i0.ɵɵclassProp("active", ctx.selectedFormat === "pdf");
@@ -365,7 +395,7 @@ ExportCenterComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: Expor
         i0.ɵɵproperty("ngIf", ctx.statusMessage);
         i0.ɵɵadvance(2);
         i0.ɵɵproperty("ngForOf", ctx.reports);
-    } }, directives: [i5.NgIf, i5.NgForOf, i5.NgClass], styles: [".export-page[_ngcontent-%COMP%] {\n  .export-container {\n    max-width: 1000px;\n    margin: 0 auto;\n    animation: fadeIn 0.5s ease-out;\n  }\n\n  .export-config {\n    padding: 24px;\n    background: white;\n    border-radius: 20px;\n    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);\n\n    .config-row {\n      display: flex;\n      gap: 40px;\n      margin-top: 20px;\n      margin-bottom: 18px;\n    }\n\n    .config-item {\n      display: flex;\n      flex-direction: column;\n      gap: 12px;\n\n      label {\n        font-size: 14px;\n        font-weight: 700;\n        color: #64748b;\n        text-transform: uppercase;\n      }\n    }\n\n    .format-toggle {\n      display: flex;\n      gap: 12px;\n\n      button {\n        padding: 12px 24px;\n        border-radius: 12px;\n        border: 2px solid #f1f5f9;\n        background: white;\n        font-weight: 700;\n        color: #64748b;\n        cursor: pointer;\n        transition: all 0.2s;\n        display: flex;\n        align-items: center;\n        gap: 10px;\n\n        i { font-size: 18px; }\n\n        &.active {\n          border-color: #3b82f6;\n          color: #3b82f6;\n          background: #eff6ff;\n        }\n\n        &:hover:not(.active) {\n          border-color: #e2e8f0;\n          background: #f8fafc;\n        }\n      }\n    }\n  }\n\n  .status-line {\n    display: flex;\n    align-items: center;\n    gap: 10px;\n    padding: 14px 16px;\n    border-radius: 14px;\n    font-weight: 600;\n\n    &.success {\n      color: #166534;\n      background: #dcfce7;\n      border: 1px solid #bbf7d0;\n    }\n\n    &.error {\n      color: #991b1b;\n      background: #fee2e2;\n      border: 1px solid #fecaca;\n    }\n  }\n\n  .report-grid {\n    display: flex;\n    flex-direction: column;\n    gap: 20px;\n  }\n\n  .report-card {\n    display: flex;\n    align-items: center;\n    padding: 24px;\n    background: white;\n    border-radius: 20px;\n    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);\n    border: 1px solid rgba(0, 0, 0, 0.05);\n\n    .report-icon {\n      width: 56px;\n      height: 56px;\n      border-radius: 14px;\n      background: #f1f5f9;\n      color: #3b82f6;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 24px;\n      margin-right: 24px;\n    }\n\n    .report-info {\n      flex: 1;\n\n      h4 {\n        font-size: 18px;\n        font-weight: 700;\n        color: #1e293b;\n        margin: 0 0 4px 0;\n      }\n\n      p {\n        font-size: 14px;\n        color: #64748b;\n        margin: 0;\n      }\n    }\n\n    .btn-download {\n      padding: 12px 24px;\n      background: #1e293b;\n      color: white;\n      border-radius: 12px;\n      border: none;\n      font-weight: 700;\n      cursor: pointer;\n      display: flex;\n      align-items: center;\n      gap: 10px;\n      transition: all 0.2s;\n\n      &:hover:not(:disabled) {\n        background: #334155;\n        transform: translateY(-2px);\n      }\n\n      &:disabled {\n        opacity: 0.6;\n        cursor: not-allowed;\n      }\n    }\n  }\n}"] });
+    } }, directives: [i5.NgIf, i5.NgForOf, i4.RouterLinkWithHref, i4.RouterLinkActive, i5.NgClass], styles: ["@import '../reporting-shared';\n\n.export-page[_ngcontent-%COMP%] {\n  .export-container {\n    max-width: 1000px;\n    margin: 0 auto;\n    animation: fadeIn 0.5s ease-out;\n  }\n\n  .export-config {\n    padding: 24px;\n    background: white;\n    border-radius: 20px;\n    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);\n\n    .config-row {\n      display: flex;\n      gap: 40px;\n      margin-top: 20px;\n      margin-bottom: 18px;\n    }\n\n    .config-item {\n      display: flex;\n      flex-direction: column;\n      gap: 12px;\n\n      label {\n        font-size: 14px;\n        font-weight: 700;\n        color: #64748b;\n        text-transform: uppercase;\n      }\n    }\n\n    .format-toggle {\n      display: flex;\n      gap: 12px;\n\n      button {\n        padding: 12px 24px;\n        border-radius: 12px;\n        border: 2px solid #f1f5f9;\n        background: white;\n        font-weight: 700;\n        color: #64748b;\n        cursor: pointer;\n        transition: all 0.2s;\n        display: flex;\n        align-items: center;\n        gap: 10px;\n\n        i { font-size: 18px; }\n\n        &.active {\n          border-color: #3b82f6;\n          color: #3b82f6;\n          background: #eff6ff;\n        }\n\n        &:hover:not(.active) {\n          border-color: #e2e8f0;\n          background: #f8fafc;\n        }\n      }\n    }\n  }\n\n  .status-line {\n    display: flex;\n    align-items: center;\n    gap: 10px;\n    padding: 14px 16px;\n    border-radius: 14px;\n    font-weight: 600;\n\n    &.success {\n      color: #166534;\n      background: #dcfce7;\n      border: 1px solid #bbf7d0;\n    }\n\n    &.error {\n      color: #991b1b;\n      background: #fee2e2;\n      border: 1px solid #fecaca;\n    }\n  }\n\n  .report-grid {\n    display: flex;\n    flex-direction: column;\n    gap: 20px;\n  }\n\n  .report-card {\n    display: flex;\n    align-items: center;\n    padding: 24px;\n    background: white;\n    border-radius: 20px;\n    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);\n    border: 1px solid rgba(0, 0, 0, 0.05);\n\n    .report-icon {\n      width: 56px;\n      height: 56px;\n      border-radius: 14px;\n      background: #f1f5f9;\n      color: #3b82f6;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 24px;\n      margin-right: 24px;\n    }\n\n    .report-info {\n      flex: 1;\n\n      h4 {\n        font-size: 18px;\n        font-weight: 700;\n        color: #1e293b;\n        margin: 0 0 4px 0;\n      }\n\n      p {\n        font-size: 14px;\n        color: #64748b;\n        margin: 0;\n      }\n    }\n\n    .btn-download {\n      padding: 12px 24px;\n      background: #1e293b;\n      color: white;\n      border-radius: 12px;\n      border: none;\n      font-weight: 700;\n      cursor: pointer;\n      display: flex;\n      align-items: center;\n      gap: 10px;\n      transition: all 0.2s;\n\n      &:hover:not(:disabled) {\n        background: #334155;\n        transform: translateY(-2px);\n      }\n\n      &:disabled {\n        opacity: 0.6;\n        cursor: not-allowed;\n      }\n    }\n  }\n}"] });
 (function () { (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(ExportCenterComponent, [{
         type: Component,
         args: [{

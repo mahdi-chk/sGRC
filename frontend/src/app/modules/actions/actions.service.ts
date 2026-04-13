@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { combineLatest, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { AuditMission, AuditMissionStatus, AuditingService } from '../../core/services/auditing.service';
+import { AuditMission, AuditMissionStatus, AuditRecordType, AuditingService } from '../../core/services/auditing.service';
 import { Incident, IncidentService, IncidentStatus } from '../../core/services/incident.service';
 import { Risk, RiskLevel, RiskService, RiskStatus } from '../../core/services/risk.service';
 import { environment } from '../../../environments/environment';
@@ -152,7 +152,7 @@ export class ActionsService {
     return combineLatest([
       this.riskService.getRisks().pipe(catchError(() => of([] as Risk[]))),
       this.incidentService.getIncidents().pipe(catchError(() => of([] as Incident[]))),
-      this.auditingService.getMissions().pipe(catchError(() => of([] as AuditMission[])))
+      this.auditingService.getMissions('all').pipe(catchError(() => of([] as AuditMission[])))
     ]).pipe(
       map(([risks, incidents, missions]) => this.buildOverview(risks, incidents, missions))
     );
@@ -280,15 +280,19 @@ export class ActionsService {
           'Non assigne';
         const dueDate = this.toIsoString(mission.delai);
         const status = this.deriveActionStatus(normalizedStatus, dueDate, owner);
-        const recommendations = this.cleanText(mission.recommandations);
+        const isPlanAction = mission.type === AuditRecordType.PLAN_ACTION_AUDIT;
+        const recommendations = this.cleanText(mission.recommandations || mission.objectifs);
+        const title = isPlanAction
+          ? recommendations || this.cleanText(mission.regleDnssi) || this.cleanText(mission.titre)
+          : recommendations || `Suivi des recommandations: ${mission.titre}`;
 
         return {
           id: `audit-${mission.id}`,
-          reference: `PA-AUD-${mission.id}`,
-          title: recommendations || `Suivi des recommandations: ${mission.titre}`,
-          sourceModule: 'Audit',
+          reference: `${isPlanAction ? 'PA-AUD' : 'AUD'}-${mission.code || mission.id}`,
+          title,
+          sourceModule: isPlanAction ? 'Plan action audit' : 'Audit',
           sourceReference: `AUD-${mission.id}`,
-          sourceRoute: '/dashboard/audit-report-review',
+          sourceRoute: isPlanAction ? '/dashboard/audit-checklists' : '/dashboard/audit-report-review',
           priority,
           status,
           dueDate,
@@ -299,7 +303,7 @@ export class ActionsService {
             owner,
             dueDate,
             hasActionPlan: Boolean(recommendations),
-            hasEvidence: Boolean(mission.rapport)
+            hasEvidence: isPlanAction ? true : Boolean(mission.rapport)
           }),
           displayActions: this.buildDisplayActions(status, priority, owner),
           lastUpdate: this.toIsoString(mission.updatedAt) || new Date().toISOString()

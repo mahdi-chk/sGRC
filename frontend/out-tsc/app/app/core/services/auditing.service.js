@@ -3,13 +3,10 @@
  * @description Service de communication avec l'API pour le module d'audit.
  */
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/common/http";
-/**
- * Énumération des statuts de mission d'audit (synchronisée avec le backend)
- */
 export var AuditMissionStatus;
 (function (AuditMissionStatus) {
     AuditMissionStatus["A_VENIR"] = "a_venir";
@@ -18,62 +15,67 @@ export var AuditMissionStatus;
     AuditMissionStatus["EN_RETARD"] = "en_retard";
     AuditMissionStatus["ANNULE"] = "annule";
 })(AuditMissionStatus || (AuditMissionStatus = {}));
+export var AuditRecordType;
+(function (AuditRecordType) {
+    AuditRecordType["MISSION_AUDIT"] = "mission_audit";
+    AuditRecordType["PLAN_ACTION_AUDIT"] = "plan_action_audit";
+})(AuditRecordType || (AuditRecordType = {}));
 export class AuditingService {
     constructor(http) {
         this.http = http;
         this.apiUrl = `${environment.apiUrl}/auditing`;
     }
-    /**
-     * Récupère la liste des missions d'audit.
-     */
-    getMissions() {
-        return this.http.get(`${this.apiUrl}/missions`);
+    getMissions(type = AuditRecordType.MISSION_AUDIT) {
+        let params = new HttpParams();
+        if (type !== 'all') {
+            params = params.set('type', type);
+        }
+        return this.http.get(`${this.apiUrl}/missions`, { params });
     }
-    /**
-     * Suggère un plan d'audit annuel via l'IA.
-     */
-    suggestPlan() {
-        return this.http.post(`${this.apiUrl}/suggest-plan`, {});
+    suggestPlan(type = AuditRecordType.PLAN_ACTION_AUDIT) {
+        return this.http.post(`${this.apiUrl}/suggest-plan`, { type });
     }
-    /**
-     * Crée des missions à partir d'un plan suggéré.
-     */
-    createMissionsFromPlan(missions) {
-        return this.http.post(`${this.apiUrl}/create-missions`, { missions });
+    createMissionsFromPlan(missions, type = AuditRecordType.MISSION_AUDIT) {
+        return this.http.post(`${this.apiUrl}/create-missions`, { missions, type });
     }
-    /**
-     * Assigne une mission à un auditeur.
-     */
+    createMission(data) {
+        return this.http.post(`${this.apiUrl}/missions`, data);
+    }
     assignMission(missionId, auditeurId) {
         return this.http.put(`${this.apiUrl}/missions/${missionId}/assign`, { auditeurId });
     }
-    /**
-     * Met à jour les détails d'une mission d'audit.
-     */
     updateMission(missionId, data) {
         return this.http.put(`${this.apiUrl}/missions/${missionId}`, data);
     }
-    /**
-     * Soumet un rapport d'audit.
-     */
     submitReport(missionId, data) {
         return this.http.put(`${this.apiUrl}/missions/${missionId}/report`, data);
     }
-    /**
-     * Supprime une mission d'audit.
-     */
     deleteMission(missionId) {
         return this.http.delete(`${this.apiUrl}/missions/${missionId}`);
     }
-    /**
-     * Réinitialise une mission d'audit.
-     */
     resetMission(missionId) {
         return this.http.put(`${this.apiUrl}/missions/${missionId}/reset`, {});
     }
-    /**
-     * --- CHECKLISTS TEMPLATES ---
-     */
+    getActionPlans() {
+        return this.http.get(`${this.apiUrl}/action-plans`);
+    }
+    createActionPlan(payload) {
+        return this.http.post(`${this.apiUrl}/action-plans`, payload);
+    }
+    updateActionPlan(actionPlanId, payload) {
+        return this.http.put(`${this.apiUrl}/action-plans/${actionPlanId}`, payload);
+    }
+    deleteActionPlan(actionPlanId) {
+        return this.http.delete(`${this.apiUrl}/action-plans/${actionPlanId}`);
+    }
+    importActionPlans(file, riskId) {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (riskId) {
+            formData.append('riskId', String(riskId));
+        }
+        return this.http.post(`${this.apiUrl}/action-plans/import`, formData);
+    }
     getChecklistTemplates() {
         return this.http.get(`${this.apiUrl}/checklists`);
     }
@@ -83,9 +85,6 @@ export class AuditingService {
     deleteChecklistTemplate(id) {
         return this.http.delete(`${this.apiUrl}/checklists/${id}`);
     }
-    /**
-     * --- MISSION CHECKLISTS ---
-     */
     getMissionChecklistItems(missionId) {
         return this.http.get(`${this.apiUrl}/missions/${missionId}/checklists`);
     }
@@ -95,9 +94,23 @@ export class AuditingService {
     toggleMissionChecklistItem(missionId, itemId, estFait) {
         return this.http.put(`${this.apiUrl}/missions/${missionId}/checklists/${itemId}`, { estFait });
     }
-    /**
-     * --- TRAÇABILITÉ DES PREUVES ---
-     */
+    getMissionActionPlanItems(missionId) {
+        return this.http.get(`${this.apiUrl}/missions/${missionId}/action-plans`);
+    }
+    createMissionActionPlanItem(missionId, payload) {
+        return this.http.post(`${this.apiUrl}/missions/${missionId}/action-plans`, payload);
+    }
+    updateMissionActionPlanItem(missionId, itemId, payload) {
+        return this.http.put(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}`, payload);
+    }
+    deleteMissionActionPlanItem(missionId, itemId) {
+        return this.http.delete(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}`);
+    }
+    importMissionActionPlan(missionId, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post(`${this.apiUrl}/missions/${missionId}/action-plans/import`, formData);
+    }
     getMissionEvidence(missionId) {
         return this.http.get(`${this.apiUrl}/missions/${missionId}/evidence`);
     }
@@ -109,15 +122,9 @@ export class AuditingService {
     deleteMissionEvidence(missionId, evidenceId) {
         return this.http.delete(`${this.apiUrl}/missions/${missionId}/evidence/${evidenceId}`);
     }
-    /**
-     * Récupère TOUTES les preuves d'audit (Global Explorer).
-     */
     getAllEvidence() {
         return this.http.get(`${this.apiUrl}/evidence`);
     }
-    /**
-     * Récupère les missions avec rapports soumis (Review Center).
-     */
     getReportsToReview() {
         return this.http.get(`${this.apiUrl}/reports`);
     }

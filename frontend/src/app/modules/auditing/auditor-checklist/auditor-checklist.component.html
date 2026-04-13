@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-list-check"></i> {{ isSuperAdmin ? 'Plans d actions d audit' : 'Mon Plan d actions' }}</h1>
-                <p>Renseignez l'avancement, le responsable et l'échéance des actions liées à vos missions.</p>
+                <h1><i class="fas fa-list-check"></i> {{ isSuperAdmin ? 'Plans d actions d audit' : 'Mes Plans d actions' }}</h1>
+                <p>Renseignez l'avancement, le responsable et l'échéance de vos plans d'actions d'audit autonomes.</p>
             </div>
         </div>
     </div>
@@ -17,96 +17,55 @@
         </a>
     </nav>
 
-    <div class="dual-layout">
-        <aside class="sidebar-list card">
-            <div class="list-header">
-                <h3>Missions assignées</h3>
-            </div>
+    <section class="main-content card">
+        <div class="empty-checklist" *ngIf="!isLoading && actionPlans.length === 0">
+            <i class="fas fa-list-ul"></i>
+            <p>Aucun plan d'actions assigné.</p>
+        </div>
 
-            <ul class="item-list">
-                <li *ngFor="let mission of missions" [class.active]="selectedMission?.id === mission.id" (click)="selectMission(mission)">
-                    <div class="item-icon"><i class="fas fa-briefcase"></i></div>
-                    <div class="item-info">
-                        <strong>{{ mission.titre }}</strong>
-                        <span class="status-tag">{{ mission.statut }}</span>
-                    </div>
-                </li>
-            </ul>
-
-            <div class="empty-list" *ngIf="!isLoading && missions.length === 0">
-                <p>Aucune mission assignée.</p>
-            </div>
-        </aside>
-
-        <section class="main-content card">
-            <div *ngIf="selectedMission; else selectPrompt">
-                <div class="content-header">
+        <div class="action-plan-list" *ngIf="actionPlans.length > 0">
+            <article class="action-card" *ngFor="let item of actionPlans">
+                <div class="action-card-head">
                     <div>
-                        <h2>Plan d'actions</h2>
-                        <p class="mission-title">{{ selectedMission.titre }}</p>
+                        <span class="rule-kicker">Code {{ item.code || item.id }}</span>
+                        <h3>{{ item.regleDnssi || item.titre }}</h3>
                     </div>
-                    <div class="mission-deadline">
-                        <span class="deadline-label">Echéance mission</span>
-                        <strong>{{ selectedMission.delai | date:'dd/MM/yyyy' }}</strong>
+                    <div class="action-badges">
+                        <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
+                        <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
                     </div>
                 </div>
 
-                <div class="empty-checklist" *ngIf="!isLoading && actionPlanItems.length === 0">
-                    <i class="fas fa-list-ul"></i>
-                    <p>Aucune action renseignée pour cette mission.</p>
+                <div class="recommendation-box">
+                    {{ item.recommandations || item.objectifs }}
                 </div>
 
-                <div class="action-plan-list" *ngIf="actionPlanItems.length > 0">
-                    <article class="action-card" *ngFor="let item of actionPlanItems">
-                        <div class="action-card-head">
-                            <div>
-                                <span class="rule-kicker">Règle DNSSI</span>
-                                <h3>{{ item.regleDnssi }}</h3>
-                            </div>
-                            <div class="action-badges">
-                                <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
-                                <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
-                            </div>
-                        </div>
+                <div class="action-editor">
+                    <label class="editor-field">
+                        <span>Responsable</span>
+                        <input [(ngModel)]="item.responsabilites">
+                    </label>
 
-                        <div class="recommendation-box">
-                            {{ item.recommandations }}
-                        </div>
+                    <label class="editor-field">
+                        <span>Echéance</span>
+                        <input type="date" [(ngModel)]="item.delai">
+                    </label>
 
-                        <div class="action-editor">
-                            <label class="editor-field">
-                                <span>Responsable</span>
-                                <input [(ngModel)]="item.responsableNom">
-                            </label>
+                    <label class="editor-field">
+                        <span>Etat</span>
+                        <select [(ngModel)]="item.statut">
+                            <option value="a_venir">A venir</option>
+                            <option value="en_cours">En cours</option>
+                            <option value="termine">Terminé</option>
+                            <option value="en_retard">En retard</option>
+                        </select>
+                    </label>
 
-                            <label class="editor-field">
-                                <span>Echéance</span>
-                                <input type="date" [(ngModel)]="item.echeance">
-                            </label>
-
-                            <label class="editor-field">
-                                <span>Etat</span>
-                                <select [(ngModel)]="item.etatAvancement">
-                                    <option value="nok">NOK</option>
-                                    <option value="en_cours">En cours</option>
-                                    <option value="ok">OK</option>
-                                </select>
-                            </label>
-
-                            <div class="editor-actions">
-                                <button class="btn-save" (click)="saveItem(item)">Enregistrer</button>
-                            </div>
-                        </div>
-                    </article>
+                    <div class="editor-actions">
+                        <button class="btn-save" (click)="saveItem(item)">Enregistrer</button>
+                    </div>
                 </div>
-            </div>
-
-            <ng-template #selectPrompt>
-                <div class="select-prompt">
-                    <i class="fas fa-mouse-pointer"></i>
-                    <p>Veuillez sélectionner une mission pour afficher son plan d'actions.</p>
-                </div>
-            </ng-template>
-        </section>
-    </div>
+            </article>
+        </div>
+    </section>
 </div>

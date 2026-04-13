@@ -3,9 +3,11 @@ import { Router } from '@angular/router';
 import {
   AuditingService,
   AuditMission,
-  AuditMissionActionPlanItem,
-  AuditMissionActionPlanPayload
+  AuditMissionActionPlanPayload,
+  AuditMissionHorizon,
+  AuditMissionStatus
 } from '../../../core/services/auditing.service';
+import { Risk, RiskService } from '../../../core/services/risk.service';
 import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
@@ -15,12 +17,12 @@ import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 })
 export class AuditChecklistsComponent implements OnInit {
   currentUserRole = getStoredAuditRole();
-  missions: AuditMission[] = [];
-  selectedMissionId: number | null = null;
-  planItems: AuditMissionActionPlanItem[] = [];
+  planItems: AuditMission[] = [];
   isLoading = false;
   isSaving = false;
   importFile: File | null = null;
+  risks: Risk[] = [];
+  selectedImportRiskId: number | null = null;
   feedback = '';
   error = '';
 
@@ -28,6 +30,7 @@ export class AuditChecklistsComponent implements OnInit {
 
   constructor(
     private auditingService: AuditingService,
+    private riskService: RiskService,
     private router: Router
   ) {}
 
@@ -35,72 +38,61 @@ export class AuditChecklistsComponent implements OnInit {
     return getAuditNavItems(this.currentUserRole);
   }
 
-  get selectedMission(): AuditMission | null {
-    return this.missions.find((mission) => mission.id === this.selectedMissionId) || null;
-  }
-
   ngOnInit(): void {
-    this.loadMissions();
-  }
-
-  loadMissions(): void {
-    this.isLoading = true;
-    this.auditingService.getMissions().subscribe({
-      next: (missions) => {
-        this.missions = missions;
-        if (!this.selectedMissionId && missions.length > 0) {
-          this.selectedMissionId = missions[0].id;
-        }
-        this.isLoading = false;
-        this.loadPlan();
-      },
-      error: (err) => {
-        console.error(err);
-        this.isLoading = false;
-        this.error = 'Impossible de charger les missions.';
-      }
-    });
-  }
-
-  selectMission(missionId: number | null): void {
-    this.selectedMissionId = missionId;
-    this.feedback = '';
-    this.error = '';
     this.loadPlan();
+    this.loadRisks();
   }
 
   loadPlan(): void {
-    if (!this.selectedMissionId) {
-      this.planItems = [];
-      return;
-    }
-
     this.isLoading = true;
-    this.auditingService.getMissionActionPlanItems(this.selectedMissionId).subscribe({
+    this.auditingService.getActionPlans().subscribe({
       next: (items) => {
-        this.planItems = this.normalizeItems(items);
+        this.planItems = items.map((item) => this.normalizeItem(item));
         this.isLoading = false;
       },
       error: (err) => {
         console.error(err);
         this.planItems = [];
         this.isLoading = false;
-        this.error = 'Impossible de charger le plan d actions.';
+        this.error = 'Impossible de charger les plans d actions.';
+      }
+    });
+  }
+
+  loadRisks(): void {
+    this.riskService.getRisks().subscribe({
+      next: (risks) => {
+        this.risks = risks;
+        if (!this.selectedImportRiskId && risks.length > 0) {
+          this.selectedImportRiskId = risks[0].id;
+        }
+        if (!this.newItem.riskId && risks.length > 0) {
+          this.newItem.riskId = risks[0].id;
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        this.risks = [];
       }
     });
   }
 
   saveNewItem(): void {
-    if (!this.selectedMissionId || !this.newItem.regleDnssi?.trim() || !this.newItem.recommandations?.trim()) {
+    if (!this.newItem.regleDnssi?.trim() || !this.newItem.recommandations?.trim()) {
       this.error = 'La règle DNSSI et les recommandations sont obligatoires.';
       return;
     }
 
+    if (!this.newItem.riskId) {
+      this.error = 'Veuillez sÃ©lectionner un risque pour crÃ©er ce plan d actions.';
+      return;
+    }
+
     this.isSaving = true;
-    this.auditingService.createMissionActionPlanItem(this.selectedMissionId, this.newItem).subscribe({
+    this.auditingService.createActionPlan(this.newItem).subscribe({
       next: () => {
         this.newItem = this.createEmptyItem();
-        this.feedback = 'Ligne ajoutée au plan d actions.';
+        this.feedback = 'Plan d actions ajouté avec succès.';
         this.error = '';
         this.isSaving = false;
         this.loadPlan();
@@ -113,26 +105,25 @@ export class AuditChecklistsComponent implements OnInit {
     });
   }
 
-  saveRow(item: AuditMissionActionPlanItem): void {
-    if (!this.selectedMissionId) {
-      return;
-    }
-
+  saveRow(item: AuditMission): void {
     this.isSaving = true;
-    this.auditingService.updateMissionActionPlanItem(this.selectedMissionId, item.id, {
-      ordre: item.ordre,
-      regleDnssi: item.regleDnssi,
-      recommandations: item.recommandations,
+    this.auditingService.updateActionPlan(item.id, {
+      code: item.code || null,
+      titre: item.titre,
+      ordre: item.ordre || 0,
+      regleDnssi: item.regleDnssi || item.titre,
+      recommandations: item.recommandations || item.objectifs || '',
       horizon: item.horizon,
       priorite: item.priorite,
-      responsableId: item.responsableId,
-      responsableNom: item.responsableNom,
-      echeance: item.echeance,
-      etatAvancement: item.etatAvancement
+      responsableId: item.auditeurId || null,
+      responsableNom: item.responsabilites || '',
+      echeance: item.delai ? String(item.delai) : null,
+      riskId: item.riskId || null,
+      etatAvancement: item.statut as string
     }).subscribe({
       next: (updated) => {
         Object.assign(item, this.normalizeItem(updated));
-        this.feedback = 'Ligne mise à jour.';
+        this.feedback = 'Plan d actions mis à jour.';
         this.error = '';
         this.isSaving = false;
       },
@@ -144,12 +135,12 @@ export class AuditChecklistsComponent implements OnInit {
     });
   }
 
-  deleteRow(item: AuditMissionActionPlanItem): void {
-    if (!this.selectedMissionId || !window.confirm(`Supprimer la ligne ${item.regleDnssi} ?`)) {
+  deleteRow(item: AuditMission): void {
+    if (!window.confirm(`Supprimer le plan ${item.code || item.titre} ?`)) {
       return;
     }
 
-    this.auditingService.deleteMissionActionPlanItem(this.selectedMissionId, item.id).subscribe({
+    this.auditingService.deleteActionPlan(item.id).subscribe({
       next: () => {
         this.planItems = this.planItems.filter((entry) => entry.id !== item.id);
       },
@@ -166,14 +157,19 @@ export class AuditChecklistsComponent implements OnInit {
   }
 
   importExcel(): void {
-    if (!this.selectedMissionId || !this.importFile) {
+    if (!this.importFile) {
+      return;
+    }
+
+    if (!this.selectedImportRiskId) {
+      this.error = 'Veuillez sÃ©lectionner un risque avant l import.';
       return;
     }
 
     this.isSaving = true;
-    this.auditingService.importMissionActionPlan(this.selectedMissionId, this.importFile).subscribe({
+    this.auditingService.importActionPlans(this.importFile, this.selectedImportRiskId).subscribe({
       next: (items) => {
-        this.planItems = this.normalizeItems(items);
+        this.planItems = items.map((item) => this.normalizeItem(item));
         this.importFile = null;
         this.feedback = 'Import Excel terminé avec succès.';
         this.error = '';
@@ -182,7 +178,7 @@ export class AuditChecklistsComponent implements OnInit {
       error: (err) => {
         console.error(err);
         this.isSaving = false;
-        this.error = err?.error?.message || 'Erreur lors de l import Excel.';
+        this.error = err?.error?.error || err?.error?.message || 'Erreur lors de l import Excel.';
       }
     });
   }
@@ -192,26 +188,19 @@ export class AuditChecklistsComponent implements OnInit {
       ordre: 0,
       regleDnssi: '',
       recommandations: '',
-      horizon: 'court_terme',
+      horizon: AuditMissionHorizon.COURT_TERME,
       priorite: 1,
       responsableNom: '',
+      riskId: null,
       echeance: '',
-      etatAvancement: 'nok'
+      etatAvancement: AuditMissionStatus.NOK
     };
   }
 
-  formatDate(value: string | null | undefined): string {
-    return value ? new Date(value).toISOString().slice(0, 10) : '';
-  }
-
-  private normalizeItems(items: AuditMissionActionPlanItem[]): AuditMissionActionPlanItem[] {
-    return items.map((item) => this.normalizeItem(item));
-  }
-
-  private normalizeItem(item: AuditMissionActionPlanItem): AuditMissionActionPlanItem {
+  private normalizeItem(item: AuditMission): AuditMission {
     return {
       ...item,
-      echeance: item.echeance ? new Date(item.echeance).toISOString().slice(0, 10) : null
+      delai: item.delai ? new Date(item.delai).toISOString().slice(0, 10) : null
     };
   }
 

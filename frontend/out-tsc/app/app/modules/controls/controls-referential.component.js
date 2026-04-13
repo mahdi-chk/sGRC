@@ -90,12 +90,12 @@ function ControlsReferentialComponent_div_18_tr_24_Template(rf, ctx) { if (rf & 
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(8, "td");
-    i0.ɵɵelementStart(9, "span", 22);
+    i0.ɵɵelementStart(9, "span", 23);
     i0.ɵɵtext(10);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(11, "td");
-    i0.ɵɵelementStart(12, "span", 23);
+    i0.ɵɵelementStart(12, "span", 24);
     i0.ɵɵtext(13);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -106,7 +106,7 @@ function ControlsReferentialComponent_div_18_tr_24_Template(rf, ctx) { if (rf & 
     i0.ɵɵtext(17);
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(18, "td");
-    i0.ɵɵelementStart(19, "span", 24);
+    i0.ɵɵelementStart(19, "span", 25);
     i0.ɵɵtext(20);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -134,6 +134,7 @@ function ControlsReferentialComponent_div_18_tr_24_Template(rf, ctx) { if (rf & 
     i0.ɵɵtextInterpolate(ctx_r7.formatDate(control_r8.nextReview));
 } }
 function ControlsReferentialComponent_div_18_Template(rf, ctx) { if (rf & 1) {
+    const _r10 = i0.ɵɵgetCurrentView();
     i0.ɵɵelementStart(0, "div", 18);
     i0.ɵɵelementStart(1, "div", 19);
     i0.ɵɵelementStart(2, "h2");
@@ -173,14 +174,19 @@ function ControlsReferentialComponent_div_18_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵtemplate(24, ControlsReferentialComponent_div_18_tr_24_Template, 21, 9, "tr", 21);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(25, "app-pagination", 22);
+    i0.ɵɵlistener("pageChanged", function ControlsReferentialComponent_div_18_Template_app_pagination_pageChanged_25_listener($event) { i0.ɵɵrestoreView(_r10); const ctx_r9 = i0.ɵɵnextContext(); return ctx_r9.onPageChanged($event); });
+    i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const ctx_r2 = i0.ɵɵnextContext();
     i0.ɵɵadvance(24);
-    i0.ɵɵproperty("ngForOf", ctx_r2.registry);
+    i0.ɵɵproperty("ngForOf", ctx_r2.paginatedRegistry);
+    i0.ɵɵadvance(1);
+    i0.ɵɵproperty("totalItems", ctx_r2.registry.length)("currentPage", ctx_r2.currentPage)("pageSize", ctx_r2.itemsPerPage);
 } }
 function ControlsReferentialComponent_ng_template_19_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 25);
+    i0.ɵɵelementStart(0, "div", 26);
     i0.ɵɵtext(1, "Aucun controle disponible pour ce perimetre.");
     i0.ɵɵelementEnd();
 } }
@@ -191,6 +197,8 @@ export class ControlsReferentialComponent {
         this.navItems = getControlsNavItems(getStoredControlsRole());
         this.overview = null;
         this.isLoading = false;
+        this.currentPage = 1;
+        this.itemsPerPage = 10;
     }
     ngOnInit() {
         this.loadOverview();
@@ -207,6 +215,7 @@ export class ControlsReferentialComponent {
                 this.isLoading = false;
             }
         });
+        this.currentPage = 1;
     }
     goBack() {
         this.router.navigate(['/dashboard/controls']);
@@ -214,6 +223,14 @@ export class ControlsReferentialComponent {
     get registry() {
         var _a;
         return ((_a = this.overview) === null || _a === void 0 ? void 0 : _a.registry) || [];
+    }
+    get paginatedRegistry() {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.registry.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+    onPageChanged(event) {
+        this.currentPage = event.page;
+        this.itemsPerPage = event.pageSize;
     }
     get departmentCount() {
         return new Set(this.registry.map(item => item.department)).size;
@@ -229,7 +246,7 @@ export class ControlsReferentialComponent {
     }
 }
 ControlsReferentialComponent.ɵfac = function ControlsReferentialComponent_Factory(t) { return new (t || ControlsReferentialComponent)(i0.ɵɵdirectiveInject(i1.Router), i0.ɵɵdirectiveInject(i2.ControlsService)); };
-ControlsReferentialComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ControlsReferentialComponent, selectors: [["app-controls-referential"]], decls: 21, vars: 6, consts: [[1, "controls-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-book-bookmark"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "controls-tabs"], ["routerLinkActive", "active", "class", "controls-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "summary-grid", 4, "ngIf"], ["class", "table-card", 4, "ngIf", "ngIfElse"], ["emptyRegistry", ""], ["routerLinkActive", "active", 1, "controls-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "summary-grid"], [1, "summary-card"], [1, "eyebrow"], [1, "table-card"], [1, "card-head"], [1, "controls-table"], [4, "ngFor", "ngForOf"], [1, "tag"], [1, "tag", "subtle"], [3, "ngClass"], [1, "empty-state"]], template: function ControlsReferentialComponent_Template(rf, ctx) { if (rf & 1) {
+ControlsReferentialComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ControlsReferentialComponent, selectors: [["app-controls-referential"]], decls: 21, vars: 6, consts: [[1, "controls-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-book-bookmark"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "controls-tabs"], ["routerLinkActive", "active", "class", "controls-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "summary-grid", 4, "ngIf"], ["class", "table-card", 4, "ngIf", "ngIfElse"], ["emptyRegistry", ""], ["routerLinkActive", "active", 1, "controls-tab", 3, "routerLink", "routerLinkActiveOptions"], [1, "summary-grid"], [1, "summary-card"], [1, "eyebrow"], [1, "table-card"], [1, "card-head"], [1, "controls-table"], [4, "ngFor", "ngForOf"], [3, "totalItems", "currentPage", "pageSize", "pageChanged"], [1, "tag"], [1, "tag", "subtle"], [3, "ngClass"], [1, "empty-state"]], template: function ControlsReferentialComponent_Template(rf, ctx) { if (rf & 1) {
         i0.ɵɵelementStart(0, "div", 0);
         i0.ɵɵelementStart(1, "div", 1);
         i0.ɵɵelementStart(2, "div", 2);
@@ -259,7 +276,7 @@ ControlsReferentialComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type
         i0.ɵɵtemplate(16, ControlsReferentialComponent_a_16_Template, 2, 4, "a", 10);
         i0.ɵɵelementEnd();
         i0.ɵɵtemplate(17, ControlsReferentialComponent_div_17_Template, 29, 4, "div", 11);
-        i0.ɵɵtemplate(18, ControlsReferentialComponent_div_18_Template, 25, 1, "div", 12);
+        i0.ɵɵtemplate(18, ControlsReferentialComponent_div_18_Template, 26, 4, "div", 12);
         i0.ɵɵtemplate(19, ControlsReferentialComponent_ng_template_19_Template, 2, 0, "ng-template", null, 13, i0.ɵɵtemplateRefExtractor);
         i0.ɵɵelementEnd();
     } if (rf & 2) {

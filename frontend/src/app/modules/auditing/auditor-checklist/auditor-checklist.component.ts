@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import {
   AuditingService,
-  AuditMission,
-  AuditMissionActionPlanItem,
-  AuditMissionStatus
+  AuditMission
 } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
@@ -15,9 +13,7 @@ import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
   styleUrls: ['./auditor-checklist.component.scss']
 })
 export class AuditorChecklistComponent implements OnInit {
-  missions: AuditMission[] = [];
-  selectedMission: AuditMission | null = null;
-  actionPlanItems: AuditMissionActionPlanItem[] = [];
+  actionPlans: AuditMission[] = [];
   isLoading = false;
   currentUserRole: UserRole | null = getStoredAuditRole();
 
@@ -31,10 +27,10 @@ export class AuditorChecklistComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadMissions();
+    this.loadActionPlans();
   }
 
-  loadMissions(): void {
+  loadActionPlans(): void {
     this.isLoading = true;
     const userStr = sessionStorage.getItem('sgrc_user');
     if (!userStr) {
@@ -46,15 +42,14 @@ export class AuditorChecklistComponent implements OnInit {
     const userId = Number(currentUser.id);
     this.currentUserRole = currentUser.role || null;
 
-    this.auditingService.getMissions().subscribe({
+    this.auditingService.getActionPlans().subscribe({
       next: (data) => {
-        this.missions = data.filter((mission) =>
-          this.isSuperAdmin || (Number(mission.auditeurId) === userId && mission.statut !== AuditMissionStatus.ANNULE)
-        );
+        this.actionPlans = (this.isSuperAdmin ? data : data.filter((item) => Number(item.auditeurId) === userId))
+          .map((item) => ({
+            ...item,
+            delai: item.delai ? new Date(item.delai).toISOString().slice(0, 10) : null
+          }));
         this.isLoading = false;
-        if (this.missions.length > 0) {
-          this.selectMission(this.missions[0]);
-        }
       },
       error: (err) => {
         console.error(err);
@@ -63,45 +58,24 @@ export class AuditorChecklistComponent implements OnInit {
     });
   }
 
-  selectMission(mission: AuditMission): void {
-    this.selectedMission = mission;
-    this.isLoading = true;
-    this.auditingService.getMissionActionPlanItems(mission.id).subscribe({
-      next: (items) => {
-        this.actionPlanItems = items.map((item) => ({
-          ...item,
-          echeance: item.echeance ? new Date(item.echeance).toISOString().slice(0, 10) : null
-        }));
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.isLoading = false;
-        alert('Erreur lors du chargement du plan d actions.');
-      }
-    });
-  }
-
-  saveItem(item: AuditMissionActionPlanItem): void {
-    if (!this.selectedMission) {
-      return;
-    }
-
-    this.auditingService.updateMissionActionPlanItem(this.selectedMission.id, item.id, {
-      ordre: item.ordre,
-      regleDnssi: item.regleDnssi,
-      recommandations: item.recommandations,
+  saveItem(item: AuditMission): void {
+    this.auditingService.updateActionPlan(item.id, {
+      code: item.code || null,
+      titre: item.titre,
+      ordre: item.ordre || 0,
+      regleDnssi: item.regleDnssi || item.titre,
+      recommandations: item.recommandations || item.objectifs || '',
       horizon: item.horizon,
       priorite: item.priorite,
-      responsableId: item.responsableId,
-      responsableNom: item.responsableNom,
-      echeance: item.echeance,
-      etatAvancement: item.etatAvancement
+      responsableId: item.auditeurId || null,
+      responsableNom: item.responsabilites || '',
+      echeance: item.delai ? String(item.delai) : null,
+      etatAvancement: item.statut as string
     }).subscribe({
       next: (updatedItem) => {
         Object.assign(item, {
           ...updatedItem,
-          echeance: updatedItem.echeance ? new Date(updatedItem.echeance).toISOString().slice(0, 10) : null
+          delai: updatedItem.delai ? new Date(updatedItem.delai).toISOString().slice(0, 10) : null
         });
       },
       error: (err) => {

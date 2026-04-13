@@ -5,6 +5,8 @@ import { UserRole } from '../models/user-role.enum';
 import { AuthService } from './auth.service';
 import { getControlsDashboardSubmodules } from '../../modules/controls/controls-navigation';
 import { getActionsDashboardSubmodules } from '../../modules/actions/actions-navigation';
+import { getComplianceDashboardSubmodules } from '../../modules/compliance/compliance-navigation';
+import { getSupervisionDashboardSubmodules } from '../../modules/supervision/supervision-navigation';
 import * as i0 from "@angular/core";
 import * as i1 from "@angular/router";
 import * as i2 from "./auth.service";
@@ -148,7 +150,7 @@ export class DashboardService {
                     { title: 'Assistance Experte' },
                     { title: 'Supervision Continue' }
                 ],
-                roles: [UserRole.TOP_MANAGEMENT]
+                roles: [UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI]
             }
         ];
     }
@@ -163,9 +165,13 @@ export class DashboardService {
             return this.modules;
         const filteredModules = this.modules.filter(m => m.roles && m.roles.some(r => r.toString() === roleStr)).map(module => (Object.assign(Object.assign({}, module), { submodules: module.key === 'controls'
                 ? getControlsDashboardSubmodules(roleStr)
-                : module.key === 'plans-actions'
-                    ? getActionsDashboardSubmodules(roleStr)
-                    : [...module.submodules] })));
+                : module.key === 'conformite'
+                    ? getComplianceDashboardSubmodules(roleStr)
+                    : module.key === 'plans-actions'
+                        ? getActionsDashboardSubmodules(roleStr)
+                        : module.key === 'supervision'
+                            ? getSupervisionDashboardSubmodules(roleStr)
+                            : [...module.submodules] })));
         if (roleStr === UserRole.TOP_MANAGEMENT) {
             return filteredModules.map(module => {
                 if (module.key !== 'incidents') {
@@ -264,6 +270,24 @@ export class DashboardService {
         else if (s.title === 'Suivi des Non-Conformites') {
             this.router.navigate(['/dashboard/controls-non-conformities']);
         }
+        else if (s.title === 'Referentiels Integres') {
+            this.router.navigate(['/dashboard/compliance-frameworks']);
+        }
+        else if (s.title === 'Mapping et Liens') {
+            this.router.navigate(['/dashboard/compliance-mappings']);
+        }
+        else if (s.title === 'Auto-Evaluations') {
+            this.router.navigate(['/dashboard/compliance-assessments']);
+        }
+        else if (s.title === 'Suivi des Ecarts') {
+            this.router.navigate(['/dashboard/compliance-gaps']);
+        }
+        else if (s.title === 'Mises a Jour et Preuves') {
+            this.router.navigate(['/dashboard/compliance-updates']);
+        }
+        else if (m.key === 'conformite') {
+            this.router.navigate(['/dashboard/compliance']);
+        }
         else if (m.key === 'controls') {
             this.router.navigate(['/dashboard/controls-referential']);
         }
@@ -308,6 +332,21 @@ export class DashboardService {
         }
         else if (s.title === 'Exports') {
             this.router.navigate(['/dashboard/reporting/exports']);
+        }
+        else if (s.title === 'Bibliotheque de Bonnes Pratiques') {
+            this.router.navigate(['/dashboard/supervision/best-practices']);
+        }
+        else if (s.title === 'Recommandations Contextualisees') {
+            this.router.navigate(['/dashboard/supervision/recommendations']);
+        }
+        else if (s.title === 'Benchmarks Sectoriels') {
+            this.router.navigate(['/dashboard/supervision/benchmarks']);
+        }
+        else if (s.title === 'Assistance Experte') {
+            this.router.navigate(['/dashboard/supervision/expert-assistance']);
+        }
+        else if (s.title === 'Supervision Continue') {
+            this.router.navigate(['/dashboard/supervision/continuous-monitoring']);
         }
         else {
             this.openModalSource.next({ m, s });

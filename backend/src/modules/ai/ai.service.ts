@@ -643,21 +643,36 @@ export class AIService {
     static async generateAuditPlan(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
         if (!risks || risks.length === 0) return [];
 
+        // Cap to top 15 risks to keep prompt within context limits
+        const cappedRisks = risks.slice(0, 15);
+        if (risks.length > 15) {
+            appLogger.info('AI', 'Audit plan risks capped', {
+                originalCount: risks.length,
+                cappedCount: cappedRisks.length,
+            });
+        }
+
         try {
             const isIndexed = await RAGEngine.checkIndexStatus();
             let standardsContext = '';
 
             if (isIndexed) {
-                const uniqueDomaines = Array.from(new Set(risks.map(r => r.domaine).filter(Boolean)));
+                const uniqueDomaines = Array.from(new Set(cappedRisks.map(r => r.domaine).filter(Boolean)));
                 const query = `Procédures d'audit pour les domaines : ${uniqueDomaines.join(', ')}`;
-                const contextChunks = await RAGEngine.searchContext(query, role, 5);
+                const contextChunks = await RAGEngine.searchContext(query, role, 3);
                 if (contextChunks.length > 0) {
                     standardsContext = this.formatStandardsContext(contextChunks);
                 }
             }
 
-            const riskMapping = risks.map(r => `${r.id}: ${r.titre}`).join('\n');
+            const riskMapping = cappedRisks.map(r => `${r.id}: ${r.titre}`).join('\n');
             const auditPlanPrompt = await this.buildAuditPlanPrompt(riskMapping, standardsContext);
+
+            appLogger.debug('AI', 'Audit plan prompt built', {
+                riskCount: cappedRisks.length,
+                promptLength: auditPlanPrompt.length,
+                hasRAG: !!standardsContext,
+            });
 
             const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
                 model: MODEL_NAME,
@@ -665,14 +680,18 @@ export class AIService {
                     { role: 'user', content: auditPlanPrompt }
                 ],
                 stream: false,
+                format: 'json',
                 options: {
-                    num_ctx: 8192,
-                    num_predict: 2000,
+                    num_ctx: 4096,
+                    num_predict: 1500,
                     temperature: 0.4
                 }
             });
 
             const content = response.data.message.content;
+            appLogger.debug('AI', 'Audit plan raw response received', {
+                responseLength: content.length,
+            });
             const plan = this.parseJsonArrayResponse(content);
 
             return plan.map(item => ({
@@ -681,7 +700,13 @@ export class AIService {
                 riskId: item.riskId ? parseInt(item.riskId.toString()) : 0
             }));
         } catch (error: any) {
-            appLogger.error('AI', 'Audit plan generation failed', error.message || error);
+            const ollamaDetail = error.response?.data?.error || error.response?.data || '';
+            appLogger.error('AI', 'Audit plan generation failed', {
+                message: error.message || error,
+                ollamaDetail: typeof ollamaDetail === 'string' ? ollamaDetail : JSON.stringify(ollamaDetail),
+                status: error.response?.status,
+                riskCount: cappedRisks.length,
+            });
             return [];
         }
     }

@@ -100,6 +100,18 @@ router.get('/assignable/auditors', authorizeRoles(UserRole.SUPER_ADMIN, UserRole
     }
 });
 
+router.get('/assignable/incidents', async (req, res) => {
+    try {
+        const users = await User.findAll({
+            attributes: publicUserAttributes,
+            where: { is_deleted: false } as any
+        });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching assignable incident users', error });
+    }
+});
+
 router.get('/assignable/risk-agents', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER), async (req, res) => {
     try {
         const riskAgents = await User.findAll({

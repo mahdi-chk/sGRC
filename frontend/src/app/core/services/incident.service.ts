@@ -46,6 +46,8 @@ export interface Incident {
     niveauRisque?: IncidentNiveauRisque;
     niveauRisqueLabel?: string;
     riskId?: number;
+    assigneeId?: number | null;
+    assignee?: { id: number; nom: string; prenom: string; mail: string };
 }
 
 

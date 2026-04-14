@@ -27,6 +27,7 @@ export class Incident extends LookupAwareModel {
     public statutId!: number;
     public pieceJointe!: string | null;
     public userId!: number | null; // L'utilisateur ayant déclaré l'incident
+    public assigneeId!: number | null; // L'utilisateur assigné au traitement
 
     // Nouveaux champs pour Fiche Incident
     public departementId!: number | null;
@@ -46,6 +47,7 @@ export class Incident extends LookupAwareModel {
 
     // Associations
     public declareur?: User;
+    public assignee?: User;
 }
 
 Incident.init(
@@ -73,6 +75,14 @@ Incident.init(
             allowNull: true,
         },
         userId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'users',
+                key: 'id',
+            },
+        },
+        assigneeId: {
             type: DataTypes.INTEGER,
             allowNull: true,
             references: {
@@ -125,6 +135,10 @@ Incident.init(
 // Un incident est déclaré par un utilisateur
 Incident.belongsTo(User, { foreignKey: 'userId', as: 'declareur' });
 User.hasMany(Incident, { foreignKey: 'userId', as: 'incidentsDeclares' });
+
+// Un incident peut être assigné à un utilisateur pour traitement
+Incident.belongsTo(User, { foreignKey: 'assigneeId', as: 'assignee' });
+User.hasMany(Incident, { foreignKey: 'assigneeId', as: 'incidentsAssignes' });
 
 registerLookupAccessors('incident', Incident);
 registerLookupAssociations('incident', Incident);

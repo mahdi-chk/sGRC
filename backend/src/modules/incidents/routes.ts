@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { Op } from 'sequelize';
 import path from 'path';
 import fs from 'fs';
 import * as xlsx from 'xlsx';
@@ -7,7 +8,7 @@ import { authenticateToken, AuthRequest, authorizeRoles } from '../../middleware
 import { secureUpload } from '../../middleware/file.middleware';
 import { AIService } from '../ai/ai.service';
 import { User } from '../users/user.model';
-import { UserRole } from '../users/user.roles';
+import { UserRole, USER_ROLE_CODES } from '../users/user.roles';
 import { Department } from '../departments/department.model';
 import { appLogger } from '../../utils/app-logger';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
@@ -588,11 +589,33 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, Use
 /**
  * RÉCUPÉRER TOUS LES INCIDENTS
  */
-router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT), async (req: AuthRequest, res: Response) => {
+router.get('/', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res: Response) => {
     try {
-        // Optionnellement: restriction par rôle, mais ici on expose tout pour l'historique
+        const user = (req as any).user;
+        const role = user?.role;
+        const userId = user?.id;
+
+        // Définition des critères de filtrage de base (invisible si supprimé)
+        const where: any = {
+            is_deleted: false
+        };
+
+        // RBAC : Les managers voient tout, les autres voient ce qui leur est affecté ou ce qu'ils ont créé
+        const isManager = role === UserRole.SUPER_ADMIN || role === UserRole.RISK_MANAGER || role === UserRole.TOP_MANAGEMENT;
+        
+        if (!isManager && userId) {
+            where[Op.or] = [
+                { userId: userId },
+                { assigneeId: userId }
+            ];
+        }
+
         const incidents = await Incident.findAll({
-            include: [{ model: User, as: 'declareur', attributes: ['id', 'nom', 'prenom', 'mail'] }],
+            where: where,
+            include: [
+                { model: User, as: 'declareur', attributes: ['id', 'nom', 'prenom', 'mail'], required: false },
+                { model: User, as: 'assignee', attributes: ['id', 'nom', 'prenom', 'mail'], required: false }
+            ],
             order: [['createdAt', 'DESC']]
         });
         res.json(incidents);
@@ -604,7 +627,7 @@ router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, User
 /**
  * GÉNÉRER DES RISQUES PAR IA À PARTIR D'UN INCIDENT
  */
-router.post('/:id/generate-risks', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res: Response) => {
+router.post('/:id/generate-risks', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
         const incident = await Incident.findByPk(parseInt(id, 10));
@@ -659,7 +682,7 @@ router.post('/:id/generate-risks', authorizeRoles(UserRole.SUPER_ADMIN, UserRole
 /**
  * METTRE À JOUR UN INCIDENT (ÉDITER)
  */
-router.put('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res: Response) => {
+router.put('/:id', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
         const incident = await Incident.findByPk(parseInt(id, 10));

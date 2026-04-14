@@ -6,14 +6,18 @@
             </button>
             <div>
                 <h1><i class="fas fa-tasks"></i> Workflow de Traitement</h1>
-                <p>Suivez le cycle de vie des incidents, de la detection a la cloture.</p>
+                <p>Suivez le cycle de vie des incidents, de la détection à la clôture.</p>
             </div>
         </div>
+    </div>
+
+    <div class="content-container">
+        <!-- Filters Bar Premium -->
         <div class="filters-bar premium mb-4">
             <div class="filter-controls">
                 <div class="filter-group">
                     <i class="fas fa-search"></i>
-                    <input type="text" [(ngModel)]="searchTerm" (input)="onFilterChange()" placeholder="Rechercher...">
+                    <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="Rechercher...">
                 </div>
 
                 <div class="filter-group">
@@ -27,71 +31,112 @@
                     </select>
                 </div>
 
-                <button class="btn-reset" (click)="clearFilters()" *ngIf="searchTerm || statusFilter">
-                    <i class="fas fa-undo"></i> Reinitialiser
+                <button 
+                    class="btn-quick-filter" 
+                    [class.active]="onlyToProcess"
+                    (click)="toggleToProcess()"
+                    title="Afficher les incidents à traiter (Nouveau/En cours)">
+                    <i class="fas fa-filter"></i> À traiter
+                </button>
+
+                <button class="btn-reset" (click)="clearFilters()" *ngIf="searchTerm || statusFilter || onlyToProcess">
+                    <i class="fas fa-undo"></i> Réinitialiser
                 </button>
             </div>
 
             <div class="results-info">
-                <span class="count-tag"><strong>{{ filteredIncidents.length }}</strong> incident(s) trouve(s)</span>
-            </div>
-        </div>
-    </div>
-
-    <nav class="incident-tabs" *ngIf="navItems.length > 0">
-        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
-            {{ item.label }}
-        </a>
-    </nav>
-
-    <div class="workflow-container">
-        <div class="loading-state" *ngIf="isLoading">
-            <i class="fas fa-circle-notch fa-spin"></i> Synchronisation du workflow...
-        </div>
-
-        <div class="incident-grid" *ngIf="!isLoading">
-            <div class="incident-card card shadow-sm" *ngFor="let incident of filteredIncidents">
-                <div class="card-header">
-                    <span class="status-badge" [ngClass]="getStatusClass(incident)">{{ getIncidentStatusLabel(incident) }}</span>
-                    <span class="date">{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</span>
-                </div>
-                <div class="card-body">
-                    <h3>{{ incident.titre }}</h3>
-                    <p class="description">{{ incident.description | slice:0:100 }}{{ incident.description.length > 100 ? '...' : '' }}</p>
-                    <div class="meta">
-                        <span><i class="fas fa-building"></i> {{ incident.departement?.nom || 'Non specifie' }}</span>
-                        <span><i class="fas fa-user-edit"></i> {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}</span>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <div class="status-actions">
-                        <button *ngIf="getIncidentStatus(incident) === IncidentStatus.NOUVEAU" (click)="updateStatus(incident, IncidentStatus.EN_COURS)" class="btn-action start">
-                            <i class="fas fa-play"></i> Prise en charge
-                        </button>
-                        <button *ngIf="getIncidentStatus(incident) === IncidentStatus.EN_COURS" (click)="updateStatus(incident, IncidentStatus.TRAITE)" class="btn-action resolve">
-                            <i class="fas fa-check"></i> Marquer comme Traite
-                        </button>
-                        <button *ngIf="getIncidentStatus(incident) === IncidentStatus.TRAITE" (click)="updateStatus(incident, IncidentStatus.CLOS)" class="btn-action close">
-                            <i class="fas fa-lock"></i> Cloturer
-                        </button>
-                    </div>
-
-                    <button type="button" class="btn-details" (click)="openDetailsModal(incident)">
-                        <i class="fas fa-eye"></i>
-                        <span>Details</span>
-                    </button>
-                </div>
+                <span class="count-tag"><strong>{{ filteredIncidents.length }}</strong> incident(s) trouvé(s)</span>
             </div>
         </div>
 
-        <div class="empty-state" *ngIf="!isLoading && filteredIncidents.length === 0">
-            <i class="fas fa-clipboard-check"></i>
-            <p>Aucun incident a traiter pour ces criteres.</p>
+        <nav class="incident-tabs" *ngIf="navItems.length > 0">
+            <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
+                {{ item.label }}
+            </a>
+        </nav>
+
+        <div class="risks-card">
+            <div class="loading-state p-5 text-center" *ngIf="isLoading">
+                <i class="fas fa-circle-notch fa-spin fa-2x"></i>
+                <p class="mt-2">Synchronisation du workflow...</p>
+            </div>
+
+            <table class="risks-table" *ngIf="!isLoading">
+                <thead>
+                    <tr>
+                        <th>Titre</th>
+                        <th>Domaine</th>
+                        <th>Niveau</th>
+                        <th>Date de survenance</th>
+                        <th>Statut</th>
+                        <th>Déclarant</th>
+                        <th>Assigné à</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let incident of paginatedIncidents">
+                        <td class="td-title"><strong>{{ incident.titre }}</strong></td>
+                        <td>{{ incident.domaine || 'Non défini' }}</td>
+                        <td>
+                            <span class="badge" [ngClass]="getImpactClass(incident)">
+                                {{ levelLabelMap[incident.niveauRisque!] || incident.niveauRisque || '-' }}
+                            </span>
+                        </td>
+                        <td>{{ incident.dateSurvenance | date:'dd/MM/yyyy' }}</td>
+                        <td>
+                            <span class="badge" [ngClass]="getStatusClass(incident)">
+                                {{ getIncidentStatusLabel(incident) }}
+                            </span>
+                        </td>
+                        <td>
+                            {{ incident.declareur?.prenom }} {{ incident.declareur?.nom }}
+                        </td>
+                        <td>
+                            <select class="assignee-select" [ngModel]="incident.assigneeId" (change)="assignUser(incident, $any($event.target).value)">
+                                <option [value]="null">Non assigné</option>
+                                <option *ngFor="let user of users" [value]="user.id">
+                                    {{ user.prenom }} {{ user.nom }}
+                                </option>
+                            </select>
+                        </td>
+                        <td class="actions-cell">
+                            <div class="workflow-actions">
+                                <button *ngIf="getIncidentStatus(incident) === IncidentStatus.NOUVEAU" (click)="updateStatus(incident, IncidentStatus.EN_COURS)" class="btn-sm-action start" title="Prendre en charge">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button *ngIf="getIncidentStatus(incident) === IncidentStatus.EN_COURS" (click)="updateStatus(incident, IncidentStatus.TRAITE)" class="btn-sm-action resolve" title="Marquer comme Traité">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button *ngIf="getIncidentStatus(incident) === IncidentStatus.TRAITE" (click)="updateStatus(incident, IncidentStatus.CLOS)" class="btn-sm-action close" title="Clôturer">
+                                    <i class="fas fa-lock"></i>
+                                </button>
+                                <button class="btn-sm-action view" (click)="openDetailsModal(incident)" title="Voir détails">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr *ngIf="filteredIncidents.length === 0">
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-clipboard-check"></i>
+                            <p>Aucun incident à traiter pour ces critères.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <app-pagination 
+                [totalItems]="filteredIncidents.length" 
+                [currentPage]="currentPage" 
+                [pageSize]="itemsPerPage" 
+                (pageChanged)="onPageChanged($event)">
+            </app-pagination>
         </div>
     </div>
 </div>
 
-<app-modal *ngIf="showDetailsModal && selectedIncident" title="Details de l'incident" (close)="closeDetailsModal()">
+<app-modal *ngIf="showDetailsModal && selectedIncident" title="Détails de l'incident" (close)="closeDetailsModal()">
     <div #projected modal-body class="modal-form">
         <div class="details-grid">
             <div class="detail-block full">
@@ -107,7 +152,7 @@
             <div class="detail-block">
                 <span class="detail-label">Statut</span>
                 <p class="detail-value">
-                    <span class="status-badge" [ngClass]="getStatusClass(selectedIncident)">
+                    <span class="badge" [ngClass]="getStatusClass(selectedIncident)">
                         {{ getIncidentStatusLabel(selectedIncident) }}
                     </span>
                 </p>
@@ -118,13 +163,13 @@
                 <p class="detail-value">{{ selectedIncident.dateSurvenance | date:'dd/MM/yyyy' }}</p>
             </div>
 
-            <div class="detail-block" *ngIf="selectedIncident.departement?.nom">
-                <span class="detail-label">Departement</span>
-                <p class="detail-value">{{ selectedIncident.departement?.nom }}</p>
+            <div class="detail-block" *ngIf="selectedIncident.assignee">
+                <span class="detail-label">Assigné à</span>
+                <p class="detail-value">{{ selectedIncident.assignee?.prenom }} {{ selectedIncident.assignee?.nom }}</p>
             </div>
 
             <div class="detail-block" *ngIf="selectedIncident.declareur">
-                <span class="detail-label">Declarant</span>
+                <span class="detail-label">Déclarant</span>
                 <p class="detail-value">{{ selectedIncident.declareur?.prenom }} {{ selectedIncident.declareur?.nom }}</p>
             </div>
 
@@ -136,7 +181,7 @@
             <div class="detail-block" *ngIf="selectedIncident.niveauRisque">
                 <span class="detail-label">Niveau d'impact global</span>
                 <p class="detail-value">
-                    <span class="impact-badge" [ngClass]="getImpactClass(selectedIncident)">
+                    <span class="badge" [ngClass]="getImpactClass(selectedIncident)">
                         {{ levelLabelMap[selectedIncident.niveauRisque!] || selectedIncident.niveauRisque }}
                     </span>
                 </p>
@@ -153,7 +198,7 @@
             </div>
 
             <div class="detail-block full" *ngIf="selectedIncident.planActionTraitement">
-                <span class="detail-label">Plan d'action / remediation initiale</span>
+                <span class="detail-label">Plan d'action / remédiation initiale</span>
                 <p class="detail-value description-value plan-box">{{ selectedIncident.planActionTraitement }}</p>
             </div>
 
@@ -162,14 +207,17 @@
                 <p class="detail-value">{{ selectedIncident.dateEcheance | date:'dd/MM/yyyy' }}</p>
             </div>
 
-            <div class="detail-block" *ngIf="selectedIncident.createdAt">
-                <span class="detail-label">Cree le</span>
-                <p class="detail-value">{{ selectedIncident.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+            <div class="detail-block full" *ngIf="selectedIncident.pieceJointe">
+                <span class="detail-label">Pièce Jointe</span>
+                <a [href]="environment.apiUrl + '/../' + selectedIncident.pieceJointe"
+                    target="_blank" class="doc-link">
+                    <i class="fas fa-download"></i> Télécharger le document
+                </a>
             </div>
         </div>
 
         <div class="form-footer">
-            <button type="button" class="btn-close-modal" (click)="closeDetailsModal()">Fermer</button>
+            <button type="button" class="btn-cancel" (click)="closeDetailsModal()">Fermer</button>
         </div>
     </div>
 </app-modal>

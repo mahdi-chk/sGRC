@@ -44,7 +44,7 @@ export class AuditorEvidenceComponent implements OnInit {
     const userId = Number(currentUser.id);
     this.currentUserRole = currentUser.role || null;
 
-    this.auditingService.getMissions().subscribe({
+    this.auditingService.getMissions('all').subscribe({
       next: (data) => {
         this.missions = data.filter(m => Number(m.auditeurId) === userId && m.statut !== AuditMissionStatus.ANNULE);
         if (this.isSuperAdmin) {

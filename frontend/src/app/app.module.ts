@@ -43,9 +43,7 @@ import { RagManagerComponent } from './dashboard/components/rag-manager/rag-mana
 import { AuditingModule } from './modules/auditing/auditing.module';
 import { AuditingComponent } from './modules/auditing/auditing.component';
 import { PlanificationComponent } from './modules/auditing/planification/planification.component';
-import { AuditChecklistsComponent } from './modules/auditing/audit-checklists/audit-checklists.component';
 import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
-import { AuditorChecklistComponent } from './modules/auditing/auditor-checklist/auditor-checklist.component';
 import { AuditorEvidenceComponent } from './modules/auditing/auditor-evidence/auditor-evidence.component';
 import { AuditorReportComponent } from './modules/auditing/auditor-report/auditor-report.component';
 import { AuditEvidenceExplorerComponent } from './modules/auditing/senior/audit-evidence-explorer.component';
@@ -168,9 +166,7 @@ const routes: Routes = [
       // Routes Audit (composants exportés par AuditingModule)
       { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
       { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-checklists', component: AuditChecklistsComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'auditor-checklist', component: AuditorChecklistComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-evidence', component: AuditorEvidenceComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-report', component: AuditorReportComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'audit-evidence-explorer', component: AuditEvidenceExplorerComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },

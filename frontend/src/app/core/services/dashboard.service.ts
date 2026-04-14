@@ -91,7 +91,6 @@ export class DashboardService {
             submodules: [
                 { title: 'Planification Pluriannuelle' },
                 { title: 'Gestion des Missions' },
-                { title: 'Check-Lists Parametrables' },
                 { title: 'Tracabilite des Preuves' },
                 { title: 'Rapports et Suivi' }
             ],
@@ -103,7 +102,6 @@ export class DashboardService {
             desc: 'Realisez vos missions, remplissez les checklists et soumettez vos rapports.',
             submodules: [
                 { title: 'Mes Missions' },
-                { title: 'Ma Checklist' },
                 { title: 'Mes Preuves' },
                 { title: 'Soumettre Rapport' }
             ],
@@ -241,7 +239,6 @@ export class DashboardService {
         } else if (s.title === 'Cartographie Dynamique') {
             this.router.navigate(['/dashboard/statistics']);
         } else if (
-            s.title === 'Check-Lists Parametrables' ||
             s.title === 'Tracabilite des Preuves' ||
             s.title === 'Gestion des Missions' ||
             s.title === 'Rapports et Suivi' ||
@@ -249,9 +246,7 @@ export class DashboardService {
         ) {
             const isSenior = currentUser?.role === UserRole.AUDIT_SENIOR || currentUser?.role === UserRole.SUPER_ADMIN;
 
-            if (s.title === 'Check-Lists Parametrables' && isSenior) {
-                this.router.navigate(['/dashboard/audit-checklists']);
-            } else if (s.title === 'Planification Pluriannuelle' && isSenior) {
+            if (s.title === 'Planification Pluriannuelle' && isSenior) {
                 this.router.navigate(['/dashboard/audit-planning']);
             } else if (s.title === 'Tracabilite des Preuves' && isSenior) {
                 this.router.navigate(['/dashboard/audit-evidence-explorer']);
@@ -262,8 +257,6 @@ export class DashboardService {
             }
         } else if (s.title === 'Mes Missions') {
             this.router.navigate(['/dashboard/auditor-missions']);
-        } else if (s.title === 'Ma Checklist') {
-            this.router.navigate(['/dashboard/auditor-checklist']);
         } else if (s.title === 'Mes Preuves') {
             this.router.navigate(['/dashboard/auditor-evidence']);
         } else if (s.title === 'Soumettre Rapport') {

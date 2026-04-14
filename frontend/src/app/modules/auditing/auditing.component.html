@@ -139,19 +139,17 @@
                             <button class="action-btn btn-assign" *ngIf="canAssignAuditor(mission)" (click)="openAssignModal(mission)" title="Assigner">
                                 <i class="fas fa-user-plus"></i>
                             </button>
-                            <button class="action-btn btn-checklist" *ngIf="isSeniorAuditor && mission.type === 'mission_audit'" (click)="openChecklistModal(mission)" title="Historique plan lié">
-                                <i class="fas fa-list-check" style="color:#10b981"></i>
-                            </button>
-                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.type === 'mission_audit' && mission.statut === AuditMissionStatus.EN_COURS" (click)="openReportModal(mission)" title="Faire le rapport">
+
+                            <button class="action-btn btn-report" *ngIf="isAuditor && mission.statut === AuditMissionStatus.EN_COURS" (click)="openReportModal(mission)" title="Faire le rapport">
                                 <i class="fas fa-file-signature"></i>
                             </button>
                             <button class="action-btn btn-edit" *ngIf="isSeniorAuditor" (click)="openEditModal(mission)" title="Modifier">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="action-btn btn-evidence" *ngIf="mission.type === 'mission_audit'" (click)="openEvidenceModal(mission)" title="Preuves">
+                            <button class="action-btn btn-evidence" (click)="openEvidenceModal(mission)" title="Preuves">
                                 <i class="fas fa-paperclip"></i>
                             </button>
-                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.type === 'mission_audit' && mission.statut === AuditMissionStatus.OK" (click)="resetMission(mission.id)" title="Réinitialiser">
+                            <button class="action-btn btn-reset" *ngIf="isSeniorAuditor && mission.statut === AuditMissionStatus.OK" (click)="resetMission(mission.id)" title="Réinitialiser">
                                 <i class="fas fa-undo"></i>
                             </button>
                             <button class="action-btn btn-delete" *ngIf="isSeniorAuditor" (click)="deleteMission(mission.id)" title="Supprimer">

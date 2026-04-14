@@ -20,8 +20,13 @@ import { getAuditNavItems, getStoredAuditRole } from './audit-navigation';
 export class AuditorMissionsComponent implements OnInit {
     missions: AuditMission[] = [];
     filteredMissions: AuditMission[] = [];
+    pagedMissions: AuditMission[] = [];
     isLoading = false;
     currentUserRole: UserRole | null = getStoredAuditRole();
+
+    currentPage = 1;
+    pageSize = 10;
+    readonly pageSizeOptions = [10, 25, 50, 100];
 
     totalAssigned = 0;
     inProgressCount = 0;
@@ -99,6 +104,7 @@ export class AuditorMissionsComponent implements OnInit {
                     : data.filter((mission) => Number(mission.auditeurId) === userId);
                 this.applyFilters();
                 this.calculateStats();
+                this.updatePagedMissions();
                 this.isLoading = false;
             },
             error: (err) => {
@@ -127,6 +133,19 @@ export class AuditorMissionsComponent implements OnInit {
 
             return matchSearch && matchStatus;
         });
+        this.currentPage = 1;
+        this.updatePagedMissions();
+    }
+
+    onPaginationChange(event: { page: number; pageSize: number }) {
+        this.currentPage = event.page;
+        this.pageSize = event.pageSize;
+        this.updatePagedMissions();
+    }
+
+    private updatePagedMissions() {
+        const startIndex = (this.currentPage - 1) * this.pageSize;
+        this.pagedMissions = this.filteredMissions.slice(startIndex, startIndex + this.pageSize);
     }
 
     onFilterChange() {

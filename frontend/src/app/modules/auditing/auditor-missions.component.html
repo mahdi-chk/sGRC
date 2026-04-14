@@ -83,7 +83,7 @@
         <table class="audit-table" *ngIf="!isLoading">
             <thead>
                 <tr>
-                    <th>Type</th>
+
                     <th>Reference</th>
                     <th>Senior Audit</th>
                     <th>Risque / Source</th>
@@ -93,12 +93,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let mission of filteredMissions">
-                    <td>
-                        <span class="record-type-badge" [class.plan]="isActionPlanRecord(mission)">
-                            {{ getRecordTypeLabel(mission) }}
-                        </span>
-                    </td>
+                <tr *ngFor="let mission of pagedMissions">
+
                     <td>
                         <div class="mission-info">
                             <strong>{{ getDisplayTitle(mission) }}</strong>
@@ -128,12 +124,7 @@
                         <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir details">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button
-                            class="action-btn btn-checklist"
-                            (click)="openChecklistModal(mission)"
-                            title="Voir plan d action lie">
-                            <i class="fas fa-tasks"></i>
-                        </button>
+
                         <button
                             class="action-btn btn-evidence"
                             (click)="openEvidenceModal(mission)"
@@ -150,13 +141,22 @@
                     </td>
                 </tr>
                 <tr *ngIf="filteredMissions.length === 0">
-                    <td colspan="7" class="empty-state">
+                    <td colspan="6" class="empty-state">
                         <i class="fas fa-check-circle"></i>
                         <p>Aucun enregistrement d audit assigne pour le moment.</p>
                     </td>
                 </tr>
             </tbody>
         </table>
+
+        <app-pagination
+            *ngIf="!isLoading && filteredMissions.length > 0"
+            [totalItems]="filteredMissions.length"
+            [currentPage]="currentPage"
+            [pageSize]="pageSize"
+            [pageSizeOptions]="pageSizeOptions"
+            (pageChanged)="onPaginationChange($event)">
+        </app-pagination>
     </div>
 
     <app-modal *ngIf="showReportModal" title="Soumettre Rapport d Audit" (close)="showReportModal = false">
@@ -253,10 +253,7 @@
     <app-modal *ngIf="showDetailModal" [title]="getRecordTypeLabel(selectedMission) + ' - Details'" (close)="showDetailModal = false">
         <div #projected modal-body class="modal-form">
             <div class="detail-grid">
-                <div class="detail-item">
-                    <label>Type</label>
-                    <span>{{ getRecordTypeLabel(selectedMission) }}</span>
-                </div>
+
                 <div class="detail-item">
                     <label>Statut</label>
                     <span [class]="'badge status-' + getNormalizedStatus(selectedMission)">

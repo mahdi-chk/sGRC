@@ -21,7 +21,7 @@
         <!-- Sidebar: Mission List -->
         <div class="sidebar-list card">
             <div class="list-header">
-                <h3>Missions Assignées</h3>
+                <h3>Missions et Plan d'actions</h3>
             </div>
             <ul class="item-list">
                 <li *ngFor="let mission of missions" 
@@ -30,7 +30,9 @@
                     <div class="item-icon"><i class="fas fa-file-contract"></i></div>
                     <div class="item-info">
                         <strong>{{ mission.titre }}</strong>
-                        <span class="status-tag" [class]="mission.statut.toLowerCase()">{{ mission.statut }}</span>
+                        <div class="meta-tags">
+                            <span class="status-tag" [class]="mission.statut.toLowerCase()">{{ mission.statut }}</span>
+                        </div>
                     </div>
                 </li>
             </ul>
@@ -91,7 +93,7 @@
             <ng-template #selectPrompt>
                 <div class="select-prompt">
                     <i class="fas fa-folder-open"></i>
-                    <p>Sélectionnez une mission pour gérer ses preuves.</p>
+                    <p>Sélectionnez un enregistrement pour gérer ses preuves.</p>
                 </div>
             </ng-template>
         </div>

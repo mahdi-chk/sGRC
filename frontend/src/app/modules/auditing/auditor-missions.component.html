@@ -28,15 +28,15 @@
         <div class="stat-card pending">
             <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
             <div class="stat-info">
-                <span class="label">Missions</span>
-                <span class="value">{{ missionCount }}</span>
+                <span class="label">En cours</span>
+                <span class="value">{{ inProgressCount }}</span>
             </div>
         </div>
         <div class="stat-card risks">
             <div class="stat-icon"><i class="fas fa-list-check"></i></div>
             <div class="stat-info">
-                <span class="label">Plans d action</span>
-                <span class="value">{{ actionPlanCount }}</span>
+                <span class="label">A traiter</span>
+                <span class="value">{{ pendingCount }}</span>
             </div>
         </div>
         <div class="stat-card completed">
@@ -130,21 +130,19 @@
                         </button>
                         <button
                             class="action-btn btn-checklist"
-                            *ngIf="isMissionRecord(mission)"
                             (click)="openChecklistModal(mission)"
                             title="Voir plan d action lie">
                             <i class="fas fa-tasks"></i>
                         </button>
                         <button
                             class="action-btn btn-evidence"
-                            *ngIf="isMissionRecord(mission)"
                             (click)="openEvidenceModal(mission)"
                             title="Traçabilite des preuves">
                             <i class="fas fa-paperclip"></i>
                         </button>
                         <button
                             class="action-btn btn-report"
-                            *ngIf="isMissionRecord(mission) && getNormalizedStatus(mission) === AuditMissionStatus.EN_COURS"
+                            *ngIf="getNormalizedStatus(mission) === AuditMissionStatus.EN_COURS"
                             (click)="openReportModal(mission)"
                             title="Soumettre rapport">
                             <i class="fas fa-file-signature"></i>

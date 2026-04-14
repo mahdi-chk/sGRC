@@ -24,8 +24,8 @@ export class AuditorMissionsComponent implements OnInit {
     currentUserRole: UserRole | null = getStoredAuditRole();
 
     totalAssigned = 0;
-    missionCount = 0;
-    actionPlanCount = 0;
+    inProgressCount = 0;
+    pendingCount = 0;
     completedCount = 0;
 
     filterSearch = '';
@@ -145,8 +145,8 @@ export class AuditorMissionsComponent implements OnInit {
         );
 
         this.totalAssigned = this.missions.length;
-        this.missionCount = this.missions.filter((mission) => this.isMissionRecord(mission)).length;
-        this.actionPlanCount = this.missions.filter((mission) => this.isActionPlanRecord(mission)).length;
+        this.inProgressCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.EN_COURS).length;
+        this.pendingCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.NOK).length;
         this.completedCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.OK).length;
     }
 
@@ -215,7 +215,8 @@ export class AuditorMissionsComponent implements OnInit {
     openChecklistModal(mission: AuditMission) {
         this.selectedMission = mission;
         this.isLoading = true;
-        this.auditingService.getMissionActionPlanItems(mission.id).subscribe({
+        const targetMissionId = mission.sourceMissionId || mission.id;
+        this.auditingService.getMissionActionPlanItems(targetMissionId).subscribe({
             next: (items) => {
                 this.currentChecklistItems = items as any[];
                 this.isLoading = false;

@@ -177,12 +177,6 @@ export class AuditingService {
         return matched?.id ?? null;
     }
 
-    private static ensureMissionRecord(record: AuditMission) {
-        if (record.type !== AuditRecordType.MISSION_AUDIT) {
-            throw new Error('Cette operation est reservee aux missions d audit');
-        }
-    }
-
     private static buildActionPlanTitle(data: any): string {
         return this.cleanString(data.titre)
             || this.cleanString(data.regleDnssi)
@@ -665,7 +659,6 @@ export class AuditingService {
     ) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         const auditeurId = actorRole === UserRole.SUPER_ADMIN ? mission.auditeurId ?? actorId : actorId;
         if (mission.auditeurId !== auditeurId) throw new Error('Action non autorisée');
@@ -719,14 +712,12 @@ export class AuditingService {
 
         await softDeleteInstance(mission);
 
-        if (mission.type === AuditRecordType.MISSION_AUDIT) {
-            await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
-                where: { missionId, is_deleted: false }
-            });
-            await AuditEvidence.update(getSoftDeleteValues(), {
-                where: { missionId, is_deleted: false }
-            });
-        }
+        await AuditMissionChecklistItem.update(getSoftDeleteValues(), {
+            where: { missionId, is_deleted: false }
+        });
+        await AuditEvidence.update(getSoftDeleteValues(), {
+            where: { missionId, is_deleted: false }
+        });
 
         return { message: 'Enregistrement supprimé avec succès' };
     }
@@ -737,14 +728,12 @@ export class AuditingService {
 
         await restoreSoftDeletedInstance(mission);
 
-        if (mission.type === AuditRecordType.MISSION_AUDIT) {
-            await AuditMissionChecklistItem.scope('withDeleted').update(getRestoreValues(), {
-                where: { missionId, is_deleted: true }
-            });
-            await AuditEvidence.scope('withDeleted').update(getRestoreValues(), {
-                where: { missionId, is_deleted: true }
-            });
-        }
+        await AuditMissionChecklistItem.scope('withDeleted').update(getRestoreValues(), {
+            where: { missionId, is_deleted: true }
+        });
+        await AuditEvidence.scope('withDeleted').update(getRestoreValues(), {
+            where: { missionId, is_deleted: true }
+        });
 
         return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior'] });
     }
@@ -752,7 +741,6 @@ export class AuditingService {
     static async resetMission(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
             auditeurId: null,
@@ -868,7 +856,6 @@ export class AuditingService {
     static async createMissionActionPlanItem(missionId: number, data: any) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         const created = await this.createRecord(mission.auditSeniorId, {
             ...data,
@@ -916,7 +903,6 @@ export class AuditingService {
     static async importMissionActionPlan(missionId: number, file: Express.Multer.File) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         await AuditMission.update(getSoftDeleteValues(), {
             where: {
@@ -987,7 +973,6 @@ export class AuditingService {
     static async getMissionChecklistItems(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         return await AuditMissionChecklistItem.findAll({
             where: { missionId },
@@ -998,7 +983,6 @@ export class AuditingService {
     static async assignTemplateToMission(missionId: number, templateId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         const template = await AuditChecklistTemplate.findByPk(templateId, {
             include: [{ model: AuditChecklistTemplateItem, as: 'items' }]
@@ -1027,7 +1011,6 @@ export class AuditingService {
     static async toggleMissionChecklistItem(missionId: number, itemId: number, estFait: boolean) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         const item = await AuditMissionChecklistItem.findOne({
             where: { id: itemId, missionId }
@@ -1041,7 +1024,6 @@ export class AuditingService {
     static async getMissionEvidence(missionId: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         return await AuditEvidence.findAll({
             where: { missionId },
@@ -1058,7 +1040,6 @@ export class AuditingService {
                     model: AuditMission,
                     as: 'mission',
                     attributes: ['id', 'titre', 'type'],
-                    where: { type: AuditRecordType.MISSION_AUDIT },
                 }
             ],
             order: [['createdAt', 'DESC']]
@@ -1068,7 +1049,6 @@ export class AuditingService {
     static async getMissionsWithReports() {
         return await AuditMission.findAll({
             where: {
-                type: AuditRecordType.MISSION_AUDIT,
                 rapport: { [Op.ne]: null }
             },
             include: ['auditeur', 'auditSenior', 'risk'],
@@ -1079,7 +1059,6 @@ export class AuditingService {
     static async addMissionEvidence(missionId: number, filename: string, path: string, uploadedById: number) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Mission non trouvée');
-        this.ensureMissionRecord(mission);
 
         const evidence = await AuditEvidence.create({
             missionId,

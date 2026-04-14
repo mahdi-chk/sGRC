@@ -1,5 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditMission, AuditMissionStatus, AuditEvidence } from '../../core/services/auditing.service';
+import {
+    AuditingService,
+    AuditMission,
+    AuditMissionStatus,
+    AuditEvidence,
+    AuditMissionHorizon,
+    AuditRecordType
+} from '../../core/services/auditing.service';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -16,17 +23,13 @@ export class AuditorMissionsComponent implements OnInit {
     isLoading = false;
     currentUserRole: UserRole | null = getStoredAuditRole();
 
-    // Stats
     totalAssigned = 0;
-    pendingCount = 0;
+    missionCount = 0;
+    actionPlanCount = 0;
     completedCount = 0;
-    overdueCount = 0;
 
-    // Filter properties
     filterSearch = '';
     filterStatus = '';
-
-
 
     showReportModal = false;
     showDetailModal = false;
@@ -44,16 +47,24 @@ export class AuditorMissionsComponent implements OnInit {
         recommandations: ''
     };
 
-    // Expose Enum to template
     AuditMissionStatus = AuditMissionStatus;
+    AuditMissionHorizon = AuditMissionHorizon;
+    AuditRecordType = AuditRecordType;
 
-    // Label mappings for UI
     statusLabelMap: Record<string, string> = {
-        [AuditMissionStatus.A_VENIR]: 'À venir',
+        [AuditMissionStatus.NOK]: 'NOK',
         [AuditMissionStatus.EN_COURS]: 'En cours',
-        [AuditMissionStatus.TERMINE]: 'Terminé',
-        [AuditMissionStatus.EN_RETARD]: 'En retard',
-        [AuditMissionStatus.ANNULE]: 'Annulé'
+        [AuditMissionStatus.OK]: 'OK'
+    };
+
+    horizonLabelMap: Record<string, string> = {
+        [AuditMissionHorizon.COURT_TERME]: 'A court terme',
+        [AuditMissionHorizon.MOYEN_TERME]: 'A moyen terme'
+    };
+
+    recordTypeLabelMap: Record<string, string> = {
+        [AuditRecordType.MISSION_AUDIT]: 'Mission',
+        [AuditRecordType.PLAN_ACTION_AUDIT]: 'Plan d action'
     };
 
     constructor(
@@ -76,15 +87,16 @@ export class AuditorMissionsComponent implements OnInit {
             this.isLoading = false;
             return;
         }
+
         const currentUser = JSON.parse(userStr);
         const userId = Number(currentUser.id);
         this.currentUserRole = currentUser.role || null;
 
-        this.auditingService.getMissions().subscribe({
+        this.auditingService.getMissions('all').subscribe({
             next: (data) => {
                 this.missions = this.isSuperAdmin
                     ? data
-                    : data.filter(m => Number(m.auditeurId) === userId);
+                    : data.filter((mission) => Number(mission.auditeurId) === userId);
                 this.applyFilters();
                 this.calculateStats();
                 this.isLoading = false;
@@ -97,19 +109,25 @@ export class AuditorMissionsComponent implements OnInit {
     }
 
     applyFilters() {
-        this.filteredMissions = this.missions.filter(m => {
-            const matchSearch = !this.filterSearch || 
-                m.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
-                (m.auditSenior && `${m.auditSenior.prenom} ${m.auditSenior.nom}`.toLowerCase().includes(this.filterSearch.toLowerCase()));
-            
-            const missionStatut = ((m as any).statutCode || m.statut || '').toLowerCase();
-            const filterStatut = (this.filterStatus || '').toLowerCase();
+        this.filteredMissions = this.missions.filter((mission) => {
+            const q = this.filterSearch.toLowerCase();
+            const matchSearch = !this.filterSearch
+                || String(mission.id).includes(q)
+                || (mission.titre || '').toLowerCase().includes(q)
+                || (mission.regleDnssi || '').toLowerCase().includes(q)
+                || (mission.recommandations || mission.objectifs || '').toLowerCase().includes(q)
+                || (mission.responsabilites || '').toLowerCase().includes(q)
+                || (mission.risk?.titre || '').toLowerCase().includes(q)
+                || (mission.sourceMission?.titre || '').toLowerCase().includes(q)
+                || (mission.auditSenior && `${mission.auditSenior.prenom} ${mission.auditSenior.nom}`.toLowerCase().includes(q));
+
+            const missionStatut = this.normalizeMissionStatus((mission as any).statutCode || mission.statut);
+            const filterStatut = this.normalizeMissionStatus(this.filterStatus);
             const matchStatus = !filterStatut || missionStatut === filterStatut;
 
             return matchSearch && matchStatus;
         });
     }
-
 
     onFilterChange() {
         this.applyFilters();
@@ -121,21 +139,18 @@ export class AuditorMissionsComponent implements OnInit {
         this.applyFilters();
     }
 
-
     calculateStats() {
         const normalizedStatuses = this.missions.map((mission) =>
             this.normalizeMissionStatus((mission as any).statutCode || mission.statut)
         );
 
-        this.totalAssigned = normalizedStatuses.filter((status) => status !== AuditMissionStatus.ANNULE).length;
-        this.pendingCount = normalizedStatuses.filter((status) =>
-            status === AuditMissionStatus.EN_COURS || status === AuditMissionStatus.A_VENIR
-        ).length;
-        this.completedCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.TERMINE).length;
-        this.overdueCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.EN_RETARD).length;
+        this.totalAssigned = this.missions.length;
+        this.missionCount = this.missions.filter((mission) => this.isMissionRecord(mission)).length;
+        this.actionPlanCount = this.missions.filter((mission) => this.isActionPlanRecord(mission)).length;
+        this.completedCount = normalizedStatuses.filter((status) => status === AuditMissionStatus.OK).length;
     }
 
-    private normalizeMissionStatus(value?: string | null): string {
+    normalizeMissionStatus(value?: string | null): string {
         return (value || '')
             .toString()
             .trim()
@@ -143,6 +158,44 @@ export class AuditorMissionsComponent implements OnInit {
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/[\s-]+/g, '_');
+    }
+
+    getNormalizedStatus(mission: AuditMission | null | undefined): string {
+        return this.normalizeMissionStatus((mission as any)?.statutCode || mission?.statut);
+    }
+
+    isMissionRecord(mission: AuditMission | null | undefined): boolean {
+        return (mission?.type || AuditRecordType.MISSION_AUDIT) === AuditRecordType.MISSION_AUDIT;
+    }
+
+    isActionPlanRecord(mission: AuditMission | null | undefined): boolean {
+        return mission?.type === AuditRecordType.PLAN_ACTION_AUDIT;
+    }
+
+    getRecordTypeLabel(mission: AuditMission | null | undefined): string {
+        const type = mission?.type || AuditRecordType.MISSION_AUDIT;
+        return this.recordTypeLabelMap[type] || 'Enregistrement';
+    }
+
+    getDisplayTitle(mission: AuditMission | null | undefined): string {
+        if (!mission) {
+            return '-';
+        }
+
+        return mission.regleDnssi || mission.titre || `Enregistrement #${mission.id}`;
+    }
+
+    getDisplayDescription(mission: AuditMission | null | undefined): string {
+        if (!mission) {
+            return '-';
+        }
+
+        return mission.recommandations || mission.objectifs || mission.responsabilites || '-';
+    }
+
+    getStatusLabel(value?: string | null): string {
+        const normalized = this.normalizeMissionStatus(value);
+        return this.statusLabelMap[normalized] || value || '-';
     }
 
     openDetailModal(mission: AuditMission) {
@@ -176,22 +229,6 @@ export class AuditorMissionsComponent implements OnInit {
         });
     }
 
-    toggleChecklistItem(item: any, isFinished: boolean) {
-        if (!this.selectedMission) return;
-        this.auditingService.toggleMissionChecklistItem(this.selectedMission.id, item.id, isFinished).subscribe({
-            next: (updatedItem) => {
-                item.estFait = updatedItem.estFait;
-            },
-            error: (err) => {
-                console.error(err);
-                item.estFait = !isFinished; // revert UI change
-                alert('Erreur lors de la mise à jour.');
-            }
-        });
-    }
-
-    // --- PREUVES (EVIDENCE) ---
-
     openEvidenceModal(mission: AuditMission) {
         this.selectedMission = mission;
         this.loadEvidences(mission.id);
@@ -220,7 +257,10 @@ export class AuditorMissionsComponent implements OnInit {
     }
 
     uploadEvidence() {
-        if (!this.selectedMission || !this.selectedFile) return;
+        if (!this.selectedMission || !this.selectedFile) {
+            return;
+        }
+
         this.isUploading = true;
         this.auditingService.addMissionEvidence(this.selectedMission.id, this.selectedFile).subscribe({
             next: (newEvidence) => {
@@ -231,16 +271,19 @@ export class AuditorMissionsComponent implements OnInit {
             error: (err) => {
                 console.error(err);
                 this.isUploading = false;
-                alert('Erreur lors de l\'upload du fichier.');
+                alert('Erreur lors de l upload du fichier.');
             }
         });
     }
 
     deleteEvidence(evidenceId: number) {
-        if (!this.selectedMission || !confirm('Voulez-vous vraiment supprimer cette preuve ?')) return;
+        if (!this.selectedMission || !confirm('Voulez-vous vraiment supprimer cette preuve ?')) {
+            return;
+        }
+
         this.auditingService.deleteMissionEvidence(this.selectedMission.id, evidenceId).subscribe({
             next: () => {
-                this.currentEvidences = this.currentEvidences.filter(e => e.id !== evidenceId);
+                this.currentEvidences = this.currentEvidences.filter((evidence) => evidence.id !== evidenceId);
             },
             error: (err) => {
                 console.error(err);
@@ -250,21 +293,20 @@ export class AuditorMissionsComponent implements OnInit {
     }
 
     downloadEvidence(path: string) {
-        // Remove trailing slashes from backendUrl just in case
         const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
-        // The path stored in DB is like 'src\storage\evidence\file.pdf'
         const normalizedPath = path.replace(/\\/g, '/');
-        const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
-        
-        // Get token for authorization (backend allows token in query string)
+        const finalPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
         const token = sessionStorage.getItem('sgrc_token');
         const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-        
+
         window.open(urlWithToken, '_blank');
     }
 
     submitReport() {
-        if (!this.selectedMission) return;
+        if (!this.selectedMission) {
+            return;
+        }
+
         this.isLoading = true;
         this.auditingService.submitReport(this.selectedMission.id, this.reportData).subscribe({
             next: () => {
@@ -275,7 +317,7 @@ export class AuditorMissionsComponent implements OnInit {
             error: (err) => {
                 console.error(err);
                 this.isLoading = false;
-                alert('Erreur lors de l\'envoi du rapport.');
+                alert('Erreur lors de l envoi du rapport.');
             }
         });
     }

@@ -1,13 +1,12 @@
 <div class="audit-page auditor-view">
-    <!-- Page Header -->
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-tasks"></i> {{ isSuperAdmin ? "Pilotage des Missions d'Audit" : "Mon Espace d'Audit" }}</h1>
-                <p>Consultez vos missions et gérez vos rapports en toute simplicité.</p>
+                <h1><i class="fas fa-tasks"></i> {{ isSuperAdmin ? "Pilotage Audit" : "Mon Espace Audit" }}</h1>
+                <p>Vue mixte de vos missions d audit et des plans d action qui vous sont affectes.</p>
             </div>
         </div>
     </div>
@@ -18,154 +17,159 @@
         </a>
     </nav>
 
-    <!-- Summary Stats -->
     <div class="stats-grid">
         <div class="stat-card total">
-            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+            <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
             <div class="stat-info">
-                <span class="label">Total Missions</span>
+                <span class="label">Total</span>
                 <span class="value">{{ totalAssigned }}</span>
             </div>
         </div>
         <div class="stat-card pending">
-            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
             <div class="stat-info">
-                <span class="label">Actives</span>
-                <span class="value">{{ pendingCount }}</span>
+                <span class="label">Missions</span>
+                <span class="value">{{ missionCount }}</span>
+            </div>
+        </div>
+        <div class="stat-card risks">
+            <div class="stat-icon"><i class="fas fa-list-check"></i></div>
+            <div class="stat-info">
+                <span class="label">Plans d action</span>
+                <span class="value">{{ actionPlanCount }}</span>
             </div>
         </div>
         <div class="stat-card completed">
             <div class="stat-icon"><i class="fas fa-check-double"></i></div>
             <div class="stat-info">
-                <span class="label">Terminées</span>
+                <span class="label">Clotures</span>
                 <span class="value">{{ completedCount }}</span>
-            </div>
-        </div>
-        <div class="stat-card risks">
-            <div class="stat-icon"><i class="fas fa-hourglass-end"></i></div>
-            <div class="stat-info">
-                <span class="label">En Retard</span>
-                <span class="value">{{ overdueCount }}</span>
             </div>
         </div>
     </div>
 
-    <!-- Filters Bar Premium -->
     <div class="filters-bar premium mb-4">
         <div class="filter-controls">
             <div class="filter-group">
                 <i class="fas fa-search"></i>
-                <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher...">
+                <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher par ID, titre, regle, recommandation...">
             </div>
 
             <div class="filter-group">
                 <i class="fas fa-tasks"></i>
                 <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
-                    <option value="">Tous les statuts</option>
-                    <option [value]="AuditMissionStatus.A_VENIR">{{ statusLabelMap[AuditMissionStatus.A_VENIR] }}</option>
+                    <option value="">Tous les etats</option>
+                    <option [value]="AuditMissionStatus.NOK">{{ statusLabelMap[AuditMissionStatus.NOK] }}</option>
                     <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
-                    <option [value]="AuditMissionStatus.TERMINE">{{ statusLabelMap[AuditMissionStatus.TERMINE] }}</option>
-                    <option [value]="AuditMissionStatus.EN_RETARD">{{ statusLabelMap[AuditMissionStatus.EN_RETARD] }}</option>
-                    <option [value]="AuditMissionStatus.ANNULE">{{ statusLabelMap[AuditMissionStatus.ANNULE] }}</option>
+                    <option [value]="AuditMissionStatus.OK">{{ statusLabelMap[AuditMissionStatus.OK] }}</option>
                 </select>
             </div>
 
             <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus">
-                <i class="fas fa-undo"></i> Réinitialiser
+                <i class="fas fa-undo"></i> Reinitialiser
             </button>
         </div>
 
         <div class="results-info">
-            <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> mission(s) trouvée(s)</span>
+            <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> enregistrement(s)</span>
         </div>
     </div>
 
-    <!-- Missions Table -->
     <div class="missions-card">
-
         <div class="table-loading" *ngIf="isLoading">
-            <i class="fas fa-circle-notch fa-spin"></i> {{ isSuperAdmin ? 'Chargement des missions...' : 'Chargement de vos missions...' }}
+            <i class="fas fa-circle-notch fa-spin"></i> {{ isSuperAdmin ? 'Chargement des enregistrements...' : 'Chargement de vos enregistrements...' }}
         </div>
 
         <table class="audit-table" *ngIf="!isLoading">
             <thead>
                 <tr>
-                    <th>Mission</th>
-                    <th>Engagement par</th>
-                    <th>Risque Associé</th>
-                    <th>Échéance</th>
+                    <th>Type</th>
+                    <th>Reference</th>
+                    <th>Senior Audit</th>
+                    <th>Risque / Source</th>
+                    <th>Echeance</th>
                     <th>Statut</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <tr *ngFor="let mission of filteredMissions">
-
+                    <td>
+                        <span class="record-type-badge" [class.plan]="isActionPlanRecord(mission)">
+                            {{ getRecordTypeLabel(mission) }}
+                        </span>
+                    </td>
                     <td>
                         <div class="mission-info">
-                            <strong>{{ mission.titre }}</strong>
-                            <small>{{ mission.objectifs | slice:0:60 }}...</small>
+                            <strong>{{ getDisplayTitle(mission) }}</strong>
+                            <small>{{ getDisplayDescription(mission) | slice:0:90 }}{{ getDisplayDescription(mission).length > 90 ? '...' : '' }}</small>
                         </div>
                     </td>
                     <td>
                         <div class="senior-info" *ngIf="mission.auditSenior">
-                            <i class="fas fa-user-tie"></i> {{ mission.auditSenior.prenom }} {{ mission.auditSenior.nom
-                            }}
+                            <i class="fas fa-user-tie"></i>
+                            {{ mission.auditSenior.prenom }} {{ mission.auditSenior.nom }}
                         </div>
                     </td>
                     <td>
-                        <div class="risk-info-cell" [title]="mission.risk?.titre">
-                            <span class="risk-id">#{{ mission.riskId }}</span>
-                            <span class="risk-name">{{ mission.risk?.titre }}</span>
+                        <div class="risk-info-cell" *ngIf="mission.risk || mission.sourceMission">
+                            <span class="risk-name" *ngIf="mission.risk?.titre">{{ mission.risk?.titre }}</span>
+                            <small *ngIf="mission.sourceMission?.titre">Source: {{ mission.sourceMission?.titre }}</small>
                         </div>
+                        <span *ngIf="!mission.risk && !mission.sourceMission">-</span>
                     </td>
-                    <td>{{ mission.delai | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ mission.delai ? (mission.delai | date:'dd/MM/yyyy') : '-' }}</td>
                     <td>
-                        <span [class]="'badge status-' + mission.statut.replace('_', '-')">
-                            {{ statusLabelMap[mission.statut] || mission.statut }}
+                        <span [class]="'badge status-' + getNormalizedStatus(mission)">
+                            {{ getStatusLabel(mission.statut) }}
                         </span>
                     </td>
                     <td class="actions-cell">
-                        <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir détails">
+                        <button class="action-btn btn-view" (click)="openDetailModal(mission)" title="Voir details">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="action-btn btn-checklist" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
-                            (click)="openChecklistModal(mission)" title="Ouvrir Plan d actions">
+                        <button
+                            class="action-btn btn-checklist"
+                            *ngIf="isMissionRecord(mission)"
+                            (click)="openChecklistModal(mission)"
+                            title="Voir plan d action lie">
                             <i class="fas fa-tasks"></i>
                         </button>
-                        <button class="action-btn btn-evidence" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
-                            (click)="openEvidenceModal(mission)" title="Traçabilité des Preuves">
+                        <button
+                            class="action-btn btn-evidence"
+                            *ngIf="isMissionRecord(mission)"
+                            (click)="openEvidenceModal(mission)"
+                            title="Traçabilite des preuves">
                             <i class="fas fa-paperclip"></i>
                         </button>
-                        <button class="action-btn btn-report" *ngIf="mission.statut === AuditMissionStatus.EN_COURS"
-                            (click)="openReportModal(mission)" title="Soumettre Rapport">
+                        <button
+                            class="action-btn btn-report"
+                            *ngIf="isMissionRecord(mission) && getNormalizedStatus(mission) === AuditMissionStatus.EN_COURS"
+                            (click)="openReportModal(mission)"
+                            title="Soumettre rapport">
                             <i class="fas fa-file-signature"></i>
                         </button>
                     </td>
                 </tr>
                 <tr *ngIf="filteredMissions.length === 0">
-
-                    <td colspan="5" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <i class="fas fa-check-circle"></i>
-                        <p>Vous n'avez aucune mission d'audit assignée pour le moment.</p>
+                        <p>Aucun enregistrement d audit assigne pour le moment.</p>
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Report Modal -->
-    <app-modal *ngIf="showReportModal" title="Soumettre Rapport d'Audit" (close)="showReportModal = false">
+    <app-modal *ngIf="showReportModal" title="Soumettre Rapport d Audit" (close)="showReportModal = false">
         <div #projected modal-body class="modal-form">
             <div class="form-group full">
-                <label>Rapport Final d'Audit <span class="req">*</span></label>
-                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Décrivez les résultats de l'audit..."
-                    class="finput"></textarea>
+                <label>Rapport Final d Audit <span class="req">*</span></label>
+                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Decrivez les resultats de l audit..." class="finput"></textarea>
             </div>
             <div class="form-group full">
                 <label>Recommandations <span class="req">*</span></label>
-                <textarea [(ngModel)]="reportData.recommandations" rows="4"
-                    placeholder="Actions correctives suggérées..." class="finput"></textarea>
+                <textarea [(ngModel)]="reportData.recommandations" rows="4" placeholder="Actions correctives suggerees..." class="finput"></textarea>
             </div>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showReportModal = false">Annuler</button>
@@ -176,24 +180,23 @@
         </div>
     </app-modal>
 
-    <!-- Plan d actions Modal -->
-    <app-modal *ngIf="showChecklistModal" title="Plan d actions de la Mission" (close)="showChecklistModal = false">
+    <app-modal *ngIf="showChecklistModal" title="Plan d action de la mission" (close)="showChecklistModal = false">
         <div #projected modal-body class="modal-form">
             <div *ngIf="isLoading" class="table-loading">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement...
             </div>
-            
+
             <div *ngIf="!isLoading && currentChecklistItems.length === 0" class="empty-state" style="padding: 2rem; text-align: center;">
-                <p>Aucun plan d actions associé à cette mission.</p>
+                <p>Aucun plan d action associe a cette mission.</p>
             </div>
 
             <table class="audit-table" *ngIf="!isLoading && currentChecklistItems.length > 0">
                 <thead>
                     <tr>
-                        <th>Règle</th>
+                        <th>Regle</th>
                         <th>Recommandations</th>
                         <th>Responsable</th>
-                        <th>Echéance</th>
+                        <th>Echeance</th>
                         <th>Etat</th>
                     </tr>
                 </thead>
@@ -214,22 +217,21 @@
         </div>
     </app-modal>
 
-    <!-- Evidence Modal -->
-    <app-modal *ngIf="showEvidenceModal" title="Traçabilité des Preuves" (close)="showEvidenceModal = false">
+    <app-modal *ngIf="showEvidenceModal" title="Tracabilite des preuves" (close)="showEvidenceModal = false">
         <div #projected modal-body class="modal-form">
             <div class="evidence-upload-section">
                 <input type="file" (change)="onFileSelected($event)" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png">
                 <button class="btn-primary" (click)="uploadEvidence()" [disabled]="!selectedFile || isUploading">
-                    <i class="fas fa-upload"></i> {{ isUploading ? 'Téléversement...' : 'Ajouter Preuve' }}
+                    <i class="fas fa-upload"></i> {{ isUploading ? 'Televersement...' : 'Ajouter Preuve' }}
                 </button>
             </div>
-            
+
             <div *ngIf="isLoading" class="table-loading">
                 <i class="fas fa-circle-notch fa-spin"></i> Chargement des preuves...
             </div>
-            
+
             <div *ngIf="!isLoading && currentEvidences.length === 0" class="empty-state">
-                <p>Aucune preuve téléversée pour cette mission.</p>
+                <p>Aucune preuve televersee pour cette mission.</p>
             </div>
 
             <ul class="evidence-list" *ngIf="!isLoading && currentEvidences.length > 0">
@@ -250,35 +252,53 @@
         </div>
     </app-modal>
 
-    <!-- Detail Modal -->
-    <app-modal *ngIf="showDetailModal" title="Détails de la Mission" (close)="showDetailModal = false">
-        <!-- Re-use the detail grid from senior view, simplified -->
+    <app-modal *ngIf="showDetailModal" [title]="getRecordTypeLabel(selectedMission) + ' - Details'" (close)="showDetailModal = false">
         <div #projected modal-body class="modal-form">
             <div class="detail-grid">
                 <div class="detail-item">
-                    <label>Titre</label>
-                    <span>{{ selectedMission?.titre }}</span>
+                    <label>Type</label>
+                    <span>{{ getRecordTypeLabel(selectedMission) }}</span>
                 </div>
                 <div class="detail-item">
                     <label>Statut</label>
-                    <span [class]="'badge status-' + selectedMission?.statut?.replace('_', '-')">
-                        {{ statusLabelMap[selectedMission?.statut!] || selectedMission?.statut }}
+                    <span [class]="'badge status-' + getNormalizedStatus(selectedMission)">
+                        {{ getStatusLabel(selectedMission?.statut) }}
                     </span>
                 </div>
                 <div class="detail-item full">
-                    <label>Objectifs</label>
-                    <p>{{ selectedMission?.objectifs }}</p>
+                    <label>Titre / Regle</label>
+                    <p>{{ getDisplayTitle(selectedMission) }}</p>
                 </div>
                 <div class="detail-item full">
-                    <label>Responsabilités</label>
-                    <p>{{ selectedMission?.responsabilites }}</p>
+                    <label>Description</label>
+                    <p>{{ getDisplayDescription(selectedMission) }}</p>
+                </div>
+                <div class="detail-item" *ngIf="isActionPlanRecord(selectedMission)">
+                    <label>Horizon</label>
+                    <span>{{ horizonLabelMap[selectedMission?.horizon || ''] || '-' }}</span>
+                </div>
+                <div class="detail-item" *ngIf="isActionPlanRecord(selectedMission)">
+                    <label>Priorite</label>
+                    <span>{{ selectedMission?.priorite ?? '-' }}</span>
+                </div>
+                <div class="detail-item full">
+                    <label>Responsabilites</label>
+                    <p>{{ selectedMission?.responsabilites || '-' }}</p>
                 </div>
                 <div class="detail-item">
-                    <label>Échéance</label>
-                    <span>{{ selectedMission?.delai | date:'dd/MM/yyyy' }}</span>
+                    <label>Echeance</label>
+                    <span>{{ selectedMission?.delai ? (selectedMission?.delai | date:'dd/MM/yyyy') : '-' }}</span>
+                </div>
+                <div class="detail-item" *ngIf="selectedMission?.risk?.titre">
+                    <label>Risque</label>
+                    <span>{{ selectedMission?.risk?.titre }}</span>
+                </div>
+                <div class="detail-item full" *ngIf="selectedMission?.sourceMission?.titre">
+                    <label>Mission source</label>
+                    <p>{{ selectedMission?.sourceMission?.titre }}</p>
                 </div>
                 <div class="detail-item full" *ngIf="selectedMission?.rapport">
-                    <label>Votre Rapport</label>
+                    <label>Rapport</label>
                     <div class="report-preview">{{ selectedMission?.rapport }}</div>
                 </div>
             </div>

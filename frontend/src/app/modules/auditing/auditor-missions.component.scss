@@ -84,6 +84,26 @@
         }
     }
 
+    .record-type-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 110px;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #0f4c81;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+
+        &.plan {
+            background: #ecfccb;
+            color: #3f6212;
+        }
+    }
+
     .report-preview {
         background: #f8fafc;
         padding: 15px;

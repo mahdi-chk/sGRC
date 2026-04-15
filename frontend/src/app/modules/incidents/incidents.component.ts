@@ -20,7 +20,8 @@ export class IncidentsComponent implements OnInit {
     risks: Risk[] = [];
     filteredIncidents: Incident[] = [];
     environment = environment;
-
+    currentUserId: number | null = null;
+    currentUserRole_enum: UserRole | null = null;
 
     // Filter properties
     filterSearch = '';
@@ -104,6 +105,9 @@ export class IncidentsComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const currentUser = this.authService.getCurrentUser();
+        this.currentUserId = currentUser?.id || null;
+        this.currentUserRole_enum = this.authService.getUserRole();
         this.loadIncidents();
         this.loadDepartments();
         this.loadRisks();
@@ -121,6 +125,12 @@ export class IncidentsComponent implements OnInit {
 
     applyFilters() {
         this.filteredIncidents = this.incidents.filter(incident => {
+            // 0. Filtre par visibilité utilisateur (sauf super admin)
+            const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
+            const isDeclarerByUser = incident.userId === this.currentUserId;
+            const isAssignedToUser = incident.assigneeId === this.currentUserId;
+            const matchUserAccess = isSuperAdmin || isDeclarerByUser || isAssignedToUser;
+
             const matchSearch = !this.filterSearch || 
                 incident.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
                 incident.description.toLowerCase().includes(this.filterSearch.toLowerCase());
@@ -133,7 +143,7 @@ export class IncidentsComponent implements OnInit {
             const filterLevel = (this.filterLevel || '').toLowerCase();
             const matchLevel = !filterLevel || incidentLevel === filterLevel;
 
-            return matchSearch && matchStatus && matchLevel;
+            return matchUserAccess && matchSearch && matchStatus && matchLevel;
         });
         this.currentPage = 1;
     }

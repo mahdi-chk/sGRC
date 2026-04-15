@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from '../../../core/services/incident.service';
 import { UserService, User } from '../../../core/services/user.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { UserRole } from '../../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
 import { environment } from '../../../../environments/environment';
@@ -12,6 +14,8 @@ import { environment } from '../../../../environments/environment';
 })
 export class IncidentWorkflowComponent implements OnInit {
   currentUserRole = getStoredIncidentRole();
+  currentUserId: number | null = null;
+  currentUserRole_enum: UserRole | null = null;
   incidents: Incident[] = [];
   users: User[] = [];
   filteredIncidents: Incident[] = [];
@@ -49,6 +53,7 @@ export class IncidentWorkflowComponent implements OnInit {
   constructor(
     private incidentService: IncidentService,
     private userService: UserService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
@@ -57,6 +62,9 @@ export class IncidentWorkflowComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const currentUser = this.authService.getCurrentUser();
+    this.currentUserId = currentUser?.id || null;
+    this.currentUserRole_enum = this.authService.getUserRole();
     this.loadIncidents();
     this.loadUsers();
   }
@@ -89,6 +97,12 @@ export class IncidentWorkflowComponent implements OnInit {
     const search = (this.searchTerm || '').toLowerCase();
     
     this.filteredIncidents = this.incidents.filter(i => {
+      // 0. Filtre par visibilité utilisateur (sauf super admin)
+      const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
+      const isDeclarerByUser = i.userId === this.currentUserId;
+      const isAssignedToUser = i.assigneeId === this.currentUserId;
+      const matchUserAccess = isSuperAdmin || isDeclarerByUser || isAssignedToUser;
+
       // 1. Recherche
       const matchSearch = !search
         || (i.titre && i.titre.toLowerCase().includes(search))
@@ -99,11 +113,12 @@ export class IncidentWorkflowComponent implements OnInit {
       const filterStatut = this.normalizeStatus(this.statusFilter);
       const matchStatus = !filterStatut || incidentStatut === filterStatut;
 
-      // 3. Filtre "À traiter" (Bouton rapide)
+      // 3. Filtre "À traiter" (Bouton rapide) - affiche seulement les incidents assignés à l'utilisateur actuel
       const isToProcess = incidentStatut === IncidentStatus.NOUVEAU || incidentStatut === IncidentStatus.EN_COURS;
-      const matchToProcess = !this.onlyToProcess || isToProcess;
+      const isAssignedToCurrentUser = i.assigneeId === this.currentUserId;
+      const matchToProcess = !this.onlyToProcess || (isToProcess && isAssignedToCurrentUser);
 
-      return matchSearch && matchStatus && matchToProcess;
+      return matchUserAccess && matchSearch && matchStatus && matchToProcess;
     });
     
     this.currentPage = 1;

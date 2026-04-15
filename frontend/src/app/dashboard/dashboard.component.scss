@@ -25,23 +25,26 @@
     .logo-container {
       display: flex;
       align-items: center;
-      gap: 10px;
+     gap: 12px;
 
-      .logo-img {
-        height: 35px;
-        width: auto;
-        border-radius: 4px;
-      }
+    .logo-img {
+      height: 48px;          // taille plus équilibrée pour navbar
+      max-height: 65px;      // limite haute
+      width: auto;
+      object-fit: contain;   // évite la déformation
+      display: block;
+   }
 
-      .logo {
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 700;
-        font-size: 18px;
-        color: #004a99;
-        letter-spacing: 0.5px;
-        white-space: nowrap;
-      }
-    }
+  .logo {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: #004a99;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    line-height: 1;        // meilleur alignement vertical
+  }
+}
 
     .divider {
       width: 1px;

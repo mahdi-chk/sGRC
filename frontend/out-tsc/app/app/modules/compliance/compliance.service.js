@@ -36,6 +36,11 @@ export class ComplianceService {
     createRequirement(payload) {
         return this.http.post(`${this.apiUrl}/requirements`, payload);
     }
+    importRequirements(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post(`${this.apiUrl}/frameworks/import`, formData);
+    }
     updateRequirement(id, payload) {
         return this.http.put(`${this.apiUrl}/requirements/${id}`, payload);
     }

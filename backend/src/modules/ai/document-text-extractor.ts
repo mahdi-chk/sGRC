@@ -44,6 +44,18 @@ export class DocumentTextExtractor {
             .trim();
     }
 
+    static cleanTextPreserveLines(text: string): string {
+        return text
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+            .split('\n')
+            .map(line => line.replace(/[ \t]+/g, ' ').trim())
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
     static limitText(text: string, maxChars: number = 4000): string {
         if (text.length <= maxChars) {
             return text;
@@ -595,7 +607,9 @@ export class DocumentTextExtractor {
             }
         } else if (extension === 'docx') {
             const result = await mammoth.extractRawText({ buffer: file.buffer });
-            extractedText = this.cleanText(result.value);
+            extractedText = this.cleanTextPreserveLines(result.value);
+        } else if (extension === 'txt') {
+            extractedText = this.cleanTextPreserveLines(file.buffer.toString('utf8'));
         } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
             extractedText = await this.extractTextFromImageBuffer(file.buffer, options.includeStructuredRegionsForImages !== false);
         } else {
@@ -604,7 +618,7 @@ export class DocumentTextExtractor {
 
         const normalizedText = ['jpg', 'jpeg', 'png'].includes(extension || '')
             ? this.normalizeOcrText(extractedText)
-            : this.cleanText(extractedText);
+            : this.cleanTextPreserveLines(extractedText);
 
         if (typeof limitChars === 'number') {
             return this.limitText(normalizedText, limitChars);

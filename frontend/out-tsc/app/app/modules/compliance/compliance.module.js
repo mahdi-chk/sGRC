@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ComplianceComponent } from './compliance.component';
 import { ComplianceFrameworksComponent } from './compliance-frameworks.component';
+import { ComplianceMaturityComponent } from './compliance-maturity.component';
 import { ComplianceMappingsComponent } from './compliance-mappings.component';
 import { ComplianceAssessmentsComponent } from './compliance-assessments.component';
 import { ComplianceGapsComponent } from './compliance-gaps.component';
@@ -20,6 +21,7 @@ ComplianceModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ imports: [[Common
                 declarations: [
                     ComplianceComponent,
                     ComplianceFrameworksComponent,
+                    ComplianceMaturityComponent,
                     ComplianceMappingsComponent,
                     ComplianceAssessmentsComponent,
                     ComplianceGapsComponent,
@@ -29,6 +31,7 @@ ComplianceModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ imports: [[Common
                 exports: [
                     ComplianceComponent,
                     ComplianceFrameworksComponent,
+                    ComplianceMaturityComponent,
                     ComplianceMappingsComponent,
                     ComplianceAssessmentsComponent,
                     ComplianceGapsComponent,
@@ -38,11 +41,13 @@ ComplianceModule.ɵinj = /*@__PURE__*/ i0.ɵɵdefineInjector({ imports: [[Common
     }], null, null); })();
 (function () { (typeof ngJitMode === "undefined" || ngJitMode) && i0.ɵɵsetNgModuleScope(ComplianceModule, { declarations: [ComplianceComponent,
         ComplianceFrameworksComponent,
+        ComplianceMaturityComponent,
         ComplianceMappingsComponent,
         ComplianceAssessmentsComponent,
         ComplianceGapsComponent,
         ComplianceUpdatesComponent], imports: [CommonModule, FormsModule, RouterModule], exports: [ComplianceComponent,
         ComplianceFrameworksComponent,
+        ComplianceMaturityComponent,
         ComplianceMappingsComponent,
         ComplianceAssessmentsComponent,
         ComplianceGapsComponent,

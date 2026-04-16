@@ -28,6 +28,11 @@ export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
     roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
   },
   {
+    label: 'Statistiques',
+    route: '/dashboard/audit-statistics',
+    roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT]
+  },
+  {
     label: 'Mes Missions',
     route: '/dashboard/auditor-missions',
     roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]

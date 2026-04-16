@@ -61,6 +61,7 @@ import { GovernanceModule } from './modules/governance/governance.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { ComplianceComponent } from './modules/compliance/compliance.component';
 import { ComplianceFrameworksComponent } from './modules/compliance/compliance-frameworks.component';
+import { ComplianceMaturityComponent } from './modules/compliance/compliance-maturity.component';
 import { ComplianceMappingsComponent } from './modules/compliance/compliance-mappings.component';
 import { ComplianceAssessmentsComponent } from './modules/compliance/compliance-assessments.component';
 import { ComplianceGapsComponent } from './modules/compliance/compliance-gaps.component';
@@ -124,6 +125,7 @@ const routes: Routes = [
       { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-non-conformities') } },
       { path: 'compliance', component: ComplianceComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance') } },
       { path: 'compliance-frameworks', component: ComplianceFrameworksComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-frameworks') } },
+      { path: 'compliance-maturity', component: ComplianceMaturityComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-maturity') } },
       { path: 'compliance-mappings', component: ComplianceMappingsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-mappings') } },
       { path: 'compliance-assessments', component: ComplianceAssessmentsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-assessments') } },
       { path: 'compliance-gaps', component: ComplianceGapsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-gaps') } },

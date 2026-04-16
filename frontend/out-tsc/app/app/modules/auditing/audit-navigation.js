@@ -11,11 +11,6 @@ export const AUDIT_NAV_ITEMS = [
         roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
     },
     {
-        label: 'Plans d actions',
-        route: '/dashboard/audit-checklists',
-        roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
-    },
-    {
         label: 'Explorateur des Preuves',
         route: '/dashboard/audit-evidence-explorer',
         roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
@@ -26,13 +21,13 @@ export const AUDIT_NAV_ITEMS = [
         roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
     },
     {
-        label: 'Mes Missions',
-        route: '/dashboard/auditor-missions',
-        roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
+        label: 'Statistiques',
+        route: '/dashboard/audit-statistics',
+        roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT]
     },
     {
-        label: 'Mon Plan d actions',
-        route: '/dashboard/auditor-checklist',
+        label: 'Mes Missions',
+        route: '/dashboard/auditor-missions',
         roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
     },
     {

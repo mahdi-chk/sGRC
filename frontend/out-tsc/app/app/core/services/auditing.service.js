@@ -9,12 +9,19 @@ import * as i0 from "@angular/core";
 import * as i1 from "@angular/common/http";
 export var AuditMissionStatus;
 (function (AuditMissionStatus) {
-    AuditMissionStatus["A_VENIR"] = "a_venir";
+    AuditMissionStatus["NOK"] = "nok";
+    AuditMissionStatus["A_VENIR"] = "nok";
     AuditMissionStatus["EN_COURS"] = "en_cours";
-    AuditMissionStatus["TERMINE"] = "termine";
-    AuditMissionStatus["EN_RETARD"] = "en_retard";
-    AuditMissionStatus["ANNULE"] = "annule";
+    AuditMissionStatus["OK"] = "ok";
+    AuditMissionStatus["TERMINE"] = "ok";
+    AuditMissionStatus["EN_RETARD"] = "nok";
+    AuditMissionStatus["ANNULE"] = "nok";
 })(AuditMissionStatus || (AuditMissionStatus = {}));
+export var AuditMissionHorizon;
+(function (AuditMissionHorizon) {
+    AuditMissionHorizon["COURT_TERME"] = "court_terme";
+    AuditMissionHorizon["MOYEN_TERME"] = "moyen_terme";
+})(AuditMissionHorizon || (AuditMissionHorizon = {}));
 export var AuditRecordType;
 (function (AuditRecordType) {
     AuditRecordType["MISSION_AUDIT"] = "mission_audit";
@@ -32,7 +39,7 @@ export class AuditingService {
         }
         return this.http.get(`${this.apiUrl}/missions`, { params });
     }
-    suggestPlan(type = AuditRecordType.PLAN_ACTION_AUDIT) {
+    suggestPlan(type = AuditRecordType.MISSION_AUDIT) {
         return this.http.post(`${this.apiUrl}/suggest-plan`, { type });
     }
     createMissionsFromPlan(missions, type = AuditRecordType.MISSION_AUDIT) {
@@ -75,6 +82,11 @@ export class AuditingService {
             formData.append('riskId', String(riskId));
         }
         return this.http.post(`${this.apiUrl}/action-plans/import`, formData);
+    }
+    importMissions(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post(`${this.apiUrl}/missions/import`, formData);
     }
     getChecklistTemplates() {
         return this.http.get(`${this.apiUrl}/checklists`);

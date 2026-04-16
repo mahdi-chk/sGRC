@@ -1,52 +1,94 @@
-<div class="role-dashboard top-management statistics-page">
+<div class="audit-page">
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-clipboard-check"></i> Analytics Audit</h1>
+                <h1><i class="fas fa-chart-pie"></i> Statistiques d'Audit</h1>
                 <p>Analyse de la performance des processus d'audit, suivi des missions et taux de complétion.</p>
             </div>
         </div>
-        <div class="header-right">
+        <div class="header-actions">
             <div class="export-dropdown">
-                <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
-                    <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
+                <button class="btn-export" (click)="showExportMenu = !showExportMenu">
+                    <i class="fas fa-file-download"></i> Exporter <i class="fas fa-chevron-down"></i>
                 </button>
                 <div class="dropdown-menu" [class.show]="showExportMenu">
-                    <button (click)="exportToXLSX()">
-                        <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
-                    </button>
-                    <button (click)="exportToPDF()">
-                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
-                    </button>
+                    <button (click)="exportToXLSX()"><i class="fas fa-file-excel" style="color:#16a34a;"></i> Excel</button>
+                    <button (click)="exportToPDF()"><i class="fas fa-file-pdf" style="color:#ef4444;"></i> PDF</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- KPIs Overview -->
-    <div class="kpi-row mb-4">
-        <div class="kpi-card kpi-total">
-            <span class="kpi-value">{{ totalMissions }}</span>
-            <span class="kpi-label">Missions Totales</span>
+    <nav class="audit-tabs" *ngIf="navItems.length > 0">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="audit-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="stat-info">
+                <span class="label">Total</span>
+                <span class="value">{{ totalMissions }}</span>
+            </div>
         </div>
-        <div class="kpi-card kpi-progress">
-            <span class="kpi-value">{{ statusStats['En cours'] || 0 }}</span>
-            <span class="kpi-label">En cours</span>
+        <div class="stat-card pending">
+            <div class="stat-icon"><i class="fas fa-play-circle"></i></div>
+            <div class="stat-info">
+                <span class="label">En cours</span>
+                <span class="value">{{ statusStats['En cours'] || 0 }}</span>
+            </div>
         </div>
-        <div class="kpi-card kpi-closed">
-            <span class="kpi-value">{{ statusStats['Terminé'] || 0 }}</span>
-            <span class="kpi-label">Terminées</span>
+        <div class="stat-card completed">
+            <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-info">
+                <span class="label">OK</span>
+                <span class="value">{{ statusStats['Terminé'] || 0 }}</span>
+            </div>
         </div>
-        <div class="kpi-card kpi-open">
-            <span class="kpi-value">{{ statusStats['En retard'] || 0 }}</span>
-            <span class="kpi-label">En retard</span>
+        <div class="stat-card risks">
+            <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
+            <div class="stat-info">
+                <span class="label">En retard</span>
+                <span class="value">{{ statusStats['En retard'] || 0 }}</span>
+            </div>
         </div>
     </div>
 
     <div class="dashboard-grid">
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-chart-pie"></i> Statuts Audit</h3>
+            <div class="chart-container donut-wrapper">
+                <div class="donut-chart audit-status"
+                    [style.--ok]="statusSummaryPercentages[0]?.percent"
+                    [style.--progress]="statusSummaryPercentages[1]?.percent"
+                    [style.--nok]="statusSummaryPercentages[2]?.percent">
+                    <div class="donut-inner">
+                        <div class="total">{{ totalMissions }}</div>
+                        <div class="sub">Missions totales</div>
+                    </div>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item ok">
+                        <span class="dot"></span>
+                        <span>OK: {{ statusSummary.OK }}</span>
+                    </div>
+                    <div class="legend-item progress">
+                        <span class="dot"></span>
+                        <span>En cours: {{ statusSummary['En cours'] }}</span>
+                    </div>
+                    <div class="legend-item nok">
+                        <span class="dot"></span>
+                        <span>NOK: {{ statusSummary.NOK }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Missions Status Distribution (Bar Chart Style) -->
         <div class="module-card premium chart-card full-width-module">
             <h3><i class="fas fa-tasks"></i> État d'Avancement des Missions</h3>
@@ -108,6 +150,94 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Audit Missions Table -->
+    <div class="tab-content">
+        <div class="filters-bar premium mb-4">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher par ID, règle, recommandation ou responsable...">
+                </div>
+
+                <div class="filter-group">
+                    <i class="fas fa-tasks"></i>
+                    <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
+                        <option value="">Tous les états</option>
+                        <option [value]="AuditMissionStatus.NOK">{{ statusLabelMap[AuditMissionStatus.NOK] }}</option>
+                        <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
+                        <option [value]="AuditMissionStatus.OK">{{ statusLabelMap[AuditMissionStatus.OK] }}</option>
+                    </select>
+                </div>
+
+                <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus">
+                    <i class="fas fa-undo"></i> Réinitialiser
+                </button>
+            </div>
+
+            <div class="results-info">
+                <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> enregistrement(s)</span>
+            </div>
+        </div>
+
+        <div class="missions-card">
+            <div class="table-loading" *ngIf="!missions.length">
+                <i class="fas fa-circle-notch fa-spin"></i> Chargement...
+            </div>
+
+            <table class="audit-table" *ngIf="missions.length > 0">
+                <thead>
+                    <tr>
+                        <th class="cell-id">ID</th>
+                        <th>Règle DNSSI</th>
+                        <th>Recommandations</th>
+                        <th>Horizon</th>
+                        <th class="cell-priority">Priorité</th>
+                        <th>Responsable</th>
+                        <th>Echéance</th>
+                        <th>Etat d'avancement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let mission of pagedMissions">
+                        <td class="cell-id">{{ mission.id }}</td>
+                        <td class="cell-rule">{{ mission.regleDnssi || mission.titre }}</td>
+                        <td class="cell-recommendation">
+                            <span class="recommendation-preview" [title]="mission.recommandations || mission.objectifs || ''">
+                                {{ getRecommendationPreview(mission.recommandations || mission.objectifs, 10) }}
+                            </span>
+                        </td>
+                        <td class="cell-horizon">{{ horizonLabelMap[mission.horizon || ''] || '-' }}</td>
+                        <td class="cell-priority">{{ mission.priorite ?? '-' }}</td>
+                        <td class="cell-owner">
+                            <div class="auditor-chip" *ngIf="mission.auditeur; else responsibleText">
+                                <i class="fas fa-user-tie"></i>
+                                {{ mission.auditeur.prenom }} {{ mission.auditeur.nom }}
+                            </div>
+                            <ng-template #responsibleText><em class="text-muted responsible-text">{{ mission.responsabilites || 'Non assigné' }}</em></ng-template>
+                        </td>
+                        <td class="cell-date">{{ mission.delai ? (mission.delai | date:'dd/MM/yyyy') : '-' }}</td>
+                        <td class="cell-status"><span [class]="'badge status-' + ((mission.statut || '').toString().replace('_', '-'))">{{ statusLabelMap[(mission.statut || '').toString()] || ((mission.statut || '').toString()) }}</span></td>
+                    </tr>
+                    <tr *ngIf="filteredMissions.length === 0">
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>Aucun enregistrement trouvé.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <app-pagination
+                *ngIf="filteredMissions.length > 0"
+                [totalItems]="filteredMissions.length"
+                [currentPage]="currentPage"
+                [pageSize]="pageSize"
+                [pageSizeOptions]="pageSizeOptions"
+                (pageChanged)="onPaginationChange($event)">
+            </app-pagination>
         </div>
     </div>
 </div>

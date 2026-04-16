@@ -1,0 +1,113 @@
+<div class="compliance-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-chart-line"></i> KPI de maturite</h1>
+                <p>Sous-module dedie au pilotage de la maturite par chapitre a partir de la couverture des exigences.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadFrameworks()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="compliance-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="compliance-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="content-card" *ngIf="error">
+        <p class="feedback-message error">{{ error }}</p>
+    </div>
+
+    <section class="content-card">
+        <div class="card-head">
+            <h2>Referentiel analyse</h2>
+            <p>Choisissez un referentiel pour afficher son niveau de couverture par chapitre.</p>
+        </div>
+
+        <div class="filter-field">
+            <label>Referentiel actif</label>
+            <select [ngModel]="selectedFrameworkId" (ngModelChange)="selectFramework($event)" [disabled]="frameworks.length === 0">
+                <option [ngValue]="null">Choisir un referentiel</option>
+                <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
+                    {{ framework.code }} - {{ framework.name }} v{{ framework.version }}
+                </option>
+            </select>
+        </div>
+    </section>
+
+    <section class="content-card maturity-card">
+        <div class="card-head">
+            <h2>Radar par chapitre</h2>
+            <p>Le graphe compare la couverture totale+partielle et la couverture totale pour chaque chapitre du referentiel actif.</p>
+        </div>
+
+        <div class="maturity-kpis" *ngIf="selectedFrameworkId && requirements.length > 0; else emptyRadar">
+            <div class="summary-card">
+                <span class="eyebrow">Couverture mixte</span>
+                <h3>{{ formatPercent(frameworkCoverage) }}</h3>
+                <p>Exigences couvertes totalement ou partiellement.</p>
+            </div>
+            <div class="summary-card">
+                <span class="eyebrow">Couverture totale</span>
+                <h3>{{ formatPercent(frameworkFullCoverage) }}</h3>
+                <p>Exigences avec couverture complete.</p>
+            </div>
+            <div class="summary-card">
+                <span class="eyebrow">Exigences sans couverture</span>
+                <h3>{{ uncoveredRequirementsCount }}</h3>
+                <p>Points encore non relies a des dispositifs.</p>
+            </div>
+        </div>
+
+        <div class="radar-wrapper" *ngIf="selectedFrameworkId && requirements.length > 0 && radarChartModel.labels.length > 0; else emptyRadar">
+            <div class="radar-legend">
+                <span *ngFor="let item of radarSeriesLegend" class="legend-item">
+                    <i class="legend-dot" [style.background]="item.color"></i>
+                    {{ item.label }}
+                </span>
+            </div>
+
+            <svg class="radar-chart" viewBox="0 0 560 420" aria-label="Graphe radar de maturite">
+                <g class="radar-grid">
+                    <polygon *ngFor="let polygon of radarChartModel.gridPolygons" [attr.points]="polygon"></polygon>
+                    <line *ngFor="let axis of radarChartModel.axes" x1="280" y1="195" [attr.x2]="axis.x" [attr.y2]="axis.y"></line>
+                </g>
+
+                <g class="radar-level-labels">
+                    <text *ngFor="let level of radarChartModel.levelLabels" [attr.x]="level.x" [attr.y]="level.y">{{ level.value }}%</text>
+                </g>
+
+                <polygon class="radar-area partial" [attr.points]="radarChartModel.partialPolygon"></polygon>
+                <polygon class="radar-area total" [attr.points]="radarChartModel.totalPolygon"></polygon>
+
+                <g class="radar-points">
+                    <circle *ngFor="let point of radarChartModel.partialPoints" class="point partial" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                    <circle *ngFor="let point of radarChartModel.totalPoints" class="point total" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                </g>
+
+                <g class="radar-labels">
+                    <text *ngFor="let axis of radarChartModel.axes; let i = index" [attr.x]="axis.labelX" [attr.y]="axis.labelY" text-anchor="middle">
+                        <tspan *ngFor="let line of radarChartModel.labelLines[i]; let lineIndex = index" [attr.x]="axis.labelX" [attr.dy]="lineIndex === 0 ? 0 : 14">{{ line }}</tspan>
+                    </text>
+                </g>
+            </svg>
+        </div>
+    </section>
+
+    <ng-template #emptyRadar>
+        <div class="empty-state compact">
+            <i class="fas fa-chart-line"></i>
+            <h3>Radar non disponible</h3>
+            <p>Selectionnez un referentiel contenant des exigences pour afficher les KPI de maturite.</p>
+        </div>
+    </ng-template>
+</div>

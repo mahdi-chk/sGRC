@@ -40,9 +40,7 @@ import { RagManagerComponent } from './dashboard/components/rag-manager/rag-mana
 import { AuditingModule } from './modules/auditing/auditing.module';
 import { AuditingComponent } from './modules/auditing/auditing.component';
 import { PlanificationComponent } from './modules/auditing/planification/planification.component';
-import { AuditChecklistsComponent } from './modules/auditing/audit-checklists/audit-checklists.component';
 import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
-import { AuditorChecklistComponent } from './modules/auditing/auditor-checklist/auditor-checklist.component';
 import { AuditorEvidenceComponent } from './modules/auditing/auditor-evidence/auditor-evidence.component';
 import { AuditorReportComponent } from './modules/auditing/auditor-report/auditor-report.component';
 import { AuditEvidenceExplorerComponent } from './modules/auditing/senior/audit-evidence-explorer.component';
@@ -60,6 +58,7 @@ import { GovernanceModule } from './modules/governance/governance.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { ComplianceComponent } from './modules/compliance/compliance.component';
 import { ComplianceFrameworksComponent } from './modules/compliance/compliance-frameworks.component';
+import { ComplianceMaturityComponent } from './modules/compliance/compliance-maturity.component';
 import { ComplianceMappingsComponent } from './modules/compliance/compliance-mappings.component';
 import { ComplianceAssessmentsComponent } from './modules/compliance/compliance-assessments.component';
 import { ComplianceGapsComponent } from './modules/compliance/compliance-gaps.component';
@@ -123,6 +122,7 @@ const routes = [
             { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-non-conformities') } },
             { path: 'compliance', component: ComplianceComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance') } },
             { path: 'compliance-frameworks', component: ComplianceFrameworksComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-frameworks') } },
+            { path: 'compliance-maturity', component: ComplianceMaturityComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-maturity') } },
             { path: 'compliance-mappings', component: ComplianceMappingsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-mappings') } },
             { path: 'compliance-assessments', component: ComplianceAssessmentsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-assessments') } },
             { path: 'compliance-gaps', component: ComplianceGapsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-gaps') } },
@@ -165,9 +165,7 @@ const routes = [
             // Routes Audit (composants exportés par AuditingModule)
             { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
             { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
-            { path: 'audit-checklists', component: AuditChecklistsComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },
             { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-            { path: 'auditor-checklist', component: AuditorChecklistComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
             { path: 'auditor-evidence', component: AuditorEvidenceComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
             { path: 'auditor-report', component: AuditorReportComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
             { path: 'audit-evidence-explorer', component: AuditEvidenceExplorerComponent, data: { expectedRoles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN] } },

@@ -836,6 +836,8 @@ export class IncidentsComponent {
         this.risks = [];
         this.filteredIncidents = [];
         this.environment = environment;
+        this.currentUserId = null;
+        this.currentUserRole_enum = null;
         // Filter properties
         this.filterSearch = '';
         this.filterStatus = '';
@@ -895,6 +897,9 @@ export class IncidentsComponent {
         return this.currentUserRole === UserRole.TOP_MANAGEMENT;
     }
     ngOnInit() {
+        const currentUser = this.authService.getCurrentUser();
+        this.currentUserId = (currentUser === null || currentUser === void 0 ? void 0 : currentUser.id) || null;
+        this.currentUserRole_enum = this.authService.getUserRole();
         this.loadIncidents();
         this.loadDepartments();
         this.loadRisks();
@@ -910,6 +915,11 @@ export class IncidentsComponent {
     }
     applyFilters() {
         this.filteredIncidents = this.incidents.filter(incident => {
+            // 0. Filtre par visibilité utilisateur (sauf super admin)
+            const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
+            const isDeclarerByUser = incident.userId === this.currentUserId;
+            const isAssignedToUser = incident.assigneeId === this.currentUserId;
+            const matchUserAccess = isSuperAdmin || isDeclarerByUser || isAssignedToUser;
             const matchSearch = !this.filterSearch ||
                 incident.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) ||
                 incident.description.toLowerCase().includes(this.filterSearch.toLowerCase());
@@ -919,7 +929,7 @@ export class IncidentsComponent {
             const incidentLevel = (incident.niveauRisqueCode || incident.niveauRisque || '').toLowerCase();
             const filterLevel = (this.filterLevel || '').toLowerCase();
             const matchLevel = !filterLevel || incidentLevel === filterLevel;
-            return matchSearch && matchStatus && matchLevel;
+            return matchUserAccess && matchSearch && matchStatus && matchLevel;
         });
         this.currentPage = 1;
     }

@@ -29,10 +29,74 @@
     </div>
 
     <div class="section-grid section-grid-wide">
-        <section class="content-card">
+        <section class="content-card import-card">
             <div class="card-head">
-                <h2>{{ frameworkEditingId ? 'Modifier un referentiel' : 'Nouveau referentiel' }}</h2>
-                <p>Chaque referentiel devient une source officielle de pilotage et de preuve pour le module.</p>
+                <h2>Import intelligent d un cadre</h2>
+                <p>Chargez un document `.docx`, `.pdf` ou `.txt` pour creer automatiquement un nouveau cadre de conformite. Le document devient le cadre, et son contenu est transforme en exigences.</p>
+            </div>
+
+            <div class="import-dropzone">
+                <div class="import-copy">
+                    <span class="eyebrow">Creation automatique</span>
+                    <h3>{{ importFileName || 'Aucun document selectionne' }}</h3>
+                    <p>Le moteur lit le document, cree un nouveau cadre a partir du fichier importe, puis ajoute les exigences detectees dans ce cadre.</p>
+                </div>
+
+                <label class="upload-field">
+                    <input #importInput type="file" accept=".pdf,.docx,.txt" (change)="onImportFileSelected($event)" [disabled]="isImporting" />
+                    <span>{{ importFileName || 'Choisir un document' }}</span>
+                </label>
+
+                <div class="form-actions">
+                    <button class="btn-refresh" type="button" (click)="importRequirements(importInput)" [disabled]="!importFileName || isImporting">
+                        <i class="fas" [ngClass]="isImporting ? 'fa-circle-notch fa-spin' : 'fa-file-import'"></i>
+                        {{ isImporting ? 'Import en cours...' : 'Importer le cadre' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="import-results" *ngIf="importResult">
+                <div class="import-kpis">
+                    <div class="metric-card">
+                        <span class="eyebrow">Exigences detectees</span>
+                        <h3>{{ importResult.detectedRequirements }}</h3>
+                        <p>{{ importResult.sourceFile }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <span class="eyebrow">Cadre cree</span>
+                        <h3>{{ importResult.framework?.code || importResult.frameworkId }}</h3>
+                        <p>{{ importResult.framework?.name || 'Nouveau cadre importe' }}</p>
+                    </div>
+                    <div class="metric-card">
+                        <span class="eyebrow">Exigences creees</span>
+                        <h3>{{ importResult.createdRequirements }}</h3>
+                        <p>{{ importResult.skippedRequirements }} ignoree(s)</p>
+                    </div>
+                </div>
+
+                <div class="import-preview">
+                    <div>
+                        <h3>Apercu du texte lu</h3>
+                        <p>{{ importResult.previewText || 'Aucun extrait disponible.' }}</p>
+                    </div>
+                    <div *ngIf="importResult.skipped.length > 0">
+                        <h3>Elements ignores</h3>
+                        <ul class="import-skipped-list">
+                            <li *ngFor="let item of importResult.skipped | slice:0:5">
+                                <strong>{{ item.code || 'Sans code' }}</strong> - {{ item.reason }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="section-grid section-grid-wide" *ngIf="frameworkEditingId || requirementEditingId">
+        <section class="content-card" *ngIf="frameworkEditingId">
+            <div class="card-head">
+                <h2>Modifier le cadre</h2>
+                <p>Mettez a jour les informations du cadre selectionne sans recreer un nouveau referentiel.</p>
             </div>
 
             <div class="form-grid">
@@ -75,57 +139,42 @@
                 </label>
                 <label class="filter-field field-span-2">
                     <span>Description</span>
-                    <textarea [(ngModel)]="frameworkForm.description" rows="3" placeholder="Perimetre, objectifs, criticite et liens avec les audits."></textarea>
+                    <textarea [(ngModel)]="frameworkForm.description" rows="3" placeholder="Perimetre et description du cadre."></textarea>
                 </label>
             </div>
 
             <div class="form-actions">
-                <button class="btn-refresh" (click)="saveFramework()" [disabled]="isSavingFramework">
-                    {{ frameworkEditingId ? 'Mettre a jour' : 'Creer le referentiel' }}
-                </button>
-                <button class="back-btn" type="button" (click)="resetFrameworkForm()">Reinitialiser</button>
+                <button class="btn-refresh" type="button" (click)="saveFramework()">Enregistrer</button>
+                <button class="back-btn" type="button" (click)="resetFrameworkForm()">Annuler</button>
             </div>
         </section>
 
-        <section class="content-card">
+        <section class="content-card" *ngIf="requirementEditingId">
             <div class="card-head">
-                <h2>{{ requirementEditingId ? 'Modifier une exigence' : 'Nouvelle exigence' }}</h2>
-                <p *ngIf="selectedFrameworkId; else chooseFrameworkHint">Selectionnez un referentiel puis structurez ses exigences une par une.</p>
-                <ng-template #chooseFrameworkHint>
-                    <p>Ajoutez d abord un referentiel pour commencer a decrire ses exigences.</p>
-                </ng-template>
-            </div>
-
-            <div class="filter-field">
-                <label>Referentiel actif</label>
-                <select [ngModel]="selectedFrameworkId" (ngModelChange)="selectFramework($event)" [disabled]="frameworks.length === 0">
-                    <option [ngValue]="null">Choisir un referentiel</option>
-                    <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
-                        {{ framework.code }} - {{ framework.name }} v{{ framework.version }}
-                    </option>
-                </select>
+                <h2>Modifier l exigence</h2>
+                <p>Ajustez le code, le chapitre, la description ou le poids de l exigence selectionnee.</p>
             </div>
 
             <div class="form-grid">
                 <label class="filter-field">
                     <span>Code exigence</span>
-                    <input [(ngModel)]="requirementForm.code" placeholder="A.5.1" [disabled]="!selectedFrameworkId" />
+                    <input [(ngModel)]="requirementForm.code" placeholder="A.5.1" />
                 </label>
                 <label class="filter-field field-span-2">
                     <span>Titre</span>
-                    <input [(ngModel)]="requirementForm.title" placeholder="Politique de securite de l information" [disabled]="!selectedFrameworkId" />
+                    <input [(ngModel)]="requirementForm.title" placeholder="Titre de l exigence" />
                 </label>
                 <label class="filter-field">
                     <span>Chapitre</span>
-                    <input [(ngModel)]="requirementForm.chapter" placeholder="Annexe A" [disabled]="!selectedFrameworkId" />
+                    <input [(ngModel)]="requirementForm.chapter" placeholder="Chapitre ou article" />
                 </label>
                 <label class="filter-field">
                     <span>Ordre</span>
-                    <input type="number" [(ngModel)]="requirementForm.orderIndex" [disabled]="!selectedFrameworkId" />
+                    <input type="number" [(ngModel)]="requirementForm.orderIndex" />
                 </label>
                 <label class="filter-field">
                     <span>Applicabilite</span>
-                    <select [(ngModel)]="requirementForm.applicability" [disabled]="!selectedFrameworkId">
+                    <select [(ngModel)]="requirementForm.applicability">
                         <option value="applicable">Applicable</option>
                         <option value="partially_applicable">Partiellement applicable</option>
                         <option value="not_applicable">Non applicable</option>
@@ -133,7 +182,7 @@
                 </label>
                 <label class="filter-field">
                     <span>Statut</span>
-                    <select [(ngModel)]="requirementForm.status" [disabled]="!selectedFrameworkId">
+                    <select [(ngModel)]="requirementForm.status">
                         <option value="active">Active</option>
                         <option value="draft">Brouillon</option>
                         <option value="retired">Retiree</option>
@@ -141,19 +190,17 @@
                 </label>
                 <label class="filter-field">
                     <span>Poids</span>
-                    <input type="number" step="0.1" [(ngModel)]="requirementForm.weight" [disabled]="!selectedFrameworkId" />
+                    <input type="number" step="0.1" [(ngModel)]="requirementForm.weight" />
                 </label>
                 <label class="filter-field field-span-2">
                     <span>Description</span>
-                    <textarea [(ngModel)]="requirementForm.description" rows="3" placeholder="Texte de l exigence, interpretation et points de controle attendus." [disabled]="!selectedFrameworkId"></textarea>
+                    <textarea [(ngModel)]="requirementForm.description" rows="4" placeholder="Description detaillee de l exigence."></textarea>
                 </label>
             </div>
 
             <div class="form-actions">
-                <button class="btn-refresh" (click)="saveRequirement()" [disabled]="isSavingRequirement || !selectedFrameworkId">
-                    {{ requirementEditingId ? 'Mettre a jour' : 'Creer l exigence' }}
-                </button>
-                <button class="back-btn" type="button" (click)="resetRequirementForm()">Reinitialiser</button>
+                <button class="btn-refresh" type="button" (click)="saveRequirement()">Enregistrer</button>
+                <button class="back-btn" type="button" (click)="resetRequirementForm()">Annuler</button>
             </div>
         </section>
     </div>
@@ -162,7 +209,7 @@
         <section class="table-card" *ngIf="frameworks.length > 0; else emptyState">
             <div class="card-head">
                 <h2>Cadres suivis</h2>
-                <p>Selectionnez un referentiel pour afficher et gerer ses exigences.</p>
+                <p>Selectionnez un referentiel pour afficher ses exigences et lancer l import automatique.</p>
             </div>
 
             <table class="compliance-table">
@@ -208,10 +255,20 @@
                 </ng-template>
             </div>
 
+            <div class="filter-field" *ngIf="frameworks.length > 0">
+                <label>Choisir un cadre</label>
+                <select [ngModel]="selectedFrameworkId" (ngModelChange)="selectFramework($event)">
+                    <option [ngValue]="null">Choisir un referentiel</option>
+                    <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
+                        {{ framework.code }} - {{ framework.name }} v{{ framework.version }}
+                    </option>
+                </select>
+            </div>
+
             <div class="empty-state compact" *ngIf="selectedFrameworkId && requirements.length === 0">
                 <i class="fas fa-list-check"></i>
                 <h3>Aucune exigence pour ce referentiel</h3>
-                <p>Commencez par saisir les clauses et controles attendus pour rendre le cadre exploitable.</p>
+                <p>Importez un document pour alimenter automatiquement ce referentiel.</p>
             </div>
 
             <table class="compliance-table" *ngIf="requirements.length > 0">
@@ -257,7 +314,7 @@
         <div class="empty-state">
             <i class="fas fa-book"></i>
             <h3>Aucun referentiel charge</h3>
-            <p>Creez votre premier referentiel pour commencer a structurer le module conformite.</p>
+            <p>Chargez vos referentiels existants puis utilisez l import de document pour extraire automatiquement les exigences.</p>
         </div>
     </ng-template>
 </div>

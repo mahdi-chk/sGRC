@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ComplianceComponent } from './compliance.component';
 import { ComplianceFrameworksComponent } from './compliance-frameworks.component';
+import { ComplianceMaturityComponent } from './compliance-maturity.component';
 import { ComplianceMappingsComponent } from './compliance-mappings.component';
 import { ComplianceAssessmentsComponent } from './compliance-assessments.component';
 import { ComplianceGapsComponent } from './compliance-gaps.component';
@@ -13,6 +14,7 @@ import { ComplianceUpdatesComponent } from './compliance-updates.component';
   declarations: [
     ComplianceComponent,
     ComplianceFrameworksComponent,
+    ComplianceMaturityComponent,
     ComplianceMappingsComponent,
     ComplianceAssessmentsComponent,
     ComplianceGapsComponent,
@@ -22,6 +24,7 @@ import { ComplianceUpdatesComponent } from './compliance-updates.component';
   exports: [
     ComplianceComponent,
     ComplianceFrameworksComponent,
+    ComplianceMaturityComponent,
     ComplianceMappingsComponent,
     ComplianceAssessmentsComponent,
     ComplianceGapsComponent,

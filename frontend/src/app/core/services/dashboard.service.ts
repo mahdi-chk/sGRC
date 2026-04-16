@@ -277,6 +277,8 @@ export class DashboardService {
             this.router.navigate(['/dashboard/controls-non-conformities']);
         } else if (s.title === 'Referentiels Integres') {
             this.router.navigate(['/dashboard/compliance-frameworks']);
+        } else if (s.title === 'KPI de Maturite') {
+            this.router.navigate(['/dashboard/compliance-maturity']);
         } else if (s.title === 'Mapping et Liens') {
             this.router.navigate(['/dashboard/compliance-mappings']);
         } else if (s.title === 'Auto-Evaluations') {

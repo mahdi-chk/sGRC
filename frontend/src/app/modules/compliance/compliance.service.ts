@@ -214,6 +214,26 @@ export interface ComplianceMappingPayload {
   entityKey?: string | null;
 }
 
+export interface ComplianceRequirementImportSkipped {
+  code: string;
+  title: string;
+  reason: string;
+}
+
+export interface ComplianceRequirementImportResult {
+  message: string;
+  frameworkId: number;
+  framework?: ComplianceFrameworkRecord;
+  sourceFile: string;
+  extractedCharacters: number;
+  previewText: string;
+  detectedRequirements: number;
+  createdRequirements: number;
+  skippedRequirements: number;
+  created: ComplianceRequirementRecord[];
+  skipped: ComplianceRequirementImportSkipped[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ComplianceService {
   private apiUrl = `${environment.apiUrl}/compliance`;
@@ -253,6 +273,12 @@ export class ComplianceService {
 
   createRequirement(payload: ComplianceRequirementPayload): Observable<ComplianceRequirementRecord> {
     return this.http.post<ComplianceRequirementRecord>(`${this.apiUrl}/requirements`, payload);
+  }
+
+  importRequirements(file: File): Observable<ComplianceRequirementImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ComplianceRequirementImportResult>(`${this.apiUrl}/frameworks/import`, formData);
   }
 
   updateRequirement(id: number, payload: ComplianceRequirementPayload): Observable<ComplianceRequirementRecord> {

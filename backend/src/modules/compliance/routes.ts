@@ -1,12 +1,15 @@
 import { Router } from 'express';
+import { ForeignKeyConstraintError, UniqueConstraintError, ValidationError } from 'sequelize';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { getSoftDeleteValues, softDeleteInstance } from '../../utils/soft-delete';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
+import { secureUpload } from '../../middleware/file.middleware';
 import { UserRole } from '../users/user.roles';
 import { AuditMission } from '../auditing/audit-mission.model';
 import { Department } from '../departments/department.model';
 import { Incident } from '../incidents/incident.model';
 import { Risk } from '../risk/risk.model';
+import { DocumentTextExtractor } from '../ai/document-text-extractor';
 import { User } from '../users/user.model';
 import { ComplianceAuditService } from './compliance-audit.service';
 import { ComplianceCampaign } from './compliance-campaign.model';
@@ -20,6 +23,7 @@ import { ComplianceGapsService } from './compliance-gaps.service';
 import { ComplianceMapping } from './compliance-mapping.model';
 import { ComplianceOverviewService } from './compliance-overview.service';
 import { ComplianceRequirement } from './compliance-requirement.model';
+import { ComplianceRequirementImportService } from './compliance-requirement-import.service';
 import { getComplianceScope } from './compliance.types';
 import { normalizeFilters } from './compliance.scope';
 
@@ -38,6 +42,7 @@ const allowedRoles = [
 
 const adminRoles = [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR];
 const mappingEditorRoles = [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.RISK_MANAGER];
+const uploadRequirementImport = secureUpload(['pdf', 'docx', 'txt'], 'file', 15 * 1024 * 1024);
 
 const isComplianceSchemaMissing = (error: any): boolean => {
     const message = String(error?.message || '').toLowerCase();
@@ -49,6 +54,48 @@ const toOptionalString = (value: unknown): string | null =>
 
 const toNullableNumber = (value: unknown): number | null =>
     typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+const sanitizeFrameworkToken = (value: string): string =>
+    String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Za-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toUpperCase()
+        .slice(0, 40);
+
+const deriveFrameworkName = (filename: string, extractedText: string): string => {
+    const firstMeaningfulLine = String(extractedText || '')
+        .split(/\r?\n/)
+        .map((line) => String(line || '').trim())
+        .find((line) => line.length >= 6);
+
+    if (firstMeaningfulLine) {
+        return firstMeaningfulLine.slice(0, 120);
+    }
+
+    return filename
+        .replace(/\.[^.]+$/, '')
+        .replace(/[_-]+/g, ' ')
+        .trim()
+        .slice(0, 120) || 'Referentiel importe';
+};
+
+const buildUniqueFrameworkIdentity = async (sourceName: string): Promise<{ code: string; version: string }> => {
+    const baseCode = sanitizeFrameworkToken(sourceName) || 'FRAMEWORK';
+    const baseVersion = String(new Date().getFullYear());
+    let code = baseCode;
+    let version = baseVersion;
+    let sequence = 1;
+
+    while (await ComplianceFramework.findOne({ where: { code, version } })) {
+        sequence += 1;
+        version = `${baseVersion}-${sequence}`;
+        code = baseCode;
+    }
+
+    return { code, version };
+};
 
 const serializeCompliance = (item: any): any => {
     if (!item) {
@@ -74,6 +121,35 @@ const serializeCompliance = (item: any): any => {
     }
 
     return payload;
+};
+
+const getComplianceRouteError = (error: any, fallbackMessage: string) => {
+    if (error instanceof UniqueConstraintError) {
+        return {
+            status: 409,
+            message: 'Un cadre avec le meme code et la meme version existe deja.'
+        };
+    }
+
+    if (error instanceof ForeignKeyConstraintError) {
+        return {
+            status: 400,
+            message: 'Une reference associee au cadre ou a l exigence est invalide.'
+        };
+    }
+
+    if (error instanceof ValidationError) {
+        const message = error.errors.map((entry) => entry.message).filter(Boolean)[0];
+        return {
+            status: 400,
+            message: message || fallbackMessage
+        };
+    }
+
+    return {
+        status: 400,
+        message: error?.message || fallbackMessage
+    };
 };
 
 const buildEmptyOverview = (role: string) => ({
@@ -319,8 +395,135 @@ router.post('/frameworks', authorizeRoles(...adminRoles), async (req: AuthReques
 
         res.status(201).json(serializeCompliance(item));
     } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la creation du referentiel');
+        res.status(routeError.status).json({
+            message: routeError.message,
+            error: error?.message || 'unknown_error',
+        });
+    }
+});
+
+router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequirementImport, async (req: AuthRequest, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun document fourni' });
+        }
+
+        const extractedText = await DocumentTextExtractor.extractTextFromFile(req.file, {
+            useOcrForPdf: true,
+            includeStructuredRegionsForImages: true,
+            requireUsableText: true,
+            limitChars: 30000,
+        });
+        const drafts = ComplianceRequirementImportService.parseRequirementsFromText(extractedText);
+
+        if (!drafts.length) {
+            return res.status(422).json({
+                message: 'Aucune exigence n a ete detectee dans le document importe',
+                sourceFile: req.file.originalname,
+                extractedCharacters: extractedText.length,
+                previewText: extractedText.slice(0, 1200),
+                detectedRequirements: 0,
+                createdRequirements: 0,
+                skippedRequirements: 0,
+                created: [],
+                skipped: [],
+            });
+        }
+
+        const sourceLabel = req.file.originalname.replace(/\.[^.]+$/, '');
+        const uniqueIdentity = await buildUniqueFrameworkIdentity(sourceLabel);
+        const frameworkPayload = await LookupResolutionService.resolveEntityPayload('complianceFramework', {
+            code: uniqueIdentity.code,
+            name: deriveFrameworkName(req.file.originalname, extractedText),
+            version: uniqueIdentity.version,
+            jurisdiction: 'Maroc',
+            description: `Cadre importe automatiquement depuis le document ${req.file.originalname}.`,
+            ownerUserId: req.user?.id || null,
+            departmentId: req.user?.departementId || null,
+            entityKey: null,
+            status: 'draft',
+            effectiveDate: null,
+            reviewDate: null,
+        }) as Record<string, unknown>;
+
+        const framework = await ComplianceFramework.create(frameworkPayload as any);
+        await ComplianceAuditService.log({
+            entityType: 'framework',
+            entityId: framework.id,
+            action: 'create',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(frameworkPayload.departmentId),
+            entityKey: toOptionalString(frameworkPayload.entityKey),
+            payload: {
+                ...frameworkPayload,
+                sourceFile: req.file.originalname,
+            },
+        });
+
+        const created: any[] = [];
+        const skipped: Array<{ code: string; title: string; reason: string }> = [];
+        const seenCodes = new Set<string>();
+
+        for (const draft of drafts) {
+            const normalizedCode = draft.code.trim().toLowerCase();
+            if (!normalizedCode) {
+                skipped.push({ code: draft.code, title: draft.title, reason: 'Code manquant' });
+                continue;
+            }
+
+            if (seenCodes.has(normalizedCode)) {
+                skipped.push({ code: draft.code, title: draft.title, reason: 'Exigence dupliquee dans le document' });
+                continue;
+            }
+
+            const payload = await LookupResolutionService.resolveEntityPayload('complianceRequirement', {
+                frameworkId: framework.id,
+                code: draft.code.trim(),
+                title: draft.title.trim(),
+                description: toOptionalString(draft.description),
+                chapter: toOptionalString(draft.chapter),
+                orderIndex: Number(draft.orderIndex || 0),
+                applicability: draft.applicability || 'applicable',
+                status: draft.status || 'active',
+                weight: Number(draft.weight || 1),
+            }) as Record<string, unknown>;
+
+            const item = await ComplianceRequirement.create(payload as any);
+            created.push(item);
+            seenCodes.add(normalizedCode);
+
+            await ComplianceAuditService.log({
+                entityType: 'requirement',
+                entityId: item.id,
+                action: 'create',
+                actorUserId: req.user?.id || null,
+                departmentId: req.user?.departementId || null,
+                entityKey: framework.entityKey,
+                payload: {
+                    frameworkId: framework.id,
+                    code: draft.code,
+                    sourceFile: req.file.originalname,
+                },
+            });
+        }
+
+        res.status(201).json({
+            message: `${created.length} exigence(s) importee(s) dans le nouveau cadre ${framework.code}`,
+            frameworkId: framework.id,
+            framework: serializeCompliance(framework),
+            sourceFile: req.file.originalname,
+            extractedCharacters: extractedText.length,
+            previewText: extractedText.slice(0, 1200),
+            detectedRequirements: drafts.length,
+            createdRequirements: created.length,
+            skippedRequirements: skipped.length,
+            created: serializeCompliance(created),
+            skipped,
+        });
+    } catch (error: any) {
         res.status(500).json({
-            message: 'Erreur lors de la creation du referentiel',
+            message: 'Erreur lors de l import du cadre',
             error: error?.message || 'unknown_error',
         });
     }
@@ -360,8 +563,9 @@ router.put('/frameworks/:id', authorizeRoles(...adminRoles), async (req: AuthReq
 
         res.json(serializeCompliance(item));
     } catch (error: any) {
-        res.status(500).json({
-            message: 'Erreur lors de la mise a jour du referentiel',
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la mise a jour du referentiel');
+        res.status(routeError.status).json({
+            message: routeError.message,
             error: error?.message || 'unknown_error',
         });
     }
@@ -434,8 +638,119 @@ router.post('/requirements', authorizeRoles(...adminRoles), async (req: AuthRequ
 
         res.status(201).json(serializeCompliance(item));
     } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la creation de l exigence');
+        res.status(routeError.status).json({
+            message: routeError.message,
+            error: error?.message || 'unknown_error',
+        });
+    }
+});
+
+router.post('/frameworks/:id/import-requirements', authorizeRoles(...adminRoles), uploadRequirementImport, async (req: AuthRequest, res) => {
+    try {
+        const frameworkId = Number(req.params.id);
+        if (!Number.isFinite(frameworkId) || frameworkId <= 0) {
+            return res.status(400).json({ message: 'Referentiel invalide' });
+        }
+
+        const framework = await ComplianceFramework.findByPk(frameworkId);
+        if (!framework) {
+            return res.status(404).json({ message: 'Referentiel introuvable' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun document fourni' });
+        }
+
+        const extractedText = await DocumentTextExtractor.extractTextFromFile(req.file, {
+            useOcrForPdf: true,
+            includeStructuredRegionsForImages: true,
+            requireUsableText: true,
+            limitChars: 30000,
+        });
+        const drafts = ComplianceRequirementImportService.parseRequirementsFromText(extractedText);
+
+        if (!drafts.length) {
+            return res.status(422).json({
+                message: 'Aucune exigence n a ete detectee dans le document importe',
+                sourceFile: req.file.originalname,
+                extractedCharacters: extractedText.length,
+                previewText: extractedText.slice(0, 1200),
+                detectedRequirements: 0,
+                createdRequirements: 0,
+                skippedRequirements: 0,
+                created: [],
+                skipped: [],
+            });
+        }
+
+        const existingRequirements = await ComplianceRequirement.findAll({
+            attributes: ['id', 'code'],
+            where: { frameworkId },
+        });
+        const existingByCode = new Set(existingRequirements.map((item: any) => String(item.code || '').trim().toLowerCase()));
+
+        const created: any[] = [];
+        const skipped: Array<{ code: string; title: string; reason: string }> = [];
+
+        for (const draft of drafts) {
+            const normalizedCode = draft.code.trim().toLowerCase();
+            if (!normalizedCode) {
+                skipped.push({ code: draft.code, title: draft.title, reason: 'Code manquant' });
+                continue;
+            }
+
+            if (existingByCode.has(normalizedCode)) {
+                skipped.push({ code: draft.code, title: draft.title, reason: 'Exigence deja presente dans le referentiel' });
+                continue;
+            }
+
+            const payload = await LookupResolutionService.resolveEntityPayload('complianceRequirement', {
+                frameworkId,
+                code: draft.code.trim(),
+                title: draft.title.trim(),
+                description: toOptionalString(draft.description),
+                chapter: toOptionalString(draft.chapter),
+                orderIndex: Number(draft.orderIndex || 0),
+                applicability: draft.applicability || 'applicable',
+                status: draft.status || 'active',
+                weight: Number(draft.weight || 1),
+            }) as Record<string, unknown>;
+
+            const item = await ComplianceRequirement.create(payload as any);
+            created.push(item);
+            existingByCode.add(normalizedCode);
+
+            await ComplianceAuditService.log({
+                entityType: 'requirement',
+                entityId: item.id,
+                action: 'create',
+                actorUserId: req.user?.id || null,
+                departmentId: req.user?.departementId || null,
+                entityKey: framework.entityKey,
+                payload: {
+                    frameworkId,
+                    code: draft.code,
+                    sourceFile: req.file.originalname,
+                },
+            });
+        }
+
+        res.status(201).json({
+            message: `${created.length} exigence(s) importee(s) depuis ${req.file.originalname}`,
+            frameworkId,
+            sourceFile: req.file.originalname,
+            extractedCharacters: extractedText.length,
+            previewText: extractedText.slice(0, 1200),
+            detectedRequirements: drafts.length,
+            createdRequirements: created.length,
+            skippedRequirements: skipped.length,
+            created: serializeCompliance(created),
+            skipped,
+        });
+    } catch (error: any) {
         res.status(500).json({
-            message: 'Erreur lors de la creation de l exigence',
+            message: 'Erreur lors de l import des exigences',
             error: error?.message || 'unknown_error',
         });
     }
@@ -473,8 +788,9 @@ router.put('/requirements/:id', authorizeRoles(...adminRoles), async (req: AuthR
 
         res.json(serializeCompliance(item));
     } catch (error: any) {
-        res.status(500).json({
-            message: 'Erreur lors de la mise a jour de l exigence',
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la mise a jour de l exigence');
+        res.status(routeError.status).json({
+            message: routeError.message,
             error: error?.message || 'unknown_error',
         });
     }

@@ -1,20 +1,26 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditMission, AuditMissionStatus } from '../../../../core/services/auditing.service';
+import { AuditingService, AuditMission, AuditMissionStatus, AuditMissionHorizon } from '../../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getAuditNavItems, getStoredAuditRole } from '../../../../modules/auditing/audit-navigation';
 
 @Component({
     selector: 'app-audit-statistics',
     templateUrl: './audit-statistics.component.html',
-    styleUrls: ['../../../dashboard.component.scss']
+    styleUrls: ['../../../dashboard.component.scss', '../../../../modules/auditing/auditing.component.scss']
 })
 export class AuditStatisticsComponent implements OnInit {
+    currentUserRole = getStoredAuditRole();
     missions: AuditMission[] = [];
+    filteredMissions: AuditMission[] = [];
+    pagedMissions: AuditMission[] = [];
 
     // Stats for Charts
     statusStats: { [key: string]: number } = {};
+    statusSummary: { OK: number; 'En cours': number; NOK: number } = { OK: 0, 'En cours': 0, NOK: 0 };
+    statusSummaryPercentages: { label: string; count: number; percent: number; class: string }[] = [];
 
     totalMissions: number = 0;
     completionRate: number = 0;
@@ -22,7 +28,31 @@ export class AuditStatisticsComponent implements OnInit {
     onTimeRate: number = 0;
     showExportMenu = false;
 
+    // Table pagination
+    currentPage = 1;
+    pageSize = 10;
+    readonly pageSizeOptions = [10, 25, 50, 100];
+    filterSearch = '';
+    filterStatus = '';
+
+    AuditMissionStatus = AuditMissionStatus;
+
+    statusLabelMap: Record<string, string> = {
+        [AuditMissionStatus.NOK]: 'NOK',
+        [AuditMissionStatus.EN_COURS]: 'En cours',
+        [AuditMissionStatus.OK]: 'OK'
+    };
+
+    horizonLabelMap: Record<string, string> = {
+        [AuditMissionHorizon.COURT_TERME]: 'A court terme',
+        [AuditMissionHorizon.MOYEN_TERME]: 'A moyen terme'
+    };
+
     constructor(private auditingService: AuditingService, private router: Router) { }
+
+    get navItems() {
+        return getAuditNavItems(this.currentUserRole);
+    }
 
     ngOnInit() {
         this.loadData();
@@ -32,8 +62,75 @@ export class AuditStatisticsComponent implements OnInit {
         this.auditingService.getMissions().subscribe(missions => {
             this.missions = missions;
             this.totalMissions = missions.length;
+            this.applyFilters();
             this.calculateStats();
         });
+    }
+
+    applyFilters() {
+        this.filteredMissions = this.missions.filter((m) => {
+            const q = this.filterSearch.toLowerCase();
+            const matchSearch = !this.filterSearch
+                || String(m.id).includes(q)
+                || (m.titre || '').toLowerCase().includes(q)
+                || (m.regleDnssi || '').toLowerCase().includes(q)
+                || (m.recommandations || m.objectifs || '').toLowerCase().includes(q)
+                || (m.auditeur && `${m.auditeur.prenom} ${m.auditeur.nom}`.toLowerCase().includes(q))
+                || (m.responsabilites || '').toLowerCase().includes(q);
+
+            const missionStatut = this.normalizeMissionStatus((m as any).statutCode || m.statut);
+            const filterStatut = this.normalizeMissionStatus(this.filterStatus);
+            const matchStatus = !filterStatut || missionStatut === filterStatut;
+
+            return matchSearch && matchStatus;
+        });
+        this.currentPage = 1;
+        this.updatePagedMissions();
+    }
+
+    onFilterChange() {
+        this.applyFilters();
+    }
+
+    clearFilters() {
+        this.filterSearch = '';
+        this.filterStatus = '';
+        this.applyFilters();
+    }
+
+    onPaginationChange(event: { page: number; pageSize: number }) {
+        this.currentPage = event.page;
+        this.pageSize = event.pageSize;
+        this.updatePagedMissions();
+    }
+
+    private updatePagedMissions() {
+        const startIndex = (this.currentPage - 1) * this.pageSize;
+        this.pagedMissions = this.filteredMissions.slice(startIndex, startIndex + this.pageSize);
+    }
+
+    private normalizeMissionStatus(value?: string | null): string {
+        return (value || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
+    }
+
+    getRecommendationPreview(value?: string | null, maxWords: number = 10): string {
+        const text = (value || '').trim();
+        if (!text) {
+            return '-';
+        }
+
+        const words = text.split(/\s+/);
+        if (words.length <= maxWords) {
+            return text;
+        }
+
+        return `${words.slice(0, maxWords).join(' ')}...`;
     }
 
     calculateStats() {
@@ -60,6 +157,27 @@ export class AuditStatisticsComponent implements OnInit {
         // On time rate = (Total - Late - Canceled) / Total
         const onTimeCount = this.totalMissions - delayedCount - (this.statusStats['Annulé'] || 0);
         this.onTimeRate = this.totalMissions > 0 ? Math.round((onTimeCount / this.totalMissions) * 100) : 0;
+
+        this.statusSummary = { OK: 0, 'En cours': 0, NOK: 0 };
+        this.missions.forEach(m => {
+            const status = (m.statut || '').toString().trim();
+            if (status.toLowerCase() === 'ok') {
+                this.statusSummary.OK++;
+            } else if (status.toLowerCase() === 'nok') {
+                this.statusSummary.NOK++;
+            } else {
+                this.statusSummary['En cours']++;
+            }
+        });
+
+        const summaryTotal = this.totalMissions;
+        this.statusSummaryPercentages = [
+            { label: 'OK', count: this.statusSummary.OK, percent: summaryTotal ? Math.round((this.statusSummary.OK / summaryTotal) * 100) : 0, class: 'ok' },
+            { label: 'En cours', count: this.statusSummary['En cours'], percent: summaryTotal ? Math.round((this.statusSummary['En cours'] / summaryTotal) * 100) : 0, class: 'progress' },
+            { label: 'NOK', count: this.statusSummary.NOK, percent: summaryTotal ? Math.round((this.statusSummary.NOK / summaryTotal) * 100) : 0, class: 'nok' }
+        ];
+
+        this.updatePagedMissions();
     }
 
     // Helper for CSS Pie Charts

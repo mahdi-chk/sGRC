@@ -3,22 +3,34 @@ export const INCIDENT_NAV_ITEMS = [
     {
         label: 'Declaration',
         route: '/dashboard/incident-registration',
-        roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR]
+        roles: [
+            UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR,
+            UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI, UserRole.AUDITEUR, UserRole.RISK_AGENT
+        ]
     },
     {
         label: 'Workflow',
         route: '/dashboard/incident-workflow',
-        roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR]
+        roles: [
+            UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR,
+            UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI, UserRole.AUDITEUR, UserRole.RISK_AGENT
+        ]
     },
     {
         label: 'Analyse',
         route: '/dashboard/incident-analysis',
-        roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+        roles: [
+            UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR,
+            UserRole.TOP_MANAGEMENT, UserRole.AUDITEUR, UserRole.RISK_AGENT
+        ]
     },
     {
         label: 'Reporting',
         route: '/dashboard/incident-reporting',
-        roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+        roles: [
+            UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR,
+            UserRole.TOP_MANAGEMENT, UserRole.AUDITEUR, UserRole.RISK_AGENT
+        ]
     }
 ];
 export function getStoredIncidentRole() {

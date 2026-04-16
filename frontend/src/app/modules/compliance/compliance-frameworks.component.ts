@@ -4,6 +4,7 @@ import { getComplianceNavItems, getStoredComplianceRole } from './compliance-nav
 import {
   ComplianceFrameworkPayload,
   ComplianceFrameworkRecord,
+  ComplianceRequirementImportResult,
   ComplianceRequirementPayload,
   ComplianceRequirementRecord,
   ComplianceService
@@ -20,8 +21,7 @@ export class ComplianceFrameworksComponent implements OnInit {
   frameworks: ComplianceFrameworkRecord[] = [];
   requirements: ComplianceRequirementRecord[] = [];
   isLoading = false;
-  isSavingFramework = false;
-  isSavingRequirement = false;
+  isImporting = false;
 
   reqCurrentPage = 1;
   reqItemsPerPage = 10;
@@ -29,9 +29,10 @@ export class ComplianceFrameworksComponent implements OnInit {
   selectedFrameworkId: number | null = null;
   frameworkEditingId: number | null = null;
   requirementEditingId: number | null = null;
+  importFileName = '';
+  importResult: ComplianceRequirementImportResult | null = null;
   feedback = '';
   error = '';
-
   frameworkForm: ComplianceFrameworkPayload = this.createEmptyFrameworkForm();
   requirementForm: ComplianceRequirementPayload = this.createEmptyRequirementForm();
 
@@ -42,6 +43,10 @@ export class ComplianceFrameworksComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadFrameworks();
+  }
+
+  get selectedFramework(): ComplianceFrameworkRecord | null {
+    return this.frameworks.find(item => item.id === this.selectedFrameworkId) || null;
   }
 
   loadFrameworks(): void {
@@ -75,6 +80,7 @@ export class ComplianceFrameworksComponent implements OnInit {
   loadRequirements(): void {
     if (!this.selectedFrameworkId) {
       this.requirements = [];
+      this.importResult = null;
       return;
     }
 
@@ -106,6 +112,9 @@ export class ComplianceFrameworksComponent implements OnInit {
 
   selectFramework(frameworkId: number | null): void {
     this.selectedFrameworkId = frameworkId;
+    this.importResult = null;
+    this.importFileName = '';
+    this.resetFrameworkForm();
     this.resetRequirementForm();
     this.loadRequirements();
   }
@@ -123,22 +132,22 @@ export class ComplianceFrameworksComponent implements OnInit {
       effectiveDate: this.toInputDate(item.effectiveDate),
       reviewDate: this.toInputDate(item.reviewDate)
     };
-    this.feedback = `Edition du referentiel ${item.code}.`;
+    this.feedback = `Edition du cadre ${item.code}.`;
     this.error = '';
   }
 
   saveFramework(): void {
-    if (!this.frameworkForm.code?.trim() || !this.frameworkForm.name?.trim() || !this.frameworkForm.version?.trim()) {
-      this.error = 'Le code, le nom et la version du referentiel sont obligatoires.';
+    if (!this.frameworkEditingId) {
+      this.error = 'Selectionnez un cadre a modifier.';
       return;
     }
 
-    this.isSavingFramework = true;
-    this.error = '';
-    this.feedback = '';
+    if (!this.frameworkForm.code?.trim() || !this.frameworkForm.name?.trim() || !this.frameworkForm.version?.trim()) {
+      this.error = 'Le code, le nom et la version du cadre sont obligatoires.';
+      return;
+    }
 
     const payload: ComplianceFrameworkPayload = {
-      ...this.frameworkForm,
       code: this.frameworkForm.code.trim(),
       name: this.frameworkForm.name.trim(),
       version: this.frameworkForm.version.trim(),
@@ -150,20 +159,17 @@ export class ComplianceFrameworksComponent implements OnInit {
       status: this.frameworkForm.status || 'draft'
     };
 
-    const request$ = this.frameworkEditingId
-      ? this.complianceService.updateFramework(this.frameworkEditingId, payload)
-      : this.complianceService.createFramework(payload);
+    this.error = '';
+    this.feedback = '';
 
-    request$.subscribe({
+    this.complianceService.updateFramework(this.frameworkEditingId, payload).subscribe({
       next: () => {
-        this.feedback = this.frameworkEditingId ? 'Referentiel mis a jour.' : 'Referentiel cree.';
+        this.feedback = 'Cadre mis a jour.';
         this.resetFrameworkForm();
         this.loadFrameworks();
-        this.isSavingFramework = false;
       },
       error: err => {
-        this.isSavingFramework = false;
-        this.error = err?.error?.message || 'Impossible d enregistrer le referentiel.';
+        this.error = err?.error?.message || 'Impossible de mettre a jour le cadre.';
       }
     });
   }
@@ -176,9 +182,6 @@ export class ComplianceFrameworksComponent implements OnInit {
     this.complianceService.deleteFramework(item.id).subscribe({
       next: () => {
         this.feedback = 'Referentiel supprime.';
-        if (this.frameworkEditingId === item.id) {
-          this.resetFrameworkForm();
-        }
         this.loadFrameworks();
       },
       error: err => {
@@ -205,8 +208,8 @@ export class ComplianceFrameworksComponent implements OnInit {
   }
 
   saveRequirement(): void {
-    if (!this.selectedFrameworkId) {
-      this.error = 'Selectionnez d abord un referentiel.';
+    if (!this.requirementEditingId || !this.selectedFrameworkId) {
+      this.error = 'Selectionnez une exigence a modifier.';
       return;
     }
 
@@ -214,10 +217,6 @@ export class ComplianceFrameworksComponent implements OnInit {
       this.error = 'Le code et le titre de l exigence sont obligatoires.';
       return;
     }
-
-    this.isSavingRequirement = true;
-    this.error = '';
-    this.feedback = '';
 
     const payload: ComplianceRequirementPayload = {
       frameworkId: this.selectedFrameworkId,
@@ -231,21 +230,17 @@ export class ComplianceFrameworksComponent implements OnInit {
       weight: Number(this.requirementForm.weight || 1)
     };
 
-    const request$ = this.requirementEditingId
-      ? this.complianceService.updateRequirement(this.requirementEditingId, payload)
-      : this.complianceService.createRequirement(payload);
+    this.error = '';
+    this.feedback = '';
 
-    request$.subscribe({
+    this.complianceService.updateRequirement(this.requirementEditingId, payload).subscribe({
       next: () => {
-        this.feedback = this.requirementEditingId ? 'Exigence mise a jour.' : 'Exigence creee.';
+        this.feedback = 'Exigence mise a jour.';
         this.resetRequirementForm();
         this.loadRequirements();
-        this.loadFrameworks();
-        this.isSavingRequirement = false;
       },
       error: err => {
-        this.isSavingRequirement = false;
-        this.error = err?.error?.message || 'Impossible d enregistrer l exigence.';
+        this.error = err?.error?.message || 'Impossible de mettre a jour l exigence.';
       }
     });
   }
@@ -258,9 +253,6 @@ export class ComplianceFrameworksComponent implements OnInit {
     this.complianceService.deleteRequirement(item.id).subscribe({
       next: () => {
         this.feedback = 'Exigence supprimee.';
-        if (this.requirementEditingId === item.id) {
-          this.resetRequirementForm();
-        }
         this.loadRequirements();
         this.loadFrameworks();
       },
@@ -280,6 +272,43 @@ export class ComplianceFrameworksComponent implements OnInit {
     this.requirementForm = this.createEmptyRequirementForm();
   }
 
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] || null;
+    this.importFileName = file?.name || '';
+    this.importResult = null;
+    this.error = '';
+  }
+
+  importRequirements(input: HTMLInputElement): void {
+    const file = input.files?.[0];
+    if (!file) {
+      this.error = 'Selectionnez un document a importer.';
+      return;
+    }
+
+    this.isImporting = true;
+    this.error = '';
+    this.feedback = '';
+    this.importResult = null;
+
+    this.complianceService.importRequirements(file).subscribe({
+      next: result => {
+        this.isImporting = false;
+        this.importResult = result;
+        this.selectedFrameworkId = result.frameworkId;
+        this.feedback = result.message || 'Import termine.';
+        input.value = '';
+        this.importFileName = '';
+        this.loadFrameworks();
+      },
+      error: err => {
+        this.isImporting = false;
+        this.error = err?.error?.message || 'Impossible d importer le document.';
+      }
+    });
+  }
+
   formatDate(value: string | null | undefined): string {
     return value ? new Date(value).toLocaleDateString('fr-FR') : 'Non planifie';
   }
@@ -293,7 +322,7 @@ export class ComplianceFrameworksComponent implements OnInit {
       code: '',
       name: '',
       version: '',
-      jurisdiction: 'Maroc',
+      jurisdiction: '',
       description: '',
       entityKey: '',
       status: 'draft',

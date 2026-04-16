@@ -50,6 +50,12 @@ export const COMPLIANCE_NAV_ITEMS: ComplianceNavItem[] = [
     roles: ALL_COMPLIANCE_ROLES
   },
   {
+    label: 'KPI de Maturite',
+    route: '/dashboard/compliance-maturity',
+    description: 'Radar de maturite et lecture par chapitre de la couverture des exigences.',
+    roles: ALL_COMPLIANCE_ROLES
+  },
+  {
     label: 'Mapping et Liens',
     route: '/dashboard/compliance-mappings',
     description: 'Matrices de couverture entre exigences, controles, risques et preuves.',

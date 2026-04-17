@@ -234,6 +234,22 @@ export interface ComplianceRequirementImportResult {
   skipped: ComplianceRequirementImportSkipped[];
 }
 
+export interface ComplianceAutoMapSkipped {
+  requirementCode: string;
+  sourceType: string;
+  sourceId: number | null;
+  reason: string;
+}
+
+export interface ComplianceAutoMapResult {
+  message: string;
+  frameworkId: number;
+  createdCount: number;
+  skippedCount: number;
+  created: ComplianceMappingRecord[];
+  skipped: ComplianceAutoMapSkipped[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ComplianceService {
   private apiUrl = `${environment.apiUrl}/compliance`;
@@ -313,6 +329,10 @@ export class ComplianceService {
 
   createMapping(payload: ComplianceMappingPayload): Observable<ComplianceMappingRecord> {
     return this.http.post<ComplianceMappingRecord>(`${this.apiUrl}/mappings`, payload);
+  }
+
+  autoMapFramework(frameworkId: number): Observable<ComplianceAutoMapResult> {
+    return this.http.post<ComplianceAutoMapResult>(`${this.apiUrl}/mappings/auto-map`, { frameworkId });
   }
 
   updateMapping(id: number, payload: ComplianceMappingPayload): Observable<ComplianceMappingRecord> {

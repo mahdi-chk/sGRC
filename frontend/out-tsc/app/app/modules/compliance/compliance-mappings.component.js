@@ -9,37 +9,37 @@ import * as i3 from "@angular/common";
 import * as i4 from "@angular/forms";
 const _c0 = function () { return { exact: true }; };
 function ComplianceMappingsComponent_a_16_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "a", 32);
+    i0.ɵɵelementStart(0, "a", 34);
     i0.ɵɵtext(1);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const item_r9 = ctx.$implicit;
-    i0.ɵɵproperty("routerLink", item_r9.route)("routerLinkActiveOptions", i0.ɵɵpureFunction0(3, _c0));
+    const item_r10 = ctx.$implicit;
+    i0.ɵɵproperty("routerLink", item_r10.route)("routerLinkActiveOptions", i0.ɵɵpureFunction0(3, _c0));
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate1(" ", item_r9.label, " ");
+    i0.ɵɵtextInterpolate1(" ", item_r10.label, " ");
 } }
 function ComplianceMappingsComponent_div_17_p_1_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "p", 35);
-    i0.ɵɵtext(1);
-    i0.ɵɵelementEnd();
-} if (rf & 2) {
-    const ctx_r10 = i0.ɵɵnextContext(2);
-    i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate(ctx_r10.feedback);
-} }
-function ComplianceMappingsComponent_div_17_p_2_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "p", 36);
+    i0.ɵɵelementStart(0, "p", 37);
     i0.ɵɵtext(1);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const ctx_r11 = i0.ɵɵnextContext(2);
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate(ctx_r11.error);
+    i0.ɵɵtextInterpolate(ctx_r11.feedback);
+} }
+function ComplianceMappingsComponent_div_17_p_2_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "p", 38);
+    i0.ɵɵtext(1);
+    i0.ɵɵelementEnd();
+} if (rf & 2) {
+    const ctx_r12 = i0.ɵɵnextContext(2);
+    i0.ɵɵadvance(1);
+    i0.ɵɵtextInterpolate(ctx_r12.error);
 } }
 function ComplianceMappingsComponent_div_17_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵelementStart(0, "div", 12);
-    i0.ɵɵtemplate(1, ComplianceMappingsComponent_div_17_p_1_Template, 2, 1, "p", 33);
-    i0.ɵɵtemplate(2, ComplianceMappingsComponent_div_17_p_2_Template, 2, 1, "p", 34);
+    i0.ɵɵtemplate(1, ComplianceMappingsComponent_div_17_p_1_Template, 2, 1, "p", 35);
+    i0.ɵɵtemplate(2, ComplianceMappingsComponent_div_17_p_2_Template, 2, 1, "p", 36);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
     const ctx_r1 = i0.ɵɵnextContext();
@@ -48,48 +48,82 @@ function ComplianceMappingsComponent_div_17_Template(rf, ctx) { if (rf & 1) {
     i0.ɵɵadvance(1);
     i0.ɵɵproperty("ngIf", ctx_r1.error);
 } }
-function ComplianceMappingsComponent_option_31_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "option", 17);
-    i0.ɵɵtext(1);
+function ComplianceMappingsComponent_div_28_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "div", 39);
+    i0.ɵɵelementStart(1, "div", 40);
+    i0.ɵɵelementStart(2, "div", 41);
+    i0.ɵɵelementStart(3, "span", 42);
+    i0.ɵɵtext(4, "Mappings crees");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(5, "h3");
+    i0.ɵɵtext(6);
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(7, "p");
+    i0.ɵɵtext(8, "Ajoutes automatiquement par IA");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(9, "div", 41);
+    i0.ɵɵelementStart(10, "span", 42);
+    i0.ɵɵtext(11, "Mappings ignores");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(12, "h3");
+    i0.ɵɵtext(13);
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementStart(14, "p");
+    i0.ɵɵtext(15, "Doublons ou suggestions invalides");
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementEnd();
+    i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const framework_r12 = ctx.$implicit;
-    i0.ɵɵproperty("ngValue", framework_r12.id);
-    i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate2(" ", framework_r12.code, " - ", framework_r12.name, " ");
+    const ctx_r2 = i0.ɵɵnextContext();
+    i0.ɵɵadvance(6);
+    i0.ɵɵtextInterpolate(ctx_r2.autoMapResult.createdCount);
+    i0.ɵɵadvance(7);
+    i0.ɵɵtextInterpolate(ctx_r2.autoMapResult.skippedCount);
 } }
-function ComplianceMappingsComponent_option_38_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "option", 17);
+function ComplianceMappingsComponent_option_36_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "option", 20);
     i0.ɵɵtext(1);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const requirement_r13 = ctx.$implicit;
-    i0.ɵɵproperty("ngValue", requirement_r13.id);
+    const framework_r13 = ctx.$implicit;
+    i0.ɵɵproperty("ngValue", framework_r13.id);
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate2(" ", requirement_r13.code, " - ", requirement_r13.title, " ");
+    i0.ɵɵtextInterpolate2(" ", framework_r13.code, " - ", framework_r13.name, " ");
 } }
 function ComplianceMappingsComponent_option_43_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "option", 17);
+    i0.ɵɵelementStart(0, "option", 20);
     i0.ɵɵtext(1);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const type_r14 = ctx.$implicit;
-    i0.ɵɵproperty("ngValue", type_r14);
+    const requirement_r14 = ctx.$implicit;
+    i0.ɵɵproperty("ngValue", requirement_r14.id);
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate(type_r14);
+    i0.ɵɵtextInterpolate2(" ", requirement_r14.code, " - ", requirement_r14.title, " ");
 } }
-function ComplianceMappingsComponent_option_50_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "option", 17);
+function ComplianceMappingsComponent_option_48_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "option", 20);
     i0.ɵɵtext(1);
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const option_r15 = ctx.$implicit;
-    i0.ɵɵproperty("ngValue", option_r15.id);
+    const type_r15 = ctx.$implicit;
+    i0.ɵɵproperty("ngValue", type_r15);
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate1(" ", option_r15.label, " ");
+    i0.ɵɵtextInterpolate(type_r15);
 } }
-function ComplianceMappingsComponent_section_78_tr_20_Template(rf, ctx) { if (rf & 1) {
-    const _r19 = i0.ɵɵgetCurrentView();
+function ComplianceMappingsComponent_option_55_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "option", 20);
+    i0.ɵɵtext(1);
+    i0.ɵɵelementEnd();
+} if (rf & 2) {
+    const option_r16 = ctx.$implicit;
+    i0.ɵɵproperty("ngValue", option_r16.id);
+    i0.ɵɵadvance(1);
+    i0.ɵɵtextInterpolate1(" ", option_r16.label, " ");
+} }
+function ComplianceMappingsComponent_section_83_tr_20_Template(rf, ctx) { if (rf & 1) {
+    const _r20 = i0.ɵɵgetCurrentView();
     i0.ɵɵelementStart(0, "tr");
     i0.ɵɵelementStart(1, "td");
     i0.ɵɵelementStart(2, "strong");
@@ -108,7 +142,7 @@ function ComplianceMappingsComponent_section_78_tr_20_Template(rf, ctx) { if (rf
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(11, "td");
-    i0.ɵɵelementStart(12, "span", 41);
+    i0.ɵɵelementStart(12, "span", 47);
     i0.ɵɵtext(13);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
@@ -120,40 +154,40 @@ function ComplianceMappingsComponent_section_78_tr_20_Template(rf, ctx) { if (rf
     i0.ɵɵtext(18);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(19, "td", 42);
-    i0.ɵɵelementStart(20, "button", 43);
-    i0.ɵɵlistener("click", function ComplianceMappingsComponent_section_78_tr_20_Template_button_click_20_listener() { const restoredCtx = i0.ɵɵrestoreView(_r19); const item_r17 = restoredCtx.$implicit; const ctx_r18 = i0.ɵɵnextContext(2); return ctx_r18.editMapping(item_r17); });
+    i0.ɵɵelementStart(19, "td", 48);
+    i0.ɵɵelementStart(20, "button", 49);
+    i0.ɵɵlistener("click", function ComplianceMappingsComponent_section_83_tr_20_Template_button_click_20_listener() { const restoredCtx = i0.ɵɵrestoreView(_r20); const item_r18 = restoredCtx.$implicit; const ctx_r19 = i0.ɵɵnextContext(2); return ctx_r19.editMapping(item_r18); });
     i0.ɵɵtext(21, "Modifier");
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(22, "button", 44);
-    i0.ɵɵlistener("click", function ComplianceMappingsComponent_section_78_tr_20_Template_button_click_22_listener() { const restoredCtx = i0.ɵɵrestoreView(_r19); const item_r17 = restoredCtx.$implicit; const ctx_r20 = i0.ɵɵnextContext(2); return ctx_r20.deleteMapping(item_r17); });
+    i0.ɵɵelementStart(22, "button", 50);
+    i0.ɵɵlistener("click", function ComplianceMappingsComponent_section_83_tr_20_Template_button_click_22_listener() { const restoredCtx = i0.ɵɵrestoreView(_r20); const item_r18 = restoredCtx.$implicit; const ctx_r21 = i0.ɵɵnextContext(2); return ctx_r21.deleteMapping(item_r18); });
     i0.ɵɵtext(23, "Supprimer");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const item_r17 = ctx.$implicit;
-    const ctx_r16 = i0.ɵɵnextContext(2);
+    const item_r18 = ctx.$implicit;
+    const ctx_r17 = i0.ɵɵnextContext(2);
     i0.ɵɵadvance(3);
-    i0.ɵɵtextInterpolate((item_r17.requirement == null ? null : item_r17.requirement.code) || "REQ-" + item_r17.requirementId);
+    i0.ɵɵtextInterpolate((item_r18.requirement == null ? null : item_r18.requirement.code) || "REQ-" + item_r18.requirementId);
     i0.ɵɵadvance(2);
-    i0.ɵɵtextInterpolate((item_r17.requirement == null ? null : item_r17.requirement.title) || "Exigence chargee sans detail");
+    i0.ɵɵtextInterpolate((item_r18.requirement == null ? null : item_r18.requirement.title) || "Exigence chargee sans detail");
     i0.ɵɵadvance(3);
-    i0.ɵɵtextInterpolate2("", item_r17.sourceTypeLabel || item_r17.sourceType, " - ", ctx_r16.getSourceLabel(item_r17), "");
+    i0.ɵɵtextInterpolate2("", item_r18.sourceTypeLabel || item_r18.sourceType, " - ", ctx_r17.getSourceLabel(item_r18), "");
     i0.ɵɵadvance(2);
-    i0.ɵɵtextInterpolate(item_r17.relatedEntityKey || "Aucune cle secondaire");
+    i0.ɵɵtextInterpolate(item_r18.relatedEntityKey || "Aucune cle secondaire");
     i0.ɵɵadvance(2);
-    i0.ɵɵproperty("ngClass", ctx_r16.getStatusClass(item_r17.coverageLevelCode || item_r17.coverageLevel));
+    i0.ɵɵproperty("ngClass", ctx_r17.getStatusClass(item_r18.coverageLevelCode || item_r18.coverageLevel));
     i0.ɵɵadvance(1);
-    i0.ɵɵtextInterpolate(item_r17.coverageLevelLabel || item_r17.coverageLevel);
+    i0.ɵɵtextInterpolate(item_r18.coverageLevelLabel || item_r18.coverageLevel);
     i0.ɵɵadvance(3);
-    i0.ɵɵtextInterpolate(item_r17.entityKey || "Global");
+    i0.ɵɵtextInterpolate(item_r18.entityKey || "Global");
     i0.ɵɵadvance(2);
-    i0.ɵɵtextInterpolate2("", item_r17.owner == null ? null : item_r17.owner.prenom, " ", item_r17.owner == null ? null : item_r17.owner.nom, "");
+    i0.ɵɵtextInterpolate2("", item_r18.owner == null ? null : item_r18.owner.prenom, " ", item_r18.owner == null ? null : item_r18.owner.nom, "");
 } }
-function ComplianceMappingsComponent_section_78_Template(rf, ctx) { if (rf & 1) {
-    const _r22 = i0.ɵɵgetCurrentView();
-    i0.ɵɵelementStart(0, "section", 37);
+function ComplianceMappingsComponent_section_83_Template(rf, ctx) { if (rf & 1) {
+    const _r23 = i0.ɵɵgetCurrentView();
+    i0.ɵɵelementStart(0, "section", 43);
     i0.ɵɵelementStart(1, "div", 13);
     i0.ɵɵelementStart(2, "h2");
     i0.ɵɵtext(3, "Matrice de couverture");
@@ -162,7 +196,7 @@ function ComplianceMappingsComponent_section_78_Template(rf, ctx) { if (rf & 1) 
     i0.ɵɵtext(5, "Chaque ligne represente un lien persiste entre une exigence et un element reel du systeme.");
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(6, "table", 38);
+    i0.ɵɵelementStart(6, "table", 44);
     i0.ɵɵelementStart(7, "thead");
     i0.ɵɵelementStart(8, "tr");
     i0.ɵɵelementStart(9, "th");
@@ -183,23 +217,23 @@ function ComplianceMappingsComponent_section_78_Template(rf, ctx) { if (rf & 1) 
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
     i0.ɵɵelementStart(19, "tbody");
-    i0.ɵɵtemplate(20, ComplianceMappingsComponent_section_78_tr_20_Template, 24, 10, "tr", 39);
+    i0.ɵɵtemplate(20, ComplianceMappingsComponent_section_83_tr_20_Template, 24, 10, "tr", 45);
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
-    i0.ɵɵelementStart(21, "app-pagination", 40);
-    i0.ɵɵlistener("pageChanged", function ComplianceMappingsComponent_section_78_Template_app_pagination_pageChanged_21_listener($event) { i0.ɵɵrestoreView(_r22); const ctx_r21 = i0.ɵɵnextContext(); return ctx_r21.onPageChanged($event); });
+    i0.ɵɵelementStart(21, "app-pagination", 46);
+    i0.ɵɵlistener("pageChanged", function ComplianceMappingsComponent_section_83_Template_app_pagination_pageChanged_21_listener($event) { i0.ɵɵrestoreView(_r23); const ctx_r22 = i0.ɵɵnextContext(); return ctx_r22.onPageChanged($event); });
     i0.ɵɵelementEnd();
     i0.ɵɵelementEnd();
 } if (rf & 2) {
-    const ctx_r6 = i0.ɵɵnextContext();
+    const ctx_r7 = i0.ɵɵnextContext();
     i0.ɵɵadvance(20);
-    i0.ɵɵproperty("ngForOf", ctx_r6.paginatedMappings);
+    i0.ɵɵproperty("ngForOf", ctx_r7.paginatedMappings);
     i0.ɵɵadvance(1);
-    i0.ɵɵproperty("totalItems", ctx_r6.mappings.length)("currentPage", ctx_r6.currentPage)("pageSize", ctx_r6.itemsPerPage);
+    i0.ɵɵproperty("totalItems", ctx_r7.mappings.length)("currentPage", ctx_r7.currentPage)("pageSize", ctx_r7.itemsPerPage);
 } }
-function ComplianceMappingsComponent_ng_template_79_Template(rf, ctx) { if (rf & 1) {
-    i0.ɵɵelementStart(0, "div", 45);
-    i0.ɵɵelement(1, "i", 46);
+function ComplianceMappingsComponent_ng_template_84_Template(rf, ctx) { if (rf & 1) {
+    i0.ɵɵelementStart(0, "div", 51);
+    i0.ɵɵelement(1, "i", 52);
     i0.ɵɵelementStart(2, "h3");
     i0.ɵɵtext(3, "Aucun mapping visible");
     i0.ɵɵelementEnd();
@@ -222,10 +256,12 @@ export class ComplianceMappingsComponent {
         this.itemsPerPage = 10;
         this.isLoading = false;
         this.isSaving = false;
+        this.isAutoMapping = false;
         this.selectedFrameworkId = null;
         this.mappingEditingId = null;
         this.feedback = '';
         this.error = '';
+        this.autoMapResult = null;
         this.mappingForm = this.createEmptyMappingForm();
     }
     ngOnInit() {
@@ -313,6 +349,7 @@ export class ComplianceMappingsComponent {
     }
     onFrameworkChange() {
         this.mappingForm.requirementId = 0;
+        this.autoMapResult = null;
         this.loadRequirements();
     }
     onSourceTypeChange() {
@@ -353,6 +390,29 @@ export class ComplianceMappingsComponent {
                 var _a;
                 this.isSaving = false;
                 this.error = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'Impossible d enregistrer le mapping.';
+            }
+        });
+    }
+    autoMapSelectedFramework() {
+        if (!this.selectedFrameworkId) {
+            this.error = 'Selectionnez un referentiel a mapper.';
+            return;
+        }
+        this.isAutoMapping = true;
+        this.error = '';
+        this.feedback = '';
+        this.autoMapResult = null;
+        this.complianceService.autoMapFramework(this.selectedFrameworkId).subscribe({
+            next: result => {
+                this.isAutoMapping = false;
+                this.autoMapResult = result;
+                this.feedback = result.message || 'Mapping automatique termine.';
+                this.loadMappings();
+            },
+            error: err => {
+                var _a;
+                this.isAutoMapping = false;
+                this.error = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'Impossible de lancer le mapping automatique.';
             }
         });
     }
@@ -430,7 +490,7 @@ export class ComplianceMappingsComponent {
     }
 }
 ComplianceMappingsComponent.ɵfac = function ComplianceMappingsComponent_Factory(t) { return new (t || ComplianceMappingsComponent)(i0.ɵɵdirectiveInject(i1.Router), i0.ɵɵdirectiveInject(i2.ComplianceService)); };
-ComplianceMappingsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ComplianceMappingsComponent, selectors: [["app-compliance-mappings"]], decls: 81, vars: 25, consts: [[1, "compliance-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-diagram-project"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "compliance-tabs"], ["routerLinkActive", "active", "class", "compliance-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "content-card", 4, "ngIf"], [1, "content-card"], [1, "card-head"], [1, "form-grid"], [1, "filter-field"], [3, "ngModel", "ngModelChange"], [3, "ngValue"], [3, "ngValue", 4, "ngFor", "ngForOf"], [1, "filter-field", "field-span-2"], [3, "ngModel", "disabled", "ngModelChange"], ["value", "partial"], ["value", "covered"], ["value", "uncovered"], ["placeholder", "filiale-casa", 3, "ngModel", "ngModelChange"], ["placeholder", "risk:12 / audit:4 / maroc-si", 3, "ngModel", "ngModelChange"], [1, "filter-field", "field-span-3"], ["rows", "3", "placeholder", "Pourquoi cette source couvre l exigence et quel est le niveau de preuve attendu.", 3, "ngModel", "ngModelChange"], [1, "form-actions"], ["type", "button", 1, "back-btn", 3, "click"], ["class", "table-card", 4, "ngIf", "ngIfElse"], ["emptyState", ""], ["routerLinkActive", "active", 1, "compliance-tab", 3, "routerLink", "routerLinkActiveOptions"], ["class", "feedback-message success", 4, "ngIf"], ["class", "feedback-message error", 4, "ngIf"], [1, "feedback-message", "success"], [1, "feedback-message", "error"], [1, "table-card"], [1, "compliance-table"], [4, "ngFor", "ngForOf"], [3, "totalItems", "currentPage", "pageSize", "pageChanged"], [1, "badge", 3, "ngClass"], [1, "action-cell"], ["type", "button", 1, "table-action", 3, "click"], ["type", "button", 1, "table-action", "danger", 3, "click"], [1, "empty-state"], [1, "fas", "fa-link"]], template: function ComplianceMappingsComponent_Template(rf, ctx) { if (rf & 1) {
+ComplianceMappingsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type: ComplianceMappingsComponent, selectors: [["app-compliance-mappings"]], decls: 86, vars: 29, consts: [[1, "compliance-workspace"], [1, "page-header"], [1, "header-left"], [1, "back-btn", 3, "click"], [1, "fas", "fa-arrow-left"], [1, "fas", "fa-diagram-project"], [1, "header-actions"], [1, "btn-refresh", 3, "disabled", "click"], [1, "fas", 3, "ngClass"], [1, "compliance-tabs"], ["routerLinkActive", "active", "class", "compliance-tab", 3, "routerLink", "routerLinkActiveOptions", 4, "ngFor", "ngForOf"], ["class", "content-card", 4, "ngIf"], [1, "content-card"], [1, "card-head"], [1, "form-actions"], ["type", "button", 1, "btn-refresh", 3, "disabled", "click"], ["class", "import-results", 4, "ngIf"], [1, "form-grid"], [1, "filter-field"], [3, "ngModel", "ngModelChange"], [3, "ngValue"], [3, "ngValue", 4, "ngFor", "ngForOf"], [1, "filter-field", "field-span-2"], [3, "ngModel", "disabled", "ngModelChange"], ["value", "partial"], ["value", "covered"], ["value", "uncovered"], ["placeholder", "filiale-casa", 3, "ngModel", "ngModelChange"], ["placeholder", "risk:12 / audit:4 / maroc-si", 3, "ngModel", "ngModelChange"], [1, "filter-field", "field-span-3"], ["rows", "3", "placeholder", "Pourquoi cette source couvre l exigence et quel est le niveau de preuve attendu.", 3, "ngModel", "ngModelChange"], ["type", "button", 1, "back-btn", 3, "click"], ["class", "table-card", 4, "ngIf", "ngIfElse"], ["emptyState", ""], ["routerLinkActive", "active", 1, "compliance-tab", 3, "routerLink", "routerLinkActiveOptions"], ["class", "feedback-message success", 4, "ngIf"], ["class", "feedback-message error", 4, "ngIf"], [1, "feedback-message", "success"], [1, "feedback-message", "error"], [1, "import-results"], [1, "import-kpis"], [1, "metric-card"], [1, "eyebrow"], [1, "table-card"], [1, "compliance-table"], [4, "ngFor", "ngForOf"], [3, "totalItems", "currentPage", "pageSize", "pageChanged"], [1, "badge", 3, "ngClass"], [1, "action-cell"], ["type", "button", 1, "table-action", 3, "click"], ["type", "button", 1, "table-action", "danger", 3, "click"], [1, "empty-state"], [1, "fas", "fa-link"]], template: function ComplianceMappingsComponent_Template(rf, ctx) { if (rf & 1) {
         i0.ɵɵelementStart(0, "div", 0);
         i0.ɵɵelementStart(1, "div", 1);
         i0.ɵɵelementStart(2, "div", 2);
@@ -470,109 +530,117 @@ ComplianceMappingsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type:
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
         i0.ɵɵelementStart(24, "div", 14);
-        i0.ɵɵelementStart(25, "label", 15);
-        i0.ɵɵelementStart(26, "span");
-        i0.ɵɵtext(27, "Referentiel");
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(28, "select", 16);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_28_listener($event) { return ctx.selectedFrameworkId = $event; })("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_28_listener() { return ctx.onFrameworkChange(); });
-        i0.ɵɵelementStart(29, "option", 17);
-        i0.ɵɵtext(30, "Choisir un referentiel");
-        i0.ɵɵelementEnd();
-        i0.ɵɵtemplate(31, ComplianceMappingsComponent_option_31_Template, 2, 3, "option", 18);
+        i0.ɵɵelementStart(25, "button", 15);
+        i0.ɵɵlistener("click", function ComplianceMappingsComponent_Template_button_click_25_listener() { return ctx.autoMapSelectedFramework(); });
+        i0.ɵɵelement(26, "i", 8);
+        i0.ɵɵtext(27);
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(32, "label", 19);
-        i0.ɵɵelementStart(33, "span");
-        i0.ɵɵtext(34, "Exigence");
+        i0.ɵɵtemplate(28, ComplianceMappingsComponent_div_28_Template, 16, 2, "div", 16);
+        i0.ɵɵelementStart(29, "div", 17);
+        i0.ɵɵelementStart(30, "label", 18);
+        i0.ɵɵelementStart(31, "span");
+        i0.ɵɵtext(32, "Referentiel");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(35, "select", 20);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_35_listener($event) { return ctx.mappingForm.requirementId = $event; });
-        i0.ɵɵelementStart(36, "option", 17);
-        i0.ɵɵtext(37, "Choisir une exigence");
+        i0.ɵɵelementStart(33, "select", 19);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_33_listener($event) { return ctx.selectedFrameworkId = $event; })("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_33_listener() { return ctx.onFrameworkChange(); });
+        i0.ɵɵelementStart(34, "option", 20);
+        i0.ɵɵtext(35, "Choisir un referentiel");
         i0.ɵɵelementEnd();
-        i0.ɵɵtemplate(38, ComplianceMappingsComponent_option_38_Template, 2, 3, "option", 18);
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(39, "label", 15);
-        i0.ɵɵelementStart(40, "span");
-        i0.ɵɵtext(41, "Type de source");
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(42, "select", 16);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_42_listener($event) { return ctx.mappingForm.sourceType = $event; })("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_42_listener() { return ctx.onSourceTypeChange(); });
-        i0.ɵɵtemplate(43, ComplianceMappingsComponent_option_43_Template, 2, 2, "option", 18);
+        i0.ɵɵtemplate(36, ComplianceMappingsComponent_option_36_Template, 2, 3, "option", 21);
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(44, "label", 19);
+        i0.ɵɵelementStart(37, "label", 22);
+        i0.ɵɵelementStart(38, "span");
+        i0.ɵɵtext(39, "Exigence");
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(40, "select", 23);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_40_listener($event) { return ctx.mappingForm.requirementId = $event; });
+        i0.ɵɵelementStart(41, "option", 20);
+        i0.ɵɵtext(42, "Choisir une exigence");
+        i0.ɵɵelementEnd();
+        i0.ɵɵtemplate(43, ComplianceMappingsComponent_option_43_Template, 2, 3, "option", 21);
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(44, "label", 18);
         i0.ɵɵelementStart(45, "span");
-        i0.ɵɵtext(46, "Source liee");
+        i0.ɵɵtext(46, "Type de source");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(47, "select", 16);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_47_listener($event) { return ctx.mappingForm.sourceId = $event; });
-        i0.ɵɵelementStart(48, "option", 17);
-        i0.ɵɵtext(49, "Choisir un element existant");
-        i0.ɵɵelementEnd();
-        i0.ɵɵtemplate(50, ComplianceMappingsComponent_option_50_Template, 2, 2, "option", 18);
+        i0.ɵɵelementStart(47, "select", 19);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_47_listener($event) { return ctx.mappingForm.sourceType = $event; })("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_47_listener() { return ctx.onSourceTypeChange(); });
+        i0.ɵɵtemplate(48, ComplianceMappingsComponent_option_48_Template, 2, 2, "option", 21);
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(51, "label", 15);
-        i0.ɵɵelementStart(52, "span");
-        i0.ɵɵtext(53, "Niveau de couverture");
+        i0.ɵɵelementStart(49, "label", 22);
+        i0.ɵɵelementStart(50, "span");
+        i0.ɵɵtext(51, "Source liee");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(54, "select", 16);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_54_listener($event) { return ctx.mappingForm.coverageLevel = $event; });
-        i0.ɵɵelementStart(55, "option", 21);
-        i0.ɵɵtext(56, "Partielle");
+        i0.ɵɵelementStart(52, "select", 19);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_52_listener($event) { return ctx.mappingForm.sourceId = $event; });
+        i0.ɵɵelementStart(53, "option", 20);
+        i0.ɵɵtext(54, "Choisir un element existant");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(57, "option", 22);
-        i0.ɵɵtext(58, "Couverte");
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(59, "option", 23);
-        i0.ɵɵtext(60, "Non couverte");
+        i0.ɵɵtemplate(55, ComplianceMappingsComponent_option_55_Template, 2, 2, "option", 21);
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(56, "label", 18);
+        i0.ɵɵelementStart(57, "span");
+        i0.ɵɵtext(58, "Niveau de couverture");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(61, "label", 15);
-        i0.ɵɵelementStart(62, "span");
-        i0.ɵɵtext(63, "Entity Key");
+        i0.ɵɵelementStart(59, "select", 19);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_select_ngModelChange_59_listener($event) { return ctx.mappingForm.coverageLevel = $event; });
+        i0.ɵɵelementStart(60, "option", 24);
+        i0.ɵɵtext(61, "Partielle");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(64, "input", 24);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_input_ngModelChange_64_listener($event) { return ctx.mappingForm.entityKey = $event; });
+        i0.ɵɵelementStart(62, "option", 25);
+        i0.ɵɵtext(63, "Couverte");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(65, "label", 19);
-        i0.ɵɵelementStart(66, "span");
-        i0.ɵɵtext(67, "Cle relationnelle");
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(68, "input", 25);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_input_ngModelChange_68_listener($event) { return ctx.mappingForm.relatedEntityKey = $event; });
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(69, "label", 26);
-        i0.ɵɵelementStart(70, "span");
-        i0.ɵɵtext(71, "Justification");
-        i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(72, "textarea", 27);
-        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_textarea_ngModelChange_72_listener($event) { return ctx.mappingForm.rationale = $event; });
+        i0.ɵɵelementStart(64, "option", 26);
+        i0.ɵɵtext(65, "Non couverte");
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(73, "div", 28);
-        i0.ɵɵelementStart(74, "button", 7);
-        i0.ɵɵlistener("click", function ComplianceMappingsComponent_Template_button_click_74_listener() { return ctx.saveMapping(); });
-        i0.ɵɵtext(75);
+        i0.ɵɵelementStart(66, "label", 18);
+        i0.ɵɵelementStart(67, "span");
+        i0.ɵɵtext(68, "Entity Key");
         i0.ɵɵelementEnd();
-        i0.ɵɵelementStart(76, "button", 29);
-        i0.ɵɵlistener("click", function ComplianceMappingsComponent_Template_button_click_76_listener() { return ctx.resetForm(); });
-        i0.ɵɵtext(77, "Reinitialiser");
+        i0.ɵɵelementStart(69, "input", 27);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_input_ngModelChange_69_listener($event) { return ctx.mappingForm.entityKey = $event; });
         i0.ɵɵelementEnd();
         i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(70, "label", 22);
+        i0.ɵɵelementStart(71, "span");
+        i0.ɵɵtext(72, "Cle relationnelle");
         i0.ɵɵelementEnd();
-        i0.ɵɵtemplate(78, ComplianceMappingsComponent_section_78_Template, 22, 4, "section", 30);
-        i0.ɵɵtemplate(79, ComplianceMappingsComponent_ng_template_79_Template, 6, 0, "ng-template", null, 31, i0.ɵɵtemplateRefExtractor);
+        i0.ɵɵelementStart(73, "input", 28);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_input_ngModelChange_73_listener($event) { return ctx.mappingForm.relatedEntityKey = $event; });
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(74, "label", 29);
+        i0.ɵɵelementStart(75, "span");
+        i0.ɵɵtext(76, "Justification");
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(77, "textarea", 30);
+        i0.ɵɵlistener("ngModelChange", function ComplianceMappingsComponent_Template_textarea_ngModelChange_77_listener($event) { return ctx.mappingForm.rationale = $event; });
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(78, "div", 14);
+        i0.ɵɵelementStart(79, "button", 7);
+        i0.ɵɵlistener("click", function ComplianceMappingsComponent_Template_button_click_79_listener() { return ctx.saveMapping(); });
+        i0.ɵɵtext(80);
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementStart(81, "button", 31);
+        i0.ɵɵlistener("click", function ComplianceMappingsComponent_Template_button_click_81_listener() { return ctx.resetForm(); });
+        i0.ɵɵtext(82, "Reinitialiser");
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementEnd();
+        i0.ɵɵelementEnd();
+        i0.ɵɵtemplate(83, ComplianceMappingsComponent_section_83_Template, 22, 4, "section", 32);
+        i0.ɵɵtemplate(84, ComplianceMappingsComponent_ng_template_84_Template, 6, 0, "ng-template", null, 33, i0.ɵɵtemplateRefExtractor);
         i0.ɵɵelementEnd();
     } if (rf & 2) {
-        const _r7 = i0.ɵɵreference(80);
+        const _r8 = i0.ɵɵreference(85);
         i0.ɵɵadvance(12);
         i0.ɵɵproperty("disabled", ctx.isLoading);
         i0.ɵɵadvance(1);
@@ -583,7 +651,15 @@ ComplianceMappingsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type:
         i0.ɵɵproperty("ngIf", ctx.feedback || ctx.error);
         i0.ɵɵadvance(4);
         i0.ɵɵtextInterpolate(ctx.mappingEditingId ? "Modifier un mapping" : "Nouveau mapping");
-        i0.ɵɵadvance(7);
+        i0.ɵɵadvance(4);
+        i0.ɵɵproperty("disabled", !ctx.selectedFrameworkId || ctx.isAutoMapping);
+        i0.ɵɵadvance(1);
+        i0.ɵɵproperty("ngClass", ctx.isAutoMapping ? "fa-circle-notch fa-spin" : "fa-wand-magic-sparkles");
+        i0.ɵɵadvance(1);
+        i0.ɵɵtextInterpolate1(" ", ctx.isAutoMapping ? "IA en cours..." : "Mapper via IA le referentiel choisi", " ");
+        i0.ɵɵadvance(1);
+        i0.ɵɵproperty("ngIf", ctx.autoMapResult);
+        i0.ɵɵadvance(5);
         i0.ɵɵproperty("ngModel", ctx.selectedFrameworkId);
         i0.ɵɵadvance(1);
         i0.ɵɵproperty("ngValue", null);
@@ -618,7 +694,7 @@ ComplianceMappingsComponent.ɵcmp = /*@__PURE__*/ i0.ɵɵdefineComponent({ type:
         i0.ɵɵadvance(1);
         i0.ɵɵtextInterpolate1(" ", ctx.mappingEditingId ? "Mettre a jour" : "Creer le mapping", " ");
         i0.ɵɵadvance(3);
-        i0.ɵɵproperty("ngIf", ctx.mappings.length > 0)("ngIfElse", _r7);
+        i0.ɵɵproperty("ngIf", ctx.mappings.length > 0)("ngIfElse", _r8);
     } }, directives: [i3.NgClass, i3.NgForOf, i3.NgIf, i4.SelectControlValueAccessor, i4.NgControlStatus, i4.NgModel, i4.NgSelectOption, i4.ɵNgSelectMultipleOption, i4.DefaultValueAccessor, i1.RouterLinkWithHref, i1.RouterLinkActive], styles: ["@import './compliance-shared';"] });
 (function () { (typeof ngDevMode === "undefined" || ngDevMode) && i0.ɵsetClassMetadata(ComplianceMappingsComponent, [{
         type: Component,

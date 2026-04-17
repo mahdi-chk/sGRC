@@ -9,6 +9,7 @@ import { AuditMission } from '../auditing/audit-mission.model';
 import { Department } from '../departments/department.model';
 import { Incident } from '../incidents/incident.model';
 import { Risk } from '../risk/risk.model';
+import { AIService } from '../ai/ai.service';
 import { DocumentTextExtractor } from '../ai/document-text-extractor';
 import { User } from '../users/user.model';
 import { ComplianceAuditService } from './compliance-audit.service';
@@ -150,6 +151,17 @@ const getComplianceRouteError = (error: any, fallbackMessage: string) => {
         status: 400,
         message: error?.message || fallbackMessage
     };
+};
+
+const normalizeCoverageLevel = (value: unknown): string => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'covered') {
+        return 'covered';
+    }
+    if (normalized === 'uncovered') {
+        return 'uncovered';
+    }
+    return 'partial';
 };
 
 const buildEmptyOverview = (role: string) => ({
@@ -403,6 +415,125 @@ router.post('/frameworks', authorizeRoles(...adminRoles), async (req: AuthReques
     }
 });
 
+router.post('/mappings/auto-map', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const frameworkId = Number(req.body.frameworkId);
+        if (!Number.isFinite(frameworkId) || frameworkId <= 0) {
+            return res.status(400).json({ message: 'Referentiel invalide' });
+        }
+
+        const framework = await ComplianceFramework.findByPk(frameworkId);
+        if (!framework) {
+            return res.status(404).json({ message: 'Referentiel introuvable' });
+        }
+
+        const requirements = await ComplianceRequirement.findAll({
+            where: { frameworkId },
+            order: [['orderIndex', 'ASC'], ['code', 'ASC']],
+        });
+
+        if (!requirements.length) {
+            return res.status(400).json({ message: 'Aucune exigence disponible pour ce referentiel' });
+        }
+
+        const [risks, audits, incidents, existingMappings] = await Promise.all([
+            Risk.findAll({ attributes: ['id', 'titre'], order: [['updatedAt', 'DESC']], limit: 100 }),
+            AuditMission.findAll({ attributes: ['id', 'titre'], order: [['updatedAt', 'DESC']], limit: 100 }),
+            Incident.findAll({ attributes: ['id', 'titre'], order: [['updatedAt', 'DESC']], limit: 100 }),
+            ComplianceMapping.findAll({ where: { requirementId: requirements.map((item: any) => item.id) } }),
+        ]);
+
+        const suggestions = await AIService.generateComplianceMappings({
+            frameworkName: framework.name,
+            requirements: requirements.map((item: any) => ({
+                id: item.id,
+                code: item.code,
+                title: item.title,
+                chapter: item.chapter,
+                description: item.description,
+            })),
+            risks: risks.map((item: any) => ({ id: item.id, label: item.titre })),
+            audits: audits.map((item: any) => ({ id: item.id, label: item.titre })),
+            incidents: incidents.map((item: any) => ({ id: item.id, label: item.titre })),
+        });
+
+        const requirementsByCode = new Map(requirements.map((item: any) => [String(item.code || '').trim().toLowerCase(), item]));
+        const validSources = {
+            risk: new Set(risks.map((item: any) => item.id)),
+            audit: new Set(audits.map((item: any) => item.id)),
+            incident: new Set(incidents.map((item: any) => item.id)),
+        };
+        const existingKeys = new Set(existingMappings.map((item: any) => `${item.requirementId}:${item.sourceType}:${item.sourceId || 'null'}`));
+
+        const created: any[] = [];
+        const skipped: Array<{ requirementCode: string; sourceType: string; sourceId: number | null; reason: string }> = [];
+
+        for (const suggestion of suggestions) {
+            const requirement = suggestion.requirementId
+                ? requirements.find((item: any) => item.id === Number(suggestion.requirementId))
+                : requirementsByCode.get(String(suggestion.requirementCode || '').trim().toLowerCase());
+            const sourceType = String(suggestion.sourceType || '').trim().toLowerCase();
+            const sourceId = Number(suggestion.sourceId);
+
+            if (!requirement) {
+                skipped.push({ requirementCode: String(suggestion.requirementCode || ''), sourceType, sourceId: Number.isFinite(sourceId) ? sourceId : null, reason: 'Exigence introuvable dans le referentiel' });
+                continue;
+            }
+
+            if (!['risk', 'audit', 'incident'].includes(sourceType) || !Number.isFinite(sourceId) || !(validSources as any)[sourceType]?.has(sourceId)) {
+                skipped.push({ requirementCode: requirement.code, sourceType, sourceId: Number.isFinite(sourceId) ? sourceId : null, reason: 'Source invalide ou absente' });
+                continue;
+            }
+
+            const mappingKey = `${requirement.id}:${sourceType}:${sourceId}`;
+            if (existingKeys.has(mappingKey)) {
+                skipped.push({ requirementCode: requirement.code, sourceType, sourceId, reason: 'Mapping deja existant' });
+                continue;
+            }
+
+            const payload = await LookupResolutionService.resolveEntityPayload('complianceMapping', {
+                requirementId: requirement.id,
+                sourceType,
+                sourceId,
+                relatedEntityKey: null,
+                coverageLevel: normalizeCoverageLevel(suggestion.coverageLevel),
+                rationale: toOptionalString(suggestion.rationale),
+                ownerUserId: req.user?.id || null,
+                departmentId: req.user?.departementId || null,
+                entityKey: framework.entityKey,
+            }) as Record<string, unknown>;
+
+            const item = await ComplianceMapping.create(payload as any);
+            created.push(item);
+            existingKeys.add(mappingKey);
+
+            await ComplianceAuditService.log({
+                entityType: 'mapping',
+                entityId: item.id,
+                action: 'create',
+                actorUserId: req.user?.id || null,
+                departmentId: toNullableNumber(payload.departmentId),
+                entityKey: toOptionalString(payload.entityKey),
+                payload,
+            });
+        }
+
+        res.status(201).json({
+            message: `${created.length} mapping(s) genere(s) automatiquement pour ${framework.code}`,
+            frameworkId,
+            createdCount: created.length,
+            skippedCount: skipped.length,
+            created: serializeCompliance(created),
+            skipped,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            message: 'Erreur lors du mapping automatique du referentiel',
+            error: error?.message || 'unknown_error',
+        });
+    }
+});
+
 router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequirementImport, async (req: AuthRequest, res) => {
     try {
         if (!req.file) {
@@ -415,7 +546,23 @@ router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequireme
             requireUsableText: true,
             limitChars: 30000,
         });
-        const drafts = ComplianceRequirementImportService.parseRequirementsFromText(extractedText);
+        const aiDraft = await AIService.generateComplianceFrameworkDraft({
+            fileName: req.file.originalname,
+            extractedText,
+            role: req.user?.role,
+        });
+        const drafts = aiDraft?.requirements?.length
+            ? aiDraft.requirements.map((item, index) => ({
+                code: String(item.code || `REQ-${index + 1}`).trim(),
+                title: String(item.title || item.code || `Exigence ${index + 1}`).trim(),
+                description: toOptionalString(item.description),
+                chapter: toOptionalString(item.chapter),
+                orderIndex: Number(item.orderIndex || index + 1),
+                applicability: String(item.applicability || 'applicable').trim(),
+                status: String(item.status || 'active').trim(),
+                weight: Number(item.weight || 1),
+            }))
+            : ComplianceRequirementImportService.parseRequirementsFromText(extractedText);
 
         if (!drafts.length) {
             return res.status(422).json({
@@ -433,16 +580,21 @@ router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequireme
 
         const sourceLabel = req.file.originalname.replace(/\.[^.]+$/, '');
         const uniqueIdentity = await buildUniqueFrameworkIdentity(sourceLabel);
+        const aiCode = sanitizeFrameworkToken(String(aiDraft?.framework?.code || ''));
+        const aiVersion = String(aiDraft?.framework?.version || '').trim();
+        const canUseAiIdentity = aiCode && aiVersion
+            ? !(await ComplianceFramework.findOne({ where: { code: aiCode, version: aiVersion } }))
+            : false;
         const frameworkPayload = await LookupResolutionService.resolveEntityPayload('complianceFramework', {
-            code: uniqueIdentity.code,
-            name: deriveFrameworkName(req.file.originalname, extractedText),
-            version: uniqueIdentity.version,
-            jurisdiction: 'Maroc',
-            description: `Cadre importe automatiquement depuis le document ${req.file.originalname}.`,
+            code: canUseAiIdentity ? aiCode : uniqueIdentity.code,
+            name: String(aiDraft?.framework?.name || deriveFrameworkName(req.file.originalname, extractedText)).trim(),
+            version: canUseAiIdentity ? aiVersion : uniqueIdentity.version,
+            jurisdiction: toOptionalString(aiDraft?.framework?.jurisdiction) || 'Maroc',
+            description: toOptionalString(aiDraft?.framework?.description) || `Cadre importe automatiquement depuis le document ${req.file.originalname}.`,
             ownerUserId: req.user?.id || null,
             departmentId: req.user?.departementId || null,
             entityKey: null,
-            status: 'draft',
+            status: String(aiDraft?.framework?.status || 'draft').trim(),
             effectiveDate: null,
             reviewDate: null,
         }) as Record<string, unknown>;

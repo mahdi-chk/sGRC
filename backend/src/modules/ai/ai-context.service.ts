@@ -7,6 +7,12 @@ export interface AIContextGroup {
     segments: Partial<Record<AIContextType, string>>;
 }
 
+export interface AIContextSyncResult {
+    createdCount: number;
+    updatedCount: number;
+    touchedNames: string[];
+}
+
 interface CachedContextGroup {
     expiresAt: number;
     value: AIContextGroup;
@@ -74,11 +80,13 @@ export class AIContextService {
         });
     }
 
-    static async ensureDefaultContexts(): Promise<number> {
+    static async ensureDefaultContexts(): Promise<AIContextSyncResult> {
         let createdCount = 0;
+        let updatedCount = 0;
+        const touchedNames = new Set<string>();
 
         for (const context of DEFAULT_AI_CONTEXTS) {
-            const [_, created] = await AIContext.findOrCreate({
+            const [record, created] = await AIContext.findOrCreate({
                 where: {
                     name: context.name,
                     typeId: getRequiredLookupId('aiContext.type', context.type),
@@ -90,16 +98,28 @@ export class AIContextService {
 
             if (created) {
                 createdCount += 1;
+                touchedNames.add(context.name);
+                continue;
+            }
+
+            if (this.normalizeStoredContent(record.content) !== this.normalizeStoredContent(context.content)) {
+                await record.update({ content: context.content });
+                updatedCount += 1;
+                touchedNames.add(context.name);
             }
         }
 
-        if (createdCount > 0) {
-            for (const context of DEFAULT_AI_CONTEXTS) {
-                this.cache.delete(context.name);
+        if (touchedNames.size > 0) {
+            for (const name of touchedNames) {
+                this.cache.delete(name);
             }
         }
 
-        return createdCount;
+        return {
+            createdCount,
+            updatedCount,
+            touchedNames: Array.from(touchedNames).sort(),
+        };
     }
 
     static async updateContext(name: string, type: string, content: string): Promise<AIContext> {
@@ -177,5 +197,9 @@ export class AIContextService {
         }
 
         return normalized;
+    }
+
+    private static normalizeStoredContent(content: string): string {
+        return typeof content === 'string' ? content.trim().replace(/\r\n/g, '\n') : '';
     }
 }

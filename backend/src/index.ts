@@ -157,15 +157,21 @@ const startServer = async () => {
 
         if (schemaReadiness.ready) {
             try {
-                const seededContexts = await AIContextService.ensureDefaultContexts();
-                if (seededContexts > 0) {
-                    appLogger.info('Boot', 'AI contexts seeded', { added: seededContexts });
+                const syncResult = await AIContextService.ensureDefaultContexts();
+                if (syncResult.createdCount > 0 || syncResult.updatedCount > 0) {
+                    appLogger.info('Boot', 'AI contexts synchronized', {
+                        createdCount: syncResult.createdCount,
+                        updatedCount: syncResult.updatedCount,
+                        touchedNames: syncResult.touchedNames,
+                    });
+                } else {
+                    appLogger.debug('Boot', 'AI contexts already up to date');
                 }
             } catch (error: any) {
-                appLogger.error('Boot', 'Failed to seed AI contexts', error.message || error);
+                appLogger.error('Boot', 'Failed to synchronize AI contexts', error.message || error);
             }
         } else {
-            appLogger.warn('Boot', 'Skipping AI context seeding until the lookup migrations are applied.');
+            appLogger.warn('Boot', 'Skipping AI context synchronization until the lookup migrations are applied.');
         }
 
         const PORT = process.env.PORT || 3000;

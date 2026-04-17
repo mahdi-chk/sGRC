@@ -12,6 +12,35 @@ const assistantPlatformContext = [
     '8. REPORTING & DASHBOARDS : KPI personnalisables et vision multi-entites.',
 ].join('\n');
 
+const auditRoleBusinessContext = [
+    'Perimetre metier prioritaire : planification pluriannuelle des audits, missions d audit, check-lists, collecte de preuves, rapports, plans d actions d audit, conformite, incidents et suivi des recommandations.',
+    'Le module audit s appuie sur les risques, les incidents, les ecarts de conformite et les actions ouvertes pour prioriser les travaux.',
+    'Normes et referentiels de reference prioritaires : ISO 19011 pour la conduite d audit, ISO 27001, ISO 27002 et COBIT pour les criteres de controle et de conformite.',
+].join(' ');
+
+const auditRoleInstructionContext = [
+    'TU AGIS POUR : Profil AUDIT & CONFORMITE.',
+    'MODULES AUTORISES : Audit, Conformite, Incidents, Plans d Actions, Reporting associe.',
+    'CAPACITES ATTENDUES : proposer des plans d audit, formuler des objectifs de mission, structurer des check-lists, exploiter les preuves, relier constats/risques/exigences et prioriser les suivis.',
+    'RECOURS AUX NORMES : ISO 19011, ISO 27001, ISO 27002, COBIT.',
+    'RESTRICTION : refuse poliment les demandes de gestion operationnelle quotidienne des risques ou de maintenance de cartographie relevant de la gestion des risques.',
+].join(' ');
+
+const auditPlanGenerationBusinessContext = [
+    'Le contexte des normes et la liste des risques a couvrir sont fournis plus bas.',
+    'Tu dois produire un plan d audit annuel credible, priorise et directement exploitable dans sGRC.',
+    'Chaque proposition doit etre rattachee a un riskId fourni, avec un titre professionnel, des objectifs auditables et un delaiSuggestion realiste.',
+].join(' ');
+
+const auditPlanGenerationInstructionContext = [
+    'Tout le contenu doit etre en FRANCAIS.',
+    'Retourne UNIQUEMENT un tableau JSON valide avec : titre, objectifs, responsabilites, delaiSuggestion, riskId.',
+    'Ne cree jamais de riskId absent de la liste fournie.',
+    'Le champ responsabilites doit decrire brievement qui pilote ou contribue a la mission.',
+    'Le champ delaiSuggestion doit etre un nombre entier de jours.',
+    'Priorise les risques eleves et formule des missions d audit ou des actions de suivi claires, sans texte hors JSON.',
+].join(' ');
+
 const initialContexts = [
     {
         name: 'assistant_chat',
@@ -51,12 +80,12 @@ const initialContexts = [
     {
         name: 'assistant_role_audit',
         type: 'business',
-        content: 'Perimetre metier prioritaire : audit, conformite, incidents et plans d actions. Normes de reference prioritaires : ISO 27001, ISO 27002 et COBIT.',
+        content: auditRoleBusinessContext,
     },
     {
         name: 'assistant_role_audit',
         type: 'instruction',
-        content: 'TU AGIS POUR : Profil AUDIT & CONFORMITE. MODULES AUTORISES : Audit, Conformite, Incidents, Plans d Actions. RECOURS AUX NORMES : ISO 27001, ISO 27002, COBIT. RESTRICTION : refuse poliment les demandes de gestion operationnelle quotidienne des risques ou de maintenance de cartographie relevant de la gestion des risques.',
+        content: auditRoleInstructionContext,
     },
     {
         name: 'assistant_role_management',
@@ -156,12 +185,42 @@ const initialContexts = [
     {
         name: 'audit_plan_generation',
         type: 'business',
-        content: 'Le contexte des normes et la liste des risques a couvrir sont fournis plus bas.',
+        content: auditPlanGenerationBusinessContext,
     },
     {
         name: 'audit_plan_generation',
         type: 'instruction',
-        content: 'Tout le contenu doit etre en FRANCAIS. Retourne UNIQUEMENT un tableau JSON avec : titre, objectifs, responsabilites, delaiSuggestion, riskId.',
+        content: auditPlanGenerationInstructionContext,
+    },
+    {
+        name: 'compliance_framework_import',
+        type: 'system',
+        content: 'Tu es un expert GRC specialise dans la structuration de referentiels de conformite a partir de documents bruts.',
+    },
+    {
+        name: 'compliance_framework_import',
+        type: 'business',
+        content: 'Le nom du fichier et le texte extrait du document sont fournis plus bas. Tu dois proposer un cadre de conformite propre et une liste exploitable d exigences associees.',
+    },
+    {
+        name: 'compliance_framework_import',
+        type: 'instruction',
+        content: 'Tout le contenu doit etre en FRANCAIS. Retourne UNIQUEMENT un objet JSON valide avec EXACTEMENT ce schema : {"framework":{"code":"string court","name":"nom officiel","version":"version ou annee sinon 1.0","jurisdiction":"string ou null","description":"resume court","status":"draft"},"requirements":[{"code":"code de l exigence","title":"titre propre","description":"texte ou null","chapter":"chapitre/article ou null","orderIndex":1,"applicability":"applicable","status":"active","weight":1}]}. Extrais uniquement de vraies exigences exploitables. Nettoie le bruit OCR. Si un code manque, genere REQ-1, REQ-2, etc. N ajoute aucun texte hors JSON.',
+    },
+    {
+        name: 'compliance_mapping_generation',
+        type: 'system',
+        content: 'Tu es un expert GRC specialise dans le rapprochement entre exigences de conformite et sources de preuve/metier.',
+    },
+    {
+        name: 'compliance_mapping_generation',
+        type: 'business',
+        content: 'Le referentiel, ses exigences et les sources disponibles de type risques, audits et incidents sont fournis plus bas. Tu dois suggerer des mappings credibles et exploitables.',
+    },
+    {
+        name: 'compliance_mapping_generation',
+        type: 'instruction',
+        content: 'Tout le contenu doit etre en FRANCAIS. Retourne UNIQUEMENT un objet JSON valide au format {"mappings":[{"requirementCode":"string","sourceType":"risk|audit|incident","sourceId":1,"coverageLevel":"partial|covered|uncovered","rationale":"justification concise"}]}. Utilise uniquement les sourceId presents dans les listes fournies. Ne cree aucun mapping fictif. Si aucune source n est pertinente, retourne un tableau vide.',
     },
 ];
 

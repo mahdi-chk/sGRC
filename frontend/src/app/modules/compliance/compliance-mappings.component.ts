@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { getComplianceNavItems, getStoredComplianceRole } from './compliance-navigation';
 import {
+  ComplianceAutoMapResult,
   ComplianceFrameworkRecord,
   ComplianceLinkableOption,
   ComplianceLinkableSources,
@@ -32,10 +33,12 @@ export class ComplianceMappingsComponent implements OnInit {
 
   isLoading = false;
   isSaving = false;
+  isAutoMapping = false;
   selectedFrameworkId: number | null = null;
   mappingEditingId: number | null = null;
   feedback = '';
   error = '';
+  autoMapResult: ComplianceAutoMapResult | null = null;
 
   mappingForm: ComplianceMappingPayload = this.createEmptyMappingForm();
 
@@ -136,6 +139,7 @@ export class ComplianceMappingsComponent implements OnInit {
 
   onFrameworkChange(): void {
     this.mappingForm.requirementId = 0;
+    this.autoMapResult = null;
     this.loadRequirements();
   }
 
@@ -182,6 +186,31 @@ export class ComplianceMappingsComponent implements OnInit {
       error: err => {
         this.isSaving = false;
         this.error = err?.error?.message || 'Impossible d enregistrer le mapping.';
+      }
+    });
+  }
+
+  autoMapSelectedFramework(): void {
+    if (!this.selectedFrameworkId) {
+      this.error = 'Selectionnez un referentiel a mapper.';
+      return;
+    }
+
+    this.isAutoMapping = true;
+    this.error = '';
+    this.feedback = '';
+    this.autoMapResult = null;
+
+    this.complianceService.autoMapFramework(this.selectedFrameworkId).subscribe({
+      next: result => {
+        this.isAutoMapping = false;
+        this.autoMapResult = result;
+        this.feedback = result.message || 'Mapping automatique termine.';
+        this.loadMappings();
+      },
+      error: err => {
+        this.isAutoMapping = false;
+        this.error = err?.error?.message || 'Impossible de lancer le mapping automatique.';
       }
     });
   }

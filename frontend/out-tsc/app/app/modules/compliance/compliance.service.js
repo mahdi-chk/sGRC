@@ -68,6 +68,9 @@ export class ComplianceService {
     createMapping(payload) {
         return this.http.post(`${this.apiUrl}/mappings`, payload);
     }
+    autoMapFramework(frameworkId) {
+        return this.http.post(`${this.apiUrl}/mappings/auto-map`, { frameworkId });
+    }
     updateMapping(id, payload) {
         return this.http.put(`${this.apiUrl}/mappings/${id}`, payload);
     }

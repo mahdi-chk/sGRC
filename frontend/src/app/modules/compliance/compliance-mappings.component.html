@@ -34,6 +34,28 @@
             <p>Le mapping relie une exigence a une source metier existante pour rendre le score et l audit trail fiables.</p>
         </div>
 
+        <div class="form-actions">
+            <button class="btn-refresh" type="button" (click)="autoMapSelectedFramework()" [disabled]="!selectedFrameworkId || isAutoMapping">
+                <i class="fas" [ngClass]="isAutoMapping ? 'fa-circle-notch fa-spin' : 'fa-wand-magic-sparkles'"></i>
+                {{ isAutoMapping ? 'IA en cours...' : 'Mapper via IA le referentiel choisi' }}
+            </button>
+        </div>
+
+        <div class="import-results" *ngIf="autoMapResult">
+            <div class="import-kpis">
+                <div class="metric-card">
+                    <span class="eyebrow">Mappings crees</span>
+                    <h3>{{ autoMapResult.createdCount }}</h3>
+                    <p>Ajoutes automatiquement par IA</p>
+                </div>
+                <div class="metric-card">
+                    <span class="eyebrow">Mappings ignores</span>
+                    <h3>{{ autoMapResult.skippedCount }}</h3>
+                    <p>Doublons ou suggestions invalides</p>
+                </div>
+            </div>
+        </div>
+
         <div class="form-grid">
             <label class="filter-field">
                 <span>Referentiel</span>

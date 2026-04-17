@@ -37,6 +37,38 @@ interface ChatMessage {
     content: string;
 }
 
+interface ComplianceFrameworkDraftResult {
+    framework: {
+        code?: string;
+        name?: string;
+        version?: string;
+        jurisdiction?: string | null;
+        description?: string | null;
+        status?: string;
+    };
+    requirements: Array<{
+        code: string;
+        title: string;
+        description?: string | null;
+        chapter?: string | null;
+        orderIndex?: number;
+        applicability?: string;
+        status?: string;
+        weight?: number;
+    }>;
+}
+
+interface ComplianceMappingSuggestionResult {
+    mappings: Array<{
+        requirementCode?: string;
+        requirementId?: number;
+        sourceType: string;
+        sourceId: number;
+        coverageLevel?: string;
+        rationale?: string | null;
+    }>;
+}
+
 interface UserSession {
     messages: ChatMessage[];
     lastAccess: number;
@@ -245,6 +277,38 @@ export class AIService {
                 standardsContext,
             },
             userInput: riskMapping,
+        });
+    }
+
+    private static async buildComplianceFrameworkImportPrompt(options: {
+        fileName: string;
+        extractedText: string;
+    }): Promise<string> {
+        return AIPromptBuilder.buildPrompt({
+            name: 'compliance_framework_import',
+            businessPayload: {
+                fileName: options.fileName,
+                extractedText: options.extractedText,
+            },
+        });
+    }
+
+    private static async buildComplianceMappingPrompt(options: {
+        frameworkName: string;
+        requirements: Array<{ id: number; code: string; title: string; chapter?: string | null; description?: string | null }>;
+        risks: Array<{ id: number; label: string }>;
+        audits: Array<{ id: number; label: string }>;
+        incidents: Array<{ id: number; label: string }>;
+    }): Promise<string> {
+        return AIPromptBuilder.buildPrompt({
+            name: 'compliance_mapping_generation',
+            businessPayload: {
+                frameworkName: options.frameworkName,
+                requirements: options.requirements,
+                risks: options.risks,
+                audits: options.audits,
+                incidents: options.incidents,
+            },
         });
     }
 
@@ -653,6 +717,13 @@ export class AIService {
         }
 
         try {
+            appLogger.info('AI', 'Audit plan generation started', {
+                role,
+                riskCount: risks.length,
+                cappedRiskCount: cappedRisks.length,
+                contextName: 'audit_plan_generation',
+            });
+
             const isIndexed = await RAGEngine.checkIndexStatus();
             let standardsContext = '';
 
@@ -694,6 +765,21 @@ export class AIService {
             });
             const plan = this.parseJsonArrayResponse(content);
 
+            if (!plan.length) {
+                appLogger.warn('AI', 'Audit plan generation returned no suggestions', {
+                    role,
+                    riskCount: cappedRisks.length,
+                    hasRAG: !!standardsContext,
+                });
+            } else {
+                appLogger.info('AI', 'Audit plan generation completed', {
+                    role,
+                    suggestionCount: plan.length,
+                    riskCount: cappedRisks.length,
+                    hasRAG: !!standardsContext,
+                });
+            }
+
             return plan.map(item => ({
                 ...item,
                 delaiSuggestion: item.delaiSuggestion ? parseInt(item.delaiSuggestion.toString()) : 30,
@@ -706,6 +792,96 @@ export class AIService {
                 ollamaDetail: typeof ollamaDetail === 'string' ? ollamaDetail : JSON.stringify(ollamaDetail),
                 status: error.response?.status,
                 riskCount: cappedRisks.length,
+            });
+            return [];
+        }
+    }
+
+    static async generateComplianceFrameworkDraft(options: {
+        fileName: string;
+        extractedText: string;
+        role?: UserRole;
+    }): Promise<ComplianceFrameworkDraftResult | null> {
+        const normalizedText = this.limitText(this.cleanText(options.extractedText || ''), 16000);
+        if (!normalizedText || normalizedText.length < 30) {
+            return null;
+        }
+
+        try {
+            const prompt = await this.buildComplianceFrameworkImportPrompt({
+                fileName: options.fileName,
+                extractedText: normalizedText,
+            });
+
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
+                model: MODEL_NAME,
+                messages: [{ role: 'user', content: prompt }],
+                stream: false,
+                format: 'json',
+                options: {
+                    temperature: 0.1,
+                    num_predict: 2500,
+                    num_ctx: 8192
+                }
+            });
+
+            const content = response.data.message.content;
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+            if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.requirements)) {
+                return null;
+            }
+
+            return parsed as ComplianceFrameworkDraftResult;
+        } catch (error: any) {
+            appLogger.warn('AI', 'Compliance framework draft generation failed', {
+                error: error?.message || error,
+                fileName: options.fileName,
+            });
+            return null;
+        }
+    }
+
+    static async generateComplianceMappings(options: {
+        frameworkName: string;
+        requirements: Array<{ id: number; code: string; title: string; chapter?: string | null; description?: string | null }>;
+        risks: Array<{ id: number; label: string }>;
+        audits: Array<{ id: number; label: string }>;
+        incidents: Array<{ id: number; label: string }>;
+    }): Promise<ComplianceMappingSuggestionResult['mappings']> {
+        if (!options.requirements.length) {
+            return [];
+        }
+
+        try {
+            const prompt = await this.buildComplianceMappingPrompt({
+                frameworkName: options.frameworkName,
+                requirements: options.requirements.slice(0, 120),
+                risks: options.risks.slice(0, 100),
+                audits: options.audits.slice(0, 100),
+                incidents: options.incidents.slice(0, 100),
+            });
+
+            const response = await ollamaAxios.post(OLLAMA_CHAT_URL, {
+                model: MODEL_NAME,
+                messages: [{ role: 'user', content: prompt }],
+                stream: false,
+                format: 'json',
+                options: {
+                    temperature: 0.1,
+                    num_predict: 2500,
+                    num_ctx: 8192
+                }
+            });
+
+            const content = response.data.message.content;
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+            return Array.isArray(parsed?.mappings) ? parsed.mappings : [];
+        } catch (error: any) {
+            appLogger.warn('AI', 'Compliance mapping generation failed', {
+                error: error?.message || error,
+                frameworkName: options.frameworkName,
             });
             return [];
         }

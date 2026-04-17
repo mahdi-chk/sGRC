@@ -1,4 +1,4 @@
-<div class="audit-page">
+<div class="audit-page statistics-page">
     <div class="page-header">
         <div class="header-left">
             <button class="back-btn" (click)="goBack()">
@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-chart-pie"></i> Statistiques d'Audit</h1>
-                <p>Analyse de la performance des processus d'audit, suivi des missions et taux de complétion.</p>
+                <p>Analyse de la performance, suivi des missions / plans d'action et taux de complétion.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -47,20 +47,20 @@
             <div class="stat-icon"><i class="fas fa-check-double"></i></div>
             <div class="stat-info">
                 <span class="label">OK</span>
-                <span class="value">{{ statusStats['Terminé'] || 0 }}</span>
+                <span class="value">{{ statusStats['OK'] || 0 }}</span>
             </div>
         </div>
         <div class="stat-card risks">
             <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
             <div class="stat-info">
-                <span class="label">En retard</span>
-                <span class="value">{{ statusStats['En retard'] || 0 }}</span>
+                <span class="label">NOK</span>
+                <span class="value">{{ statusStats['NOK'] || 0 }}</span>
             </div>
         </div>
     </div>
 
     <div class="dashboard-grid">
-        <div class="module-card premium chart-card">
+        <div class="module-card premium chart-card large-chart">
             <h3><i class="fas fa-chart-pie"></i> Statuts Audit</h3>
             <div class="chart-container donut-wrapper">
                 <div class="donut-chart audit-status"
@@ -69,7 +69,7 @@
                     [style.--nok]="statusSummaryPercentages[2]?.percent">
                     <div class="donut-inner">
                         <div class="total">{{ totalMissions }}</div>
-                        <div class="sub">Missions totales</div>
+                        <div class="sub">Total (Missions & PA)</div>
                     </div>
                 </div>
                 <div class="chart-legend">
@@ -89,11 +89,11 @@
             </div>
         </div>
 
-        <!-- Missions Status Distribution (Bar Chart Style) -->
-        <div class="module-card premium chart-card full-width-module">
-            <h3><i class="fas fa-tasks"></i> État d'Avancement des Missions</h3>
-            <div class="chart-container bar-wrapper">
-                <div class="bar-chart">
+        <!-- Consolidated Status Distribution (Bar Chart Style) -->
+        <div class="module-card premium chart-card large-chart">
+            <h3><i class="fas fa-tasks"></i> État d'Avancement Global</h3>
+            <div class="chart-container bar-wrapper" style="height: 100%;">
+                <div class="bar-chart" style="height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 20px;">
                     <div class="bar-group" *ngFor="let entry of statusStats | keyvalue">
                         <div class="bar-label">{{ entry.key }}</div>
                         <div class="bar-track">
@@ -132,7 +132,7 @@
             <div class="domain-list">
                 <div class="domain-item">
                     <div class="domain-info">
-                        <span class="name">Missions Critiques (Retard)</span>
+                        <span class="name">Éléments Critiques (Retard)</span>
                         <span class="count">{{ statusStats['En retard'] || 0 }}</span>
                     </div>
                     <div class="progress-lite">
@@ -141,7 +141,7 @@
                 </div>
                 <div class="domain-item">
                     <div class="domain-info">
-                        <span class="name">Missions à venir</span>
+                        <span class="name">Éléments à venir</span>
                         <span class="count">{{ statusStats['À venir'] || 0 }}</span>
                     </div>
                     <div class="progress-lite">
@@ -153,91 +153,4 @@
         </div>
     </div>
 
-    <!-- Audit Missions Table -->
-    <div class="tab-content">
-        <div class="filters-bar premium mb-4">
-            <div class="filter-controls">
-                <div class="filter-group">
-                    <i class="fas fa-search"></i>
-                    <input type="text" [(ngModel)]="filterSearch" (ngModelChange)="onFilterChange()" placeholder="Rechercher par ID, règle, recommandation ou responsable...">
-                </div>
-
-                <div class="filter-group">
-                    <i class="fas fa-tasks"></i>
-                    <select [(ngModel)]="filterStatus" (change)="onFilterChange()">
-                        <option value="">Tous les états</option>
-                        <option [value]="AuditMissionStatus.NOK">{{ statusLabelMap[AuditMissionStatus.NOK] }}</option>
-                        <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
-                        <option [value]="AuditMissionStatus.OK">{{ statusLabelMap[AuditMissionStatus.OK] }}</option>
-                    </select>
-                </div>
-
-                <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus">
-                    <i class="fas fa-undo"></i> Réinitialiser
-                </button>
-            </div>
-
-            <div class="results-info">
-                <span class="count-tag"><strong>{{ filteredMissions.length }}</strong> enregistrement(s)</span>
-            </div>
-        </div>
-
-        <div class="missions-card">
-            <div class="table-loading" *ngIf="!missions.length">
-                <i class="fas fa-circle-notch fa-spin"></i> Chargement...
-            </div>
-
-            <table class="audit-table" *ngIf="missions.length > 0">
-                <thead>
-                    <tr>
-                        <th class="cell-id">ID</th>
-                        <th>Règle DNSSI</th>
-                        <th>Recommandations</th>
-                        <th>Horizon</th>
-                        <th class="cell-priority">Priorité</th>
-                        <th>Responsable</th>
-                        <th>Echéance</th>
-                        <th>Etat d'avancement</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let mission of pagedMissions">
-                        <td class="cell-id">{{ mission.id }}</td>
-                        <td class="cell-rule">{{ mission.regleDnssi || mission.titre }}</td>
-                        <td class="cell-recommendation">
-                            <span class="recommendation-preview" [title]="mission.recommandations || mission.objectifs || ''">
-                                {{ getRecommendationPreview(mission.recommandations || mission.objectifs, 10) }}
-                            </span>
-                        </td>
-                        <td class="cell-horizon">{{ horizonLabelMap[mission.horizon || ''] || '-' }}</td>
-                        <td class="cell-priority">{{ mission.priorite ?? '-' }}</td>
-                        <td class="cell-owner">
-                            <div class="auditor-chip" *ngIf="mission.auditeur; else responsibleText">
-                                <i class="fas fa-user-tie"></i>
-                                {{ mission.auditeur.prenom }} {{ mission.auditeur.nom }}
-                            </div>
-                            <ng-template #responsibleText><em class="text-muted responsible-text">{{ mission.responsabilites || 'Non assigné' }}</em></ng-template>
-                        </td>
-                        <td class="cell-date">{{ mission.delai ? (mission.delai | date:'dd/MM/yyyy') : '-' }}</td>
-                        <td class="cell-status"><span [class]="'badge status-' + ((mission.statut || '').toString().replace('_', '-'))">{{ statusLabelMap[(mission.statut || '').toString()] || ((mission.statut || '').toString()) }}</span></td>
-                    </tr>
-                    <tr *ngIf="filteredMissions.length === 0">
-                        <td colspan="8" class="empty-state">
-                            <i class="fas fa-folder-open"></i>
-                            <p>Aucun enregistrement trouvé.</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <app-pagination
-                *ngIf="filteredMissions.length > 0"
-                [totalItems]="filteredMissions.length"
-                [currentPage]="currentPage"
-                [pageSize]="pageSize"
-                [pageSizeOptions]="pageSizeOptions"
-                (pageChanged)="onPaginationChange($event)">
-            </app-pagination>
-        </div>
-    </div>
 </div>

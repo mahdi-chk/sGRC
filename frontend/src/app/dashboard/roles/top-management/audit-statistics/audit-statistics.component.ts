@@ -14,8 +14,7 @@ import { getAuditNavItems, getStoredAuditRole } from '../../../../modules/auditi
 export class AuditStatisticsComponent implements OnInit {
     currentUserRole = getStoredAuditRole();
     missions: AuditMission[] = [];
-    filteredMissions: AuditMission[] = [];
-    pagedMissions: AuditMission[] = [];
+
 
     // Stats for Charts
     statusStats: { [key: string]: number } = {};
@@ -28,12 +27,7 @@ export class AuditStatisticsComponent implements OnInit {
     onTimeRate: number = 0;
     showExportMenu = false;
 
-    // Table pagination
-    currentPage = 1;
-    pageSize = 10;
-    readonly pageSizeOptions = [10, 25, 50, 100];
-    filterSearch = '';
-    filterStatus = '';
+
 
     AuditMissionStatus = AuditMissionStatus;
 
@@ -59,116 +53,46 @@ export class AuditStatisticsComponent implements OnInit {
     }
 
     loadData() {
-        this.auditingService.getMissions().subscribe(missions => {
+        this.auditingService.getMissions('all').subscribe(missions => {
             this.missions = missions;
             this.totalMissions = missions.length;
-            this.applyFilters();
             this.calculateStats();
         });
     }
 
-    applyFilters() {
-        this.filteredMissions = this.missions.filter((m) => {
-            const q = this.filterSearch.toLowerCase();
-            const matchSearch = !this.filterSearch
-                || String(m.id).includes(q)
-                || (m.titre || '').toLowerCase().includes(q)
-                || (m.regleDnssi || '').toLowerCase().includes(q)
-                || (m.recommandations || m.objectifs || '').toLowerCase().includes(q)
-                || (m.auditeur && `${m.auditeur.prenom} ${m.auditeur.nom}`.toLowerCase().includes(q))
-                || (m.responsabilites || '').toLowerCase().includes(q);
 
-            const missionStatut = this.normalizeMissionStatus((m as any).statutCode || m.statut);
-            const filterStatut = this.normalizeMissionStatus(this.filterStatus);
-            const matchStatus = !filterStatut || missionStatut === filterStatut;
-
-            return matchSearch && matchStatus;
-        });
-        this.currentPage = 1;
-        this.updatePagedMissions();
-    }
-
-    onFilterChange() {
-        this.applyFilters();
-    }
-
-    clearFilters() {
-        this.filterSearch = '';
-        this.filterStatus = '';
-        this.applyFilters();
-    }
-
-    onPaginationChange(event: { page: number; pageSize: number }) {
-        this.currentPage = event.page;
-        this.pageSize = event.pageSize;
-        this.updatePagedMissions();
-    }
-
-    private updatePagedMissions() {
-        const startIndex = (this.currentPage - 1) * this.pageSize;
-        this.pagedMissions = this.filteredMissions.slice(startIndex, startIndex + this.pageSize);
-    }
-
-    private normalizeMissionStatus(value?: string | null): string {
-        return (value || '')
-            .toString()
-            .trim()
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[\s-]+/g, '_');
-    }
-
-    getRecommendationPreview(value?: string | null, maxWords: number = 10): string {
-        const text = (value || '').trim();
-        if (!text) {
-            return '-';
-        }
-
-        const words = text.split(/\s+/);
-        if (words.length <= maxWords) {
-            return text;
-        }
-
-        return `${words.slice(0, maxWords).join(' ')}...`;
-    }
 
     calculateStats() {
         this.statusStats = {
-            'À venir': 0,
+            'OK': 0,
             'En cours': 0,
-            'Terminé': 0,
-            'En retard': 0,
-            'Annulé': 0
+            'NOK': 0
         };
-
-        this.missions.forEach(m => {
-            if (this.statusStats[m.statut] !== undefined) {
-                this.statusStats[m.statut]++;
-            }
-        });
-
-        const completedCount = this.statusStats['Terminé'] || 0;
-        this.completionRate = this.totalMissions > 0 ? Math.round((completedCount / this.totalMissions) * 100) : 0;
-
-        const delayedCount = this.statusStats['En retard'] || 0;
-        this.delayedRate = this.totalMissions > 0 ? Math.round((delayedCount / this.totalMissions) * 100) : 0;
-
-        // On time rate = (Total - Late - Canceled) / Total
-        const onTimeCount = this.totalMissions - delayedCount - (this.statusStats['Annulé'] || 0);
-        this.onTimeRate = this.totalMissions > 0 ? Math.round((onTimeCount / this.totalMissions) * 100) : 0;
 
         this.statusSummary = { OK: 0, 'En cours': 0, NOK: 0 };
         this.missions.forEach(m => {
-            const status = (m.statut || '').toString().trim();
-            if (status.toLowerCase() === 'ok') {
+            const rawStatus = (m.statut || '').toString().trim().toLowerCase();
+            if (rawStatus === 'ok' || rawStatus === 'termine' || rawStatus === 'terminé') {
                 this.statusSummary.OK++;
-            } else if (status.toLowerCase() === 'nok') {
+                this.statusStats['OK']++;
+            } else if (rawStatus === 'nok' || rawStatus === 'en_retard' || rawStatus.includes('retard') || rawStatus === 'annule' || rawStatus === 'annulé') {
                 this.statusSummary.NOK++;
+                this.statusStats['NOK']++;
             } else {
                 this.statusSummary['En cours']++;
+                this.statusStats['En cours']++;
             }
         });
+
+        const completedCount = this.statusStats['OK'] || 0;
+        this.completionRate = this.totalMissions > 0 ? Math.round((completedCount / this.totalMissions) * 100) : 0;
+
+        const delayedCount = this.statusStats['NOK'] || 0;
+        this.delayedRate = this.totalMissions > 0 ? Math.round((delayedCount / this.totalMissions) * 100) : 0;
+
+        // On time rate = (OK + En cours) / Total
+        const onTimeCount = this.statusStats['OK'] + this.statusStats['En cours'];
+        this.onTimeRate = this.totalMissions > 0 ? Math.round((onTimeCount / this.totalMissions) * 100) : 0;
 
         const summaryTotal = this.totalMissions;
         this.statusSummaryPercentages = [
@@ -176,8 +100,6 @@ export class AuditStatisticsComponent implements OnInit {
             { label: 'En cours', count: this.statusSummary['En cours'], percent: summaryTotal ? Math.round((this.statusSummary['En cours'] / summaryTotal) * 100) : 0, class: 'progress' },
             { label: 'NOK', count: this.statusSummary.NOK, percent: summaryTotal ? Math.round((this.statusSummary.NOK / summaryTotal) * 100) : 0, class: 'nok' }
         ];
-
-        this.updatePagedMissions();
     }
 
     // Helper for CSS Pie Charts
@@ -193,12 +115,12 @@ export class AuditStatisticsComponent implements OnInit {
         this.showExportMenu = false;
         const rows = [
             ['Catégorie', 'Métrique', 'Valeur'],
-            ['Vue d\'ensemble', 'Total Missions', this.totalMissions],
+            ['Vue d\'ensemble', 'Total (Missions & PA)', this.totalMissions],
             ['Vue d\'ensemble', 'Taux de Complétion', this.completionRate + '%'],
             ['Vue d\'ensemble', 'Taux de Retard', this.delayedRate + '%'],
             ['Vue d\'ensemble', 'Taux à Temps', this.onTimeRate + '%'],
             [''],
-            ['État d\'Avancement des Missions', '', ''],
+            ['État d\'Avancement Global', '', ''],
             ...Object.entries(this.statusStats).map(([k, v]) => ['Statut', k, v])
         ];
 
@@ -219,7 +141,7 @@ export class AuditStatisticsComponent implements OnInit {
         doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 14, 30);
 
         const overviewData = [
-            ['Missions Totales', this.totalMissions.toString()],
+            ['Total (Missions & PA)', this.totalMissions.toString()],
             ['Taux de Complétion', this.completionRate + '%'],
             ['Taux de Retard', this.delayedRate + '%'],
             ['Taux à Temps', this.onTimeRate + '%']

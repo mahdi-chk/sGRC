@@ -616,3 +616,84 @@
         min-width: 1220px;
     }
 }
+
+/* Overrides for Stats Charts */
+.statistics-page {
+    .donut-chart.audit-status {
+        background: conic-gradient(
+            #10b981 0% calc(var(--ok) * 1%),
+            #f59e0b calc(var(--ok) * 1%) calc((var(--ok) + var(--progress)) * 1%),
+            #ef4444 calc((var(--ok) + var(--progress)) * 1%) 100%
+        );
+    }
+
+    .chart-legend {
+        .legend-item.ok .dot { background: #10b981; }
+        .legend-item.progress .dot { background: #f59e0b; }
+        .legend-item.nok .dot { background: #ef4444; }
+    }
+
+    .bar-fill {
+        &.ok { background: #10b981; }
+        &.en-cours { background: #f59e0b; }
+        &.nok { background: #ef4444; }
+    }
+
+    .large-chart {
+        min-height: 400px;
+    }
+
+    .donut-wrapper .donut-chart {
+        width: 250px;
+        height: 250px;
+
+        .donut-inner {
+            width: 190px;
+            height: 190px;
+            
+            .total {
+                font-size: 2.8rem;
+            }
+        }
+    }
+
+    .bar-chart {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .bar-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .bar-label {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .bar-track {
+        height: 16px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 12px;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 800;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 2rem;
+    }
+}

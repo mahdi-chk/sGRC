@@ -81,11 +81,6 @@ export class DashboardComponent {
       roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
     },
     {
-      label: 'Conformite',
-      route: '/dashboard/compliance',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT]
-    },
-    {
       label: 'Action',
       route: '/dashboard/actions',
       roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]

@@ -26,8 +26,12 @@ export class ComplianceMaturityComponent implements OnInit {
   mappings: ComplianceMappingRecord[] = [];
   selectedFrameworkId: number | null = null;
   isLoading = false;
+  isAutoMapping = false;
   error = '';
-  radarChartModel = this.createEmptyRadarChart();
+  autoMapResult: any = null;
+  radarChartAnalytic = this.createEmptyRadarChart();
+  radarChartDetailed = this.createEmptyRadarChart();
+  radarChartDispositions = this.createEmptyRadarChart();
 
   constructor(
     private router: Router,
@@ -43,7 +47,7 @@ export class ComplianceMaturityComponent implements OnInit {
   }
 
   get frameworkCoverage(): number {
-    const chart = this.radarChartModel;
+    const chart = this.radarChartAnalytic;
     if (!chart.labels.length) {
       return 0;
     }
@@ -53,7 +57,7 @@ export class ComplianceMaturityComponent implements OnInit {
   }
 
   get frameworkFullCoverage(): number {
-    const chart = this.radarChartModel;
+    const chart = this.radarChartAnalytic;
     if (!chart.labels.length) {
       return 0;
     }
@@ -103,7 +107,9 @@ export class ComplianceMaturityComponent implements OnInit {
         this.frameworks = [];
         this.requirements = [];
         this.mappings = [];
-        this.radarChartModel = this.createEmptyRadarChart();
+        this.radarChartAnalytic = this.createEmptyRadarChart();
+        this.radarChartDetailed = this.createEmptyRadarChart();
+        this.radarChartDispositions = this.createEmptyRadarChart();
         this.isLoading = false;
         this.error = err?.error?.message || 'Impossible de charger les referentiels.';
       }
@@ -119,7 +125,8 @@ export class ComplianceMaturityComponent implements OnInit {
     if (!this.selectedFrameworkId) {
       this.requirements = [];
       this.mappings = [];
-      this.radarChartModel = this.createEmptyRadarChart();
+      this.radarChartAnalytic = this.createEmptyRadarChart();
+      this.radarChartDetailed = this.createEmptyRadarChart();
       return;
     }
 
@@ -131,7 +138,9 @@ export class ComplianceMaturityComponent implements OnInit {
       error: err => {
         this.requirements = [];
         this.mappings = [];
-        this.radarChartModel = this.createEmptyRadarChart();
+        this.radarChartAnalytic = this.createEmptyRadarChart();
+        this.radarChartDetailed = this.createEmptyRadarChart();
+        this.radarChartDispositions = this.createEmptyRadarChart();
         this.error = err?.error?.message || 'Impossible de charger les exigences.';
       }
     });
@@ -140,7 +149,8 @@ export class ComplianceMaturityComponent implements OnInit {
   loadMappings(): void {
     if (!this.selectedFrameworkId) {
       this.mappings = [];
-      this.radarChartModel = this.createEmptyRadarChart();
+      this.radarChartAnalytic = this.createEmptyRadarChart();
+      this.radarChartDetailed = this.createEmptyRadarChart();
       return;
     }
 
@@ -161,6 +171,33 @@ export class ComplianceMaturityComponent implements OnInit {
     return `${Math.round(value)}%`;
   }
 
+  autoMapSelectedFramework(): void {
+    if (!this.selectedFrameworkId) {
+      this.error = 'Selectionnez un referentiel a mapper.';
+      return;
+    }
+
+    this.isAutoMapping = true;
+    this.error = '';
+    this.autoMapResult = null;
+
+    this.complianceService.autoMapFramework(this.selectedFrameworkId).subscribe({
+      next: result => {
+        this.isAutoMapping = false;
+        this.autoMapResult = result;
+        this.loadRequirements();
+      },
+      error: err => {
+        this.isAutoMapping = false;
+        this.error = err?.error?.message || 'Impossible de lancer le mapping automatique.';
+      }
+    });
+  }
+
+  evaluateManually(): void {
+    this.router.navigate(['/dashboard/compliance-mappings']);
+  }
+
   private buildRadarChart() {
     const centerX = 280;
     const centerY = 195;
@@ -168,6 +205,7 @@ export class ComplianceMaturityComponent implements OnInit {
     const chapterMap = new Map<string, {
       key: string;
       label: string;
+      numericLabel: string;
       order: number;
       totalWeight: number;
       partialWeight: number;
@@ -186,10 +224,12 @@ export class ComplianceMaturityComponent implements OnInit {
 
     this.requirements.forEach(requirement => {
       const chapter = this.resolveChapterLabel(requirement);
+      const numericLabel = String(this.resolveChapterOrder(requirement));
       const key = chapter.toLowerCase();
       const existing = chapterMap.get(key) || {
         key,
         label: chapter,
+        numericLabel,
         order: this.resolveChapterOrder(requirement),
         totalWeight: 0,
         partialWeight: 0,
@@ -211,49 +251,77 @@ export class ComplianceMaturityComponent implements OnInit {
     });
 
     const chapters = Array.from(chapterMap.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
-    if (!chapters.length) {
-      return this.createEmptyRadarChart();
-    }
+    
+    const isArticleOrDisposition = (str: string) => {
+      const lower = str.toLowerCase();
+      return lower.includes('article') || lower.includes('disposition') || lower.includes('entit');
+    };
 
-    const axes = chapters.map((item, index) => {
-      const angle = this.toRadarAngle(index, chapters.length);
-      const point = this.projectPoint(centerX, centerY, radius, angle);
-      const labelPoint = this.projectPoint(centerX, centerY, radius + 38, angle);
+    // Séparation des données : Les Chapitres normaux et les Articles (Dispositions)
+    const regularChapters = chapters.filter(c => !isArticleOrDisposition(c.label) && c.label.toLowerCase() !== 'hors chapitre');
+    const articleChapters = chapters.filter(c => isArticleOrDisposition(c.label));
+
+    const generateChart = (items: any[], labelFn: (item: any) => string, useDecimalScale: boolean = false) => {
+      if (!items.length) return this.createEmptyRadarChart();
+
+      const axes = items.map((item: any, index: number) => {
+        const angle = this.toRadarAngle(index, items.length);
+        const point = this.projectPoint(centerX, centerY, radius, angle);
+        const labelPoint = this.projectPoint(centerX, centerY, radius + 38, angle);
+
+        return {
+          x: point.x,
+          y: point.y,
+          labelX: labelPoint.x,
+          labelY: labelPoint.y
+        };
+      });
+
+      const pValues = items.map((item: any) => item.totalWeight > 0 ? Math.round((item.partialWeight / item.totalWeight) * 100) : 0);
+      const tValues = items.map((item: any) => item.totalWeight > 0 ? Math.round((item.coveredWeight / item.totalWeight) * 100) : 0);
+
+      const pPoints = pValues.map((value: number, index: number) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, items.length)));
+      const tPoints = tValues.map((value: number, index: number) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, items.length)));
 
       return {
-        x: point.x,
-        y: point.y,
-        labelX: labelPoint.x,
-        labelY: labelPoint.y
+        labels: items.map(labelFn),
+        labelLines: items.map((item: any) => this.wrapRadarLabel(labelFn(item))),
+        partialValues: pValues,
+        totalValues: tValues,
+        partialPolygon: this.buildRadarPolygon(pValues, centerX, centerY, radius),
+        totalPolygon: this.buildRadarPolygon(tValues, centerX, centerY, radius),
+        partialPoints: pPoints,
+        totalPoints: tPoints,
+        axes,
+        gridPolygons: this.radarGridLevels.map(level => this.buildRadarPolygon(new Array(items.length).fill(level), centerX, centerY, radius)),
+        levelLabels: this.radarGridLevels.map(level => {
+          let displayedValue: string | number = level;
+          if (useDecimalScale) {
+            displayedValue = level === 100 ? '1' : level === 0 ? '0' : String(level / 100).replace('.', ',');
+          } else {
+            displayedValue = `${level}%`;
+          }
+          return {
+            value: displayedValue,
+            x: centerX + 8,
+            y: centerY - (radius * level / 100) + 4
+          };
+        })
       };
-    });
-
-    const partialValues = chapters.map(item => item.totalWeight > 0 ? Math.round((item.partialWeight / item.totalWeight) * 100) : 0);
-    const totalValues = chapters.map(item => item.totalWeight > 0 ? Math.round((item.coveredWeight / item.totalWeight) * 100) : 0);
-    const partialPoints = partialValues.map((value, index) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, chapters.length)));
-    const totalPoints = totalValues.map((value, index) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, chapters.length)));
+    };
 
     return {
-      labels: chapters.map(item => item.label),
-      labelLines: chapters.map(item => this.wrapRadarLabel(item.label)),
-      partialValues,
-      totalValues,
-      partialPolygon: this.buildRadarPolygon(partialValues, centerX, centerY, radius),
-      totalPolygon: this.buildRadarPolygon(totalValues, centerX, centerY, radius),
-      partialPoints,
-      totalPoints,
-      axes,
-      gridPolygons: this.radarGridLevels.map(level => this.buildRadarPolygon(new Array(chapters.length).fill(level), centerX, centerY, radius)),
-      levelLabels: this.radarGridLevels.map(level => ({
-        value: level,
-        x: centerX + 8,
-        y: centerY - (radius * level / 100) + 4
-      }))
+      analytic: generateChart(regularChapters.length ? regularChapters : chapters, (item: any) => item.numericLabel),
+      detailed: generateChart(regularChapters.length ? regularChapters : chapters, (item: any) => item.label),
+      dispositions: generateChart(articleChapters, (item: any) => item.label, true)
     };
   }
 
   private refreshRadarChart(): void {
-    this.radarChartModel = this.buildRadarChart();
+    const charts = this.buildRadarChart();
+    this.radarChartAnalytic = charts.analytic;
+    this.radarChartDetailed = charts.detailed;
+    this.radarChartDispositions = charts.dispositions;
   }
 
   private createEmptyRadarChart() {
@@ -268,19 +336,19 @@ export class ComplianceMaturityComponent implements OnInit {
       totalPoints: [] as Array<{ x: number; y: number }>,
       axes: [] as Array<{ x: number; y: number; labelX: number; labelY: number }>,
       gridPolygons: [] as string[],
-      levelLabels: [] as Array<{ value: number; x: number; y: number }>
+      levelLabels: [] as Array<{ value: number | string; x: number; y: number }>
     };
   }
 
   private resolveChapterLabel(requirement: ComplianceRequirementRecord): string {
-    const chapter = (requirement.chapter || '').trim();
-    if (chapter) {
-      return chapter;
-    }
-
     const articleMatch = String(requirement.code || '').match(/^(Article\s+\d+)/i);
     if (articleMatch) {
       return articleMatch[1];
+    }
+
+    const chapter = (requirement.chapter || '').trim();
+    if (chapter) {
+      return chapter;
     }
 
     const codeMatch = String(requirement.code || '').match(/^((?:[A-Z]\.)?\d+(?:\.\d+)?)/);

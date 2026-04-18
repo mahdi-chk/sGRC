@@ -42,6 +42,27 @@
                 </option>
             </select>
         </div>
+
+        <div class="form-actions" *ngIf="selectedFrameworkId">
+            <button class="btn-refresh" type="button" (click)="autoMapSelectedFramework()" [disabled]="isAutoMapping">
+                <i class="fas" [ngClass]="isAutoMapping ? 'fa-circle-notch fa-spin' : 'fa-wand-magic-sparkles'"></i>
+                {{ isAutoMapping ? 'IA en cours...' : 'Evaluer via IA' }}
+            </button>
+            <button class="back-btn" type="button" (click)="evaluateManually()">
+                <i class="fas fa-hand-pointer"></i> Evaluer manuellement
+            </button>
+        </div>
+
+        <div class="import-results" *ngIf="autoMapResult" style="margin-top: 16px;">
+            <div class="import-kpis">
+                <div class="metric-card">
+                    <span class="eyebrow">Exigences verifiees</span>
+                    <h3>{{ autoMapResult.createdCount + autoMapResult.skippedCount }}</h3>
+                    <p>Actions liees ou couvertes</p>
+                </div>
+            </div>
+            <p class="feedback-message success" style="margin-top: 8px;">{{ autoMapResult.message }}</p>
+        </div>
     </section>
 
     <section class="content-card maturity-card">
@@ -68,7 +89,7 @@
             </div>
         </div>
 
-        <div class="radar-wrapper" *ngIf="selectedFrameworkId && requirements.length > 0 && radarChartModel.labels.length > 0; else emptyRadar">
+        <div *ngIf="selectedFrameworkId && requirements.length > 0 && radarChartAnalytic.labels.length > 0; else emptyRadar">
             <div class="radar-legend">
                 <span *ngFor="let item of radarSeriesLegend" class="legend-item">
                     <i class="legend-dot" [style.background]="item.color"></i>
@@ -76,30 +97,96 @@
                 </span>
             </div>
 
-            <svg class="radar-chart" viewBox="0 0 560 420" aria-label="Graphe radar de maturite">
-                <g class="radar-grid">
-                    <polygon *ngFor="let polygon of radarChartModel.gridPolygons" [attr.points]="polygon"></polygon>
-                    <line *ngFor="let axis of radarChartModel.axes" x1="280" y1="195" [attr.x2]="axis.x" [attr.y2]="axis.y"></line>
-                </g>
+            <div class="section-grid">
+                <!-- Radar Analytic (Chapitres numérotés) -->
+                <div class="radar-wrapper">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Taux de conformite par chapitre</h3>
+                    <svg class="radar-chart" viewBox="0 0 560 420" aria-label="Graphe radar analytique">
+                        <g class="radar-grid">
+                            <polygon *ngFor="let polygon of radarChartAnalytic.gridPolygons" [attr.points]="polygon"></polygon>
+                            <line *ngFor="let axis of radarChartAnalytic.axes" x1="280" y1="195" [attr.x2]="axis.x" [attr.y2]="axis.y"></line>
+                        </g>
 
-                <g class="radar-level-labels">
-                    <text *ngFor="let level of radarChartModel.levelLabels" [attr.x]="level.x" [attr.y]="level.y">{{ level.value }}%</text>
-                </g>
+                        <g class="radar-level-labels">
+                            <text *ngFor="let level of radarChartAnalytic.levelLabels" [attr.x]="level.x" [attr.y]="level.y">{{ level.value }}</text>
+                        </g>
 
-                <polygon class="radar-area partial" [attr.points]="radarChartModel.partialPolygon"></polygon>
-                <polygon class="radar-area total" [attr.points]="radarChartModel.totalPolygon"></polygon>
+                        <polygon class="radar-area partial" [attr.points]="radarChartAnalytic.partialPolygon"></polygon>
+                        <polygon class="radar-area total" [attr.points]="radarChartAnalytic.totalPolygon"></polygon>
 
-                <g class="radar-points">
-                    <circle *ngFor="let point of radarChartModel.partialPoints" class="point partial" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
-                    <circle *ngFor="let point of radarChartModel.totalPoints" class="point total" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
-                </g>
+                        <g class="radar-points">
+                            <circle *ngFor="let point of radarChartAnalytic.partialPoints" class="point partial" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                            <circle *ngFor="let point of radarChartAnalytic.totalPoints" class="point total" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                        </g>
 
-                <g class="radar-labels">
-                    <text *ngFor="let axis of radarChartModel.axes; let i = index" [attr.x]="axis.labelX" [attr.y]="axis.labelY" text-anchor="middle">
-                        <tspan *ngFor="let line of radarChartModel.labelLines[i]; let lineIndex = index" [attr.x]="axis.labelX" [attr.dy]="lineIndex === 0 ? 0 : 14">{{ line }}</tspan>
-                    </text>
-                </g>
-            </svg>
+                        <g class="radar-labels">
+                            <text *ngFor="let axis of radarChartAnalytic.axes; let i = index" [attr.x]="axis.labelX" [attr.y]="axis.labelY" text-anchor="middle">
+                                <tspan *ngFor="let line of radarChartAnalytic.labelLines[i]; let lineIndex = index" [attr.x]="axis.labelX" [attr.dy]="lineIndex === 0 ? 0 : 14">{{ line }}</tspan>
+                            </text>
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Radar Detailed (Libellés complets) -->
+                <div class="radar-wrapper">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Detail des chapitres</h3>
+                    <svg class="radar-chart" viewBox="0 0 560 420" aria-label="Graphe radar detaille">
+                        <g class="radar-grid">
+                            <polygon *ngFor="let polygon of radarChartDetailed.gridPolygons" [attr.points]="polygon"></polygon>
+                            <line *ngFor="let axis of radarChartDetailed.axes" x1="280" y1="195" [attr.x2]="axis.x" [attr.y2]="axis.y"></line>
+                        </g>
+
+                        <g class="radar-level-labels">
+                            <text *ngFor="let level of radarChartDetailed.levelLabels" [attr.x]="level.x" [attr.y]="level.y">{{ level.value }}</text>
+                        </g>
+
+                        <polygon class="radar-area partial" [attr.points]="radarChartDetailed.partialPolygon"></polygon>
+                        <polygon class="radar-area total" [attr.points]="radarChartDetailed.totalPolygon"></polygon>
+
+                        <g class="radar-points">
+                            <circle *ngFor="let point of radarChartDetailed.partialPoints" class="point partial" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                            <circle *ngFor="let point of radarChartDetailed.totalPoints" class="point total" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                        </g>
+
+                        <g class="radar-labels">
+                            <text *ngFor="let axis of radarChartDetailed.axes; let i = index" [attr.x]="axis.labelX" [attr.y]="axis.labelY" text-anchor="middle">
+                                <tspan *ngFor="let line of radarChartDetailed.labelLines[i]; let lineIndex = index" [attr.x]="axis.labelX" [attr.dy]="lineIndex === 0 ? 0 : 14">{{ line }}</tspan>
+                            </text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Radar Dispositions propres (Articles) -->
+            <div class="section-grid" *ngIf="radarChartDispositions.labels.length > 0" style="margin-top: 20px;">
+                <div class="radar-wrapper" style="grid-column: 1 / -1; max-width: 800px; margin: 0 auto; width: 100%;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Dispositions propres aux entites</h3>
+                    <svg class="radar-chart" viewBox="0 0 560 420" aria-label="Graphe radar dispositions propres">
+                        <g class="radar-grid">
+                            <polygon *ngFor="let polygon of radarChartDispositions.gridPolygons" [attr.points]="polygon"></polygon>
+                            <line *ngFor="let axis of radarChartDispositions.axes" x1="280" y1="195" [attr.x2]="axis.x" [attr.y2]="axis.y"></line>
+                        </g>
+
+                        <g class="radar-level-labels">
+                            <text *ngFor="let level of radarChartDispositions.levelLabels" [attr.x]="level.x" [attr.y]="level.y">{{ level.value }}</text>
+                        </g>
+
+                        <polygon class="radar-area partial" [attr.points]="radarChartDispositions.partialPolygon"></polygon>
+                        <polygon class="radar-area total" [attr.points]="radarChartDispositions.totalPolygon"></polygon>
+
+                        <g class="radar-points">
+                            <circle *ngFor="let point of radarChartDispositions.partialPoints" class="point partial" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                            <circle *ngFor="let point of radarChartDispositions.totalPoints" class="point total" [attr.cx]="point.x" [attr.cy]="point.y" r="4"></circle>
+                        </g>
+
+                        <g class="radar-labels">
+                            <text *ngFor="let axis of radarChartDispositions.axes; let i = index" [attr.x]="axis.labelX" [attr.y]="axis.labelY" text-anchor="middle">
+                                <tspan *ngFor="let line of radarChartDispositions.labelLines[i]; let lineIndex = index" [attr.x]="axis.labelX" [attr.dy]="lineIndex === 0 ? 0 : 14">{{ line }}</tspan>
+                            </text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
         </div>
     </section>
 

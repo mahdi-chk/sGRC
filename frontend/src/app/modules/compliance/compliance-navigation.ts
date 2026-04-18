@@ -38,12 +38,6 @@ const ASSESSMENT_ROLES: UserRole[] = [
 
 export const COMPLIANCE_NAV_ITEMS: ComplianceNavItem[] = [
   {
-    label: 'Cockpit',
-    route: '/dashboard/compliance',
-    description: 'Vue d ensemble du dispositif de conformite, de la couverture et des ecarts.',
-    roles: ALL_COMPLIANCE_ROLES
-  },
-  {
     label: 'Referentiels Integres',
     route: '/dashboard/compliance-frameworks',
     description: 'Catalogue des exigences, normes et versions applicables.',

@@ -78,7 +78,7 @@ export class DashboardComponent {
     {
       label: 'Controle',
       route: '/dashboard/controls-referential',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.CONTROLLER, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
     },
     {
       label: 'Action',
@@ -286,6 +286,10 @@ export class DashboardComponent {
       case UserRole.TOP_MANAGEMENT:
         this.dashboardTitle = 'Dashboard Top Management';
         this.dashboardDesc = 'Vision stratégique, indicateurs clés et aide à la décision.';
+        break;
+      case UserRole.CONTROLLER:
+        this.dashboardTitle = 'Dashboard Controller';
+        this.dashboardDesc = 'Supervisez les contrôles, suivez les référentiels et assurez la conformité.';
         break;
       default:
         this.dashboardTitle = 'Dashboard';

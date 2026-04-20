@@ -83,6 +83,7 @@ import { ActionsIndicatorsComponent } from './modules/actions/actions-indicators
 import { getActionsRolesByRoute } from './modules/actions/actions-navigation';
 
 import { UserRole } from './core/models/user-role.enum';
+import { ControllerDashboardComponent } from './dashboard/roles/controller/controller-dashboard.component';
 
 /**
  * --- CONFIGURATION DU ROUTAGE ---
@@ -156,7 +157,8 @@ const routes: Routes = [
             UserRole.RISK_MANAGER,
             UserRole.RISK_AGENT,
             UserRole.AUDIT_SENIOR,
-            UserRole.AUDITEUR
+            UserRole.AUDITEUR,
+            UserRole.CONTROLLER
           ]
         }
       },
@@ -213,6 +215,7 @@ const routes: Routes = [
     TopManagementDashboardComponent,
     DashboardHomeComponent,
     RiskManagementComponent,
+    ControllerDashboardComponent,
     AssignedRisksComponent,
     PlanningComponent,
     RiskStatisticsComponent,

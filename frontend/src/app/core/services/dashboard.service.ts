@@ -69,7 +69,7 @@ export class DashboardService {
                 { title: 'Evaluation d Efficacite' },
                 { title: 'Suivi des Non-Conformites' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
+            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.CONTROLLER]
         },
         {
             key: 'conformite',

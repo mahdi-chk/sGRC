@@ -91,7 +91,13 @@ const ROLE_DOCUMENT_FOLDERS: RoleFolderMap = {
     key: 'auditeur',
     label: 'Dossier Auditeur',
     relativePath: 'doc/ressources-par-role/auditeur'
-  }
+  },
+  [UserRole.CONTROLLER]: {
+    key: 'controller',
+    label: 'Dossier Controller',
+    relativePath: 'doc/ressources-par-role/controller'
+  } 
+
 };
 
 const uploadSecureDocument = secureUpload(DOCUMENT_EXTENSIONS, 'document', 20 * 1024 * 1024);

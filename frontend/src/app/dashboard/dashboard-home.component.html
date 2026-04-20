@@ -33,6 +33,10 @@
         (openModule)="onOpenModule($event)">
     </app-top-management-dashboard>
 
+    <app-controller-dashboard *ngSwitchCase="UserRole.CONTROLLER" [filteredModules]="filteredModules"
+        title="Dashboard Controller" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
+    </app-controller-dashboard>
+
     <div *ngSwitchDefault>
         <p>Chargement de votre espace personnalisé...</p>
     </div>

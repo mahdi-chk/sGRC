@@ -20,6 +20,7 @@ const allowedRoles = [
     UserRole.RISK_AGENT,
     UserRole.AUDIT_SENIOR,
     UserRole.TOP_MANAGEMENT,
+    UserRole.CONTROLLER
 ];
 
 const normalizeLookupValue = (value: unknown): string =>
@@ -196,7 +197,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
         );
 
         let incidents: any[] = [];
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.CONTROLLER) {
             incidents = await Incident.findAll({
                 include: [{ model: User, as: 'declareur', required: false, attributes: ['id', 'prenom', 'nom'] }],
                 order: [['updatedAt', 'DESC']],

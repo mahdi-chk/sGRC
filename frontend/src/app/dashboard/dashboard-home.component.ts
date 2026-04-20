@@ -53,7 +53,8 @@ export class DashboardHomeComponent implements OnInit {
             case UserRole.AUDIT_SENIOR: targetPath = 'audit-senior'; break;
             case UserRole.RISK_MANAGER: targetPath = 'risk-manager'; break;
             case UserRole.RISK_AGENT: targetPath = 'risk-agent'; break;
-            case UserRole.TOP_MANAGEMENT: targetPath = 'top-management'; break;
+            case UserRole.CONTROLLER: targetPath = 'controller'; break;
+
         }
 
         if (targetPath && this.router.url === '/dashboard') {

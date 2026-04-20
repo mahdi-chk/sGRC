@@ -6,5 +6,6 @@ export enum UserRole {
     TOP_MANAGEMENT = 'top_management',
     ADMIN_SI = 'admin_si',
     SUPER_ADMIN = 'super_admin',
+    CONTROLLER = 'controller'
 }
 

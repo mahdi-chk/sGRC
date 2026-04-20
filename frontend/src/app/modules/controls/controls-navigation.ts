@@ -18,21 +18,24 @@ const ALL_CONTROLS_ROLES: UserRole[] = [
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT,
   UserRole.AUDIT_SENIOR,
-  UserRole.TOP_MANAGEMENT
+  UserRole.TOP_MANAGEMENT,
+  UserRole.CONTROLLER
 ];
 
 const EVIDENCE_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT,
-  UserRole.AUDIT_SENIOR
+  UserRole.AUDIT_SENIOR,
+  UserRole.CONTROLLER
 ];
 
 const EFFECTIVENESS_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
   UserRole.AUDIT_SENIOR,
-  UserRole.TOP_MANAGEMENT
+  UserRole.TOP_MANAGEMENT,
+  UserRole.CONTROLLER
 ];
 
 export const CONTROLS_NAV_ITEMS: ControlsNavItem[] = [

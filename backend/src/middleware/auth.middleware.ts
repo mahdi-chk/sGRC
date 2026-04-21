@@ -78,7 +78,7 @@ export const restrictToDepartment = () => {
         }
 
         // Les auditeurs sont limités à leur propre département
-        if (role === UserRole.AUDITEUR || role === UserRole.AUDIT_SENIOR) {
+        if (role === UserRole.AUDITEUR || role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE) {
             const resourceDeptId = req.params.departementId || req.query.departementId || req.body.departementId;
 
             if (resourceDeptId && Number(resourceDeptId) !== departementId) {

@@ -8,8 +8,12 @@
         title="Dashboard Risk Agent" (openModule)="onOpenModule($event)">
     </app-risk-agent-dashboard>
 
-    <app-audit-senior-dashboard *ngSwitchCase="UserRole.AUDIT_SENIOR" [filteredModules]="filteredModules"
-        title="Dashboard Audit Senior" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
+    <app-audit-senior-dashboard *ngSwitchCase="UserRole.AUDIT_DIRECTEUR" [filteredModules]="filteredModules"
+        title="Dashboard Audit Directeur" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
+    </app-audit-senior-dashboard>
+
+    <app-audit-senior-dashboard *ngSwitchCase="UserRole.AUDIT_RESPONSABLE" [filteredModules]="filteredModules"
+        title="Dashboard Audit Responsable" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
     </app-audit-senior-dashboard>
 
     <app-auditeur-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"

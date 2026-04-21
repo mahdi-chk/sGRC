@@ -88,7 +88,7 @@ router.get('/roles', (req, res) => {
     res.json(roles);
 });
 
-router.get('/assignable/auditors', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+router.get('/assignable/auditors', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE), async (req, res) => {
     try {
         const auditors = await User.findAll({
             where: { roleId: LookupResolutionService.getStaticValue('user.role', UserRole.AUDITEUR)?.id },

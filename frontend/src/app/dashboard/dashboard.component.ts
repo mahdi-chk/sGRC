@@ -66,24 +66,25 @@ export class DashboardComponent {
         UserRole.SUPER_ADMIN,
         UserRole.RISK_MANAGER,
         UserRole.RISK_AGENT,
-        UserRole.AUDIT_SENIOR,
+        UserRole.AUDIT_DIRECTEUR,
+        UserRole.AUDIT_RESPONSABLE,
         UserRole.TOP_MANAGEMENT
       ]
     },
     {
       label: 'Incident',
       route: '/dashboard/incidents',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT]
     },
     {
       label: 'Controle',
       route: '/dashboard/controls-referential',
-      roles: [UserRole.SUPER_ADMIN, UserRole.CONTROLLER, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.CONTROLLER, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT]
     },
     {
       label: 'Action',
       route: '/dashboard/actions',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT]
     }
   ];
 
@@ -203,7 +204,8 @@ export class DashboardComponent {
     return role === UserRole.SUPER_ADMIN ||
       role === UserRole.RISK_MANAGER ||
       role === UserRole.RISK_AGENT ||
-      role === UserRole.AUDIT_SENIOR ||
+      role === UserRole.AUDIT_DIRECTEUR ||
+      role === UserRole.AUDIT_RESPONSABLE ||
       role === UserRole.TOP_MANAGEMENT;
   }
 
@@ -275,9 +277,13 @@ export class DashboardComponent {
         this.dashboardTitle = 'Dashboard Risk Agent';
         this.dashboardDesc = 'Gérez les risques, évaluez les impacts et suivez les plans de traitement.';
         break;
-      case UserRole.AUDIT_SENIOR:
-        this.dashboardTitle = 'Dashboard Audit Senior';
-        this.dashboardDesc = 'Planifiez les missions, supervisez les audits et validez les recommandations.';
+      case UserRole.AUDIT_DIRECTEUR:
+        this.dashboardTitle = 'Dashboard Audit Directeur';
+        this.dashboardDesc = 'Creez et planifiez les plans d action d audit.';
+        break;
+      case UserRole.AUDIT_RESPONSABLE:
+        this.dashboardTitle = 'Dashboard Audit Responsable';
+        this.dashboardDesc = 'Assignez les plans d action aux auditeurs et suivez leur traitement.';
         break;
       case UserRole.AUDITEUR:
         this.dashboardTitle = 'Dashboard Auditeur';

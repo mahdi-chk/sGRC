@@ -82,10 +82,15 @@ const ROLE_DOCUMENT_FOLDERS: RoleFolderMap = {
     label: 'Dossier Risk Agent',
     relativePath: 'doc/ressources-par-role/risk-agent'
   },
-  [UserRole.AUDIT_SENIOR]: {
-    key: 'audit-senior',
-    label: 'Dossier Audit Senior',
-    relativePath: 'doc/ressources-par-role/audit-senior'
+  [UserRole.AUDIT_DIRECTEUR]: {
+    key: 'audit-directeur',
+    label: 'Dossier Audit Directeur',
+    relativePath: 'doc/ressources-par-role/audit-directeur'
+  },
+  [UserRole.AUDIT_RESPONSABLE]: {
+    key: 'audit-responsable',
+    label: 'Dossier Audit Responsable',
+    relativePath: 'doc/ressources-par-role/audit-responsable'
   },
   [UserRole.AUDITEUR]: {
     key: 'auditeur',

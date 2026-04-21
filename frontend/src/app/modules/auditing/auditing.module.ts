@@ -11,6 +11,8 @@ import { AuditorEvidenceComponent } from './auditor-evidence/auditor-evidence.co
 import { AuditorReportComponent } from './auditor-report/auditor-report.component';
 import { AuditEvidenceExplorerComponent } from './senior/audit-evidence-explorer.component';
 import { AuditReportReviewComponent } from './senior/audit-report-review.component';
+import { AuditChecklistsComponent } from './audit-checklists/audit-checklists.component';
+import { AuditorChecklistComponent } from './auditor-checklist/auditor-checklist.component';
 
 @NgModule({
   declarations: [
@@ -20,7 +22,9 @@ import { AuditReportReviewComponent } from './senior/audit-report-review.compone
     AuditorEvidenceComponent,
     AuditorReportComponent,
     AuditEvidenceExplorerComponent,
-    AuditReportReviewComponent
+    AuditReportReviewComponent,
+    AuditChecklistsComponent,
+    AuditorChecklistComponent
   ],
   imports: [
     CommonModule,
@@ -35,7 +39,9 @@ import { AuditReportReviewComponent } from './senior/audit-report-review.compone
     AuditorEvidenceComponent,
     AuditorReportComponent,
     AuditEvidenceExplorerComponent,
-    AuditReportReviewComponent
+    AuditReportReviewComponent,
+    AuditChecklistsComponent,
+    AuditorChecklistComponent
   ]
 })
 export class AuditingModule { }

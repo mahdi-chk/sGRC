@@ -50,7 +50,8 @@ export class DashboardHomeComponent implements OnInit {
             case UserRole.SUPER_ADMIN: targetPath = 'super-admin'; break;
             case UserRole.ADMIN_SI: targetPath = 'admin-si'; break;
             case UserRole.AUDITEUR: targetPath = 'auditeur'; break;
-            case UserRole.AUDIT_SENIOR: targetPath = 'audit-senior'; break;
+            case UserRole.AUDIT_DIRECTEUR: targetPath = 'audit-directeur'; break;
+            case UserRole.AUDIT_RESPONSABLE: targetPath = 'audit-responsable'; break;
             case UserRole.RISK_MANAGER: targetPath = 'risk-manager'; break;
             case UserRole.RISK_AGENT: targetPath = 'risk-agent'; break;
             case UserRole.CONTROLLER: targetPath = 'controller'; break;

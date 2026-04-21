@@ -56,13 +56,23 @@ async function seed() {
                 password: 'password123'
             },
             {
-                nom: 'Senior',
+                nom: 'Directeur',
                 prenom: 'Audit',
-                mail: 'audit.senior@sgrc.com',
+                mail: 'audit.directeur@sgrc.com',
                 telephone: '03030303',
-                poste: 'Audit Senior',
+                poste: 'Audit Directeur',
                 departement: 'Audit',
-                role: UserRole.AUDIT_SENIOR,
+                role: UserRole.AUDIT_DIRECTEUR,
+                password: 'password123'
+            },
+            {
+                nom: 'Responsable',
+                prenom: 'Audit',
+                mail: 'audit.responsable@sgrc.com',
+                telephone: '03030304',
+                poste: 'Audit Responsable',
+                departement: 'Audit',
+                role: UserRole.AUDIT_RESPONSABLE,
                 password: 'password123'
             },
             {

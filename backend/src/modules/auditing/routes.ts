@@ -12,6 +12,10 @@ const router = Router();
 
 const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'], 'evidenceFile', 15 * 1024 * 1024);
 const uploadActionPlanFile = secureUpload(['xlsx', 'xls'], 'file', 15 * 1024 * 1024);
+const auditDirectorRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN];
+const auditResponsibleRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
+const auditManagementRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
+const auditAllRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR, UserRole.SUPER_ADMIN];
 
 const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
@@ -26,7 +30,7 @@ const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
 
 router.use(authenticateToken);
 
-router.post('/suggest-plan', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+router.post('/suggest-plan', authorizeRoles(...auditDirectorRoles), async (req: AuthRequest, res) => {
     try {
         const requestedType = String(req.body?.type || req.query?.type || AuditRecordType.MISSION_AUDIT);
         appLogger.info('Auditing', 'Suggested AI planning request received', {
@@ -53,7 +57,7 @@ router.post('/suggest-plan', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPE
     }
 });
 
-router.post('/create-missions', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+router.post('/create-missions', authorizeRoles(...auditDirectorRoles), async (req: AuthRequest, res) => {
     try {
         const requestedType = String(req.body?.type || AuditRecordType.MISSION_AUDIT);
         appLogger.info('Auditing', 'Mission creation from suggested AI planning request received', {
@@ -79,7 +83,7 @@ router.post('/create-missions', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.S
 router.get('/missions', async (req: AuthRequest, res) => {
     try {
         const { role, id } = req.user!;
-        if (![UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR].includes(role)) {
+        if (![UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR].includes(role)) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
 
@@ -93,7 +97,7 @@ router.get('/missions', async (req: AuthRequest, res) => {
     }
 });
 
-router.post('/missions', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req: AuthRequest, res) => {
+router.post('/missions', authorizeRoles(...auditDirectorRoles), async (req: AuthRequest, res) => {
     try {
         const record = await AuditingService.createRecord(req.user!.id, req.body);
         res.status(201).json(record);
@@ -102,7 +106,7 @@ router.post('/missions', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_AD
     }
 });
 
-router.put('/missions/:id/assign', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+router.put('/missions/:id/assign', authorizeRoles(...auditResponsibleRoles), async (req, res) => {
     try {
         const { auditeurId } = req.body;
         const mission = await AuditingService.assignMission(parseInt(req.params.id as string, 10), parseInt(auditeurId, 10));
@@ -112,7 +116,7 @@ router.put('/missions/:id/assign', authorizeRoles(UserRole.AUDIT_SENIOR, UserRol
     }
 });
 
-router.put('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+router.put('/missions/:id', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const mission = await AuditingService.updateMission(parseInt(req.params.id as string, 10), req.body);
         res.json(mission);
@@ -135,7 +139,7 @@ router.put('/missions/:id/report', authorizeRoles(UserRole.AUDITEUR, UserRole.SU
     }
 });
 
-router.delete('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+router.delete('/missions/:id', authorizeRoles(...auditDirectorRoles), async (req, res) => {
     try {
         const result = await AuditingService.deleteMission(parseInt(req.params.id as string, 10));
         res.json(result);
@@ -144,7 +148,7 @@ router.delete('/missions/:id', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SU
     }
 });
 
-router.patch('/missions/:id/restore', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+router.patch('/missions/:id/restore', authorizeRoles(...auditDirectorRoles), async (req, res) => {
     try {
         const mission = await AuditingService.restoreMission(parseInt(req.params.id as string, 10));
         res.json(mission);
@@ -153,10 +157,10 @@ router.patch('/missions/:id/restore', authorizeRoles(UserRole.AUDIT_SENIOR, User
     }
 });
 
-router.get('/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req: AuthRequest, res) => {
+router.get('/action-plans', authorizeRoles(...auditAllRoles), async (req: AuthRequest, res) => {
     try {
         const items = await AuditingService.getActionPlanRecords({
-            auditSeniorId: req.user!.role === UserRole.AUDIT_SENIOR ? req.user!.id : undefined,
+            auditSeniorId: req.user!.role === UserRole.AUDIT_DIRECTEUR ? req.user!.id : undefined,
             auditeurId: req.user!.role === UserRole.AUDITEUR ? req.user!.id : undefined,
         });
         res.json(items);
@@ -165,7 +169,7 @@ router.get('/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_
     }
 });
 
-router.post('/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req: AuthRequest, res) => {
+router.post('/action-plans', authorizeRoles(...auditManagementRoles), async (req: AuthRequest, res) => {
     try {
         const item = await AuditingService.createRecord(req.user!.id, {
             ...req.body,
@@ -177,7 +181,7 @@ router.post('/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT
     }
 });
 
-router.put('/action-plans/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.put('/action-plans/:id', authorizeRoles(...auditAllRoles), async (req, res) => {
     try {
         const item = await AuditingService.updateMission(parseInt(req.params.id as string, 10), {
             ...req.body,
@@ -189,7 +193,7 @@ router.put('/action-plans/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AU
     }
 });
 
-router.delete('/action-plans/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.delete('/action-plans/:id', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const result = await AuditingService.deleteMission(parseInt(req.params.id as string, 10));
         res.json(result);
@@ -198,7 +202,7 @@ router.delete('/action-plans/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole
     }
 });
 
-router.post('/action-plans/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), uploadActionPlanFile, async (req: AuthRequest, res) => {
+router.post('/action-plans/import', authorizeRoles(...auditManagementRoles), uploadActionPlanFile, async (req: AuthRequest, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Aucun fichier fourni' });
@@ -215,7 +219,7 @@ router.post('/action-plans/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRol
     }
 });
 
-router.post('/missions/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), uploadActionPlanFile, async (req: AuthRequest, res) => {
+router.post('/missions/import', authorizeRoles(...auditDirectorRoles), uploadActionPlanFile, async (req: AuthRequest, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Aucun fichier fourni' });
@@ -230,7 +234,7 @@ router.post('/missions/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AU
     }
 });
 
-router.put('/missions/:id/reset', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN), async (req, res) => {
+router.put('/missions/:id/reset', authorizeRoles(...auditResponsibleRoles), async (req, res) => {
     try {
         const mission = await AuditingService.resetMission(parseInt(req.params.id as string, 10));
         res.json(mission);
@@ -239,7 +243,7 @@ router.put('/missions/:id/reset', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole
     }
 });
 
-router.get('/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (_req, res) => {
+router.get('/checklists', authorizeRoles(...auditAllRoles), async (_req, res) => {
     try {
         const templates = await AuditingService.getChecklistTemplates();
         res.json(templates);
@@ -248,7 +252,7 @@ router.get('/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SE
     }
 });
 
-router.post('/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req: AuthRequest, res) => {
+router.post('/checklists', authorizeRoles(...auditManagementRoles), async (req: AuthRequest, res) => {
     try {
         const template = await AuditingService.createChecklistTemplate(req.user!.id, req.body);
         res.status(201).json(template);
@@ -257,7 +261,16 @@ router.post('/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_S
     }
 });
 
-router.delete('/checklists/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+router.put('/checklists/:id', authorizeRoles(...auditManagementRoles), async (req, res) => {
+    try {
+        const template = await AuditingService.updateChecklistTemplate(parseInt(req.params.id as string, 10), req.body);
+        res.json(template);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la modification du modèle de checklist', error: error.message });
+    }
+});
+
+router.delete('/checklists/:id', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const result = await AuditingService.deleteChecklistTemplate(parseInt(req.params.id as string, 10));
         res.json(result);
@@ -266,7 +279,7 @@ router.delete('/checklists/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.A
     }
 });
 
-router.patch('/checklists/:id/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+router.patch('/checklists/:id/restore', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const template = await AuditingService.restoreChecklistTemplate(parseInt(req.params.id as string, 10));
         res.json(template);
@@ -275,7 +288,7 @@ router.patch('/checklists/:id/restore', authorizeRoles(UserRole.SUPER_ADMIN, Use
     }
 });
 
-router.get('/missions/:id/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.get('/missions/:id/checklists', authorizeRoles(...auditAllRoles), async (req, res) => {
     try {
         const items = await AuditingService.getMissionChecklistItems(parseInt(req.params.id as string, 10));
         res.json(items);
@@ -284,7 +297,7 @@ router.get('/missions/:id/checklists', authorizeRoles(UserRole.SUPER_ADMIN, User
     }
 });
 
-router.post('/missions/:id/checklists', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (req, res) => {
+router.post('/missions/:id/checklists', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const items = await AuditingService.assignTemplateToMission(parseInt(req.params.id as string, 10), req.body.templateId);
         res.status(201).json(items);
@@ -293,7 +306,7 @@ router.post('/missions/:id/checklists', authorizeRoles(UserRole.SUPER_ADMIN, Use
     }
 });
 
-router.put('/missions/:id/checklists/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.put('/missions/:id/checklists/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDITEUR), async (req, res) => {
     try {
         const item = await AuditingService.toggleMissionChecklistItem(
             parseInt(req.params.id as string, 10),
@@ -306,7 +319,7 @@ router.put('/missions/:id/checklists/:itemId', authorizeRoles(UserRole.SUPER_ADM
     }
 });
 
-router.get('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.get('/missions/:id/action-plans', authorizeRoles(...auditAllRoles), async (req, res) => {
     try {
         const items = await AuditingService.getMissionActionPlanItems(parseInt(req.params.id as string, 10));
         res.json(items);
@@ -315,7 +328,7 @@ router.get('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, Us
     }
 });
 
-router.post('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.post('/missions/:id/action-plans', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const item = await AuditingService.createMissionActionPlanItem(parseInt(req.params.id as string, 10), req.body);
         res.status(201).json(item);
@@ -324,7 +337,7 @@ router.post('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, U
     }
 });
 
-router.put('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.put('/missions/:id/action-plans/:itemId', authorizeRoles(...auditAllRoles), async (req, res) => {
     try {
         const item = await AuditingService.updateMissionActionPlanItem(
             parseInt(req.params.id as string, 10),
@@ -337,7 +350,7 @@ router.put('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_A
     }
 });
 
-router.delete('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.delete('/missions/:id/action-plans/:itemId', authorizeRoles(...auditManagementRoles), async (req, res) => {
     try {
         const result = await AuditingService.deleteMissionActionPlanItem(
             parseInt(req.params.id as string, 10),
@@ -349,7 +362,7 @@ router.delete('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPE
     }
 });
 
-router.post('/missions/:id/action-plans/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), uploadActionPlanFile, async (req: AuthRequest, res) => {
+router.post('/missions/:id/action-plans/import', authorizeRoles(...auditManagementRoles), uploadActionPlanFile, async (req: AuthRequest, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Aucun fichier fourni' });
@@ -362,7 +375,7 @@ router.post('/missions/:id/action-plans/import', authorizeRoles(UserRole.SUPER_A
     }
 });
 
-router.get('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.get('/missions/:id/evidence', authorizeRoles(...auditAllRoles), async (req, res) => {
     try {
         const evidence = await AuditingService.getMissionEvidence(parseInt(req.params.id as string, 10));
         res.json(evidence);
@@ -371,7 +384,7 @@ router.get('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRo
     }
 });
 
-router.get('/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (_req, res) => {
+router.get('/evidence', authorizeRoles(...auditManagementRoles), async (_req, res) => {
     try {
         const evidence = await AuditingService.getAllEvidence();
         res.json(evidence);
@@ -380,7 +393,7 @@ router.get('/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENI
     }
 });
 
-router.get('/reports', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR), async (_req, res) => {
+router.get('/reports', authorizeRoles(...auditManagementRoles), async (_req, res) => {
     try {
         const reports = await AuditingService.getMissionsWithReports();
         res.json(reports);
@@ -389,7 +402,7 @@ router.get('/reports', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIO
     }
 });
 
-router.post('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), uploadEvidence, async (req: AuthRequest, res) => {
+router.post('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDITEUR), uploadEvidence, async (req: AuthRequest, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Aucun fichier fourni' });
@@ -402,7 +415,7 @@ router.post('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserR
     }
 });
 
-router.delete('/missions/:id/evidence/:evidenceId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.delete('/missions/:id/evidence/:evidenceId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDITEUR), async (req, res) => {
     try {
         const result = await AuditingService.deleteMissionEvidence(parseInt(req.params.evidenceId as string, 10));
         res.json(result);
@@ -411,7 +424,7 @@ router.delete('/missions/:id/evidence/:evidenceId', authorizeRoles(UserRole.SUPE
     }
 });
 
-router.patch('/missions/:id/evidence/:evidenceId/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR), async (req, res) => {
+router.patch('/missions/:id/evidence/:evidenceId/restore', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDITEUR), async (req, res) => {
     try {
         const result = await AuditingService.restoreMissionEvidence(parseInt(req.params.evidenceId as string, 10));
         res.json(result);

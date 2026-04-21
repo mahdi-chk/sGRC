@@ -24,10 +24,6 @@ export class AuditorMissionsComponent implements OnInit {
     isLoading = false;
     currentUserRole: UserRole | null = getStoredAuditRole();
 
-    currentPage = 1;
-    pageSize = 10;
-    readonly pageSizeOptions = [10, 25, 50, 100];
-
     totalAssigned = 0;
     inProgressCount = 0;
     pendingCount = 0;
@@ -35,7 +31,6 @@ export class AuditorMissionsComponent implements OnInit {
 
     filterSearch = '';
     filterStatus = '';
-    filterPlanType = '';
     filterHorizon = '';
     filterPriority = '';
 
@@ -70,11 +65,6 @@ export class AuditorMissionsComponent implements OnInit {
         [AuditMissionHorizon.MOYEN_TERME]: 'A moyen terme'
     };
 
-    recordTypeLabelMap: Record<string, string> = {
-        [AuditRecordType.MISSION_AUDIT]: 'Mission',
-        [AuditRecordType.PLAN_ACTION_AUDIT]: 'Plan d action'
-    };
-
     constructor(
         private auditingService: AuditingService,
         private router: Router
@@ -107,7 +97,6 @@ export class AuditorMissionsComponent implements OnInit {
                     : data.filter((mission) => Number(mission.auditeurId) === userId);
                 this.applyFilters();
                 this.calculateStats();
-                this.updatePagedMissions();
                 this.isLoading = false;
             },
             error: (err) => {
@@ -124,7 +113,6 @@ export class AuditorMissionsComponent implements OnInit {
                 || String(mission.id).includes(q)
                 || (mission.titre || '').toLowerCase().includes(q)
                 || (mission.regleDnssi || '').toLowerCase().includes(q)
-                || (mission.planActionType || '').toLowerCase().includes(q)
                 || (mission.recommandations || mission.objectifs || '').toLowerCase().includes(q)
                 || (mission.responsabilites || '').toLowerCase().includes(q)
                 || (mission.risk?.titre || '').toLowerCase().includes(q)
@@ -134,25 +122,16 @@ export class AuditorMissionsComponent implements OnInit {
             const missionStatut = this.normalizeMissionStatus((mission as any).statutCode || mission.statut);
             const filterStatut = this.normalizeMissionStatus(this.filterStatus);
             const matchStatus = !filterStatut || missionStatut === filterStatut;
-            const matchPlanType = !this.filterPlanType || (mission.planActionType || '') === this.filterPlanType;
             const matchHorizon = !this.filterHorizon || (mission.horizon || '') === this.filterHorizon;
             const matchPriority = !this.filterPriority || String(mission.priorite ?? '') === this.filterPriority;
 
-            return matchSearch && matchStatus && matchPlanType && matchHorizon && matchPriority;
+            return matchSearch && matchStatus && matchHorizon && matchPriority;
         });
-        this.currentPage = 1;
-        this.updatePagedMissions();
-    }
-
-    onPaginationChange(event: { page: number; pageSize: number }) {
-        this.currentPage = event.page;
-        this.pageSize = event.pageSize;
         this.updatePagedMissions();
     }
 
     private updatePagedMissions() {
-        const startIndex = (this.currentPage - 1) * this.pageSize;
-        this.pagedMissions = this.filteredMissions.slice(startIndex, startIndex + this.pageSize);
+        this.pagedMissions = [...this.filteredMissions];
     }
 
     onFilterChange() {
@@ -162,7 +141,6 @@ export class AuditorMissionsComponent implements OnInit {
     clearFilters() {
         this.filterSearch = '';
         this.filterStatus = '';
-        this.filterPlanType = '';
         this.filterHorizon = '';
         this.filterPriority = '';
         this.applyFilters();
@@ -193,19 +171,6 @@ export class AuditorMissionsComponent implements OnInit {
         return this.normalizeMissionStatus((mission as any)?.statutCode || mission?.statut);
     }
 
-    isMissionRecord(mission: AuditMission | null | undefined): boolean {
-        return (mission?.type || AuditRecordType.MISSION_AUDIT) === AuditRecordType.MISSION_AUDIT;
-    }
-
-    isActionPlanRecord(mission: AuditMission | null | undefined): boolean {
-        return mission?.type === AuditRecordType.PLAN_ACTION_AUDIT;
-    }
-
-    getRecordTypeLabel(mission: AuditMission | null | undefined): string {
-        const type = mission?.type || AuditRecordType.MISSION_AUDIT;
-        return this.recordTypeLabelMap[type] || 'Enregistrement';
-    }
-
     getDisplayTitle(mission: AuditMission | null | undefined): string {
         if (!mission) {
             return '-';
@@ -220,14 +185,6 @@ export class AuditorMissionsComponent implements OnInit {
         }
 
         return mission.recommandations || mission.objectifs || mission.responsabilites || '-';
-    }
-
-    get availablePlanTypes(): string[] {
-        return Array.from(new Set(
-            this.missions
-                .map((mission) => (mission.planActionType || '').trim())
-                .filter((value) => !!value)
-        )).sort((a, b) => a.localeCompare(b));
     }
 
     getStatusLabel(value?: string | null): string {
@@ -262,7 +219,7 @@ export class AuditorMissionsComponent implements OnInit {
             error: (err) => {
                 console.error(err);
                 this.isLoading = false;
-                alert('Erreur lors du chargement du plan d actions.');
+                alert('Erreur lors du chargement de la checklist.');
             }
         });
     }

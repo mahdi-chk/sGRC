@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-list-check"></i> Plans d'actions d'audit</h1>
-                <p>Gérez directement les plans d'actions d'audit autonomes, sans rattachement obligatoire à une mission.</p>
+                <h1><i class="fas fa-list-check"></i> Checklists d'audit</h1>
+                <p>Gerez les modeles de checklist et suivez leur affectation sur les missions.</p>
             </div>
         </div>
     </div>
@@ -22,160 +22,165 @@
         <p class="error" *ngIf="error">{{ error }}</p>
     </div>
 
-    <div class="layout-grid">
+    <div class="layout-grid checklist-workspace">
         <aside class="panel mission-panel">
             <div class="panel-head">
-                <h2>Import Excel</h2>
-                <p>Chargez un fichier DNSSI pour créer plusieurs plans d'actions d'un coup.</p>
+                <h2>Missions</h2>
+                <p>Selectionnez une mission pour voir sa checklist et son avancement.</p>
             </div>
 
-            <div class="import-box">
-                <label class="field">
-                    <span>Risque de rattachement</span>
-                    <select [(ngModel)]="selectedImportRiskId">
-                        <option [ngValue]="null">SÃ©lectionner un risque</option>
-                        <option *ngFor="let risk of risks" [ngValue]="risk.id">{{ risk.titre }}</option>
-                    </select>
-                </label>
-                <label class="field">
-                    <span>Importer Excel DNSSI</span>
-                    <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)">
-                </label>
-                <small class="file-hint" *ngIf="importFile">{{ importFile.name }}</small>
-                <button class="btn-primary" (click)="importExcel()" [disabled]="!importFile || !selectedImportRiskId || isSaving">
-                    {{ isSaving ? 'Import...' : 'Importer le plan' }}
+            <div class="mission-list">
+                <button
+                    type="button"
+                    class="mission-list-item"
+                    *ngFor="let mission of missions"
+                    [class.active]="mission.id === selectedMissionId"
+                    (click)="selectMission(mission.id)">
+                    <span class="mission-list-title">{{ mission.titre }}</span>
+                    <span class="mission-list-meta">
+                        {{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Non assignee' }}
+                    </span>
                 </button>
+                <div class="empty-state" *ngIf="missions.length === 0">
+                    <p>Aucune mission disponible.</p>
+                </div>
             </div>
 
             <div class="mission-summary">
                 <span class="summary-label">Total</span>
-                <strong>{{ planItems.length }} plan(s)</strong>
-                <small>Plans d'actions d'audit actuellement disponibles.</small>
+                <strong>{{ missions.length }} mission(s)</strong>
+                <small>{{ templates.length }} modele(s) de checklist disponibles.</small>
             </div>
         </aside>
 
         <section class="panel content-panel">
-            <div class="panel-head hero-head">
+            <div class="panel-head hero-head" *ngIf="selectedMission">
                 <div>
-                    <h2>Nouveau plan d'actions</h2>
-                    <p>Ajoutez une action autonome directement dans le registre d'audit.</p>
+                    <h2>{{ selectedMission.titre }}</h2>
+                    <p>Vue manager: affectation, consultation et suivi de la progression.</p>
+                </div>
+                <div class="hero-meta">
+                    <span class="meta-label">Avancement</span>
+                    <strong>{{ progressPercent }}%</strong>
+                    <small>{{ completedItems }}/{{ missionChecklistItems.length }} item(s) coches</small>
+                </div>
+            </div>
+
+            <div class="manager-grid" *ngIf="selectedMission">
+                <div class="composer-card">
+                    <div class="composer-head">
+                        <div>
+                            <h3>Affecter une checklist</h3>
+                            <p>Associez un modele a la mission selectionnee.</p>
+                        </div>
+                        <button class="btn-primary" (click)="assignTemplate()" [disabled]="!selectedMissionId || !selectedTemplateId || isSaving">
+                            {{ isSaving ? 'Affectation...' : 'Affecter' }}
+                        </button>
+                    </div>
+
+                    <div class="form-grid compact-grid">
+                        <label class="field field-wide">
+                            <span>Modele de checklist</span>
+                            <select [(ngModel)]="selectedTemplateId">
+                                <option [ngValue]="null">Selectionner une checklist</option>
+                                <option *ngFor="let template of templates" [ngValue]="template.id">{{ template.titre }}</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="assignment-state">
+                        <span class="summary-label">Checklist assignee</span>
+                        <strong>{{ assignedTemplate?.titre || 'Aucune checklist assignee' }}</strong>
+                        <small *ngIf="assignedTemplate">{{ assignedTemplate.description || 'Sans description' }}</small>
+                    </div>
+                </div>
+
+                <div class="composer-card">
+                    <div class="composer-head">
+                        <div>
+                            <h3>Etat d'avancement</h3>
+                            <p>Lecture du travail realise par l'auditeur.</p>
+                        </div>
+                    </div>
+
+                    <div class="progress-bar-shell">
+                        <div class="progress-bar-fill" [style.width.%]="progressPercent"></div>
+                    </div>
+
+                    <div class="checklist-state-list" *ngIf="missionChecklistItems.length > 0; else noItems">
+                        <div class="checklist-state-item" *ngFor="let item of missionChecklistItems">
+                            <span class="check-state" [class.done]="item.estFait">{{ item.estFait ? 'Fait' : 'A faire' }}</span>
+                            <span class="check-text">{{ item.texte }}</span>
+                        </div>
+                    </div>
+
+                    <ng-template #noItems>
+                        <div class="empty-state">
+                            <p>Aucun item de checklist pour cette mission.</p>
+                        </div>
+                    </ng-template>
                 </div>
             </div>
 
             <div class="composer-card">
                 <div class="composer-head">
                     <div>
-                        <h3>Création manuelle</h3>
-                        <p>Chaque ligne crée un nouvel enregistrement autonome dans `audit_missions`.</p>
+                        <h3>{{ editingTemplateId ? 'Modification de modele' : 'Creation de modele' }}</h3>
+                        <p>{{ editingTemplateId ? 'Modifiez un modele existant.' : 'Creez une checklist reutilisable sur plusieurs missions.' }}</p>
                     </div>
-                    <button class="btn-primary" (click)="saveNewItem()" [disabled]="isSaving">Créer le plan</button>
+                    <div class="row-actions">
+                        <button class="btn-secondary" *ngIf="editingTemplateId" (click)="cancelEdit()">Annuler</button>
+                        <button class="btn-primary" (click)="saveNewTemplate()" [disabled]="isSaving">
+                            {{ editingTemplateId ? 'Enregistrer les modifications' : 'Creer la checklist' }}
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-grid">
-                    <label class="field compact">
-                        <span>Ordre</span>
-                        <input type="number" [(ngModel)]="newItem.ordre">
-                    </label>
-                    <label class="field compact">
-                        <span>Règle DNSSI</span>
-                        <input [(ngModel)]="newItem.regleDnssi" placeholder="POL-RISQUE">
-                    </label>
-                    <label class="field compact">
-                        <span>Horizon</span>
-                        <select [(ngModel)]="newItem.horizon">
-                            <option value="court_terme">Court terme</option>
-                            <option value="moyen_terme">Moyen terme</option>
-                            <option value="long_terme">Long terme</option>
-                        </select>
-                    </label>
-                    <label class="field compact">
-                        <span>Priorité</span>
-                        <input type="number" [(ngModel)]="newItem.priorite">
-                    </label>
-                    <label class="field compact">
-                        <span>Risque</span>
-                        <select [(ngModel)]="newItem.riskId">
-                            <option [ngValue]="null">SÃ©lectionner un risque</option>
-                            <option *ngFor="let risk of risks" [ngValue]="risk.id">{{ risk.titre }}</option>
-                        </select>
+                    <label class="field field-wide">
+                        <span>Titre</span>
+                        <input [(ngModel)]="newTemplate.titre" placeholder="Checklist ISO 27001 - Revue d acces">
                     </label>
                     <label class="field field-wide">
-                        <span>Recommandations</span>
-                        <textarea rows="4" [(ngModel)]="newItem.recommandations" placeholder="Décrivez l'action ou la recommandation à mettre en œuvre."></textarea>
+                        <span>Description</span>
+                        <textarea rows="3" [(ngModel)]="newTemplate.description" placeholder="Contexte et objectif de la checklist."></textarea>
                     </label>
-                    <label class="field compact">
-                        <span>Responsable</span>
-                        <input [(ngModel)]="newItem.responsableNom" placeholder="Nom du responsable">
-                    </label>
-                    <label class="field compact">
-                        <span>Echéance</span>
-                        <input type="date" [(ngModel)]="newItem.echeance">
-                    </label>
-                    <label class="field compact">
-                        <span>Etat d'avancement</span>
-                        <select [(ngModel)]="newItem.etatAvancement">
-                            <option value="a_venir">A venir</option>
-                            <option value="en_cours">En cours</option>
-                            <option value="termine">Terminé</option>
-                            <option value="en_retard">En retard</option>
-                        </select>
+                    <label class="field field-wide">
+                        <span>Items</span>
+                        <textarea rows="8" [(ngModel)]="newTemplate.itemsText" placeholder="Un item par ligne"></textarea>
                     </label>
                 </div>
             </div>
 
             <div class="panel-head section-head">
-                <h2>Registre des plans</h2>
-                <p>{{ planItems.length }} plan(s) d'actions suivis</p>
+                <h2>Bibliotheque des checklists</h2>
+                <p>{{ templates.length }} modele(s) disponibles</p>
             </div>
 
-            <div class="empty-state" *ngIf="!isLoading && planItems.length === 0">
-                <p>Aucun plan d'actions d'audit disponible.</p>
+            <div class="empty-state" *ngIf="!isLoading && templates.length === 0">
+                <p>Aucune checklist disponible.</p>
             </div>
 
-            <div class="action-plan-list" *ngIf="planItems.length > 0">
-                <article class="action-card" *ngFor="let item of planItems">
+            <div class="action-plan-list" *ngIf="templates.length > 0">
+                <article class="action-card" *ngFor="let template of templates">
                     <div class="action-card-head">
                         <div class="action-title">
-                            <span class="rule-kicker">Code {{ item.code || item.id }}</span>
-                            <h3>{{ item.regleDnssi || item.titre }}</h3>
-                        </div>
-                        <div class="action-badges">
-                            <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
-                            <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
+                            <span class="rule-kicker">Checklist {{ template.id }}</span>
+                            <h3>{{ template.titre }}</h3>
                         </div>
                     </div>
 
                     <div class="recommendation-box">
-                        {{ item.recommandations || item.objectifs }}
+                        {{ template.description || 'Sans description' }}
                     </div>
 
-                    <div class="editor-grid">
-                        <label class="field compact">
-                            <span>Ordre</span>
-                            <input type="number" [(ngModel)]="item.ordre">
-                        </label>
-                        <label class="field compact">
-                            <span>Responsable</span>
-                            <input [(ngModel)]="item.responsabilites">
-                        </label>
-                        <label class="field compact">
-                            <span>Echéance</span>
-                            <input type="date" [(ngModel)]="item.delai">
-                        </label>
-                        <label class="field compact">
-                            <span>Etat</span>
-                            <select [(ngModel)]="item.statut">
-                                <option value="a_venir">A venir</option>
-                                <option value="en_cours">En cours</option>
-                                <option value="termine">Terminé</option>
-                                <option value="en_retard">En retard</option>
-                            </select>
-                        </label>
-                    </div>
+                    <ul class="checklist-preview">
+                        <li *ngFor="let item of template.items">{{ item.texte }}</li>
+                    </ul>
 
                     <div class="row-actions">
-                        <button class="btn-secondary" (click)="saveRow(item)">Enregistrer</button>
-                        <button class="btn-danger" (click)="deleteRow(item)">Supprimer</button>
+                        <button class="btn-secondary" (click)="editTemplate(template)">Modifier</button>
+                        <button class="btn-danger" (click)="deleteTemplate(template)">Supprimer</button>
                     </div>
                 </article>
             </div>

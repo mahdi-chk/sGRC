@@ -2,12 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   AuditingService,
+  AuditChecklistTemplate,
   AuditMission,
-  AuditMissionActionPlanPayload,
-  AuditMissionHorizon,
-  AuditMissionStatus
+  AuditMissionChecklistItem,
+  AuditRecordType
 } from '../../../core/services/auditing.service';
-import { Risk, RiskService } from '../../../core/services/risk.service';
 import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
@@ -17,20 +16,26 @@ import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
 })
 export class AuditChecklistsComponent implements OnInit {
   currentUserRole = getStoredAuditRole();
-  planItems: AuditMission[] = [];
+  templates: AuditChecklistTemplate[] = [];
+  missions: AuditMission[] = [];
+  missionChecklistItems: AuditMissionChecklistItem[] = [];
+  selectedMission: AuditMission | null = null;
   isLoading = false;
   isSaving = false;
-  importFile: File | null = null;
-  risks: Risk[] = [];
-  selectedImportRiskId: number | null = null;
+  selectedMissionId: number | null = null;
+  selectedTemplateId: number | null = null;
+  editingTemplateId: number | null = null;
   feedback = '';
   error = '';
 
-  newItem: AuditMissionActionPlanPayload = this.createEmptyItem();
+  newTemplate = {
+    titre: '',
+    description: '',
+    itemsText: ''
+  };
 
   constructor(
     private auditingService: AuditingService,
-    private riskService: RiskService,
     private router: Router
   ) {}
 
@@ -39,169 +44,192 @@ export class AuditChecklistsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadPlan();
-    this.loadRisks();
+    this.loadTemplates();
+    this.loadMissions();
   }
 
-  loadPlan(): void {
+  loadTemplates(): void {
     this.isLoading = true;
-    this.auditingService.getActionPlans().subscribe({
+    this.auditingService.getChecklistTemplates().subscribe({
+      next: (templates) => {
+        this.templates = templates;
+        if (!this.selectedTemplateId && templates.length > 0) {
+          this.selectedTemplateId = templates[0].id;
+        }
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error(err);
+        this.templates = [];
+        this.isLoading = false;
+        this.error = 'Impossible de charger les checklists.';
+      }
+    });
+  }
+
+  loadMissions(): void {
+    this.auditingService.getMissions(AuditRecordType.MISSION_AUDIT).subscribe({
+      next: (missions) => {
+        this.missions = missions;
+        if (!this.selectedMissionId && missions.length > 0) {
+          this.selectedMissionId = missions[0].id;
+        }
+        if (this.selectedMissionId) {
+          this.selectMission(this.selectedMissionId);
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        this.missions = [];
+      }
+    });
+  }
+
+  saveNewTemplate(): void {
+    const items = this.newTemplate.itemsText
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => !!item);
+
+    if (!this.newTemplate.titre.trim() || items.length === 0) {
+      this.error = 'Le titre et au moins un item de checklist sont obligatoires.';
+      return;
+    }
+
+    this.isSaving = true;
+    const payload = {
+      titre: this.newTemplate.titre.trim(),
+      description: this.newTemplate.description.trim() || '',
+      items
+    };
+    const request = this.editingTemplateId
+      ? this.auditingService.updateChecklistTemplate(this.editingTemplateId, payload)
+      : this.auditingService.createChecklistTemplate(payload);
+
+    request.subscribe({
+      next: (template) => {
+        const wasEditing = this.editingTemplateId !== null;
+        this.newTemplate = { titre: '', description: '', itemsText: '' };
+        this.editingTemplateId = null;
+        this.feedback = wasEditing ? 'Checklist modifiee avec succes.' : 'Checklist ajoutee avec succes.';
+        this.error = '';
+        this.isSaving = false;
+        this.templates = wasEditing
+          ? this.templates.map((entry) => entry.id === template.id ? template : entry)
+          : [template, ...this.templates];
+        this.selectedTemplateId = template.id;
+      },
+      error: (err) => {
+        console.error(err);
+        this.isSaving = false;
+        this.error = err?.error?.message || 'Erreur lors de la creation de la checklist.';
+      }
+    });
+  }
+
+  editTemplate(template: AuditChecklistTemplate): void {
+    this.editingTemplateId = template.id;
+    this.newTemplate = {
+      titre: template.titre || '',
+      description: template.description || '',
+      itemsText: (template.items || []).map((item) => item.texte).join('\n')
+    };
+  }
+
+  cancelEdit(): void {
+    this.editingTemplateId = null;
+    this.newTemplate = {
+      titre: '',
+      description: '',
+      itemsText: ''
+    };
+  }
+
+  assignTemplate(): void {
+    if (!this.selectedMissionId || !this.selectedTemplateId) {
+      this.error = 'Veuillez selectionner une mission et une checklist.';
+      return;
+    }
+
+    this.isSaving = true;
+    this.auditingService.assignTemplateToMission(this.selectedMissionId, this.selectedTemplateId).subscribe({
+      next: () => {
+        this.feedback = 'Checklist affectee a la mission.';
+        this.error = '';
+        this.isSaving = false;
+        this.selectMission(this.selectedMissionId!);
+      },
+      error: (err) => {
+        console.error(err);
+        this.isSaving = false;
+        this.error = err?.error?.message || 'Erreur lors de l affectation.';
+      }
+    });
+  }
+
+  selectMission(missionId: number): void {
+    this.selectedMissionId = missionId;
+    this.selectedMission = this.missions.find((mission) => mission.id === missionId) || null;
+    if (!this.selectedMission) {
+      this.missionChecklistItems = [];
+      return;
+    }
+
+    this.isLoading = true;
+    this.auditingService.getMissionChecklistItems(missionId).subscribe({
       next: (items) => {
-        this.planItems = items.map((item) => this.normalizeItem(item));
+        this.missionChecklistItems = items;
         this.isLoading = false;
       },
       error: (err) => {
         console.error(err);
-        this.planItems = [];
+        this.missionChecklistItems = [];
         this.isLoading = false;
-        this.error = 'Impossible de charger les plans d actions.';
       }
     });
   }
 
-  loadRisks(): void {
-    this.riskService.getRisks().subscribe({
-      next: (risks) => {
-        this.risks = risks;
-        if (!this.selectedImportRiskId && risks.length > 0) {
-          this.selectedImportRiskId = risks[0].id;
-        }
-        if (!this.newItem.riskId && risks.length > 0) {
-          this.newItem.riskId = risks[0].id;
-        }
-      },
-      error: (err) => {
-        console.error(err);
-        this.risks = [];
-      }
-    });
+  get selectedTemplate(): AuditChecklistTemplate | null {
+    return this.templates.find((template) => template.id === this.selectedTemplateId) || null;
   }
 
-  saveNewItem(): void {
-    if (!this.newItem.regleDnssi?.trim() || !this.newItem.recommandations?.trim()) {
-      this.error = 'La règle DNSSI et les recommandations sont obligatoires.';
+  get assignedTemplate(): AuditChecklistTemplate | null {
+    if (!this.selectedMission?.checklistTemplateId) {
+      return null;
+    }
+
+    return this.templates.find((template) => template.id === this.selectedMission?.checklistTemplateId) || null;
+  }
+
+  get completedItems(): number {
+    return this.missionChecklistItems.filter((item) => item.estFait).length;
+  }
+
+  get progressPercent(): number {
+    if (!this.missionChecklistItems.length) {
+      return 0;
+    }
+
+    return Math.round((this.completedItems / this.missionChecklistItems.length) * 100);
+  }
+
+  deleteTemplate(template: AuditChecklistTemplate): void {
+    if (!window.confirm(`Supprimer la checklist ${template.titre} ?`)) {
       return;
     }
 
-    if (!this.newItem.riskId) {
-      this.error = 'Veuillez sÃ©lectionner un risque pour crÃ©er ce plan d actions.';
-      return;
-    }
-
-    this.isSaving = true;
-    this.auditingService.createActionPlan(this.newItem).subscribe({
+    this.auditingService.deleteChecklistTemplate(template.id).subscribe({
       next: () => {
-        this.newItem = this.createEmptyItem();
-        this.feedback = 'Plan d actions ajouté avec succès.';
-        this.error = '';
-        this.isSaving = false;
-        this.loadPlan();
-      },
-      error: (err) => {
-        console.error(err);
-        this.isSaving = false;
-        this.error = err?.error?.message || 'Erreur lors de l ajout.';
-      }
-    });
-  }
-
-  saveRow(item: AuditMission): void {
-    this.isSaving = true;
-    this.auditingService.updateActionPlan(item.id, {
-      code: item.code || null,
-      titre: item.titre,
-      ordre: item.ordre || 0,
-      regleDnssi: item.regleDnssi || item.titre,
-      recommandations: item.recommandations || item.objectifs || '',
-      horizon: item.horizon,
-      priorite: item.priorite,
-      responsableId: item.auditeurId || null,
-      responsableNom: item.responsabilites || '',
-      echeance: item.delai ? String(item.delai) : null,
-      riskId: item.riskId || null,
-      etatAvancement: item.statut as string
-    }).subscribe({
-      next: (updated) => {
-        Object.assign(item, this.normalizeItem(updated));
-        this.feedback = 'Plan d actions mis à jour.';
-        this.error = '';
-        this.isSaving = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.isSaving = false;
-        this.error = err?.error?.message || 'Erreur lors de la mise à jour.';
-      }
-    });
-  }
-
-  deleteRow(item: AuditMission): void {
-    if (!window.confirm(`Supprimer le plan ${item.code || item.titre} ?`)) {
-      return;
-    }
-
-    this.auditingService.deleteActionPlan(item.id).subscribe({
-      next: () => {
-        this.planItems = this.planItems.filter((entry) => entry.id !== item.id);
+        this.templates = this.templates.filter((entry) => entry.id !== template.id);
+        if (this.selectedTemplateId === template.id) {
+          this.selectedTemplateId = this.templates[0]?.id || null;
+        }
       },
       error: (err) => {
         console.error(err);
         this.error = err?.error?.message || 'Erreur lors de la suppression.';
       }
     });
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.importFile = input.files?.[0] || null;
-  }
-
-  importExcel(): void {
-    if (!this.importFile) {
-      return;
-    }
-
-    if (!this.selectedImportRiskId) {
-      this.error = 'Veuillez sÃ©lectionner un risque avant l import.';
-      return;
-    }
-
-    this.isSaving = true;
-    this.auditingService.importActionPlans(this.importFile, this.selectedImportRiskId).subscribe({
-      next: (items) => {
-        this.planItems = items.map((item) => this.normalizeItem(item));
-        this.importFile = null;
-        this.feedback = 'Import Excel terminé avec succès.';
-        this.error = '';
-        this.isSaving = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.isSaving = false;
-        this.error = err?.error?.error || err?.error?.message || 'Erreur lors de l import Excel.';
-      }
-    });
-  }
-
-  createEmptyItem(): AuditMissionActionPlanPayload {
-    return {
-      ordre: 0,
-      regleDnssi: '',
-      recommandations: '',
-      horizon: AuditMissionHorizon.COURT_TERME,
-      priorite: 1,
-      responsableNom: '',
-      riskId: null,
-      echeance: '',
-      etatAvancement: AuditMissionStatus.NOK
-    };
-  }
-
-  private normalizeItem(item: AuditMission): AuditMission {
-    return {
-      ...item,
-      delai: item.delai ? new Date(item.delai).toISOString().slice(0, 10) : null
-    };
   }
 
   goBack(): void {

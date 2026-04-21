@@ -300,7 +300,7 @@ async function seedCompliance() {
         await sequelize.authenticate();
 
         const [auditSenior, auditeur, riskManager] = await Promise.all([
-            findPreferredUser(UserRole.AUDIT_SENIOR),
+            findPreferredUser(UserRole.AUDIT_DIRECTEUR),
             findPreferredUser(UserRole.AUDITEUR),
             findPreferredUser(UserRole.RISK_MANAGER),
         ]);

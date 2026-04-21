@@ -222,6 +222,10 @@ export class AuditingService {
         return this.http.post<AuditChecklistTemplate>(`${this.apiUrl}/checklists`, data);
     }
 
+    updateChecklistTemplate(id: number, data: { titre: string, description?: string, items: string[] }): Observable<AuditChecklistTemplate> {
+        return this.http.put<AuditChecklistTemplate>(`${this.apiUrl}/checklists/${id}`, data);
+    }
+
     deleteChecklistTemplate(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrl}/checklists/${id}`);
     }

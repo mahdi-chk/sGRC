@@ -6,31 +6,44 @@ export interface AuditNavItem {
   roles: UserRole[];
 }
 
+const AUDIT_DIRECTOR_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN];
+const AUDIT_MANAGEMENT_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
+
 export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
   {
     label: 'Gestion des Audits',
     route: '/dashboard/auditing',
-    roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
+    roles: AUDIT_MANAGEMENT_ROLES
   },
   {
     label: 'Planification',
     route: '/dashboard/audit-planning',
-    roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
+    roles: AUDIT_DIRECTOR_ROLES
+  },
+  {
+    label: 'Checklists',
+    route: '/dashboard/audit-checklists',
+    roles: AUDIT_MANAGEMENT_ROLES
+  },
+  {
+    label: 'Traitement checklists',
+    route: '/dashboard/auditor-checklist',
+    roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
   },
   {
     label: 'Explorateur des Preuves',
     route: '/dashboard/audit-evidence-explorer',
-    roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
+    roles: AUDIT_MANAGEMENT_ROLES
   },
   {
     label: 'Revision des Rapports',
     route: '/dashboard/audit-report-review',
-    roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
+    roles: AUDIT_MANAGEMENT_ROLES
   },
   {
     label: 'Statistiques',
     route: '/dashboard/audit-statistics',
-    roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT]
+    roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT]
   },
   {
     label: 'Mes Missions',

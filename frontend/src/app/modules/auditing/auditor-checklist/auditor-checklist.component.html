@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-list-check"></i> {{ isSuperAdmin ? 'Plans d actions d audit' : 'Mes Plans d actions' }}</h1>
-                <p>Renseignez l'avancement, le responsable et l'échéance de vos plans d'actions d'audit autonomes.</p>
+                <h1><i class="fas fa-list-check"></i> {{ isSuperAdmin ? 'Traitement des checklists' : 'Mes checklists' }}</h1>
+                <p>Traitez les items par mission avec un suivi d'avancement clair.</p>
             </div>
         </div>
     </div>
@@ -17,55 +17,59 @@
         </a>
     </nav>
 
-    <section class="main-content card">
-        <div class="empty-checklist" *ngIf="!isLoading && actionPlans.length === 0">
-            <i class="fas fa-list-ul"></i>
-            <p>Aucun plan d'actions assigné.</p>
-        </div>
-
-        <div class="action-plan-list" *ngIf="actionPlans.length > 0">
-            <article class="action-card" *ngFor="let item of actionPlans">
-                <div class="action-card-head">
-                    <div>
-                        <span class="rule-kicker">Code {{ item.code || item.id }}</span>
-                        <h3>{{ item.regleDnssi || item.titre }}</h3>
-                    </div>
-                    <div class="action-badges">
-                        <span class="badge horizon">{{ item.horizon || 'Non défini' }}</span>
-                        <span class="badge priority">Priorité {{ item.priorite || '-' }}</span>
-                    </div>
+    <div class="dual-layout">
+        <aside class="card sidebar-list">
+            <div class="list-header">
+                <h3>Mes missions</h3>
+            </div>
+            <div class="item-list">
+                <div class="empty-list" *ngIf="!isLoading && missions.length === 0">
+                    <p>Aucune mission assignee.</p>
                 </div>
-
-                <div class="recommendation-box">
-                    {{ item.recommandations || item.objectifs }}
-                </div>
-
-                <div class="action-editor">
-                    <label class="editor-field">
-                        <span>Responsable</span>
-                        <input [(ngModel)]="item.responsabilites">
-                    </label>
-
-                    <label class="editor-field">
-                        <span>Echéance</span>
-                        <input type="date" [(ngModel)]="item.delai">
-                    </label>
-
-                    <label class="editor-field">
-                        <span>Etat</span>
-                        <select [(ngModel)]="item.statut">
-                            <option value="a_venir">A venir</option>
-                            <option value="en_cours">En cours</option>
-                            <option value="termine">Terminé</option>
-                            <option value="en_retard">En retard</option>
-                        </select>
-                    </label>
-
-                    <div class="editor-actions">
-                        <button class="btn-save" (click)="saveItem(item)">Enregistrer</button>
+                <li *ngFor="let mission of missions" [class.active]="selectedMission?.id === mission.id" (click)="selectMission(mission)">
+                    <div class="item-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="item-info">
+                        <strong>{{ mission.titre }}</strong>
+                        <span class="status-tag">{{ mission.delai ? (mission.delai | date:'dd/MM/yyyy') : 'Sans echeance' }}</span>
                     </div>
+                </li>
+            </div>
+        </aside>
+
+        <section class="main-content card">
+            <div class="content-header" *ngIf="selectedMission">
+                <div>
+                    <h2>Checklist de mission</h2>
+                    <p class="mission-title">{{ selectedMission.titre }}</p>
                 </div>
-            </article>
-        </div>
-    </section>
+                <div class="mission-deadline">
+                    <span class="deadline-label">Avancement</span>
+                    <strong>{{ progressPercent }}%</strong>
+                    <small>{{ completedItems }}/{{ checklistItems.length }} item(s) finalises</small>
+                </div>
+            </div>
+
+            <div class="progress-bar-shell" *ngIf="selectedMission">
+                <div class="progress-bar-fill" [style.width.%]="progressPercent"></div>
+            </div>
+
+            <div class="select-prompt" *ngIf="!selectedMission && missions.length > 0">
+                <p>Selectionnez une mission pour traiter sa checklist.</p>
+            </div>
+
+            <div class="empty-checklist" *ngIf="selectedMission && !isLoading && checklistItems.length === 0">
+                <p>Aucun item de checklist pour cette mission.</p>
+            </div>
+
+            <div class="checklist-worklist" *ngIf="selectedMission && checklistItems.length > 0">
+                <label class="checklist-row" *ngFor="let item of checklistItems">
+                    <input type="checkbox" [(ngModel)]="item.estFait" (change)="toggleItem(item)">
+                    <div class="row-copy">
+                        <span class="row-state" [class.done]="item.estFait">{{ item.estFait ? 'Fait' : 'A faire' }}</span>
+                        <span class="row-text">{{ item.texte }}</span>
+                    </div>
+                </label>
+            </div>
+        </section>
+    </div>
 </div>

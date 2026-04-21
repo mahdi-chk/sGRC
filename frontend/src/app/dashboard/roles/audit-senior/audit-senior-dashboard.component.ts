@@ -10,7 +10,7 @@ import { AuditingService, AuditMission, AuditMissionStatus } from '../../../core
 })
 export class AuditSeniorDashboardComponent implements OnInit {
     @Input() filteredModules: any[] = [];
-    @Input() title: string = 'Dashboard Audit Senior';
+    @Input() title: string = 'Dashboard Audit';
     @Output() openModule = new EventEmitter<any>();
     @Output() toggleAssistant = new EventEmitter<void>();
 

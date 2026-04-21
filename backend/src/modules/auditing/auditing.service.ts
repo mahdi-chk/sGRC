@@ -314,8 +314,10 @@ export class AuditingService {
             where.type = normalizedType;
         }
 
-        if (role === UserRole.AUDIT_SENIOR) {
+        if (role === UserRole.AUDIT_DIRECTEUR) {
             where.auditSeniorId = userId;
+        } else if (role === UserRole.AUDIT_RESPONSABLE) {
+            where.type = normalizedType || AuditRecordType.PLAN_ACTION_AUDIT;
         } else if (role === UserRole.AUDITEUR) {
             where.auditeurId = userId;
         }
@@ -550,7 +552,7 @@ export class AuditingService {
         }));
     }
 
-    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_SENIOR, type: string = AuditRecordType.MISSION_AUDIT) {
+    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_DIRECTEUR, type: string = AuditRecordType.MISSION_AUDIT) {
         const risks = await Risk.findAll({
             where: {
                 statutId: [
@@ -964,6 +966,34 @@ export class AuditingService {
         if (data.items && data.items.length > 0) {
             const itemsData = data.items.map((texte) => ({ templateId: template.id, texte }));
             await AuditChecklistTemplateItem.bulkCreate(itemsData);
+        }
+
+        return await AuditChecklistTemplate.findByPk(template.id, {
+            include: [{ model: AuditChecklistTemplateItem, as: 'items' }]
+        });
+    }
+
+    static async updateChecklistTemplate(templateId: number, data: { titre: string, description?: string, items: string[] }) {
+        const template = await AuditChecklistTemplate.findByPk(templateId);
+        if (!template) throw new Error('Template non trouve');
+
+        await template.update({
+            titre: data.titre,
+            description: data.description || null
+        });
+
+        await AuditChecklistTemplateItem.update(getSoftDeleteValues(), {
+            where: { templateId, is_deleted: false }
+        });
+
+        const items = (data.items || [])
+            .map((item) => String(item || '').trim())
+            .filter((item) => !!item);
+
+        if (items.length > 0) {
+            await AuditChecklistTemplateItem.bulkCreate(
+                items.map((texte) => ({ templateId, texte }))
+            );
         }
 
         return await AuditChecklistTemplate.findByPk(template.id, {

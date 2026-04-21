@@ -82,7 +82,7 @@ export class DashboardService {
                 { title: 'Suivi des Ecarts' },
                 { title: 'Mises a Jour et Preuves' }
             ],
-            roles: [UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR]
         },
         {
             key: 'audit',
@@ -91,10 +91,11 @@ export class DashboardService {
             submodules: [
                 { title: 'Planification Pluriannuelle' },
                 { title: 'Gestion des Missions' },
+                { title: 'Checklists' },
                 { title: 'Tracabilite des Preuves' },
                 { title: 'Rapports et Suivi' }
             ],
-            roles: [UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN]
+            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN]
         },
         {
             key: 'audit-auditeur',
@@ -102,6 +103,7 @@ export class DashboardService {
             desc: 'Realisez vos missions, remplissez les checklists et soumettez vos rapports.',
             submodules: [
                 { title: 'Mes Missions' },
+                { title: 'Traitement checklists' },
                 { title: 'Mes Preuves' },
                 { title: 'Soumettre Rapport' }
             ],
@@ -117,7 +119,7 @@ export class DashboardService {
                 { title: 'Liens et Analyse' },
                 { title: 'Reporting Consolide' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.AUDITEUR]
+            roles: [UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR]
         },
         {
             key: 'plans-actions',
@@ -133,7 +135,8 @@ export class DashboardService {
                 UserRole.SUPER_ADMIN,
                 UserRole.RISK_MANAGER,
                 UserRole.RISK_AGENT,
-                UserRole.AUDIT_SENIOR,
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDIT_RESPONSABLE,
                 UserRole.TOP_MANAGEMENT
             ]
         },
@@ -244,19 +247,25 @@ export class DashboardService {
             s.title === 'Rapports et Suivi' ||
             s.title === 'Planification Pluriannuelle'
         ) {
-            const isSenior = currentUser?.role === UserRole.AUDIT_SENIOR || currentUser?.role === UserRole.SUPER_ADMIN;
+            const isDirector = currentUser?.role === UserRole.AUDIT_DIRECTEUR || currentUser?.role === UserRole.SUPER_ADMIN;
+            const isResponsible = currentUser?.role === UserRole.AUDIT_RESPONSABLE || currentUser?.role === UserRole.SUPER_ADMIN;
+            const isAuditManager = isDirector || isResponsible;
 
-            if (s.title === 'Planification Pluriannuelle' && isSenior) {
+            if (s.title === 'Planification Pluriannuelle' && isDirector) {
                 this.router.navigate(['/dashboard/audit-planning']);
-            } else if (s.title === 'Tracabilite des Preuves' && isSenior) {
+            } else if (s.title === 'Checklists' && isAuditManager) {
+                this.router.navigate(['/dashboard/audit-checklists']);
+            } else if (s.title === 'Tracabilite des Preuves' && isAuditManager) {
                 this.router.navigate(['/dashboard/audit-evidence-explorer']);
-            } else if (s.title === 'Rapports et Suivi' && isSenior) {
+            } else if (s.title === 'Rapports et Suivi' && isAuditManager) {
                 this.router.navigate(['/dashboard/audit-report-review']);
             } else {
-                this.router.navigate(isSenior ? ['/dashboard/auditing'] : ['/dashboard/auditor-missions']);
+                this.router.navigate(isAuditManager ? ['/dashboard/auditing'] : ['/dashboard/auditor-missions']);
             }
         } else if (s.title === 'Mes Missions') {
             this.router.navigate(['/dashboard/auditor-missions']);
+        } else if (s.title === 'Traitement checklists') {
+            this.router.navigate(['/dashboard/auditor-checklist']);
         } else if (s.title === 'Mes Preuves') {
             this.router.navigate(['/dashboard/auditor-evidence']);
         } else if (s.title === 'Soumettre Rapport') {

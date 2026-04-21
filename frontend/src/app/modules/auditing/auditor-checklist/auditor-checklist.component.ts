@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import {
   AuditingService,
-  AuditMission
+  AuditMission,
+  AuditMissionChecklistItem,
+  AuditRecordType
 } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
@@ -13,7 +15,9 @@ import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
   styleUrls: ['./auditor-checklist.component.scss']
 })
 export class AuditorChecklistComponent implements OnInit {
-  actionPlans: AuditMission[] = [];
+  missions: AuditMission[] = [];
+  checklistItems: AuditMissionChecklistItem[] = [];
+  selectedMission: AuditMission | null = null;
   isLoading = false;
   currentUserRole: UserRole | null = getStoredAuditRole();
 
@@ -27,10 +31,10 @@ export class AuditorChecklistComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadActionPlans();
+    this.loadMissions();
   }
 
-  loadActionPlans(): void {
+  loadMissions(): void {
     this.isLoading = true;
     const userStr = sessionStorage.getItem('sgrc_user');
     if (!userStr) {
@@ -42,14 +46,16 @@ export class AuditorChecklistComponent implements OnInit {
     const userId = Number(currentUser.id);
     this.currentUserRole = currentUser.role || null;
 
-    this.auditingService.getActionPlans().subscribe({
+    this.auditingService.getMissions(AuditRecordType.MISSION_AUDIT).subscribe({
       next: (data) => {
-        this.actionPlans = (this.isSuperAdmin ? data : data.filter((item) => Number(item.auditeurId) === userId))
-          .map((item) => ({
-            ...item,
-            delai: item.delai ? new Date(item.delai).toISOString().slice(0, 10) : null
-          }));
-        this.isLoading = false;
+        this.missions = (this.isSuperAdmin ? data : data.filter((item) => Number(item.auditeurId) === userId));
+        if (this.missions.length > 0) {
+          this.selectMission(this.missions[0]);
+        } else {
+          this.selectedMission = null;
+          this.checklistItems = [];
+          this.isLoading = false;
+        }
       },
       error: (err) => {
         console.error(err);
@@ -58,29 +64,35 @@ export class AuditorChecklistComponent implements OnInit {
     });
   }
 
-  saveItem(item: AuditMission): void {
-    this.auditingService.updateActionPlan(item.id, {
-      code: item.code || null,
-      titre: item.titre,
-      ordre: item.ordre || 0,
-      regleDnssi: item.regleDnssi || item.titre,
-      recommandations: item.recommandations || item.objectifs || '',
-      horizon: item.horizon,
-      priorite: item.priorite,
-      responsableId: item.auditeurId || null,
-      responsableNom: item.responsabilites || '',
-      echeance: item.delai ? String(item.delai) : null,
-      etatAvancement: item.statut as string
-    }).subscribe({
-      next: (updatedItem) => {
-        Object.assign(item, {
-          ...updatedItem,
-          delai: updatedItem.delai ? new Date(updatedItem.delai).toISOString().slice(0, 10) : null
-        });
+  selectMission(mission: AuditMission): void {
+    this.selectedMission = mission;
+    this.isLoading = true;
+    this.auditingService.getMissionChecklistItems(mission.id).subscribe({
+      next: (items) => {
+        this.checklistItems = items;
+        this.isLoading = false;
       },
       error: (err) => {
         console.error(err);
-        alert('Erreur lors de la mise à jour.');
+        this.checklistItems = [];
+        this.isLoading = false;
+      }
+    });
+  }
+
+  toggleItem(item: AuditMissionChecklistItem): void {
+    if (!this.selectedMission) {
+      return;
+    }
+
+    this.auditingService.toggleMissionChecklistItem(this.selectedMission.id, item.id, item.estFait).subscribe({
+      next: (updatedItem) => {
+        Object.assign(item, updatedItem);
+      },
+      error: (err) => {
+        console.error(err);
+        item.estFait = !item.estFait;
+        alert('Erreur lors de la mise a jour.');
       }
     });
   }
@@ -91,5 +103,17 @@ export class AuditorChecklistComponent implements OnInit {
 
   get isSuperAdmin(): boolean {
     return this.currentUserRole === UserRole.SUPER_ADMIN;
+  }
+
+  get completedItems(): number {
+    return this.checklistItems.filter((item) => item.estFait).length;
+  }
+
+  get progressPercent(): number {
+    if (!this.checklistItems.length) {
+      return 0;
+    }
+
+    return Math.round((this.completedItems / this.checklistItems.length) * 100);
   }
 }

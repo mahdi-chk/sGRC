@@ -34,7 +34,7 @@ export class PlanificationComponent implements OnInit {
   get isSeniorAuditor(): boolean {
     const userString = sessionStorage.getItem('sgrc_user');
     const userAddress = userString ? JSON.parse(userString) : null;
-    return userAddress?.role === UserRole.AUDIT_SENIOR || userAddress?.role === UserRole.SUPER_ADMIN;
+    return userAddress?.role === UserRole.AUDIT_DIRECTEUR || userAddress?.role === UserRole.SUPER_ADMIN;
   }
 
   generatePlan() {

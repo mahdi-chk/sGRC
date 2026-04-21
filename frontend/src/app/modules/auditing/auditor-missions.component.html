@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-tasks"></i> {{ isSuperAdmin ? "Pilotage Audit" : "Mon Espace Audit" }}</h1>
-                <p>Vue mixte de vos missions d audit et des plans d action qui vous sont affectes.</p>
+                <p>Vue unifiee de tous les audits qui vous sont affectes.</p>
             </div>
         </div>
     </div>
@@ -66,14 +66,6 @@
             </div>
 
             <div class="filter-group">
-                <i class="fas fa-layer-group"></i>
-                <select [(ngModel)]="filterPlanType" (change)="onFilterChange()">
-                    <option value="">Tous les types de plan</option>
-                    <option *ngFor="let planType of availablePlanTypes" [value]="planType">{{ planType }}</option>
-                </select>
-            </div>
-
-            <div class="filter-group">
                 <i class="fas fa-hourglass-half"></i>
                 <select [(ngModel)]="filterHorizon" (change)="onFilterChange()">
                     <option value="">Tous les horizons</option>
@@ -92,7 +84,7 @@
                 </select>
             </div>
 
-            <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus || filterPlanType || filterHorizon || filterPriority">
+            <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus || filterHorizon || filterPriority">
                 <i class="fas fa-undo"></i> Reinitialiser
             </button>
         </div>
@@ -107,12 +99,13 @@
             <i class="fas fa-circle-notch fa-spin"></i> {{ isSuperAdmin ? 'Chargement des enregistrements...' : 'Chargement de vos enregistrements...' }}
         </div>
 
-        <table class="audit-table" *ngIf="!isLoading">
+        <div class="table-scroll" *ngIf="!isLoading">
+        <table class="audit-table">
             <thead>
                 <tr>
 
                     <th>Reference</th>
-                    <th>Type de plan</th>
+                    <th>Audit</th>
                     <th>Senior Audit</th>
                     <th>Risque / Source</th>
                     <th>Horizon</th>
@@ -131,7 +124,7 @@
                             <small>{{ getDisplayDescription(mission) | slice:0:90 }}{{ getDisplayDescription(mission).length > 90 ? '...' : '' }}</small>
                         </div>
                     </td>
-                    <td>{{ mission.planActionType || '-' }}</td>
+                    <td>{{ getDisplayTitle(mission) }}</td>
                     <td>
                         <div class="senior-info" *ngIf="mission.auditSenior">
                             <i class="fas fa-user-tie"></i>
@@ -181,15 +174,7 @@
                 </tr>
             </tbody>
         </table>
-
-        <app-pagination
-            *ngIf="!isLoading && filteredMissions.length > 0"
-            [totalItems]="filteredMissions.length"
-            [currentPage]="currentPage"
-            [pageSize]="pageSize"
-            [pageSizeOptions]="pageSizeOptions"
-            (pageChanged)="onPaginationChange($event)">
-        </app-pagination>
+        </div>
     </div>
 
     <app-modal *ngIf="showReportModal" title="Soumettre Rapport d Audit" (close)="showReportModal = false">
@@ -218,7 +203,7 @@
             </div>
 
             <div *ngIf="!isLoading && currentChecklistItems.length === 0" class="empty-state" style="padding: 2rem; text-align: center;">
-                <p>Aucun plan d action associe a cette mission.</p>
+                <p>Aucune checklist associee a cet audit.</p>
             </div>
 
             <table class="audit-table" *ngIf="!isLoading && currentChecklistItems.length > 0">
@@ -283,7 +268,7 @@
         </div>
     </app-modal>
 
-    <app-modal *ngIf="showDetailModal" [title]="getRecordTypeLabel(selectedMission) + ' - Details'" (close)="showDetailModal = false">
+    <app-modal *ngIf="showDetailModal" [title]="'Audit - Details'" (close)="showDetailModal = false">
         <div #projected modal-body class="modal-form">
             <div class="detail-grid">
 
@@ -301,11 +286,11 @@
                     <label>Description</label>
                     <p>{{ getDisplayDescription(selectedMission) }}</p>
                 </div>
-                <div class="detail-item" *ngIf="isActionPlanRecord(selectedMission)">
+                <div class="detail-item">
                     <label>Horizon</label>
                     <span>{{ horizonLabelMap[selectedMission?.horizon || ''] || '-' }}</span>
                 </div>
-                <div class="detail-item" *ngIf="isActionPlanRecord(selectedMission)">
+                <div class="detail-item">
                     <label>Priorite</label>
                     <span>{{ selectedMission?.priorite ?? '-' }}</span>
                 </div>

@@ -20,12 +20,13 @@
       "values": [
         { "id": 1, "symbol": "RISK_MANAGER", "code": "risk_manager", "label": "Risk Manager", "sortOrder": 1 },
         { "id": 2, "symbol": "RISK_AGENT", "code": "risk_agent", "label": "Risk Agent", "sortOrder": 2 },
-        { "id": 3, "symbol": "AUDIT_SENIOR", "code": "audit_senior", "label": "Audit Senior", "sortOrder": 3 },
-        { "id": 4, "symbol": "AUDITEUR", "code": "auditeur", "label": "Auditeur", "sortOrder": 4 },
-        { "id": 5, "symbol": "TOP_MANAGEMENT", "code": "top_management", "label": "Top Management", "sortOrder": 5 },
-        { "id": 6, "symbol": "ADMIN_SI", "code": "admin_si", "label": "Administrateur SI", "sortOrder": 6 },
-        { "id": 7, "symbol": "SUPER_ADMIN", "code": "super_admin", "label": "Super Admin", "sortOrder": 7 },
-        { "id": 10, "symbol": "CONTROLLER", "code": "controller", "label": "Controller", "sortOrder": 8 }
+        { "id": 3, "symbol": "AUDIT_DIRECTEUR", "code": "audit_directeur", "label": "Audit Directeur", "sortOrder": 3 },
+        { "id": 4, "symbol": "AUDITEUR", "code": "auditeur", "label": "Auditeur", "sortOrder": 5 },
+        { "id": 5, "symbol": "TOP_MANAGEMENT", "code": "top_management", "label": "Top Management", "sortOrder": 6 },
+        { "id": 6, "symbol": "ADMIN_SI", "code": "admin_si", "label": "Administrateur SI", "sortOrder": 7 },
+        { "id": 7, "symbol": "SUPER_ADMIN", "code": "super_admin", "label": "Super Admin", "sortOrder": 8 },
+        { "id": 9, "symbol": "AUDIT_RESPONSABLE", "code": "audit_responsable", "label": "Audit Responsable", "sortOrder": 4 },
+        { "id": 10, "symbol": "CONTROLLER", "code": "controller", "label": "Controller", "sortOrder": 9 }
       ]
     },
     {

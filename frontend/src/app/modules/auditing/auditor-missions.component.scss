@@ -2,6 +2,17 @@
 @import 'auditing.component.scss';
 
 .auditor-view {
+    .table-scroll {
+        max-height: 70vh;
+        overflow: auto;
+    }
+
+    .table-scroll .audit-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

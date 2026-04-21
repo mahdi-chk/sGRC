@@ -34,6 +34,7 @@ export type AuditRecordType = typeof AuditRecordType[keyof typeof AuditRecordTyp
 export class AuditMission extends LookupAwareModel {
     public id!: number;
     public type!: AuditRecordType;
+    public planActionType!: string | null;
     public code!: string | null;
     public titre!: string;
     public objectifs!: string | null;
@@ -72,6 +73,10 @@ AuditMission.init(
             type: DataTypes.STRING(40),
             allowNull: false,
             defaultValue: AuditRecordType.MISSION_AUDIT,
+        },
+        planActionType: {
+            type: DataTypes.STRING(120),
+            allowNull: true,
         },
         code: {
             type: DataTypes.STRING(80),

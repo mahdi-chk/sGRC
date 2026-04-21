@@ -10,6 +10,7 @@ import { AIDataService } from './ai.data.service';
 import { AIPromptBuilder } from './ai-prompt-builder';
 import { DocumentTextExtractor } from './document-text-extractor';
 import { UserRole } from '../users/user.roles';
+import { AuditRecordType } from '../auditing/audit-mission.model';
 import { Response } from 'express';
 import * as mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
@@ -270,11 +271,16 @@ export class AIService {
         });
     }
 
-    private static async buildAuditPlanPrompt(riskMapping: string, standardsContext: string): Promise<string> {
+    private static async buildAuditPlanPrompt(
+        riskMapping: string,
+        standardsContext: string,
+        generationType: string
+    ): Promise<string> {
         return AIPromptBuilder.buildPrompt({
             name: 'audit_plan_generation',
             businessPayload: {
                 standardsContext,
+                generationType,
             },
             userInput: riskMapping,
         });
@@ -704,7 +710,11 @@ export class AIService {
      * GÃ‰NÃ‰RATION DU PLAN D'AUDIT ANNUEL PAR IA
      * SuggÃ¨re des missions d'audit basÃ©es sur les risques identifiÃ©s.
      */
-    static async generateAuditPlan(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
+    static async generateAuditPlan(
+        risks: any[],
+        role: UserRole = UserRole.AUDIT_SENIOR,
+        generationType: string = AuditRecordType.MISSION_AUDIT
+    ): Promise<any[]> {
         if (!risks || risks.length === 0) return [];
 
         // Cap to top 15 risks to keep prompt within context limits
@@ -722,6 +732,7 @@ export class AIService {
                 riskCount: risks.length,
                 cappedRiskCount: cappedRisks.length,
                 contextName: 'audit_plan_generation',
+                generationType,
             });
 
             const isIndexed = await RAGEngine.checkIndexStatus();
@@ -737,7 +748,7 @@ export class AIService {
             }
 
             const riskMapping = cappedRisks.map(r => `${r.id}: ${r.titre}`).join('\n');
-            const auditPlanPrompt = await this.buildAuditPlanPrompt(riskMapping, standardsContext);
+            const auditPlanPrompt = await this.buildAuditPlanPrompt(riskMapping, standardsContext, generationType);
 
             appLogger.debug('AI', 'Audit plan prompt built', {
                 riskCount: cappedRisks.length,

@@ -35,6 +35,9 @@ export class AuditingComponent implements OnInit {
 
   filterSearch = '';
   filterStatus = '';
+  filterPlanType = '';
+  filterHorizon = '';
+  filterPriority = '';
   currentPage = 1;
   pageSize = 10;
   readonly pageSizeOptions = [10, 25, 50, 100];
@@ -64,6 +67,7 @@ export class AuditingComponent implements OnInit {
   currentChecklistItems: AuditMissionActionPlanItem[] = [];
   backendUrl = environment.apiUrl.replace('/api', '');
   importFile: File | null = null;
+  importPlanActionType = '';
   risks: any[] = [];
 
   reportData = {
@@ -147,14 +151,18 @@ export class AuditingComponent implements OnInit {
         || (m.titre || '').toLowerCase().includes(q)
         || (m.regleDnssi || '').toLowerCase().includes(q)
         || (m.recommandations || m.objectifs || '').toLowerCase().includes(q)
+        || (m.planActionType || '').toLowerCase().includes(q)
         || (m.auditeur && `${m.auditeur.prenom} ${m.auditeur.nom}`.toLowerCase().includes(q))
         || (m.responsabilites || '').toLowerCase().includes(q);
 
       const missionStatut = this.normalizeMissionStatus((m as any).statutCode || m.statut);
       const filterStatut = this.normalizeMissionStatus(this.filterStatus);
       const matchStatus = !filterStatut || missionStatut === filterStatut;
+      const matchPlanType = !this.filterPlanType || (m.planActionType || '') === this.filterPlanType;
+      const matchHorizon = !this.filterHorizon || (m.horizon || '') === this.filterHorizon;
+      const matchPriority = !this.filterPriority || String(m.priorite ?? '') === this.filterPriority;
 
-      return matchSearch && matchStatus;
+      return matchSearch && matchStatus && matchPlanType && matchHorizon && matchPriority;
     });
     this.currentPage = 1;
     this.updatePagedMissions();
@@ -167,6 +175,9 @@ export class AuditingComponent implements OnInit {
   clearFilters() {
     this.filterSearch = '';
     this.filterStatus = '';
+    this.filterPlanType = '';
+    this.filterHorizon = '';
+    this.filterPriority = '';
     this.applyFilters();
   }
 
@@ -188,6 +199,14 @@ export class AuditingComponent implements OnInit {
     }
 
     return `${words.slice(0, maxWords).join(' ')}...`;
+  }
+
+  get availablePlanTypes(): string[] {
+    return Array.from(new Set(
+      this.missions
+        .map((mission) => (mission.planActionType || '').trim())
+        .filter((value) => !!value)
+    )).sort((a, b) => a.localeCompare(b));
   }
 
   calculateStats() {
@@ -228,6 +247,7 @@ export class AuditingComponent implements OnInit {
     this.selectedMission = {
       id: 0,
       type: AuditRecordType.PLAN_ACTION_AUDIT,
+      planActionType: '',
       titre: '',
       objectifs: '',
       responsabilites: '',
@@ -249,6 +269,7 @@ export class AuditingComponent implements OnInit {
 
   openImportModal() {
     this.importFile = null;
+    this.importPlanActionType = '';
     this.showImportModal = true;
   }
 
@@ -269,11 +290,12 @@ export class AuditingComponent implements OnInit {
     }
 
     this.isImporting = true;
-    this.auditingService.importMissions(this.importFile).subscribe({
+    this.auditingService.importMissions(this.importFile, this.importPlanActionType).subscribe({
       next: () => {
         this.isImporting = false;
         this.showImportModal = false;
         this.importFile = null;
+        this.importPlanActionType = '';
         this.loadMissions();
       },
       error: (err) => {
@@ -299,6 +321,9 @@ export class AuditingComponent implements OnInit {
     if (!this.selectedMission?.type) {
       this.selectedMission!.type = AuditRecordType.PLAN_ACTION_AUDIT;
     }
+    if (!this.selectedMission?.planActionType) {
+      this.selectedMission!.planActionType = '';
+    }
     this.showEditModal = true;
   }
 
@@ -309,6 +334,7 @@ export class AuditingComponent implements OnInit {
     const payload = {
       ...this.selectedMission,
       type: this.selectedMission.type || AuditRecordType.PLAN_ACTION_AUDIT,
+      planActionType: (this.selectedMission.planActionType || '').trim() || null,
       titre: this.selectedMission.regleDnssi || this.selectedMission.titre || '',
       objectifs: this.selectedMission.recommandations || this.selectedMission.objectifs || '',
       recommandations: this.selectedMission.recommandations || this.selectedMission.objectifs || ''
@@ -472,6 +498,7 @@ export class AuditingComponent implements OnInit {
   exportToXLSX() {
     const dataToExport = this.filteredMissions.map((m) => ({
       'ID': m.id,
+      'Type de plan d action': m.planActionType || '',
       'Règle DNSSI': m.regleDnssi || m.titre,
       'Recommandations': m.recommandations || m.objectifs || '',
       'Horizon': this.horizonLabelMap[String(m.horizon || '')] || '',
@@ -494,9 +521,10 @@ export class AuditingComponent implements OnInit {
     doc.setTextColor(0, 74, 153);
     doc.text('Rapport de Gestion des Audits', 14, 22);
 
-    const columns = ['ID', 'Règle DNSSI', 'Recommandations', 'Horizon', 'Priorité', 'Responsable', 'Échéance', 'Etat d\'avancement'];
+    const columns = ['ID', 'Type de plan', 'Règle DNSSI', 'Recommandations', 'Horizon', 'Priorité', 'Responsable', 'Échéance', 'Etat d\'avancement'];
     const rows = this.filteredMissions.map((m) => [
       String(m.id),
+      m.planActionType || '',
       m.regleDnssi || m.titre,
       m.recommandations || m.objectifs || '',
       this.horizonLabelMap[String(m.horizon || '')] || '',

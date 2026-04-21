@@ -26,6 +26,7 @@ type MissionListFilter = {
 type ActionPlanImportOptions = {
     sourceMissionId?: number | null;
     riskId?: number | null;
+    planActionType?: string | null;
     replaceExisting?: boolean;
 };
 
@@ -141,6 +142,10 @@ export class AuditingService {
         return cleaned ? cleaned : null;
     }
 
+    private static normalizePlanActionType(value: unknown): string | null {
+        return this.cleanString(value);
+    }
+
     private static toInteger(value: unknown): number | null {
         if (value === null || value === undefined || value === '') {
             return null;
@@ -212,6 +217,9 @@ export class AuditingService {
 
         return {
             type: AuditRecordType.PLAN_ACTION_AUDIT,
+            planActionType: this.normalizePlanActionType(
+                merged.planActionType !== undefined ? merged.planActionType : merged.typePlanAction
+            ),
             code: this.cleanString(merged.code),
             titre: this.buildActionPlanTitle(merged),
             objectifs: recommandations,
@@ -240,6 +248,9 @@ export class AuditingService {
 
         return {
             type: AuditRecordType.MISSION_AUDIT,
+            planActionType: this.normalizePlanActionType(
+                merged.planActionType !== undefined ? merged.planActionType : merged.typePlanAction
+            ),
             code: this.cleanString(merged.code),
             titre: this.cleanString(merged.titre),
             objectifs: this.cleanString(merged.objectifs),
@@ -341,6 +352,7 @@ export class AuditingService {
             ordre: record.ordre ?? 0,
             regleDnssi: record.regleDnssi || record.titre,
             recommandations: record.recommandations || record.objectifs || '',
+            planActionType: record.planActionType || null,
             horizon: record.horizon || null,
             priorite: record.priorite ?? null,
             responsableId: record.auditeurId ?? null,
@@ -375,6 +387,7 @@ export class AuditingService {
 
         return {
             ordre: findIndex('ordre', 'numero'),
+            planActionType: findIndex('type de plan d action', 'type plan action', 'type action', 'categorie plan'),
             regleDnssi: findIndex('regle dnssi', 'dnssi', 'regle'),
             recommandations: findIndex('recommandations', 'recommendations', 'action', 'mesure', 'description'),
             horizon: findIndex('horizon'),
@@ -416,6 +429,7 @@ export class AuditingService {
             payloads.push({
                 ...baseDefaults,
                 ordre: row[1] ? Number(row[1]) : index + 1,
+                planActionType: this.normalizePlanActionType(baseDefaults.planActionType),
                 regleDnssi,
                 titre: regleDnssi,
                 objectifs: recommandations,
@@ -484,6 +498,9 @@ export class AuditingService {
             payloads.push({
                 ...baseDefaults,
                 ordre: readCell(columnIndexes.ordre, 1) ? Number(readCell(columnIndexes.ordre, 1)) : index + 1,
+                planActionType: this.normalizePlanActionType(
+                    readCell(columnIndexes.planActionType, -1) || baseDefaults.planActionType
+                ),
                 regleDnssi,
                 titre: regleDnssi,
                 objectifs: recommandations,
@@ -550,10 +567,11 @@ export class AuditingService {
 
         const normalizedType = this.normalizeRecordType(type);
         const sortedRisks = [...risks].sort((a, b) => (b.niveauCotationRisqueNet || 0) - (a.niveauCotationRisqueNet || 0));
-        const suggestions = await AIService.generateAuditPlan(sortedRisks, role);
+        const suggestions = await AIService.generateAuditPlan(sortedRisks, role, normalizedType);
         return suggestions.map((item) => ({
             ...item,
             type: normalizedType,
+            planActionType: item.planActionType || item.typePlanAction || null,
             regleDnssi: item.regleDnssi || item.titre || null,
             recommandations: item.recommandations || item.objectifs || item.titre || null,
         }));
@@ -569,6 +587,7 @@ export class AuditingService {
                     ...data,
                     auditSeniorId: seniorId,
                     type: normalizedType,
+                    planActionType: data.planActionType || data.typePlanAction || null,
                     titre: data.titre || data.regleDnssi || data.code,
                     regleDnssi: data.regleDnssi || data.titre || null,
                     recommandations: data.recommandations || data.objectifs || data.titre || '',
@@ -580,6 +599,7 @@ export class AuditingService {
                     ...data,
                     auditSeniorId: seniorId,
                     type: normalizedType,
+                    planActionType: data.planActionType || data.typePlanAction || null,
                     statut: AuditMissionStatus.NOK,
                     delai: data.delai || new Date(Date.now() + (data.delaiSuggestion || 30) * 24 * 60 * 60 * 1000),
                 });
@@ -787,6 +807,7 @@ export class AuditingService {
             type: AuditRecordType.PLAN_ACTION_AUDIT,
             riskId: options.riskId ?? null,
             sourceMissionId: options.sourceMissionId ?? null,
+            planActionType: options.planActionType ?? null,
         });
 
         if (options.replaceExisting) {
@@ -808,11 +829,17 @@ export class AuditingService {
         return this.createActionPlanRecords(rows);
     }
 
-    static async importMissionsFromExcel(actorId: number, file: Express.Multer.File, riskId: number | null = null) {
+    static async importMissionsFromExcel(
+        actorId: number,
+        file: Express.Multer.File,
+        riskId: number | null = null,
+        planActionType: string | null = null
+    ) {
         const rows = await this.parseActionPlanImportRowsRobust(file, {
             auditSeniorId: actorId,
             type: AuditRecordType.MISSION_AUDIT,
             riskId,
+            planActionType,
         });
 
         const createdRecords: AuditMission[] = [];

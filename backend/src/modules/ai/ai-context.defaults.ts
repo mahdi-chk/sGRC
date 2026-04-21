@@ -34,16 +34,22 @@ const auditRoleInstructionContext = [
 
 const auditPlanGenerationBusinessContext = [
     'Le contexte des normes et la liste des risques a couvrir sont fournis plus bas.',
+    'Le type d enregistrement demande est fourni plus bas dans GENERATION TYPE.',
     'Tu dois produire un plan d audit annuel credible, priorise et directement exploitable dans sGRC.',
     'Chaque proposition doit etre rattachee a un riskId fourni, avec un titre professionnel, des objectifs auditables et un delaiSuggestion realiste.',
+    'Quand GENERATION TYPE vaut plan_action_audit, ajoute un champ planActionType qui decrit le type metier du plan d action attendu, par exemple cybersecurite, conformite, continuite, IAM ou sensibilisation.',
 ].join(' ');
 
 const auditPlanGenerationInstructionContext = [
     'Tout le contenu doit etre en FRANCAIS.',
-    'Retourne UNIQUEMENT un tableau JSON valide avec : titre, objectifs, responsabilites, delaiSuggestion, riskId.',
+    'Si GENERATION TYPE = mission_audit, retourne UNIQUEMENT un tableau JSON valide avec : titre, objectifs, responsabilites, delaiSuggestion, riskId, planActionType.',
+    'Si GENERATION TYPE = plan_action_audit, retourne UNIQUEMENT un tableau JSON valide avec : titre, regleDnssi, recommandations, responsabilites, delaiSuggestion, riskId, horizon, priorite, planActionType.',
     'Ne cree jamais de riskId absent de la liste fournie.',
     'Le champ responsabilites doit decrire brievement qui pilote ou contribue a la mission.',
     'Le champ delaiSuggestion doit etre un nombre entier de jours.',
+    'Le champ planActionType doit etre un libelle metier court et lisible, jamais mission_audit ni plan_action_audit.',
+    'Le champ horizon doit etre soit court_terme soit moyen_terme quand il est demande.',
+    'Le champ priorite doit etre 1, 2 ou 3 quand il est demande.',
     'Priorise les risques eleves et formule des missions d audit ou des actions de suivi claires, sans texte hors JSON.',
 ].join(' ');
 

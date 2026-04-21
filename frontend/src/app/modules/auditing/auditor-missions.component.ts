@@ -35,6 +35,9 @@ export class AuditorMissionsComponent implements OnInit {
 
     filterSearch = '';
     filterStatus = '';
+    filterPlanType = '';
+    filterHorizon = '';
+    filterPriority = '';
 
     showReportModal = false;
     showDetailModal = false;
@@ -121,6 +124,7 @@ export class AuditorMissionsComponent implements OnInit {
                 || String(mission.id).includes(q)
                 || (mission.titre || '').toLowerCase().includes(q)
                 || (mission.regleDnssi || '').toLowerCase().includes(q)
+                || (mission.planActionType || '').toLowerCase().includes(q)
                 || (mission.recommandations || mission.objectifs || '').toLowerCase().includes(q)
                 || (mission.responsabilites || '').toLowerCase().includes(q)
                 || (mission.risk?.titre || '').toLowerCase().includes(q)
@@ -130,8 +134,11 @@ export class AuditorMissionsComponent implements OnInit {
             const missionStatut = this.normalizeMissionStatus((mission as any).statutCode || mission.statut);
             const filterStatut = this.normalizeMissionStatus(this.filterStatus);
             const matchStatus = !filterStatut || missionStatut === filterStatut;
+            const matchPlanType = !this.filterPlanType || (mission.planActionType || '') === this.filterPlanType;
+            const matchHorizon = !this.filterHorizon || (mission.horizon || '') === this.filterHorizon;
+            const matchPriority = !this.filterPriority || String(mission.priorite ?? '') === this.filterPriority;
 
-            return matchSearch && matchStatus;
+            return matchSearch && matchStatus && matchPlanType && matchHorizon && matchPriority;
         });
         this.currentPage = 1;
         this.updatePagedMissions();
@@ -155,6 +162,9 @@ export class AuditorMissionsComponent implements OnInit {
     clearFilters() {
         this.filterSearch = '';
         this.filterStatus = '';
+        this.filterPlanType = '';
+        this.filterHorizon = '';
+        this.filterPriority = '';
         this.applyFilters();
     }
 
@@ -210,6 +220,14 @@ export class AuditorMissionsComponent implements OnInit {
         }
 
         return mission.recommandations || mission.objectifs || mission.responsabilites || '-';
+    }
+
+    get availablePlanTypes(): string[] {
+        return Array.from(new Set(
+            this.missions
+                .map((mission) => (mission.planActionType || '').trim())
+                .filter((value) => !!value)
+        )).sort((a, b) => a.localeCompare(b));
     }
 
     getStatusLabel(value?: string | null): string {

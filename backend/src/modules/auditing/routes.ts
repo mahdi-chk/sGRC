@@ -206,6 +206,7 @@ router.post('/action-plans/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRol
 
         const items = await AuditingService.importActionPlans(req.user!.id, req.file, {
             riskId: req.body?.riskId ? Number(req.body.riskId) : null,
+            planActionType: typeof req.body?.planActionType === 'string' ? req.body.planActionType : null,
             replaceExisting: false,
         });
         res.status(201).json(items);
@@ -221,7 +222,8 @@ router.post('/missions/import', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AU
         }
 
         const riskId = req.body?.riskId ? Number(req.body.riskId) : null;
-        const missions = await AuditingService.importMissionsFromExcel(req.user!.id, req.file, riskId);
+        const planActionType = typeof req.body?.planActionType === 'string' ? req.body.planActionType : null;
+        const missions = await AuditingService.importMissionsFromExcel(req.user!.id, req.file, riskId, planActionType);
         res.status(201).json(missions);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de l import des missions', error: error.message });

@@ -31,6 +31,7 @@ export enum AuditRecordType {
 export interface AuditMission {
     id: number;
     type?: AuditRecordType;
+    planActionType?: string | null;
     code?: string | null;
     titre: string;
     objectifs?: string | null;
@@ -88,6 +89,7 @@ export interface AuditMissionActionPlanItem {
     ordre: number;
     regleDnssi: string;
     recommandations: string;
+    planActionType?: string | null;
     horizon: string | null;
     priorite: number | null;
     responsableId: number | null;
@@ -103,6 +105,7 @@ export interface AuditMissionActionPlanItem {
 export interface AuditMissionActionPlanPayload {
     code?: string | null;
     titre?: string | null;
+    planActionType?: string | null;
     ordre?: number;
     regleDnssi: string;
     recommandations: string;
@@ -190,18 +193,24 @@ export class AuditingService {
         return this.http.delete(`${this.apiUrl}/action-plans/${actionPlanId}`);
     }
 
-    importActionPlans(file: File, riskId?: number | null): Observable<AuditMission[]> {
+    importActionPlans(file: File, riskId?: number | null, planActionType?: string | null): Observable<AuditMission[]> {
         const formData = new FormData();
         formData.append('file', file);
         if (riskId) {
             formData.append('riskId', String(riskId));
         }
+        if (planActionType) {
+            formData.append('planActionType', planActionType);
+        }
         return this.http.post<AuditMission[]>(`${this.apiUrl}/action-plans/import`, formData);
     }
 
-    importMissions(file: File): Observable<AuditMission[]> {
+    importMissions(file: File, planActionType?: string | null): Observable<AuditMission[]> {
         const formData = new FormData();
         formData.append('file', file);
+        if (planActionType) {
+            formData.append('planActionType', planActionType);
+        }
         return this.http.post<AuditMission[]>(`${this.apiUrl}/missions/import`, formData);
     }
 

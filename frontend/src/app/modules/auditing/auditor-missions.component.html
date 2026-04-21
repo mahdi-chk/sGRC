@@ -65,7 +65,34 @@
                 </select>
             </div>
 
-            <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus">
+            <div class="filter-group">
+                <i class="fas fa-layer-group"></i>
+                <select [(ngModel)]="filterPlanType" (change)="onFilterChange()">
+                    <option value="">Tous les types de plan</option>
+                    <option *ngFor="let planType of availablePlanTypes" [value]="planType">{{ planType }}</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <i class="fas fa-hourglass-half"></i>
+                <select [(ngModel)]="filterHorizon" (change)="onFilterChange()">
+                    <option value="">Tous les horizons</option>
+                    <option [value]="AuditMissionHorizon.COURT_TERME">{{ horizonLabelMap[AuditMissionHorizon.COURT_TERME] }}</option>
+                    <option [value]="AuditMissionHorizon.MOYEN_TERME">{{ horizonLabelMap[AuditMissionHorizon.MOYEN_TERME] }}</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <i class="fas fa-sort-numeric-down"></i>
+                <select [(ngModel)]="filterPriority" (change)="onFilterChange()">
+                    <option value="">Toutes les priorites</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+
+            <button class="btn-reset" (click)="clearFilters()" *ngIf="filterSearch || filterStatus || filterPlanType || filterHorizon || filterPriority">
                 <i class="fas fa-undo"></i> Reinitialiser
             </button>
         </div>
@@ -85,8 +112,11 @@
                 <tr>
 
                     <th>Reference</th>
+                    <th>Type de plan</th>
                     <th>Senior Audit</th>
                     <th>Risque / Source</th>
+                    <th>Horizon</th>
+                    <th>Priorite</th>
                     <th>Echeance</th>
                     <th>Statut</th>
                     <th>Actions</th>
@@ -101,6 +131,7 @@
                             <small>{{ getDisplayDescription(mission) | slice:0:90 }}{{ getDisplayDescription(mission).length > 90 ? '...' : '' }}</small>
                         </div>
                     </td>
+                    <td>{{ mission.planActionType || '-' }}</td>
                     <td>
                         <div class="senior-info" *ngIf="mission.auditSenior">
                             <i class="fas fa-user-tie"></i>
@@ -114,6 +145,8 @@
                         </div>
                         <span *ngIf="!mission.risk && !mission.sourceMission">-</span>
                     </td>
+                    <td>{{ horizonLabelMap[mission.horizon || ''] || '-' }}</td>
+                    <td>{{ mission.priorite ?? '-' }}</td>
                     <td>{{ mission.delai ? (mission.delai | date:'dd/MM/yyyy') : '-' }}</td>
                     <td>
                         <span [class]="'badge status-' + getNormalizedStatus(mission)">
@@ -141,7 +174,7 @@
                     </td>
                 </tr>
                 <tr *ngIf="filteredMissions.length === 0">
-                    <td colspan="6" class="empty-state">
+                    <td colspan="9" class="empty-state">
                         <i class="fas fa-check-circle"></i>
                         <p>Aucun enregistrement d audit assigne pour le moment.</p>
                     </td>

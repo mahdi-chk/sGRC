@@ -198,6 +198,11 @@
     text-align: center !important;
 }
 
+.audit-table th:nth-child(2),
+.audit-table td:nth-child(2) {
+    min-width: 160px;
+}
+
 .cell-rule {
     font-weight: 600;
     color: #1e293b;

@@ -175,6 +175,14 @@
             </tbody>
         </table>
         </div>
+        
+        <app-pagination
+            *ngIf="!isLoading && filteredMissions.length > 0"
+            [totalItems]="filteredMissions.length"
+            [currentPage]="currentPage"
+            [pageSize]="pageSize"
+            (pageChanged)="onPageChange($event)">
+        </app-pagination>
     </div>
 
     <app-modal *ngIf="showReportModal" title="Soumettre Rapport d Audit" (close)="showReportModal = false">

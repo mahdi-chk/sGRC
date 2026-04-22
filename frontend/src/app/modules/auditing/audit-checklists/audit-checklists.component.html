@@ -22,25 +22,23 @@
         <p class="error" *ngIf="error">{{ error }}</p>
     </div>
 
-    <div class="layout-grid checklist-workspace">
-        <aside class="panel mission-panel">
-            <div class="panel-head">
+    <div class="dual-layout">
+        <aside class="sidebar-list">
+            <div class="list-header">
                 <h2>Missions</h2>
                 <p>Selectionnez une mission pour voir sa checklist et son avancement.</p>
             </div>
 
-            <div class="mission-list">
-                <button
-                    type="button"
-                    class="mission-list-item"
+            <div class="item-list">
+                <li
                     *ngFor="let mission of missions"
                     [class.active]="mission.id === selectedMissionId"
                     (click)="selectMission(mission.id)">
-                    <span class="mission-list-title">{{ mission.titre }}</span>
-                    <span class="mission-list-meta">
+                    <span class="item-title">{{ mission.titre }}</span>
+                    <span class="item-meta">
                         {{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Non assignee' }}
                     </span>
-                </button>
+                </li>
                 <div class="empty-state" *ngIf="missions.length === 0">
                     <p>Aucune mission disponible.</p>
                 </div>
@@ -53,76 +51,78 @@
             </div>
         </aside>
 
-        <section class="panel content-panel">
-            <div class="panel-head hero-head" *ngIf="selectedMission">
-                <div>
-                    <h2>{{ selectedMission.titre }}</h2>
-                    <p>Vue manager: affectation, consultation et suivi de la progression.</p>
+        <section class="main-content">
+            <div class="panel content-panel" *ngIf="selectedMission">
+                <div class="panel-head hero-head">
+                    <div>
+                        <h2>{{ selectedMission.titre }}</h2>
+                        <p>Vue manager: affectation, consultation et suivi de la progression.</p>
+                    </div>
+                    <div class="hero-meta">
+                        <span class="meta-label">Avancement</span>
+                        <strong>{{ progressPercent }}%</strong>
+                        <small>{{ completedItems }}/{{ missionChecklistItems.length }} item(s) coches</small>
+                    </div>
                 </div>
-                <div class="hero-meta">
-                    <span class="meta-label">Avancement</span>
-                    <strong>{{ progressPercent }}%</strong>
-                    <small>{{ completedItems }}/{{ missionChecklistItems.length }} item(s) coches</small>
+
+                <div class="manager-grid">
+                    <div class="composer-card">
+                        <div class="composer-head">
+                            <div>
+                                <h3>Affecter une checklist</h3>
+                                <p>Associez un modele a la mission selectionnee.</p>
+                            </div>
+                            <button class="btn-primary" (click)="assignTemplate()" [disabled]="!selectedMissionId || !selectedTemplateId || isSaving">
+                                {{ isSaving ? 'Affectation...' : 'Affecter' }}
+                            </button>
+                        </div>
+
+                        <div class="form-grid compact-grid">
+                            <label class="field field-wide">
+                                <span>Modele de checklist</span>
+                                <select [(ngModel)]="selectedTemplateId">
+                                    <option [ngValue]="null">Selectionner une checklist</option>
+                                    <option *ngFor="let template of templates" [ngValue]="template.id">{{ template.titre }}</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="assignment-state">
+                            <span class="summary-label">Checklist assignee</span>
+                            <strong>{{ assignedTemplate?.titre || 'Aucune checklist assignee' }}</strong>
+                            <small *ngIf="assignedTemplate">{{ assignedTemplate.description || 'Sans description' }}</small>
+                        </div>
+                    </div>
+
+                    <div class="composer-card">
+                        <div class="composer-head">
+                            <div>
+                                <h3>Etat d'avancement</h3>
+                                <p>Lecture du travail realise par l'auditeur.</p>
+                            </div>
+                        </div>
+
+                        <div class="progress-bar-shell">
+                            <div class="progress-bar-fill" [style.width.%]="progressPercent"></div>
+                        </div>
+
+                        <div class="checklist-state-list" *ngIf="missionChecklistItems.length > 0; else noItems">
+                            <div class="checklist-state-item" *ngFor="let item of missionChecklistItems">
+                                <span class="check-state" [class.done]="item.estFait">{{ item.estFait ? 'Fait' : 'A faire' }}</span>
+                                <span class="check-text">{{ item.texte }}</span>
+                            </div>
+                        </div>
+
+                        <ng-template #noItems>
+                            <div class="empty-state">
+                                <p>Aucun item de checklist pour cette mission.</p>
+                            </div>
+                        </ng-template>
+                    </div>
                 </div>
             </div>
 
-            <div class="manager-grid" *ngIf="selectedMission">
-                <div class="composer-card">
-                    <div class="composer-head">
-                        <div>
-                            <h3>Affecter une checklist</h3>
-                            <p>Associez un modele a la mission selectionnee.</p>
-                        </div>
-                        <button class="btn-primary" (click)="assignTemplate()" [disabled]="!selectedMissionId || !selectedTemplateId || isSaving">
-                            {{ isSaving ? 'Affectation...' : 'Affecter' }}
-                        </button>
-                    </div>
-
-                    <div class="form-grid compact-grid">
-                        <label class="field field-wide">
-                            <span>Modele de checklist</span>
-                            <select [(ngModel)]="selectedTemplateId">
-                                <option [ngValue]="null">Selectionner une checklist</option>
-                                <option *ngFor="let template of templates" [ngValue]="template.id">{{ template.titre }}</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <div class="assignment-state">
-                        <span class="summary-label">Checklist assignee</span>
-                        <strong>{{ assignedTemplate?.titre || 'Aucune checklist assignee' }}</strong>
-                        <small *ngIf="assignedTemplate">{{ assignedTemplate.description || 'Sans description' }}</small>
-                    </div>
-                </div>
-
-                <div class="composer-card">
-                    <div class="composer-head">
-                        <div>
-                            <h3>Etat d'avancement</h3>
-                            <p>Lecture du travail realise par l'auditeur.</p>
-                        </div>
-                    </div>
-
-                    <div class="progress-bar-shell">
-                        <div class="progress-bar-fill" [style.width.%]="progressPercent"></div>
-                    </div>
-
-                    <div class="checklist-state-list" *ngIf="missionChecklistItems.length > 0; else noItems">
-                        <div class="checklist-state-item" *ngFor="let item of missionChecklistItems">
-                            <span class="check-state" [class.done]="item.estFait">{{ item.estFait ? 'Fait' : 'A faire' }}</span>
-                            <span class="check-text">{{ item.texte }}</span>
-                        </div>
-                    </div>
-
-                    <ng-template #noItems>
-                        <div class="empty-state">
-                            <p>Aucun item de checklist pour cette mission.</p>
-                        </div>
-                    </ng-template>
-                </div>
-            </div>
-
-            <div class="composer-card">
+            <div class="panel composer-card">
                 <div class="composer-head">
                     <div>
                         <h3>{{ editingTemplateId ? 'Modification de modele' : 'Creation de modele' }}</h3>
@@ -152,37 +152,39 @@
                 </div>
             </div>
 
-            <div class="panel-head section-head">
-                <h2>Bibliotheque des checklists</h2>
-                <p>{{ templates.length }} modele(s) disponibles</p>
-            </div>
+            <div class="panel section-panel">
+                <div class="panel-head section-head">
+                    <h2>Bibliotheque des checklists</h2>
+                    <p>{{ templates.length }} modele(s) disponibles</p>
+                </div>
 
-            <div class="empty-state" *ngIf="!isLoading && templates.length === 0">
-                <p>Aucune checklist disponible.</p>
-            </div>
+                <div class="empty-state" *ngIf="!isLoading && templates.length === 0">
+                    <p>Aucune checklist disponible.</p>
+                </div>
 
-            <div class="action-plan-list" *ngIf="templates.length > 0">
-                <article class="action-card" *ngFor="let template of templates">
-                    <div class="action-card-head">
-                        <div class="action-title">
-                            <span class="rule-kicker">Checklist {{ template.id }}</span>
-                            <h3>{{ template.titre }}</h3>
+                <div class="action-plan-list" *ngIf="templates.length > 0">
+                    <article class="action-card" *ngFor="let template of templates">
+                        <div class="action-card-head">
+                            <div class="action-title">
+                                <span class="rule-kicker">Checklist {{ template.id }}</span>
+                                <h3>{{ template.titre }}</h3>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="recommendation-box">
-                        {{ template.description || 'Sans description' }}
-                    </div>
+                        <div class="recommendation-box">
+                            {{ template.description || 'Sans description' }}
+                        </div>
 
-                    <ul class="checklist-preview">
-                        <li *ngFor="let item of template.items">{{ item.texte }}</li>
-                    </ul>
+                        <ul class="checklist-preview">
+                            <li *ngFor="let item of template.items">{{ item.texte }}</li>
+                        </ul>
 
-                    <div class="row-actions">
-                        <button class="btn-secondary" (click)="editTemplate(template)">Modifier</button>
-                        <button class="btn-danger" (click)="deleteTemplate(template)">Supprimer</button>
-                    </div>
-                </article>
+                        <div class="row-actions">
+                            <button class="btn-secondary" (click)="editTemplate(template)">Modifier</button>
+                            <button class="btn-danger" (click)="deleteTemplate(template)">Supprimer</button>
+                        </div>
+                    </article>
+                </div>
             </div>
         </section>
     </div>

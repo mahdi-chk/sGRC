@@ -4,6 +4,8 @@
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 1.5rem;
+  height: calc(100vh - 240px);
+  min-height: 500px;
 }
 
 .card {
@@ -14,6 +16,8 @@
 }
 
 .sidebar-list {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -31,6 +35,8 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .item-list li {
@@ -74,6 +80,7 @@
 
 .main-content {
   padding: 1.4rem;
+  overflow-y: auto;
 }
 
 .content-header {
@@ -324,10 +331,16 @@
 @media (max-width: 960px) {
   .dual-layout {
     grid-template-columns: 1fr;
+    height: auto;
+    max-height: none;
   }
 
   .content-header {
     flex-direction: column;
+  }
+  
+  .item-list, .main-content {
+    max-height: 500px;
   }
 }
 

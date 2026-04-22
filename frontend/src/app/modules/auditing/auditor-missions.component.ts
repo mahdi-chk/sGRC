@@ -24,6 +24,9 @@ export class AuditorMissionsComponent implements OnInit {
     isLoading = false;
     currentUserRole: UserRole | null = getStoredAuditRole();
 
+    currentPage = 1;
+    pageSize = 10;
+
     totalAssigned = 0;
     inProgressCount = 0;
     pendingCount = 0;
@@ -127,11 +130,20 @@ export class AuditorMissionsComponent implements OnInit {
 
             return matchSearch && matchStatus && matchHorizon && matchPriority;
         });
+        this.currentPage = 1;
         this.updatePagedMissions();
     }
 
     private updatePagedMissions() {
-        this.pagedMissions = [...this.filteredMissions];
+        const startIndex = (this.currentPage - 1) * this.pageSize;
+        const endIndex = startIndex + this.pageSize;
+        this.pagedMissions = this.filteredMissions.slice(startIndex, endIndex);
+    }
+
+    onPageChange(event: { page: number, pageSize: number }) {
+        this.currentPage = event.page;
+        this.pageSize = event.pageSize;
+        this.updatePagedMissions();
     }
 
     onFilterChange() {

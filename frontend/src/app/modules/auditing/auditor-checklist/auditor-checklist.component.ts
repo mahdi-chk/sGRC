@@ -46,7 +46,7 @@ export class AuditorChecklistComponent implements OnInit {
     const userId = Number(currentUser.id);
     this.currentUserRole = currentUser.role || null;
 
-    this.auditingService.getMissions(AuditRecordType.MISSION_AUDIT).subscribe({
+    this.auditingService.getMissions('all').subscribe({
       next: (data) => {
         this.missions = (this.isSuperAdmin ? data : data.filter((item) => Number(item.auditeurId) === userId));
         if (this.missions.length > 0) {

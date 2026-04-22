@@ -119,6 +119,14 @@
                     </tbody>
                 </table>
             </div>
+            
+            <app-pagination
+                *ngIf="!isLoadingMissions && filteredMissions.length > 0"
+                [totalItems]="filteredMissions.length"
+                [currentPage]="currentPage"
+                [pageSize]="pageSize"
+                (pageChanged)="onPageChange($event)">
+            </app-pagination>
         </div>
     </div>
 

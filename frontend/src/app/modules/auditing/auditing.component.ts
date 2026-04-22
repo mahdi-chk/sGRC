@@ -33,6 +33,9 @@ export class AuditingComponent implements OnInit {
   pagedMissions: AuditMission[] = [];
   showExportMenu = false;
 
+  currentPage = 1;
+  pageSize = 10;
+
   filterSearch = '';
   filterStatus = '';
   filterHorizon = '';
@@ -169,6 +172,7 @@ export class AuditingComponent implements OnInit {
       return matchSearch && matchStatus && matchHorizon && matchPriority;
     });
 
+    this.currentPage = 1;
     this.updatePagedMissions();
   }
 
@@ -206,7 +210,15 @@ export class AuditingComponent implements OnInit {
   }
 
   private updatePagedMissions() {
-    this.pagedMissions = [...this.filteredMissions];
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.pagedMissions = this.filteredMissions.slice(startIndex, endIndex);
+  }
+
+  onPageChange(event: { page: number, pageSize: number }) {
+    this.currentPage = event.page;
+    this.pageSize = event.pageSize;
+    this.updatePagedMissions();
   }
 
   loadUsers() {

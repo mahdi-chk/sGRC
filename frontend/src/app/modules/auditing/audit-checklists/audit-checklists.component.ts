@@ -68,7 +68,7 @@ export class AuditChecklistsComponent implements OnInit {
   }
 
   loadMissions(): void {
-    this.auditingService.getMissions(AuditRecordType.MISSION_AUDIT).subscribe({
+    this.auditingService.getMissions('all').subscribe({
       next: (missions) => {
         this.missions = missions;
         if (!this.selectedMissionId && missions.length > 0) {

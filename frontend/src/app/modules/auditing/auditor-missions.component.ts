@@ -46,7 +46,7 @@ export class AuditorMissionsComponent implements OnInit {
     currentEvidences: AuditEvidence[] = [];
     selectedFile: File | null = null;
     isUploading = false;
-    backendUrl = environment.apiUrl.replace('/api', '');
+    backendUrl = environment.serverUrl;
 
     reportData = {
         rapport: '',

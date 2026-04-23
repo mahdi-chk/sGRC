@@ -33,6 +33,10 @@ Advanced API servicing the Governance, Risk, and Compliance (GRC) platform.
    ```
 2. **Environment Configuration**:
    Create a `.env` file based on `.env.example`.
+   Configure CORS with external values only:
+   - `FRONTEND_URL` for one exact origin
+   - `CORS_ALLOWED_ORIGINS` for several exact origins
+   - `CORS_ALLOWED_ORIGIN_PATTERNS` for wildcard patterns such as `https://*.example.com`
 3. **Run Platform**:
    ```bash
    npm start

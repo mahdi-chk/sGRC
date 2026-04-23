@@ -1,5 +1,3 @@
-export const environment = {
-    production: true,
-    apiUrl: '/api',
-    serverUrl: ''
-};
+import { createEnvironment } from './runtime-config';
+
+export const environment = createEnvironment(true);

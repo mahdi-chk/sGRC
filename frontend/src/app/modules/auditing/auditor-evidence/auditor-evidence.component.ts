@@ -17,7 +17,7 @@ export class AuditorEvidenceComponent implements OnInit {
   isLoading = false;
   isUploading = false;
   selectedFile: File | null = null;
-  backendUrl = environment.apiUrl.replace('/api', '');
+  backendUrl = environment.serverUrl;
   currentUserRole: UserRole | null = getStoredAuditRole();
 
   constructor(

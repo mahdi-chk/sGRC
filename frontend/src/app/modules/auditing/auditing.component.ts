@@ -64,7 +64,7 @@ export class AuditingComponent implements OnInit {
   selectedAuditorId = '';
   currentEvidences: AuditEvidence[] = [];
   currentChecklistItems: AuditMissionChecklistItem[] = [];
-  backendUrl = environment.apiUrl.replace('/api', '');
+  backendUrl = environment.serverUrl;
   importFile: File | null = null;
   importPlanActionType = '';
 

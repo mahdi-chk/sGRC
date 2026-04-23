@@ -37,9 +37,27 @@ Tailored interfaces with specific KPIs and tools for:
    ```
 2. **Development Server**:
    ```bash
-   ng serve
+   npm start
    ```
    Navigate to `http://localhost:4200/`.
+
+## Runtime Configuration
+
+The frontend reads its backend endpoints from `src/assets/runtime-config.js`.
+
+- `window.__env.API_URL`: API base URL, for example `/api` or `https://api.example.com/api`
+- `window.__env.SERVER_URL`: backend root URL, for example `https://api.example.com`
+
+If no runtime value is provided, the frontend defaults to `/api`, which works with:
+
+- a reverse proxy in test or production
+- the Angular dev proxy configured in `proxy.conf.js`
+
+For local development, you can override the proxy target with:
+
+```bash
+API_PROXY_TARGET=http://127.0.0.1:3000 npm start
+```
 
 ## 📁 Key Directories
 

@@ -14,6 +14,45 @@ dotenv.config();
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
+const parseCsv = (value?: string): string[] =>
+    (value || '')
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
+const wildcardToRegExp = (pattern: string): RegExp => {
+    const escapedPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`^${escapedPattern.replace(/\\\*/g, '.*')}$`, 'i');
+};
+
+const exactAllowedOrigins = Array.from(
+    new Set([
+        ...parseCsv(process.env.CORS_ALLOWED_ORIGINS),
+        ...parseCsv(process.env.FRONTEND_URL),
+    ])
+);
+
+const allowedOriginPatterns = parseCsv(process.env.CORS_ALLOWED_ORIGIN_PATTERNS).map(wildcardToRegExp);
+
+const isLocalOrigin = (origin: string): boolean =>
+    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin);
+
+const isOriginAllowed = (origin: string): boolean => {
+    if (exactAllowedOrigins.includes(origin)) {
+        return true;
+    }
+
+    if (allowedOriginPatterns.some((pattern) => pattern.test(origin))) {
+        return true;
+    }
+
+    if (!isProduction && isLocalOrigin(origin)) {
+        return true;
+    }
+
+    return exactAllowedOrigins.length === 0 && allowedOriginPatterns.length === 0 && isLocalOrigin(origin);
+};
+
 app.use(helmet({
     crossOriginResourcePolicy: false,
 }));
@@ -29,10 +68,9 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:4200'].filter(Boolean) as string[];
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || isOriginAllowed(origin)) {
             callback(null, true);
             return;
         }

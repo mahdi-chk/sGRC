@@ -15,7 +15,7 @@ export class AuditEvidenceExplorerComponent implements OnInit {
   filteredEvidences: AuditEvidence[] = [];
   isLoading = false;
   searchTerm = '';
-  backendUrl = environment.apiUrl.replace('/api', '');
+  backendUrl = environment.serverUrl;
 
   constructor(
     private auditingService: AuditingService,

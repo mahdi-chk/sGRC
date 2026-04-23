@@ -209,7 +209,7 @@
 
             <div class="detail-block full" *ngIf="selectedIncident.pieceJointe">
                 <span class="detail-label">Pièce Jointe</span>
-                <a [href]="environment.apiUrl + '/../' + selectedIncident.pieceJointe"
+                <a [href]="environment.serverUrl + '/' + selectedIncident.pieceJointe"
                     target="_blank" class="doc-link">
                     <i class="fas fa-download"></i> Télécharger le document
                 </a>

@@ -3,30 +3,122 @@ import { appLogger } from './app-logger';
 
 class EmailService {
     private transporter;
+    private readonly smtpConfigured: boolean;
+    private smtpConfigWarningLogged = false;
+    private transportVerified = false;
+    private verificationPromise: Promise<boolean> | null = null;
+    private disabledUntil: number | null = null;
+    private static readonly RETRY_DELAY_MS = 15 * 60 * 1000;
 
     constructor() {
+        this.smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+        if (!this.smtpConfigured) {
+            this.transporter = null;
+            return;
+        }
+
         this.transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'smtp.ethereal.email',
             port: Number(process.env.SMTP_PORT) || 587,
-            secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
+            secure: process.env.SMTP_SECURE === 'true',
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
             },
-            // Force IPv4 if IPv6 is unreachable
             connectionTimeout: 10000,
             greetingTimeout: 10000,
             socketTimeout: 10000,
-            family: 4, // Force IPv4
+            family: 4,
         } as any);
     }
 
-    async sendWelcomeEmail(user: { mail: string; nom: string; prenom: string }) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            appLogger.warn('Email', 'Email sending skipped because SMTP credentials are missing');
+    private logMissingConfig() {
+        if (this.smtpConfigWarningLogged) {
+            return;
+        }
+
+        this.smtpConfigWarningLogged = true;
+        appLogger.warn('Email', 'Email sending skipped because SMTP configuration is incomplete');
+    }
+
+    private markTransportUnavailable(error: any) {
+        this.transportVerified = false;
+        this.disabledUntil = Date.now() + EmailService.RETRY_DELAY_MS;
+        appLogger.error('Email', 'SMTP transport unavailable; email delivery paused temporarily', {
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT) || 587,
+            retryAt: new Date(this.disabledUntil).toISOString(),
+            message: error?.message || 'Unknown error',
+        });
+    }
+
+    private async ensureTransportAvailable() {
+        if (!this.smtpConfigured || !this.transporter) {
+            this.logMissingConfig();
+            return false;
+        }
+
+        if (this.disabledUntil && Date.now() < this.disabledUntil) {
+            return false;
+        }
+
+        if (this.transportVerified) {
+            return true;
+        }
+
+        if (!this.verificationPromise) {
+            this.verificationPromise = this.transporter.verify()
+                .then(() => {
+                    this.transportVerified = true;
+                    this.disabledUntil = null;
+                    appLogger.info('Email', 'SMTP transport verified', {
+                        host: process.env.SMTP_HOST,
+                        port: Number(process.env.SMTP_PORT) || 587,
+                    });
+                    return true;
+                })
+                .catch((error: any) => {
+                    this.markTransportUnavailable(error);
+                    return false;
+                })
+                .finally(() => {
+                    this.verificationPromise = null;
+                });
+        }
+
+        return this.verificationPromise;
+    }
+
+    private async sendMail(mailOptions: any, failureMessage: string, successContext?: Record<string, unknown>) {
+        const canSend = await this.ensureTransportAvailable();
+        if (!canSend || !this.transporter) {
             return null;
         }
 
+        try {
+            const info = await this.transporter.sendMail(mailOptions);
+
+            if (successContext) {
+                appLogger.info('Email', 'Email sent', {
+                    messageId: info.messageId,
+                    ...successContext,
+                });
+            }
+
+            if (info.messageId && process.env.SMTP_HOST === 'smtp.ethereal.email') {
+                appLogger.debug('Email', 'Preview URL available', nodemailer.getTestMessageUrl(info as any));
+            }
+
+            return info;
+        } catch (error: any) {
+            this.markTransportUnavailable(error);
+            appLogger.error('Email', failureMessage, error);
+            return null;
+        }
+    }
+
+    async sendWelcomeEmail(user: { mail: string; nom: string; prenom: string }) {
         const mailOptions = {
             from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
             to: user.mail,
@@ -34,86 +126,59 @@ class EmailService {
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c3e50;">Bienvenue, ${user.prenom} ${user.nom} !</h2>
-                    <p>Votre compte a été créé avec succès sur la plateforme GRC.</p>
-                    <p>Vous pouvez désormais vous connecter en utilisant votre adresse e-mail : <strong>${user.mail}</strong>.</p>
+                    <p>Votre compte a ete cree avec succes sur la plateforme GRC.</p>
+                    <p>Vous pouvez desormais vous connecter en utilisant votre adresse e-mail : <strong>${user.mail}</strong>.</p>
                     <p>Si vous ne connaissez pas votre mot de passe, veuillez contacter votre administrateur.</p>
                     <br>
-                    <p>Cordialement,<br>L'équipe GRC</p>
+                    <p>Cordialement,<br>L'equipe GRC</p>
                 </div>
             `,
         };
 
-        try {
-            const info = await this.transporter.sendMail(mailOptions);
-            appLogger.info('Email', 'Email sent', {
-                messageId: info.messageId,
-                to: user.mail,
-                subject: mailOptions.subject,
-            });
-            // If using ethereal
-            if (info.messageId && process.env.SMTP_HOST === 'smtp.ethereal.email') {
-                appLogger.debug('Email', 'Preview URL available', nodemailer.getTestMessageUrl(info as any));
-            }
-            return info;
-        } catch (error) {
-            appLogger.error('Email', 'Email sending failed', error);
-            // We don't want to block user creation if email fails
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Email sending failed', {
+            to: user.mail,
+            subject: mailOptions.subject,
+        });
     }
 
     async sendRiskAssignedEmail(agent: { mail: string; nom: string; prenom: string }, risk: { titre: string; id: number }) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-
         const mailOptions = {
             from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
             to: agent.mail,
-            subject: `Nouveau risque assigné : ${risk.titre}`,
+            subject: `Nouveau risque assigne : ${risk.titre}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c3e50;">Bonjour ${agent.prenom},</h2>
-                    <p>Un nouveau risque vous a été assigné sur la plateforme GRC.</p>
+                    <p>Un nouveau risque vous a ete assigne sur la plateforme GRC.</p>
                     <p><strong>Risque :</strong> ${risk.titre} (ID: ${risk.id})</p>
-                    <p>Veuillez vous connecter pour consulter les détails et commencer le traitement.</p>
+                    <p>Veuillez vous connecter pour consulter les details et commencer le traitement.</p>
                     <br>
-                    <p>Cordialement,<br>L'équipe GRC</p>
+                    <p>Cordialement,<br>L'equipe GRC</p>
                 </div>
             `,
         };
 
-        try {
-            return await this.transporter.sendMail(mailOptions);
-        } catch (error) {
-            appLogger.error('Email', 'Risk assigned email failed', error);
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Risk assigned email failed');
     }
 
     async sendRiskStatusUpdateEmail(manager: { mail: string; nom: string; prenom: string }, risk: { titre: string; statut: string }) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-
         const mailOptions = {
             from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
             to: manager.mail,
-            subject: `Mise à jour du statut : ${risk.titre}`,
+            subject: `Mise a jour du statut : ${risk.titre}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c3e50;">Bonjour ${manager.prenom},</h2>
-                    <p>Le statut du risque suivant a été mis à jour :</p>
+                    <p>Le statut du risque suivant a ete mis a jour :</p>
                     <p><strong>Risque :</strong> ${risk.titre}</p>
                     <p><strong>Nouveau statut :</strong> ${risk.statut}</p>
                     <br>
-                    <p>Cordialement,<br>L'équipe GRC</p>
+                    <p>Cordialement,<br>L'equipe GRC</p>
                 </div>
             `,
         };
 
-        try {
-            return await this.transporter.sendMail(mailOptions);
-        } catch (error) {
-            appLogger.error('Email', 'Risk status update email failed', error);
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Risk status update email failed');
     }
 
     async sendRiskReminderEmail(
@@ -121,8 +186,6 @@ class EmailService {
         risk: { titre: string; prochaineEcheance?: Date | null },
         message: string
     ) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-
         const deadline = risk.prochaineEcheance
             ? new Date(risk.prochaineEcheance).toLocaleDateString('fr-FR')
             : 'non definie';
@@ -144,44 +207,30 @@ class EmailService {
             `,
         };
 
-        try {
-            return await this.transporter.sendMail(mailOptions);
-        } catch (error) {
-            appLogger.error('Email', 'Risk reminder email failed', error);
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Risk reminder email failed');
     }
 
     async sendAuditMissionAssignedEmail(auditeur: { mail: string; nom: string; prenom: string }, mission: { titre: string; id: number }) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-
         const mailOptions = {
             from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
             to: auditeur.mail,
-            subject: `Nouvelle mission d'audit assignée : ${mission.titre}`,
+            subject: `Nouvelle mission d'audit assignee : ${mission.titre}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c3e50;">Bonjour ${auditeur.prenom},</h2>
-                    <p>Une nouvelle mission d'audit vous a été assignée sur la plateforme GRC.</p>
+                    <p>Une nouvelle mission d'audit vous a ete assignee sur la plateforme GRC.</p>
                     <p><strong>Mission :</strong> ${mission.titre} (ID: ${mission.id})</p>
-                    <p>Veuillez vous connecter pour consulter les détails et commencer l'audit.</p>
+                    <p>Veuillez vous connecter pour consulter les details et commencer l'audit.</p>
                     <br>
-                    <p>Cordialement,<br>L'équipe GRC</p>
+                    <p>Cordialement,<br>L'equipe GRC</p>
                 </div>
             `,
         };
 
-        try {
-            return await this.transporter.sendMail(mailOptions);
-        } catch (error) {
-            appLogger.error('Email', 'Audit mission assigned email failed', error);
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Audit mission assigned email failed');
     }
 
     async sendAuditReportSubmittedEmail(senior: { mail: string; nom: string; prenom: string }, mission: { titre: string; auditeurNom: string }) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-
         const mailOptions = {
             from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
             to: senior.mail,
@@ -189,51 +238,38 @@ class EmailService {
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c3e50;">Bonjour ${senior.prenom},</h2>
-                    <p>Un nouveau rapport d'audit a été soumis pour la mission suivante :</p>
+                    <p>Un nouveau rapport d'audit a ete soumis pour la mission suivante :</p>
                     <p><strong>Mission :</strong> ${mission.titre}</p>
                     <p><strong>Auditeur :</strong> ${mission.auditeurNom}</p>
                     <p>Veuillez vous connecter pour valider les recommandations et clore la mission.</p>
                     <br>
-                    <p>Cordialement,<br>L'équipe GRC</p>
+                    <p>Cordialement,<br>L'equipe GRC</p>
                 </div>
             `,
         };
 
-        try {
-            return await this.transporter.sendMail(mailOptions);
-        } catch (error) {
-            appLogger.error('Email', 'Audit report submitted email failed', error);
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Audit report submitted email failed');
     }
 
     async sendRiskClosedEmail(agent: { mail: string; nom: string; prenom: string }, risk: { titre: string }) {
-        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-
         const mailOptions = {
             from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
             to: agent.mail,
-            subject: `Risque clôturé : ${risk.titre}`,
+            subject: `Risque cloture : ${risk.titre}`,
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c3e50;">Bonjour ${agent.prenom},</h2>
-                    <p>Le risque suivant sur lequel vous avez travaillé a été clôturé par le Risk Manager :</p>
+                    <p>Le risque suivant sur lequel vous avez travaille a ete cloture par le Risk Manager :</p>
                     <p><strong>Risque :</strong> ${risk.titre}</p>
                     <br>
-                    <p>Félicitations pour le traitement !</p>
-                    <p>Cordialement,<br>L'équipe GRC</p>
+                    <p>Felicitations pour le traitement !</p>
+                    <p>Cordialement,<br>L'equipe GRC</p>
                 </div>
             `,
         };
 
-        try {
-            return await this.transporter.sendMail(mailOptions);
-        } catch (error) {
-            appLogger.error('Email', 'Risk closed email failed', error);
-            return null;
-        }
+        return this.sendMail(mailOptions, 'Risk closed email failed');
     }
 }
 
 export const emailService = new EmailService();
-

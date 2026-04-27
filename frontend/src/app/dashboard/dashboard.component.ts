@@ -68,23 +68,24 @@ export class DashboardComponent {
         UserRole.RISK_AGENT,
         UserRole.AUDIT_DIRECTEUR,
         UserRole.AUDIT_RESPONSABLE,
+        UserRole.CHEF_MISSION,
         UserRole.TOP_MANAGEMENT
       ]
     },
     {
       label: 'Incident',
       route: '/dashboard/incidents',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT]
     },
     {
       label: 'Controle',
       route: '/dashboard/controls-referential',
-      roles: [UserRole.SUPER_ADMIN, UserRole.CONTROLLER, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.CONTROLLER, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT]
     },
     {
       label: 'Action',
       route: '/dashboard/actions',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT]
+      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT]
     }
   ];
 
@@ -206,6 +207,7 @@ export class DashboardComponent {
       role === UserRole.RISK_AGENT ||
       role === UserRole.AUDIT_DIRECTEUR ||
       role === UserRole.AUDIT_RESPONSABLE ||
+      role === UserRole.CHEF_MISSION ||
       role === UserRole.TOP_MANAGEMENT;
   }
 
@@ -285,6 +287,10 @@ export class DashboardComponent {
         this.dashboardTitle = 'Dashboard Audit Responsable';
         this.dashboardDesc = 'Assignez les plans d action aux auditeurs et suivez leur traitement.';
         break;
+      case UserRole.CHEF_MISSION:
+        this.dashboardTitle = 'Dashboard Chef de Mission';
+        this.dashboardDesc = 'Pilotez les missions, assignez les auditeurs et suivez l execution des travaux.';
+        break;
       case UserRole.AUDITEUR:
         this.dashboardTitle = 'Dashboard Auditeur';
         this.dashboardDesc = 'Planifiez les missions, supervisez les audits et validez les recommandations.';
@@ -294,7 +300,7 @@ export class DashboardComponent {
         this.dashboardDesc = 'Vision stratégique, indicateurs clés et aide à la décision.';
         break;
       case UserRole.CONTROLLER:
-        this.dashboardTitle = 'Dashboard Controller';
+        this.dashboardTitle = 'Dashboard Controleur Interne';
         this.dashboardDesc = 'Supervisez les contrôles, suivez les référentiels et assurez la conformité.';
         break;
       default:

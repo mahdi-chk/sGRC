@@ -13,9 +13,9 @@ const router = Router();
 const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'], 'evidenceFile', 15 * 1024 * 1024);
 const uploadActionPlanFile = secureUpload(['xlsx', 'xls'], 'file', 15 * 1024 * 1024);
 const auditDirectorRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN];
-const auditResponsibleRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
-const auditManagementRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
-const auditAllRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR, UserRole.SUPER_ADMIN];
+const auditResponsibleRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
+const auditManagementRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
+const auditAllRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.SUPER_ADMIN];
 
 const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
@@ -83,7 +83,7 @@ router.post('/create-missions', authorizeRoles(...auditDirectorRoles), async (re
 router.get('/missions', async (req: AuthRequest, res) => {
     try {
         const { role, id } = req.user!;
-        if (![UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR].includes(role)) {
+        if (![UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR].includes(role)) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
 

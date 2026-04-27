@@ -82,7 +82,7 @@ export class DashboardService {
                 { title: 'Suivi des Ecarts' },
                 { title: 'Mises a Jour et Preuves' }
             ],
-            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR]
+            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR]
         },
         {
             key: 'audit',
@@ -95,7 +95,7 @@ export class DashboardService {
                 { title: 'Tracabilite des Preuves' },
                 { title: 'Rapports et Suivi' }
             ],
-            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN]
+            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN]
         },
         {
             key: 'audit-auditeur',
@@ -119,7 +119,7 @@ export class DashboardService {
                 { title: 'Liens et Analyse' },
                 { title: 'Reporting Consolide' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.AUDITEUR]
+            roles: [UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR]
         },
         {
             key: 'plans-actions',
@@ -137,6 +137,7 @@ export class DashboardService {
                 UserRole.RISK_AGENT,
                 UserRole.AUDIT_DIRECTEUR,
                 UserRole.AUDIT_RESPONSABLE,
+                UserRole.CHEF_MISSION,
                 UserRole.TOP_MANAGEMENT
             ]
         },
@@ -248,7 +249,7 @@ export class DashboardService {
             s.title === 'Planification Pluriannuelle'
         ) {
             const isDirector = currentUser?.role === UserRole.AUDIT_DIRECTEUR || currentUser?.role === UserRole.SUPER_ADMIN;
-            const isResponsible = currentUser?.role === UserRole.AUDIT_RESPONSABLE || currentUser?.role === UserRole.SUPER_ADMIN;
+            const isResponsible = currentUser?.role === UserRole.AUDIT_RESPONSABLE || currentUser?.role === UserRole.CHEF_MISSION || currentUser?.role === UserRole.SUPER_ADMIN;
             const isAuditManager = isDirector || isResponsible;
 
             if (s.title === 'Planification Pluriannuelle' && isDirector) {

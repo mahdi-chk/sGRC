@@ -92,6 +92,11 @@ const ROLE_DOCUMENT_FOLDERS: RoleFolderMap = {
     label: 'Dossier Audit Responsable',
     relativePath: 'doc/ressources-par-role/audit-responsable'
   },
+  [UserRole.CHEF_MISSION]: {
+    key: 'chef-mission',
+    label: 'Dossier Chef de Mission',
+    relativePath: 'doc/ressources-par-role/chef-mission'
+  },
   [UserRole.AUDITEUR]: {
     key: 'auditeur',
     label: 'Dossier Auditeur',
@@ -99,7 +104,7 @@ const ROLE_DOCUMENT_FOLDERS: RoleFolderMap = {
   },
   [UserRole.CONTROLLER]: {
     key: 'controller',
-    label: 'Dossier Controller',
+    label: 'Dossier Controleur Interne',
     relativePath: 'doc/ressources-par-role/controller'
   } 
 

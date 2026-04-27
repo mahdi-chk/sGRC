@@ -3,6 +3,7 @@ export enum UserRole {
     RISK_AGENT = 'risk_agent',
     AUDIT_DIRECTEUR = 'audit_directeur',
     AUDIT_RESPONSABLE = 'audit_responsable',
+    CHEF_MISSION = 'chef_mission',
     AUDIT_SENIOR = 'audit_directeur',
     AUDITEUR = 'auditeur',
     TOP_MANAGEMENT = 'top_management',

@@ -9,7 +9,7 @@ import { DashboardService, ModuleItem, Submodule } from '../../../core/services/
 })
 export class ControllerDashboardComponent implements OnInit {
     @Input() filteredModules: ModuleItem[] = [];
-    @Input() title = 'Dashboard Controller';
+    @Input() title = 'Dashboard Controleur Interne';
     @Output() openModule = new EventEmitter<{ m: ModuleItem; s: Submodule }>();
     @Output() toggleAssistant = new EventEmitter<void>();
 

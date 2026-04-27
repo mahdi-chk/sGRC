@@ -12,6 +12,7 @@ export const UserRole = {
     ADMIN_SI: userRoleMap.ADMIN_SI || 'admin_si',
     SUPER_ADMIN: userRoleMap.SUPER_ADMIN || 'super_admin',
     CONTROLLER: userRoleMap.CONTROLLER || 'controller',
+    CHEF_MISSION: userRoleMap.CHEF_MISSION || 'chef_mission',
 } as const;
 export type UserRole = string;
 export const USER_ROLE_CODES = buildLookupCodeList('user.role');

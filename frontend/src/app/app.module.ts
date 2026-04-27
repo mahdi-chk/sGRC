@@ -110,15 +110,16 @@ const routes: Routes = [
             UserRole.RISK_AGENT,
             UserRole.AUDIT_DIRECTEUR,
             UserRole.AUDIT_RESPONSABLE,
+            UserRole.CHEF_MISSION,
             UserRole.TOP_MANAGEMENT
           ]
         }
       },
-      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.RISK_MANAGER, UserRole.RISK_AGENT] } },
+      { path: 'strategic-evaluation', component: StrategicEvaluationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.RISK_MANAGER, UserRole.RISK_AGENT] } },
       { path: 'assigned-risks', component: AssignedRisksComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'planning', component: PlanningComponent },
       { path: 'statistics', component: RiskStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
-      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.TOP_MANAGEMENT] } },
+      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT] } },
       { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'controls', redirectTo: 'controls-referential', pathMatch: 'full' },
@@ -139,11 +140,11 @@ const routes: Routes = [
       { path: 'actions-deadlines', component: ActionsDeadlinesComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-deadlines') } },
       { path: 'actions-notifications', component: ActionsNotificationsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-notifications') } },
       { path: 'actions-indicators', component: ActionsIndicatorsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-indicators') } },
-      { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
-      { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
-      { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] } },
-      { path: 'incident-analysis', component: IncidentAnalysisComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
-      { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.TOP_MANAGEMENT] } },
+      { path: 'incidents', component: IncidentsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT] } },
+      { path: 'incident-registration', component: IncidentRegistrationComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION] } },
+      { path: 'incident-workflow', component: IncidentWorkflowComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION] } },
+      { path: 'incident-analysis', component: IncidentAnalysisComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT] } },
+      { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT] } },
       {
         path: 'governance',
         redirectTo: 'governance-documents',
@@ -161,6 +162,7 @@ const routes: Routes = [
             UserRole.RISK_AGENT,
             UserRole.AUDIT_DIRECTEUR,
             UserRole.AUDIT_RESPONSABLE,
+            UserRole.CHEF_MISSION,
             UserRole.AUDITEUR,
             UserRole.CONTROLLER
           ]
@@ -172,21 +174,22 @@ const routes: Routes = [
       { path: 'governance-adoption', component: GovernanceAdoptionComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'resources', redirectTo: 'governance-documents', pathMatch: 'full' },
       // Routes Audit (composants exportés par AuditingModule)
-      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN] } },
+      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
       { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-checklists', component: AuditChecklistsComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-checklists', component: AuditChecklistsComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-checklist', component: AuditorChecklistComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-evidence', component: AuditorEvidenceComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
       { path: 'auditor-report', component: AuditorReportComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-evidence-explorer', component: AuditEvidenceExplorerComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-report-review', component: AuditReportReviewComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-evidence-explorer', component: AuditEvidenceExplorerComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-report-review', component: AuditReportReviewComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
       // Routes spécifiques par rôle
       { path: 'super-admin', component: SuperAdminDashboardComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'admin-si', component: AdminSiDashboardComponent, data: { expectedRoles: [UserRole.ADMIN_SI] } },
       { path: 'auditeur', component: AuditeurDashboardComponent, data: { expectedRoles: [UserRole.AUDITEUR] } },
       { path: 'audit-directeur', component: AuditSeniorDashboardComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR] } },
       { path: 'audit-responsable', component: AuditSeniorDashboardComponent, data: { expectedRoles: [UserRole.AUDIT_RESPONSABLE] } },
+      { path: 'chef-mission', component: AuditSeniorDashboardComponent, data: { expectedRoles: [UserRole.CHEF_MISSION] } },
       { path: 'risk-manager', component: RiskManagerDashboardComponent, data: { expectedRoles: [UserRole.RISK_MANAGER] } },
       { path: 'risk-agent', component: RiskAgentDashboardComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'top-management', component: TopManagementDashboardComponent, data: { expectedRoles: [UserRole.TOP_MANAGEMENT] } },
@@ -195,7 +198,7 @@ const routes: Routes = [
       {
         path: 'reporting',
         loadChildren: () => import('./modules/reporting/reporting.module').then(m => m.ReportingModule),
-        data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR] }
+        data: { expectedRoles: [UserRole.TOP_MANAGEMENT, UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION] }
       },
       {
         path: 'supervision',

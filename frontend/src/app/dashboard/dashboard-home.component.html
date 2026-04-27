@@ -16,6 +16,10 @@
         title="Dashboard Audit Responsable" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
     </app-audit-senior-dashboard>
 
+    <app-audit-senior-dashboard *ngSwitchCase="UserRole.CHEF_MISSION" [filteredModules]="filteredModules"
+        title="Dashboard Chef de Mission" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
+    </app-audit-senior-dashboard>
+
     <app-auditeur-dashboard *ngSwitchCase="UserRole.AUDITEUR" [filteredModules]="filteredModules"
         title="Dashboard Auditeur" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
     </app-auditeur-dashboard>
@@ -38,7 +42,7 @@
     </app-top-management-dashboard>
 
     <app-controller-dashboard *ngSwitchCase="UserRole.CONTROLLER" [filteredModules]="filteredModules"
-        title="Dashboard Controller" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
+        title="Dashboard Controleur Interne" (openModule)="onOpenModule($event)" (toggleAssistant)="onToggleAiAssistant()">
     </app-controller-dashboard>
 
     <div *ngSwitchDefault>

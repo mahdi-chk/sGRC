@@ -7,7 +7,7 @@ export interface AuditNavItem {
 }
 
 const AUDIT_DIRECTOR_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN];
-const AUDIT_MANAGEMENT_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
+const AUDIT_MANAGEMENT_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
 
 export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
   {
@@ -43,7 +43,7 @@ export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
   {
     label: 'Statistiques',
     route: '/dashboard/audit-statistics',
-    roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT]
+    roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT]
   },
   {
     label: 'Mes Missions',

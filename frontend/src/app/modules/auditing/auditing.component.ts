@@ -119,7 +119,7 @@ export class AuditingComponent implements OnInit {
 
   get isSeniorAuditor(): boolean {
     const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-    return user.role === UserRole.AUDIT_DIRECTEUR || user.role === UserRole.AUDIT_RESPONSABLE || user.role === UserRole.SUPER_ADMIN;
+    return user.role === UserRole.AUDIT_DIRECTEUR || user.role === UserRole.AUDIT_RESPONSABLE || user.role === UserRole.CHEF_MISSION || user.role === UserRole.SUPER_ADMIN;
   }
 
   get isAuditDirector(): boolean {
@@ -129,7 +129,7 @@ export class AuditingComponent implements OnInit {
 
   get isAuditResponsible(): boolean {
     const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-    return user.role === UserRole.AUDIT_RESPONSABLE || user.role === UserRole.SUPER_ADMIN;
+    return user.role === UserRole.AUDIT_RESPONSABLE || user.role === UserRole.CHEF_MISSION || user.role === UserRole.SUPER_ADMIN;
   }
 
   get isAuditor(): boolean {

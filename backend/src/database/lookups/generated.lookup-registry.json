@@ -26,7 +26,8 @@
         { "id": 6, "symbol": "ADMIN_SI", "code": "admin_si", "label": "Administrateur SI", "sortOrder": 7 },
         { "id": 7, "symbol": "SUPER_ADMIN", "code": "super_admin", "label": "Super Admin", "sortOrder": 8 },
         { "id": 9, "symbol": "AUDIT_RESPONSABLE", "code": "audit_responsable", "label": "Audit Responsable", "sortOrder": 4 },
-        { "id": 10, "symbol": "CONTROLLER", "code": "controller", "label": "Controller", "sortOrder": 9 }
+        { "id": 10, "symbol": "CONTROLLER", "code": "controller", "label": "Controleur Interne", "sortOrder": 9 },
+        { "id": 11, "symbol": "CHEF_MISSION", "code": "chef_mission", "label": "Chef de Mission", "sortOrder": 10 }
       ]
     },
     {

@@ -316,7 +316,7 @@ export class AuditingService {
 
         if (role === UserRole.AUDIT_DIRECTEUR) {
             where.auditSeniorId = userId;
-        } else if (role === UserRole.AUDIT_RESPONSABLE) {
+        } else if (role === UserRole.AUDIT_RESPONSABLE || role === UserRole.CHEF_MISSION) {
             where.type = normalizedType || AuditRecordType.PLAN_ACTION_AUDIT;
         } else if (role === UserRole.AUDITEUR) {
             where.auditeurId = userId;

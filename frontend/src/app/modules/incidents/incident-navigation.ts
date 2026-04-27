@@ -11,7 +11,7 @@ export const INCIDENT_NAV_ITEMS: IncidentNavItem[] = [
     label: 'Declaration',
     route: '/dashboard/incident-registration',
     roles: [
-      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, 
+      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION,
       UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI, UserRole.AUDITEUR, UserRole.RISK_AGENT
     ]
   },
@@ -19,7 +19,7 @@ export const INCIDENT_NAV_ITEMS: IncidentNavItem[] = [
     label: 'Workflow',
     route: '/dashboard/incident-workflow',
     roles: [
-      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, 
+      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION,
       UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI, UserRole.AUDITEUR, UserRole.RISK_AGENT
     ]
   },
@@ -27,7 +27,7 @@ export const INCIDENT_NAV_ITEMS: IncidentNavItem[] = [
     label: 'Analyse',
     route: '/dashboard/incident-analysis',
     roles: [
-      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, 
+      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION,
       UserRole.TOP_MANAGEMENT, UserRole.AUDITEUR, UserRole.RISK_AGENT
     ]
   },
@@ -35,7 +35,7 @@ export const INCIDENT_NAV_ITEMS: IncidentNavItem[] = [
     label: 'Reporting',
     route: '/dashboard/incident-reporting',
     roles: [
-      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, 
+      UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION,
       UserRole.TOP_MANAGEMENT, UserRole.AUDITEUR, UserRole.RISK_AGENT
     ]
   }

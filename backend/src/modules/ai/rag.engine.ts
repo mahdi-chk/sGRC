@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { SystemSetting } from '../settings/setting.model';
-import { UserRole } from '../users/user.roles';
+import { isAuditRole, UserRole } from '../users/user.roles';
 import { appLogger } from '../../utils/app-logger';
 import { DocumentTextExtractor } from './document-text-extractor';
 
@@ -244,7 +244,7 @@ export class RAGEngine {
             allowedTopics = ['risk', 'audit', 'general'];
         } else if (role === UserRole.RISK_MANAGER || role === UserRole.RISK_AGENT) {
             allowedTopics = ['risk', 'general'];
-        } else if (role === UserRole.AUDIT_SENIOR || role === UserRole.AUDITEUR) {
+        } else if (isAuditRole(role)) {
             allowedTopics = ['audit', 'general'];
         }
 

@@ -9,7 +9,7 @@ import { RAGEngine } from './rag.engine';
 import { AIDataService } from './ai.data.service';
 import { AIPromptBuilder } from './ai-prompt-builder';
 import { DocumentTextExtractor } from './document-text-extractor';
-import { UserRole } from '../users/user.roles';
+import { isAuditRole, UserRole } from '../users/user.roles';
 import { AuditRecordType } from '../auditing/audit-mission.model';
 import { Response } from 'express';
 import * as mammoth from 'mammoth';
@@ -169,7 +169,7 @@ export class AIService {
             return 'assistant_role_risk';
         }
 
-        if (role === UserRole.AUDIT_SENIOR || role === UserRole.AUDITEUR) {
+        if (isAuditRole(role)) {
             return 'assistant_role_audit';
         }
 
@@ -634,7 +634,7 @@ export class AIService {
         }
     }
 
-    static async evaluateRisks(risks: any[], role: UserRole = UserRole.AUDIT_SENIOR): Promise<any[]> {
+    static async evaluateRisks(risks: any[], role: UserRole = UserRole.AUDIT_DIRECTEUR): Promise<any[]> {
         if (!risks || risks.length === 0) {
             appLogger.warn('AI', 'Strategic AI evaluation skipped because no risks were provided', { role });
             return [];
@@ -712,7 +712,7 @@ export class AIService {
      */
     static async generateAuditPlan(
         risks: any[],
-        role: UserRole = UserRole.AUDIT_SENIOR,
+        role: UserRole = UserRole.AUDIT_DIRECTEUR,
         generationType: string = AuditRecordType.MISSION_AUDIT
     ): Promise<any[]> {
         if (!risks || risks.length === 0) return [];

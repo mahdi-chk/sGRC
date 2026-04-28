@@ -4,7 +4,7 @@ import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { getSoftDeleteValues, softDeleteInstance } from '../../utils/soft-delete';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { secureUpload } from '../../middleware/file.middleware';
-import { UserRole } from '../users/user.roles';
+import { AUDIT_COORDINATION_ROLES, UserRole } from '../users/user.roles';
 import { AuditMission } from '../auditing/audit-mission.model';
 import { Department } from '../departments/department.model';
 import { Incident } from '../incidents/incident.model';
@@ -36,13 +36,13 @@ const allowedRoles = [
     UserRole.SUPER_ADMIN,
     UserRole.RISK_MANAGER,
     UserRole.RISK_AGENT,
-    UserRole.AUDIT_SENIOR,
+    ...AUDIT_COORDINATION_ROLES,
     UserRole.AUDITEUR,
     UserRole.TOP_MANAGEMENT,
 ];
 
-const adminRoles = [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR];
-const mappingEditorRoles = [UserRole.SUPER_ADMIN, UserRole.AUDIT_SENIOR, UserRole.RISK_MANAGER];
+const adminRoles = [UserRole.SUPER_ADMIN, ...AUDIT_COORDINATION_ROLES];
+const mappingEditorRoles = [UserRole.SUPER_ADMIN, ...AUDIT_COORDINATION_ROLES, UserRole.RISK_MANAGER];
 const uploadRequirementImport = secureUpload(['pdf', 'docx', 'txt'], 'file', 15 * 1024 * 1024);
 
 const isComplianceSchemaMissing = (error: any): boolean => {

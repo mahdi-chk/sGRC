@@ -495,7 +495,7 @@ const resolveDepartementId = async (departementName: string | null): Promise<num
     return partialMatch ? partialMatch.id : null;
 };
 
-router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
+router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Fichier requis pour l import.' });
@@ -558,7 +558,7 @@ router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_
 /**
  * CRÉER UN INCIDENT
  */
-router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
+router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
     try {
         const cleanedBody = { ...req.body };
         for (const key in cleanedBody) {

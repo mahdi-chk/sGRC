@@ -1,7 +1,7 @@
 import { Department } from '../departments/department.model';
 import { Risk } from '../risk/risk.model';
 import { AuditMission } from '../auditing/audit-mission.model';
-import { UserRole } from '../users/user.roles';
+import { isAuditCoordinationRole, UserRole } from '../users/user.roles';
 import { Op } from 'sequelize';
 import { appLogger } from '../../utils/app-logger';
 
@@ -120,7 +120,7 @@ export class AIDataService {
 
         // Filtres pour Audit
         if (type === 'audit') {
-            if (role === UserRole.AUDIT_SENIOR) {
+            if (isAuditCoordinationRole(role)) {
                 return { auditSeniorId: userId };
             }
             if (role === UserRole.AUDITEUR) {

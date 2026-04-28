@@ -15,7 +15,7 @@ import { Department } from '../departments/department.model';
 import { Incident, IncidentStatus } from '../incidents/incident.model';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
-import { UserRole } from '../users/user.roles';
+import { AUDIT_COORDINATION_ROLES, isAuditCoordinationRole, UserRole } from '../users/user.roles';
 import { emailService } from '../../utils/email.service';
 import { Notification, NotificationType } from '../notifications/notification.model';
 import { AIService } from '../ai/ai.service';
@@ -123,13 +123,13 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
  * RÉCUPÉRER TOUS LES RISQUES
  * Filtre les résultats en fonction du rôle de l'utilisateur.
  */
-router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
+router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, ...AUDIT_COORDINATION_ROLES, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { role, id } = req.user!;
         let risks;
 
         // Logique de filtrage par rôle
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || role === UserRole.AUDIT_SENIOR) {
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT || isAuditCoordinationRole(role)) {
             // Accès total
             risks = await Risk.findAll({ include: riskListIncludes as any });
         } else if (role === UserRole.RISK_MANAGER) {
@@ -322,7 +322,7 @@ router.put('/:id/status', async (req: AuthRequest, res) => {
 /**
  * ÉVALUATION DES RISQUES PAR IA
  */
-router.post('/evaluate', authorizeRoles(UserRole.AUDIT_SENIOR, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
+router.post('/evaluate', authorizeRoles(...AUDIT_COORDINATION_ROLES, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { riskIds } = req.body;
         const requestedRiskIds = Array.isArray(riskIds)
@@ -514,7 +514,7 @@ router.patch('/:id/restore', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPE
 /**
  * ENVOYER UNE NOTIFICATION EMAIL D'ALERTE POUR UN RISQUE
  */
-router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.AUDIT_SENIOR, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
+router.post('/:id/notify', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, ...AUDIT_COORDINATION_ROLES, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
     try {
         const { id } = req.params;
         const risk = await Risk.findByPk(parseInt(id as string));

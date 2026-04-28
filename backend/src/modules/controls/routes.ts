@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { Op } from 'sequelize';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
-import { UserRole } from '../users/user.roles';
+import { AUDIT_COORDINATION_ROLES, isAuditCoordinationRole, UserRole } from '../users/user.roles';
 import { Risk } from '../risk/risk.model';
 import { Department } from '../departments/department.model';
 import { Organigramme } from '../organigramme/organigramme.model';
@@ -18,7 +18,7 @@ const allowedRoles = [
     UserRole.SUPER_ADMIN,
     UserRole.RISK_MANAGER,
     UserRole.RISK_AGENT,
-    UserRole.AUDIT_SENIOR,
+    ...AUDIT_COORDINATION_ROLES,
     UserRole.TOP_MANAGEMENT,
     UserRole.CONTROLLER
 ];
@@ -115,7 +115,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
         let risks: any[] = [];
         let missions: any[] = [];
 
-        if (role === UserRole.AUDIT_SENIOR) {
+        if (isAuditCoordinationRole(role)) {
             missions = await AuditMission.findAll({
                 where: { auditSeniorId: userId, type: AuditRecordType.MISSION_AUDIT },
                 include: [

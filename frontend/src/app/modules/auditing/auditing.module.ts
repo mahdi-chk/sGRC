@@ -6,7 +6,6 @@ import { SharedModule } from '../../shared/shared.module';
 
 import { AuditingComponent } from './auditing.component';
 import { AuditorMissionsComponent } from './auditor-missions.component';
-import { PlanificationComponent } from './planification/planification.component';
 import { AuditorEvidenceComponent } from './auditor-evidence/auditor-evidence.component';
 import { AuditorReportComponent } from './auditor-report/auditor-report.component';
 import { AuditEvidenceExplorerComponent } from './senior/audit-evidence-explorer.component';
@@ -18,7 +17,6 @@ import { AuditorChecklistComponent } from './auditor-checklist/auditor-checklist
   declarations: [
     AuditingComponent, 
     AuditorMissionsComponent, 
-    PlanificationComponent,
     AuditorEvidenceComponent,
     AuditorReportComponent,
     AuditEvidenceExplorerComponent,
@@ -35,7 +33,6 @@ import { AuditorChecklistComponent } from './auditor-checklist/auditor-checklist
   exports: [
     AuditingComponent, 
     AuditorMissionsComponent, 
-    PlanificationComponent,
     AuditorEvidenceComponent,
     AuditorReportComponent,
     AuditEvidenceExplorerComponent,

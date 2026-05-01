@@ -39,17 +39,11 @@ import { IncidentsComponent } from './modules/incidents/incidents.component';
 import { IncidentsModule } from './modules/incidents/incidents.module';
 import { RagManagerComponent } from './dashboard/components/rag-manager/rag-manager.component';
 
-// Module Audit (déclare AuditingComponent, PlanificationComponent, AuditChecklistsComponent, AuditorMissionsComponent)
-import { AuditingModule } from './modules/auditing/auditing.module';
-import { AuditingComponent } from './modules/auditing/auditing.component';
+// Module Audit (execution des audits)
+import { AuditPlanningModule } from './modules/auditing/audit-planning.module';
 import { PlanificationComponent } from './modules/auditing/planification/planification.component';
-import { AuditorMissionsComponent } from './modules/auditing/auditor-missions.component';
-import { AuditorEvidenceComponent } from './modules/auditing/auditor-evidence/auditor-evidence.component';
-import { AuditorReportComponent } from './modules/auditing/auditor-report/auditor-report.component';
-import { AuditEvidenceExplorerComponent } from './modules/auditing/senior/audit-evidence-explorer.component';
-import { AuditReportReviewComponent } from './modules/auditing/senior/audit-report-review.component';
-import { AuditChecklistsComponent } from './modules/auditing/audit-checklists/audit-checklists.component';
-import { AuditorChecklistComponent } from './modules/auditing/auditor-checklist/auditor-checklist.component';
+import { AuditPlansComponent } from './modules/auditing/audit-plans.component';
+import { AuditPlanDetailComponent } from './modules/auditing/audit-plan-detail.component';
 import { IncidentRegistrationComponent } from './modules/incidents/incident-registration/incident-registration.component';
 import { IncidentWorkflowComponent } from './modules/incidents/incident-workflow/incident-workflow.component';
 import { IncidentAnalysisComponent } from './modules/incidents/incident-analysis/incident-analysis.component';
@@ -173,16 +167,18 @@ const routes: Routes = [
       { path: 'governance-maturity', component: GovernanceMaturityComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'governance-adoption', component: GovernanceAdoptionComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'resources', redirectTo: 'governance-documents', pathMatch: 'full' },
-      // Routes Audit (composants exportés par AuditingModule)
-      { path: 'auditing', component: AuditingComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
+      // Routes Plan d Audit
+      { path: 'audit-plans', component: AuditPlansComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-plans/:id', component: AuditPlanDetailComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },
       { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-checklists', component: AuditChecklistsComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
-      { path: 'auditor-checklist', component: AuditorChecklistComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'auditor-missions', component: AuditorMissionsComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'auditor-evidence', component: AuditorEvidenceComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'auditor-report', component: AuditorReportComponent, data: { expectedRoles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-evidence-explorer', component: AuditEvidenceExplorerComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-report-review', component: AuditReportReviewComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN] } },
+      { path: 'auditing', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'audit-checklists', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'audit-evidence-explorer', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'audit-report-review', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'auditor-checklist', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'auditor-missions', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'auditor-evidence', redirectTo: 'audit-plans', pathMatch: 'full' },
+      { path: 'auditor-report', redirectTo: 'audit-plans', pathMatch: 'full' },
       // Routes spécifiques par rôle
       { path: 'super-admin', component: SuperAdminDashboardComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'admin-si', component: AdminSiDashboardComponent, data: { expectedRoles: [UserRole.ADMIN_SI] } },
@@ -241,7 +237,7 @@ const routes: Routes = [
     HttpClientModule,
     FormsModule,
     SharedModule,
-    AuditingModule,
+    AuditPlanningModule,
     IncidentsModule,
     GovernanceModule,
     ComplianceModule,

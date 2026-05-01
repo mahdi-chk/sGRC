@@ -18,6 +18,8 @@ import * as XLSX from 'xlsx';
 import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 import { appLogger } from '../../utils/app-logger';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
+import { AuditMissionResource } from './audit-mission-resource.model';
+import { AUDIT_LOOKUP_KEYS, AuditMissionResourceRoleCode } from './audit-lookup-codes';
 
 type MissionListFilter = {
     type?: string | null;
@@ -164,6 +166,15 @@ export class AuditingService {
         return [1, 2, 3].includes(parsed) ? parsed : null;
     }
 
+    private static clampProgressPercent(value: unknown): number | null {
+        const parsed = this.toInteger(value);
+        if (parsed === null) {
+            return null;
+        }
+
+        return Math.max(0, Math.min(100, parsed));
+    }
+
     private static async resolveResponsibleName(responsableNom: string | null): Promise<number | null> {
         if (!responsableNom) {
             return null;
@@ -226,11 +237,23 @@ export class AuditingService {
             responsabilites: responsableNom,
             delai: this.parseExcelDate(delai),
             statut: this.normalizeProgressStatus(merged.statut !== undefined ? merged.statut : merged.etatAvancement),
+            auditPlanId: this.toInteger(merged.auditPlanId),
             auditSeniorId: this.toInteger(merged.auditSeniorId),
+            chefMissionId: this.toInteger(merged.chefMissionId),
             auditeurId: await this.resolveActionPlanAssignee(merged, responsableNom),
+            auditedPrincipalId: this.toInteger(merged.auditedPrincipalId),
             riskId: this.toInteger(merged.riskId),
             checklistTemplateId: null,
+            category: merged.category !== undefined ? merged.category : merged.categorie,
             ordre: this.toInteger(merged.ordre) ?? 0,
+            axe: this.cleanString(merged.axe),
+            evaluation: this.cleanString(merged.evaluation),
+            quarter: merged.quarter !== undefined ? merged.quarter : merged.trimestre,
+            datePrevueDebut: this.parseExcelDate(merged.datePrevueDebut),
+            datePrevueFin: this.parseExcelDate(merged.datePrevueFin),
+            dateReelleDebut: this.parseExcelDate(merged.dateReelleDebut),
+            dateReelleFin: this.parseExcelDate(merged.dateReelleFin),
+            progressPercent: this.clampProgressPercent(merged.progressPercent),
             regleDnssi: this.cleanString(merged.regleDnssi),
             horizon: this.normalizeHorizon(merged.horizon),
             priorite: this.normalizePriority(merged.priorite),
@@ -257,11 +280,23 @@ export class AuditingService {
             responsabilites: this.cleanString(merged.responsabilites),
             delai: this.parseExcelDate(merged.delai),
             statut: this.normalizeProgressStatus(merged.statut),
+            auditPlanId: this.toInteger(merged.auditPlanId),
             auditSeniorId: this.toInteger(merged.auditSeniorId),
+            chefMissionId: this.toInteger(merged.chefMissionId),
             auditeurId: this.toInteger(merged.auditeurId),
+            auditedPrincipalId: this.toInteger(merged.auditedPrincipalId),
             riskId: this.toInteger(merged.riskId),
             checklistTemplateId: this.toInteger(merged.checklistTemplateId),
+            category: merged.category !== undefined ? merged.category : merged.categorie,
             ordre: this.toInteger(merged.ordre) ?? 0,
+            axe: this.cleanString(merged.axe),
+            evaluation: this.cleanString(merged.evaluation),
+            quarter: merged.quarter !== undefined ? merged.quarter : merged.trimestre,
+            datePrevueDebut: this.parseExcelDate(merged.datePrevueDebut),
+            datePrevueFin: this.parseExcelDate(merged.datePrevueFin),
+            dateReelleDebut: this.parseExcelDate(merged.dateReelleDebut),
+            dateReelleFin: this.parseExcelDate(merged.dateReelleFin),
+            progressPercent: this.clampProgressPercent(merged.progressPercent),
             regleDnssi: this.cleanString(merged.regleDnssi),
             horizon: this.normalizeHorizon(merged.horizon),
             priorite: this.normalizePriority(merged.priorite),
@@ -539,14 +574,58 @@ export class AuditingService {
         return createdRecords;
     }
 
+    private static async syncMissionAssigneeResource(missionId: number, auditeurId: number | null) {
+        const existingAuditorAssignments = await AuditMissionResource.findAll({
+            where: {
+                missionId,
+                assignmentRoleId: LookupResolutionService.getStaticValue(
+                    AUDIT_LOOKUP_KEYS.RESOURCE_ASSIGNMENT_ROLE,
+                    AuditMissionResourceRoleCode.AUDITEUR
+                )?.id,
+            },
+        });
+
+        for (const assignment of existingAuditorAssignments) {
+            if (auditeurId && assignment.userId === auditeurId) {
+                continue;
+            }
+
+            await softDeleteInstance(assignment);
+        }
+
+        if (!auditeurId) {
+            return;
+        }
+
+        const matchingAssignment = existingAuditorAssignments.find((assignment) => assignment.userId === auditeurId);
+        if (matchingAssignment && !matchingAssignment.is_deleted) {
+            return;
+        }
+
+        if (matchingAssignment?.is_deleted) {
+            await restoreSoftDeletedInstance(matchingAssignment);
+            return;
+        }
+
+        await AuditMissionResource.create(await LookupResolutionService.resolveEntityPayload('auditMissionResource', {
+            missionId,
+            userId: auditeurId,
+            assignmentRole: AuditMissionResourceRoleCode.AUDITEUR,
+            allocationPercent: 100,
+        }));
+    }
+
     static async getRecordsForUser(role: UserRole, userId: number, filter: MissionListFilter = {}) {
         const where = this.buildListWhere(role, userId, filter);
         return this.sortRecordsForDisplay(await AuditMission.findAll({
             where,
             include: [
+                { model: User, as: 'chefMission', required: false },
                 { model: User, as: 'auditSenior', required: false },
                 { model: User, as: 'auditeur', required: false },
+                { model: User, as: 'auditedPrincipal', required: false },
                 { model: Risk, as: 'risk', required: false },
+                { association: 'auditPlan', required: false } as any,
                 { model: AuditMission, as: 'sourceMission', required: false },
             ] as any,
         }));
@@ -644,6 +723,8 @@ export class AuditingService {
             statut: targetStatus
         }));
 
+        await this.syncMissionAssigneeResource(missionId, auditeurId);
+
         try {
             const auditeur = await User.findByPk(auditeurId);
             if (auditeur) {
@@ -725,7 +806,7 @@ export class AuditingService {
         await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', payload));
         await this.ensureCode(mission);
 
-        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior', 'sourceMission'] });
+        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior', 'chefMission', 'auditedPrincipal', 'auditPlan', 'sourceMission'] });
     }
 
     static async deleteMission(missionId: number) {
@@ -795,8 +876,11 @@ export class AuditingService {
             where,
             include: [
                 { model: User, as: 'auditSenior', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'chefMission', attributes: ['id', 'prenom', 'nom'], required: false },
                 { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom'], required: false },
                 { model: Risk, as: 'risk', required: false },
+                { association: 'auditPlan', required: false } as any,
                 { model: AuditMission, as: 'sourceMission', required: false },
             ] as any,
             order: [['ordre', 'ASC'], ['updatedAt', 'DESC']]
@@ -890,6 +974,7 @@ export class AuditingService {
             ...data,
             type: AuditRecordType.PLAN_ACTION_AUDIT,
             sourceMissionId: missionId,
+            auditPlanId: mission.auditPlanId,
             riskId: mission.riskId,
         });
 

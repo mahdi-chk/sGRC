@@ -9,6 +9,7 @@ import { emailService } from '../../utils/email.service';
 import { restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
 import { appLogger } from '../../utils/app-logger';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
+import { AuditPlanService } from '../audit-planning';
 
 const router = Router();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -121,6 +122,24 @@ router.get('/assignable/risk-agents', authorizeRoles(UserRole.SUPER_ADMIN, UserR
         res.json(riskAgents);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching risk agents', error });
+    }
+});
+
+router.get('/:id/audit-skills', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), async (req, res) => {
+    try {
+        const items = await AuditPlanService.getUserAuditSkills(parseInt(req.params.id as string, 10));
+        res.json(items);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors du chargement des competences audit', error: error.message });
+    }
+});
+
+router.put('/:id/audit-skills', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), async (req, res) => {
+    try {
+        const items = await AuditPlanService.updateUserAuditSkills(parseInt(req.params.id as string, 10), req.body);
+        res.json(items);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la mise a jour des competences audit', error: error.message });
     }
 });
 

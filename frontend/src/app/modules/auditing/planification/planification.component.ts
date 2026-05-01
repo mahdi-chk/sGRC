@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { AuditingService, AuditRecordType } from '../../../core/services/auditing.service';
+import { AuditPlanningRecordType, AuditPlanningService } from '../../../core/services/audit-planning.service';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { Router } from '@angular/router';
-import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
+import { getAuditPlanningNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-planification',
@@ -16,17 +16,21 @@ export class PlanificationComponent implements OnInit {
   isCreatingMissions = false;
 
   constructor(
-    private auditingService: AuditingService,
+    private auditPlanningService: AuditPlanningService,
     private router: Router
   ) { }
 
   get navItems() {
-    return getAuditNavItems(this.currentUserRole);
+    return getAuditPlanningNavItems(this.currentUserRole);
+  }
+
+  get selectedSuggestionsCount(): number {
+    return this.suggestedPlan.filter((item) => item.selected).length;
   }
 
   ngOnInit(): void {
     if (!this.isSeniorAuditor) {
-      this.router.navigate(['/dashboard/auditor-missions']);
+      this.router.navigate(['/dashboard/audit-plans']);
       return;
     }
   }
@@ -40,7 +44,7 @@ export class PlanificationComponent implements OnInit {
   generatePlan() {
     this.isGeneratingPlan = true;
     this.suggestedPlan = [];
-    this.auditingService.suggestPlan(AuditRecordType.MISSION_AUDIT).subscribe({
+    this.auditPlanningService.suggestPlan(AuditPlanningRecordType.MISSION_AUDIT).subscribe({
       next: (plan) => {
         this.suggestedPlan = plan.map((item) => ({ ...item, selected: true }));
         this.isGeneratingPlan = false;
@@ -60,12 +64,12 @@ export class PlanificationComponent implements OnInit {
     }
 
     this.isCreatingMissions = true;
-    this.auditingService.createMissionsFromPlan(selected, AuditRecordType.MISSION_AUDIT).subscribe({
+    this.auditPlanningService.createMissionsFromPlan(selected, AuditPlanningRecordType.MISSION_AUDIT).subscribe({
       next: () => {
         this.isCreatingMissions = false;
         this.suggestedPlan = [];
         alert('Missions creees avec succes.');
-        this.router.navigate(['/dashboard/auditing']);
+        this.router.navigate(['/dashboard/audit-plans']);
       },
       error: (err) => {
         console.error(err);
@@ -76,6 +80,14 @@ export class PlanificationComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/dashboard/auditing']);
+    this.router.navigate(['/dashboard/audit-plans']);
+  }
+
+  goToPlans() {
+    this.router.navigate(['/dashboard/audit-plans']);
+  }
+
+  goToAudits() {
+    this.router.navigate(['/dashboard/audit-plans']);
   }
 }

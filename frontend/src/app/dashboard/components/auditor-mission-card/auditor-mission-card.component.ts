@@ -12,6 +12,6 @@ export class AuditorMissionCardComponent {
     constructor(private router: Router) { }
 
     onAccess() {
-        this.router.navigate(['/dashboard/auditor-missions']);
+        this.router.navigate(['/dashboard/audit-plans']);
     }
 }

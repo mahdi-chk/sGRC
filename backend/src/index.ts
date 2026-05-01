@@ -106,8 +106,8 @@ try {
 } catch (_error) {}
 
 try {
-    const auditing = require('./modules/auditing').router;
-    app.use('/api/auditing', auditing);
+    const auditPlanning = require('./modules/audit-planning').router;
+    app.use('/api/audit-planning', auditPlanning);
 } catch (_error) {}
 
 try {

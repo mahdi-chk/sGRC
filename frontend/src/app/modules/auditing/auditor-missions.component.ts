@@ -10,7 +10,7 @@ import {
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { getAuditNavItems, getStoredAuditRole } from './audit-navigation';
+import { getAuditorNavItems, getStoredAuditRole } from './audit-navigation';
 
 @Component({
     selector: 'app-auditor-missions',
@@ -74,7 +74,7 @@ export class AuditorMissionsComponent implements OnInit {
     ) { }
 
     get navItems() {
-        return getAuditNavItems(this.currentUserRole);
+        return getAuditorNavItems(this.currentUserRole);
     }
 
     ngOnInit() {

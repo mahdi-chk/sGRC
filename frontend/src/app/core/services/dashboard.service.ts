@@ -85,29 +85,26 @@ export class DashboardService {
             roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR]
         },
         {
-            key: 'audit',
-            title: 'Audit',
-            desc: 'Planifier et executer les audits avec tracabilite.',
+            key: 'audit-plans',
+            title: 'Plan d Audit',
+            desc: 'Construire le plan d audit, organiser ses missions et piloter ses validations.',
             submodules: [
+                { title: 'Liste des Plans' },
                 { title: 'Planification Pluriannuelle' },
-                { title: 'Gestion des Missions' },
-                { title: 'Checklists' },
-                { title: 'Tracabilite des Preuves' },
-                { title: 'Rapports et Suivi' }
+                { title: 'Workflow de Validation' },
+                { title: 'Missions et Planning' },
+                { title: 'Ressources et Competences' },
+                { title: 'Recommandations et Reporting' }
             ],
-            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN]
-        },
-        {
-            key: 'audit-auditeur',
-            title: 'Audit',
-            desc: 'Realisez vos missions, remplissez les checklists et soumettez vos rapports.',
-            submodules: [
-                { title: 'Mes Missions' },
-                { title: 'Traitement checklists' },
-                { title: 'Mes Preuves' },
-                { title: 'Soumettre Rapport' }
-            ],
-            roles: [UserRole.AUDITEUR, UserRole.SUPER_ADMIN]
+            roles: [
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDIT_RESPONSABLE,
+                UserRole.CHEF_MISSION,
+                UserRole.AUDITEUR,
+                UserRole.TOP_MANAGEMENT,
+                UserRole.CONTROLLER,
+                UserRole.SUPER_ADMIN
+            ]
         },
         {
             key: 'incidents',
@@ -242,35 +239,10 @@ export class DashboardService {
             this.router.navigate(['/dashboard/strategic-evaluation']);
         } else if (s.title === 'Cartographie Dynamique') {
             this.router.navigate(['/dashboard/statistics']);
-        } else if (
-            s.title === 'Tracabilite des Preuves' ||
-            s.title === 'Gestion des Missions' ||
-            s.title === 'Rapports et Suivi' ||
-            s.title === 'Planification Pluriannuelle'
-        ) {
-            const isDirector = currentUser?.role === UserRole.AUDIT_DIRECTEUR || currentUser?.role === UserRole.SUPER_ADMIN;
-            const isResponsible = currentUser?.role === UserRole.AUDIT_RESPONSABLE || currentUser?.role === UserRole.CHEF_MISSION || currentUser?.role === UserRole.SUPER_ADMIN;
-            const isAuditManager = isDirector || isResponsible;
-
-            if (s.title === 'Planification Pluriannuelle' && isDirector) {
-                this.router.navigate(['/dashboard/audit-planning']);
-            } else if (s.title === 'Checklists' && isAuditManager) {
-                this.router.navigate(['/dashboard/audit-checklists']);
-            } else if (s.title === 'Tracabilite des Preuves' && isAuditManager) {
-                this.router.navigate(['/dashboard/audit-evidence-explorer']);
-            } else if (s.title === 'Rapports et Suivi' && isAuditManager) {
-                this.router.navigate(['/dashboard/audit-report-review']);
-            } else {
-                this.router.navigate(isAuditManager ? ['/dashboard/auditing'] : ['/dashboard/auditor-missions']);
-            }
-        } else if (s.title === 'Mes Missions') {
-            this.router.navigate(['/dashboard/auditor-missions']);
-        } else if (s.title === 'Traitement checklists') {
-            this.router.navigate(['/dashboard/auditor-checklist']);
-        } else if (s.title === 'Mes Preuves') {
-            this.router.navigate(['/dashboard/auditor-evidence']);
-        } else if (s.title === 'Soumettre Rapport') {
-            this.router.navigate(['/dashboard/auditor-report']);
+        } else if (m.key === 'audit-plans' && s.title === 'Planification Pluriannuelle') {
+            this.router.navigate(['/dashboard/audit-planning']);
+        } else if (m.key === 'audit-plans') {
+            this.router.navigate(['/dashboard/audit-plans']);
         } else if (s.title === 'Alertes et Monitoring') {
             this.router.navigate(['/dashboard/alertes-monitoring']);
         } else if (s.title === 'Plans de Traitement') {

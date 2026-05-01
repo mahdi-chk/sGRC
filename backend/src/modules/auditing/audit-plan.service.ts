@@ -1,0 +1,1511 @@
+import { Op } from 'sequelize';
+import { LookupResolutionService } from '../../database/lookups/lookup.service';
+import { getRestoreValues, getSoftDeleteValues, restoreSoftDeletedInstance, softDeleteInstance } from '../../utils/soft-delete';
+import { emailService } from '../../utils/email.service';
+import { AuditMission, AuditMissionStatus, AuditRecordType } from './audit-mission.model';
+import { AuditPlan } from './audit-plan.model';
+import { AuditPlanWorkflowEvent } from './audit-plan-workflow-event.model';
+import { AuditMissionWorkflowEvent } from './audit-mission-workflow-event.model';
+import { AuditMissionChecklistItem } from './audit-mission-checklist.model';
+import { AuditMissionResource } from './audit-mission-resource.model';
+import { AuditMissionRequiredSkill, AuditSkill, UserAuditSkill } from './audit-skill.model';
+import { AuditingService } from './auditing.service';
+import { Notification, NotificationType } from '../notifications/notification.model';
+import { User } from '../users/user.model';
+import { UserRole } from '../users/user.roles';
+import {
+    AUDIT_LOOKUP_KEYS,
+    AuditMissionResourceRoleCode,
+    AuditPlanNatureCode,
+    AuditPlanStatusCode,
+    AuditPlanTransitionCode,
+} from './audit-lookup-codes';
+
+type PlanFilter = {
+    nom?: string | null;
+    status?: string | null;
+    nature?: string | null;
+    dateDebut?: string | null;
+    dateFin?: string | null;
+};
+
+type TransitionResult = {
+    targetStatusCode: string;
+    patch: Record<string, unknown>;
+};
+
+type MissionWorkflowType = 'mission_order' | 'work_program' | 'report';
+
+type MissionPermissions = {
+    canManageResources: boolean;
+    canSendMissionOrder: boolean;
+    canEditWorkProgram: boolean;
+    canExecuteWorkProgram: boolean;
+    canSubmitWorkProgram: boolean;
+    canValidateWorkProgram: boolean;
+    canApproveWorkProgram: boolean;
+    canEditReport: boolean;
+    canSubmitReport: boolean;
+    canValidateReport: boolean;
+    canApproveReport: boolean;
+    canCreateActionPlan: boolean;
+    canUpdateActionPlan: boolean;
+    canDeleteActionPlan: boolean;
+    canFollowActionPlan: boolean;
+};
+
+const PLAN_READ_ROLES = [
+    UserRole.SUPER_ADMIN,
+    UserRole.AUDIT_DIRECTEUR,
+    UserRole.AUDIT_RESPONSABLE,
+    UserRole.CHEF_MISSION,
+    UserRole.AUDITEUR,
+    UserRole.TOP_MANAGEMENT,
+    UserRole.CONTROLLER,
+] as const;
+
+const PLAN_WRITE_ROLES = [
+    UserRole.SUPER_ADMIN,
+    UserRole.AUDIT_RESPONSABLE,
+] as const;
+
+const MISSION_ORDER_MANAGER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
+const WORK_PROGRAM_EDITOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION] as const;
+const WORK_PROGRAM_EXECUTION_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
+const WORK_PROGRAM_VALIDATOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
+const WORK_PROGRAM_APPROVER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR] as const;
+const REPORT_EDITOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
+const REPORT_SUBMITTER_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION] as const;
+const REPORT_VALIDATOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
+const REPORT_APPROVER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR] as const;
+const ACTION_PLAN_CREATOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
+const ACTION_PLAN_UPDATE_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER] as const;
+const ACTION_PLAN_DELETE_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION] as const;
+
+const EDITABLE_WORKFLOW_STATUSES = ['draft', 'rework_requested'];
+
+const WORK_PROGRAM_STATUS_LABELS: Record<string, string> = {
+    draft: 'Brouillon',
+    submitted: 'Soumis au chef de division',
+    validated: 'Valide par le chef de division',
+    approved: 'Approuve par le directeur',
+    rework_requested: 'Retourne pour rework',
+};
+
+const REPORT_STATUS_LABELS: Record<string, string> = {
+    draft: 'Brouillon',
+    submitted: 'Soumis par le chef de mission',
+    validated: 'Valide par le chef de division',
+    approved: 'Approuve par le directeur',
+    rework_requested: 'Retourne pour rework',
+};
+
+const MISSION_ORDER_STATUS_LABELS: Record<string, string> = {
+    pending: 'A envoyer',
+    sent: 'Envoye',
+};
+
+const buildDisplayName = (user: any) =>
+    `${user?.prenom || ''} ${user?.nom || ''}`.trim() || user?.mail || 'Utilisateur';
+
+const isRoleAllowed = (role: string, allowedRoles: readonly string[]) =>
+    allowedRoles.includes(role);
+
+export class AuditPlanService {
+    static getLookupOptions(key: string) {
+        const allowedKeys = new Set<string>([
+            AUDIT_LOOKUP_KEYS.PLAN_STATUS,
+            AUDIT_LOOKUP_KEYS.PLAN_NATURE,
+            AUDIT_LOOKUP_KEYS.PLAN_TRANSITION,
+            AUDIT_LOOKUP_KEYS.MISSION_CATEGORY,
+            AUDIT_LOOKUP_KEYS.MISSION_QUARTER,
+            AUDIT_LOOKUP_KEYS.RESOURCE_ASSIGNMENT_ROLE,
+        ]);
+
+        if (!allowedKeys.has(key)) {
+            throw new Error('Lookup audit non supporte');
+        }
+
+        return LookupResolutionService.getStaticOptions(key);
+    }
+
+    private static async getPlanById(planId: number, withDeleted = false) {
+        const scope = withDeleted ? AuditPlan.scope('withDeleted') : AuditPlan;
+        const plan = await scope.findByPk(planId, {
+            include: [{ model: User, as: 'createdBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false }],
+        });
+
+        if (!plan) {
+            throw new Error('Plan d audit introuvable');
+        }
+
+        return plan;
+    }
+
+    private static ensurePlanReadable(role: string) {
+        if (!isRoleAllowed(role, PLAN_READ_ROLES)) {
+            throw new Error('Acces non autorise');
+        }
+    }
+
+    private static ensurePlanWritable(role: string) {
+        if (!isRoleAllowed(role, PLAN_WRITE_ROLES)) {
+            throw new Error('Acces non autorise');
+        }
+    }
+
+    private static async getMissionById(missionId: number) {
+        const mission = await AuditMission.findByPk(missionId, {
+            include: [
+                { model: User, as: 'auditSenior', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'chefMission', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'missionOrderSender', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'workProgramPreparedBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'workProgramValidatedBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'workProgramApprovedBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'reportPreparedBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'reportValidatedBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'reportApprovedBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { association: 'auditPlan', required: false } as any,
+            ],
+        });
+
+        if (!mission || mission.type !== AuditRecordType.MISSION_AUDIT || !mission.auditPlanId) {
+            throw new Error('Mission du plan introuvable');
+        }
+
+        return mission;
+    }
+
+    private static ensureMissionReadable(mission: AuditMission, role: string, userId: number) {
+        this.ensurePlanReadable(role);
+
+        if (role === UserRole.CHEF_MISSION && mission.chefMissionId !== userId) {
+            throw new Error('Cette mission n est pas affectee a ce chef de mission');
+        }
+
+        if (role === UserRole.AUDITEUR && mission.auditeurId !== userId) {
+            throw new Error('Cette mission n est pas affectee a cet auditeur');
+        }
+    }
+
+    private static ensureMissionRole(mission: AuditMission, role: string, userId: number, allowedRoles: readonly string[]) {
+        if (!isRoleAllowed(role, allowedRoles)) {
+            throw new Error('Acces non autorise');
+        }
+
+        if (role === UserRole.CHEF_MISSION && allowedRoles.includes(UserRole.CHEF_MISSION) && mission.chefMissionId !== userId) {
+            throw new Error('Cette mission n est pas affectee a ce chef de mission');
+        }
+
+        if (role === UserRole.AUDITEUR && allowedRoles.includes(UserRole.AUDITEUR) && mission.auditeurId !== userId) {
+            throw new Error('Cette mission n est pas affectee a cet auditeur');
+        }
+    }
+
+    private static getWorkflowStatusLabel(type: MissionWorkflowType, status: string | null | undefined) {
+        const normalized = String(status || '').trim() || (type === 'mission_order' ? 'pending' : 'draft');
+        const mapping = type === 'work_program'
+            ? WORK_PROGRAM_STATUS_LABELS
+            : type === 'report'
+                ? REPORT_STATUS_LABELS
+                : MISSION_ORDER_STATUS_LABELS;
+
+        return mapping[normalized] || normalized;
+    }
+
+    private static buildMissionPermissions(mission: AuditMission, role: string, userId: number): MissionPermissions {
+        const isAssignedChef = role === UserRole.CHEF_MISSION && mission.chefMissionId === userId;
+        const isAssignedAuditor = role === UserRole.AUDITEUR && mission.auditeurId === userId;
+        const isGlobalManager = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.AUDIT_DIRECTEUR, UserRole.CONTROLLER].includes(role);
+        const canEditWorkProgram = isRoleAllowed(role, WORK_PROGRAM_EDITOR_ROLES)
+            && (role === UserRole.SUPER_ADMIN || isAssignedChef)
+            && EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'));
+        const canEditReport = isRoleAllowed(role, REPORT_EDITOR_ROLES)
+            && (
+                role === UserRole.SUPER_ADMIN
+                || isAssignedChef
+                || isAssignedAuditor
+            )
+            && EDITABLE_WORKFLOW_STATUSES.includes(String(mission.reportStatus || 'draft'));
+
+        return {
+            canManageResources: isRoleAllowed(role, MISSION_ORDER_MANAGER_ROLES),
+            canSendMissionOrder: isRoleAllowed(role, MISSION_ORDER_MANAGER_ROLES),
+            canEditWorkProgram,
+            canExecuteWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EXECUTION_ROLES) && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor),
+            canSubmitWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EDITOR_ROLES)
+                && (role === UserRole.SUPER_ADMIN || isAssignedChef)
+                && ['draft', 'rework_requested'].includes(String(mission.workProgramStatus || 'draft')),
+            canValidateWorkProgram: isRoleAllowed(role, WORK_PROGRAM_VALIDATOR_ROLES) && String(mission.workProgramStatus || 'draft') === 'submitted',
+            canApproveWorkProgram: isRoleAllowed(role, WORK_PROGRAM_APPROVER_ROLES) && String(mission.workProgramStatus || 'draft') === 'validated',
+            canEditReport,
+            canSubmitReport: isRoleAllowed(role, REPORT_SUBMITTER_ROLES)
+                && (role === UserRole.SUPER_ADMIN || isAssignedChef)
+                && ['draft', 'rework_requested'].includes(String(mission.reportStatus || 'draft')),
+            canValidateReport: isRoleAllowed(role, REPORT_VALIDATOR_ROLES) && String(mission.reportStatus || 'draft') === 'submitted',
+            canApproveReport: isRoleAllowed(role, REPORT_APPROVER_ROLES) && String(mission.reportStatus || 'draft') === 'validated',
+            canCreateActionPlan: isRoleAllowed(role, ACTION_PLAN_CREATOR_ROLES) && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor),
+            canUpdateActionPlan: isRoleAllowed(role, ACTION_PLAN_UPDATE_ROLES) && (isGlobalManager || isAssignedChef || isAssignedAuditor),
+            canDeleteActionPlan: isRoleAllowed(role, ACTION_PLAN_DELETE_ROLES) && (role !== UserRole.CHEF_MISSION || isAssignedChef),
+            canFollowActionPlan: isRoleAllowed(role, ACTION_PLAN_UPDATE_ROLES) && (isGlobalManager || isAssignedChef || isAssignedAuditor),
+        };
+    }
+
+    private static async createMissionWorkflowEvent(
+        missionId: number,
+        actorUserId: number,
+        workflowType: MissionWorkflowType,
+        transitionCode: string,
+        fromStatus: string | null,
+        toStatus: string | null,
+        comment?: string | null
+    ) {
+        await AuditMissionWorkflowEvent.create({
+            missionId,
+            actorUserId,
+            workflowType,
+            transitionCode,
+            fromStatus,
+            toStatus,
+            comment: comment ? String(comment).trim() : null,
+        });
+    }
+
+    private static ensurePlanEditable(plan: AuditPlan) {
+        if ((plan as any).statusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
+            throw new Error('Le plan est ferme definitivement et ne peut plus etre modifie');
+        }
+    }
+
+    private static buildPlanFilterWhere(role: string, userId: number, filter: PlanFilter = {}) {
+        const where: Record<string, unknown> = {};
+
+        if (role === UserRole.AUDIT_RESPONSABLE) {
+            where.createdById = userId;
+        }
+
+        if (filter.nom) {
+            where.nom = { [Op.like]: `%${String(filter.nom).trim()}%` };
+        }
+
+        return where;
+    }
+
+    static async listPlans(role: string, userId: number, filter: PlanFilter = {}) {
+        this.ensurePlanReadable(role);
+        const where = this.buildPlanFilterWhere(role, userId, filter);
+        const resolvedNatureId = filter.nature
+            ? await LookupResolutionService.resolveLookupId(AUDIT_LOOKUP_KEYS.PLAN_NATURE, filter.nature)
+            : null;
+        const resolvedStatusId = filter.status
+            ? await LookupResolutionService.resolveLookupId(AUDIT_LOOKUP_KEYS.PLAN_STATUS, filter.status)
+            : null;
+
+        if (resolvedNatureId) {
+            where.natureId = resolvedNatureId;
+        }
+
+        if (resolvedStatusId) {
+            where.statusId = resolvedStatusId;
+        }
+
+        if (filter.dateDebut || filter.dateFin) {
+            const range: any = {};
+            if (filter.dateDebut) {
+                range[Op.gte] = new Date(filter.dateDebut);
+            }
+            if (filter.dateFin) {
+                range[Op.lte] = new Date(filter.dateFin);
+            }
+            where.dateDebut = range;
+        }
+
+        const plans = await AuditPlan.findAll({
+            where,
+            include: [{ model: User, as: 'createdBy', attributes: ['id', 'prenom', 'nom', 'mail'], required: false }],
+            order: [['updatedAt', 'DESC']],
+        });
+
+        const planIds = plans.map((plan) => plan.id);
+        const missions = planIds.length > 0
+            ? await AuditMission.findAll({
+                where: { auditPlanId: { [Op.in]: planIds } },
+                attributes: ['id', 'auditPlanId', 'type', 'statutId'],
+            })
+            : [];
+
+        const missionCountMap = new Map<number, number>();
+        const recommendationCountMap = new Map<number, number>();
+
+        for (const mission of missions) {
+            const planId = mission.auditPlanId || 0;
+            if (!planId) {
+                continue;
+            }
+
+            if (mission.type === AuditRecordType.PLAN_ACTION_AUDIT) {
+                recommendationCountMap.set(planId, (recommendationCountMap.get(planId) || 0) + 1);
+            } else {
+                missionCountMap.set(planId, (missionCountMap.get(planId) || 0) + 1);
+            }
+        }
+
+        return plans.map((plan) => ({
+            ...plan.toJSON(),
+            missionCount: missionCountMap.get(plan.id) || 0,
+            recommendationCount: recommendationCountMap.get(plan.id) || 0,
+            availableTransitions: this.getAvailableTransitions((plan as any).statusCode, role),
+            isEditable: (plan as any).statusCode !== AuditPlanStatusCode.FERME_DEFINITIVEMENT,
+        }));
+    }
+
+    static async createPlan(actorId: number, data: any) {
+        const payload = await LookupResolutionService.resolveEntityPayload('auditPlan', {
+            nom: String(data.nom || '').trim(),
+            calendrier: String(data.calendrier || '').trim() || null,
+            description: String(data.description || '').trim() || null,
+            nature: data.nature || AuditPlanNatureCode.ANNUEL,
+            status: data.status || AuditPlanStatusCode.CREE,
+            isTemplate: Boolean(data.isTemplate),
+            dateDebut: data.dateDebut ? new Date(data.dateDebut) : null,
+            dateFin: data.dateFin ? new Date(data.dateFin) : null,
+            createdById: actorId,
+        });
+
+        if (!payload.nom) {
+            throw new Error('Le nom du plan est obligatoire');
+        }
+
+        const created = await AuditPlan.create(payload);
+        return this.getPlanDetail(created.id);
+    }
+
+    static async updatePlan(planId: number, actorRole: string, data: any) {
+        this.ensurePlanWritable(actorRole);
+        const plan = await this.getPlanById(planId);
+        this.ensurePlanEditable(plan);
+
+        const payload = await LookupResolutionService.resolveEntityPayload('auditPlan', {
+            nom: data.nom !== undefined ? String(data.nom || '').trim() : plan.nom,
+            calendrier: data.calendrier !== undefined ? String(data.calendrier || '').trim() || null : plan.calendrier,
+            description: data.description !== undefined ? String(data.description || '').trim() || null : plan.description,
+            nature: data.nature !== undefined ? data.nature : (plan as any).natureCode,
+            isTemplate: data.isTemplate !== undefined ? Boolean(data.isTemplate) : plan.isTemplate,
+            dateDebut: data.dateDebut !== undefined ? (data.dateDebut ? new Date(data.dateDebut) : null) : plan.dateDebut,
+            dateFin: data.dateFin !== undefined ? (data.dateFin ? new Date(data.dateFin) : null) : plan.dateFin,
+        });
+
+        await plan.update(payload);
+        return this.getPlanDetail(planId);
+    }
+
+    static async deletePlan(planId: number) {
+        const plan = await this.getPlanById(planId);
+        await softDeleteInstance(plan);
+
+        await AuditMission.update(getSoftDeleteValues(), {
+            where: { auditPlanId: planId, is_deleted: false },
+        });
+
+        return { message: 'Plan d audit supprime avec succes' };
+    }
+
+    static async restorePlan(planId: number) {
+        const plan = await this.getPlanById(planId, true);
+        if (!plan.is_deleted) {
+            throw new Error('Le plan n est pas supprime');
+        }
+
+        if ((plan as any).statusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
+            throw new Error('Un plan ferme definitivement ne peut pas etre restaure');
+        }
+
+        await restoreSoftDeletedInstance(plan);
+        await AuditMission.scope('withDeleted').update(getRestoreValues(), {
+            where: { auditPlanId: planId, is_deleted: true },
+        });
+
+        return this.getPlanDetail(planId);
+    }
+
+    private static getAvailableTransitions(statusCode: string, role: string) {
+        const transitions: string[] = [];
+        const isDivisionChief = role === UserRole.AUDIT_RESPONSABLE || role === UserRole.SUPER_ADMIN;
+        const isDirector = role === UserRole.AUDIT_DIRECTEUR || role === UserRole.SUPER_ADMIN;
+        const isCouncil = role === UserRole.TOP_MANAGEMENT || role === UserRole.SUPER_ADMIN;
+        const isCommittee = role === UserRole.TOP_MANAGEMENT || role === UserRole.SUPER_ADMIN;
+
+        if (statusCode === AuditPlanStatusCode.CREE && isDivisionChief) {
+            transitions.push(AuditPlanTransitionCode.DEMANDER_VALIDATION, AuditPlanTransitionCode.DEFINIR_MODELE);
+        }
+        if (statusCode === AuditPlanStatusCode.A_VALIDER && isDirector) {
+            transitions.push(AuditPlanTransitionCode.VALIDER_DIRECTION, AuditPlanTransitionCode.DEMANDER_REVUE);
+        }
+        if (statusCode === AuditPlanStatusCode.VALIDE_DIRECTION) {
+            if (isCouncil) {
+                transitions.push(AuditPlanTransitionCode.VALIDER_CONSEIL);
+            }
+            if (isDirector || isDivisionChief) {
+                transitions.push(AuditPlanTransitionCode.DEMANDER_REVUE);
+            }
+        }
+        if (statusCode === AuditPlanStatusCode.VALIDE_CONSEIL) {
+            if (isCommittee) {
+                transitions.push(AuditPlanTransitionCode.VALIDER_COMITE);
+            }
+            if (isDirector || isCouncil) {
+                transitions.push(AuditPlanTransitionCode.DEMANDER_REVUE);
+            }
+        }
+        if (statusCode === AuditPlanStatusCode.VALIDE_COMITE && isDirector) {
+            transitions.push(AuditPlanTransitionCode.FERMER, AuditPlanTransitionCode.DEMANDER_REVUE);
+        }
+        if (statusCode === AuditPlanStatusCode.FERME && isDirector) {
+            transitions.push(AuditPlanTransitionCode.REOUVRIR, AuditPlanTransitionCode.FERMER_DEFINITIVEMENT);
+        }
+
+        return transitions;
+    }
+
+    private static resolveTransition(currentStatusCode: string, transitionCode: string, comment?: string | null): TransitionResult {
+        switch (transitionCode) {
+            case AuditPlanTransitionCode.DEMANDER_VALIDATION:
+                if (currentStatusCode !== AuditPlanStatusCode.CREE) {
+                    throw new Error('Transition invalide');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.A_VALIDER,
+                    patch: { submittedAt: new Date() },
+                };
+            case AuditPlanTransitionCode.VALIDER_DIRECTION:
+                if (currentStatusCode !== AuditPlanStatusCode.A_VALIDER) {
+                    throw new Error('La validation direction exige un plan a valider');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.VALIDE_DIRECTION,
+                    patch: { validatedDirectionAt: new Date() },
+                };
+            case AuditPlanTransitionCode.DEMANDER_REVUE:
+                if (!comment || !String(comment).trim()) {
+                    throw new Error('Un commentaire est obligatoire pour demander une revue');
+                }
+                if (!([AuditPlanStatusCode.A_VALIDER, AuditPlanStatusCode.VALIDE_DIRECTION, AuditPlanStatusCode.VALIDE_CONSEIL, AuditPlanStatusCode.VALIDE_COMITE] as string[]).includes(currentStatusCode)) {
+                    throw new Error('Transition invalide');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.CREE,
+                    patch: {},
+                };
+            case AuditPlanTransitionCode.VALIDER_CONSEIL:
+                if (currentStatusCode !== AuditPlanStatusCode.VALIDE_DIRECTION) {
+                    throw new Error('Pas de validation Conseil sans Direction');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.VALIDE_CONSEIL,
+                    patch: { validatedCouncilAt: new Date() },
+                };
+            case AuditPlanTransitionCode.VALIDER_COMITE:
+                if (currentStatusCode !== AuditPlanStatusCode.VALIDE_CONSEIL) {
+                    throw new Error('Pas de validation Comite sans Conseil');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.VALIDE_COMITE,
+                    patch: { validatedCommitteeAt: new Date() },
+                };
+            case AuditPlanTransitionCode.FERMER:
+                if (currentStatusCode !== AuditPlanStatusCode.VALIDE_COMITE) {
+                    throw new Error('Seul un plan valide par Comite peut etre ferme');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.FERME,
+                    patch: { closedAt: new Date() },
+                };
+            case AuditPlanTransitionCode.REOUVRIR:
+                if (currentStatusCode !== AuditPlanStatusCode.FERME) {
+                    throw new Error('Seul un plan ferme peut etre reouvert');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.VALIDE_COMITE,
+                    patch: { closedAt: null },
+                };
+            case AuditPlanTransitionCode.FERMER_DEFINITIVEMENT:
+                if (currentStatusCode !== AuditPlanStatusCode.FERME) {
+                    throw new Error('Seul un plan ferme peut etre ferme definitivement');
+                }
+                return {
+                    targetStatusCode: AuditPlanStatusCode.FERME_DEFINITIVEMENT,
+                    patch: { closedDefinitivelyAt: new Date() },
+                };
+            case AuditPlanTransitionCode.DEFINIR_MODELE:
+                if (currentStatusCode !== AuditPlanStatusCode.CREE) {
+                    throw new Error('Seul un plan en creation peut etre defini comme modele');
+                }
+                return {
+                    targetStatusCode: currentStatusCode,
+                    patch: { isTemplate: true },
+                };
+            default:
+                throw new Error('Transition inconnue');
+        }
+    }
+
+    private static async createWorkflowEvent(planId: number, actorUserId: number, transitionCode: string, fromStatusId: number | null, toStatusId: number, comment?: string | null) {
+        await AuditPlanWorkflowEvent.create(await LookupResolutionService.resolveEntityPayload('auditPlanWorkflowEvent', {
+            planId,
+            transition: transitionCode,
+            fromStatusId,
+            toStatusId,
+            actorUserId,
+            comment: comment ? String(comment).trim() : null,
+        }));
+    }
+
+    private static async notifyPlanTransition(plan: AuditPlan, actorUserId: number, transitionCode: string, targetStatusCode: string) {
+        const actor = await User.findByPk(actorUserId);
+        const recipientRoleIds = transitionCode === AuditPlanTransitionCode.DEMANDER_VALIDATION
+            ? [
+                LookupResolutionService.getStaticValue('user.role', UserRole.AUDIT_DIRECTEUR)?.id,
+                LookupResolutionService.getStaticValue('user.role', UserRole.SUPER_ADMIN)?.id,
+            ]
+            : [
+                LookupResolutionService.getStaticValue('user.role', UserRole.AUDIT_DIRECTEUR)?.id,
+                LookupResolutionService.getStaticValue('user.role', UserRole.AUDIT_RESPONSABLE)?.id,
+                LookupResolutionService.getStaticValue('user.role', UserRole.CHEF_MISSION)?.id,
+                LookupResolutionService.getStaticValue('user.role', UserRole.TOP_MANAGEMENT)?.id,
+                LookupResolutionService.getStaticValue('user.role', UserRole.SUPER_ADMIN)?.id,
+            ];
+        const recipients = await User.findAll({
+            where: {
+                roleId: {
+                    [Op.in]: recipientRoleIds.filter(Boolean),
+                },
+            },
+            attributes: ['id', 'nom', 'prenom', 'mail'],
+        });
+
+        const content = transitionCode === AuditPlanTransitionCode.DEMANDER_VALIDATION
+            ? `Le plan d audit ${plan.nom} a ete soumis pour validation`
+            : `Le plan d audit ${plan.nom} est maintenant au statut ${LookupResolutionService.getStaticValue(AUDIT_LOOKUP_KEYS.PLAN_STATUS, targetStatusCode)?.label || targetStatusCode}`;
+
+        const type = transitionCode === AuditPlanTransitionCode.DEMANDER_VALIDATION
+            ? NotificationType.AUDIT_PLAN_VALIDATION_REQUESTED
+            : NotificationType.AUDIT_PLAN_STATUS_CHANGED;
+
+        for (const recipient of recipients) {
+            if (recipient.id === actorUserId) {
+                continue;
+            }
+
+            await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
+                userId: recipient.id,
+                type,
+                content,
+            }));
+
+            if (transitionCode === AuditPlanTransitionCode.DEMANDER_VALIDATION) {
+                await emailService.sendAuditPlanValidationRequestedEmail(
+                    { mail: recipient.mail, nom: recipient.nom, prenom: recipient.prenom },
+                    { nom: plan.nom, statusLabel: (plan as any).statusLabel || (plan as any).status || 'Cree' }
+                );
+            } else {
+                await emailService.sendAuditPlanStatusChangedEmail(
+                    { mail: recipient.mail, nom: recipient.nom, prenom: recipient.prenom },
+                    {
+                        nom: plan.nom,
+                        statusLabel: LookupResolutionService.getStaticValue(AUDIT_LOOKUP_KEYS.PLAN_STATUS, targetStatusCode)?.label || targetStatusCode,
+                        actorName: buildDisplayName(actor),
+                    }
+                );
+            }
+        }
+    }
+
+    static async applyTransition(planId: number, actorUserId: number, actorRole: string, transitionCode: string, comment?: string | null) {
+        const plan = await this.getPlanById(planId);
+        const availableTransitions = this.getAvailableTransitions((plan as any).statusCode, actorRole);
+        if (!availableTransitions.includes(transitionCode)) {
+            throw new Error('Transition non autorisee pour ce role ou ce statut');
+        }
+
+        if ((plan as any).statusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
+            throw new Error('Le plan est ferme definitivement');
+        }
+
+        const { targetStatusCode, patch } = this.resolveTransition((plan as any).statusCode, transitionCode, comment);
+        const targetStatusId = await LookupResolutionService.requireLookupId(AUDIT_LOOKUP_KEYS.PLAN_STATUS, targetStatusCode);
+
+        const updatePayload: Record<string, unknown> = {
+            ...patch,
+            statusId: targetStatusId,
+        };
+
+        if (transitionCode === AuditPlanTransitionCode.DEFINIR_MODELE) {
+            delete updatePayload.statusId;
+        }
+
+        await plan.update(updatePayload);
+        await this.createWorkflowEvent(planId, actorUserId, transitionCode, plan.statusId, targetStatusId, comment);
+        await this.notifyPlanTransition(plan, actorUserId, transitionCode, targetStatusCode);
+
+        return this.getPlanDetail(planId, actorRole);
+    }
+
+    private static async computeMissionProgress(mission: AuditMission) {
+        const checklistItems = await AuditMissionChecklistItem.findAll({ where: { missionId: mission.id } });
+        const linkedRecommendations = await AuditMission.findAll({
+            where: {
+                type: AuditRecordType.PLAN_ACTION_AUDIT,
+                sourceMissionId: mission.id,
+            },
+            attributes: ['id', 'statutId'],
+        });
+
+        const statusCode = (mission as any).statutCode || mission.statut;
+        if (statusCode === AuditMissionStatus.OK || mission.dateReelleFin) {
+            return 100;
+        }
+
+        const components: number[] = [];
+        components.push(statusCode === AuditMissionStatus.EN_COURS ? 40 : 0);
+
+        if (mission.dateReelleDebut) {
+            components.push(25);
+        }
+
+        if (checklistItems.length > 0) {
+            const doneCount = checklistItems.filter((item) => item.estFait).length;
+            components.push(Math.round((doneCount / checklistItems.length) * 100));
+        }
+
+        if (linkedRecommendations.length > 0) {
+            const okStatusId = LookupResolutionService.getStaticValue('auditMission.statut', AuditMissionStatus.OK)?.id;
+            const completedCount = linkedRecommendations.filter((item) => item.statutId === okStatusId).length;
+            components.push(Math.round((completedCount / linkedRecommendations.length) * 100));
+        }
+
+        if (components.length === 0) {
+            return 0;
+        }
+
+        return Math.max(0, Math.min(100, Math.round(components.reduce((sum, value) => sum + value, 0) / components.length)));
+    }
+
+    private static async hydrateMission(mission: AuditMission) {
+        const progressPercent = await this.computeMissionProgress(mission);
+        if (mission.progressPercent !== progressPercent) {
+            await mission.update({ progressPercent });
+        }
+
+        const resourceAssignments = await AuditMissionResource.findAll({
+            where: { missionId: mission.id },
+            include: [
+                { model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'mail', 'poste'], required: false },
+            ],
+            order: [['createdAt', 'ASC']],
+        });
+
+        const requiredSkills = await AuditMissionRequiredSkill.findAll({
+            where: { missionId: mission.id },
+            include: [{ model: AuditSkill, as: 'skill', required: false }],
+            order: [['createdAt', 'ASC']],
+        });
+
+        return {
+            ...mission.toJSON(),
+            progressPercent,
+            missionOrderStatus: mission.missionOrderSentAt ? 'sent' : 'pending',
+            missionOrderStatusLabel: this.getWorkflowStatusLabel('mission_order', mission.missionOrderSentAt ? 'sent' : 'pending'),
+            workProgramStatus: mission.workProgramStatus || 'draft',
+            workProgramStatusLabel: this.getWorkflowStatusLabel('work_program', mission.workProgramStatus || 'draft'),
+            reportStatus: mission.reportStatus || 'draft',
+            reportStatusLabel: this.getWorkflowStatusLabel('report', mission.reportStatus || 'draft'),
+            resourceAssignments: resourceAssignments.map((item) => item.toJSON()),
+            requiredSkills: requiredSkills.map((item) => item.toJSON()),
+        };
+    }
+
+    static async getPlanMissions(planId: number) {
+        const missions = await AuditMission.findAll({
+            where: {
+                auditPlanId: planId,
+                type: AuditRecordType.MISSION_AUDIT,
+            },
+            include: [
+                { model: User, as: 'auditSenior', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'chefMission', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+            ],
+            order: [['ordre', 'ASC'], ['datePrevueDebut', 'ASC'], ['createdAt', 'ASC']],
+        });
+
+        const enriched = [];
+        for (const mission of missions) {
+            enriched.push(await this.hydrateMission(mission));
+        }
+
+        return enriched;
+    }
+
+    static async listMissions(role: string, userId: number, filter: { type?: string | null } = {}) {
+        this.ensurePlanReadable(role);
+
+        const where: Record<string, unknown> = {
+            auditPlanId: { [Op.ne]: null },
+            type: filter.type || AuditRecordType.MISSION_AUDIT,
+        };
+
+        if (role === UserRole.CHEF_MISSION) {
+            where.chefMissionId = userId;
+        } else if (role === UserRole.AUDITEUR) {
+            where.auditeurId = userId;
+        }
+
+        const missions = await AuditMission.findAll({
+            where,
+            include: [
+                { model: User, as: 'auditSenior', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'chefMission', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { association: 'auditPlan', required: false } as any,
+            ],
+            order: [['datePrevueFin', 'ASC'], ['updatedAt', 'DESC']],
+        });
+
+        const enriched = [];
+        for (const mission of missions) {
+            enriched.push(await this.hydrateMission(mission));
+        }
+
+        return enriched;
+    }
+
+    static async createPlanMission(planId: number, actorId: number, data: any) {
+        const plan = await this.getPlanById(planId);
+        this.ensurePlanEditable(plan);
+
+        const mission = await AuditingService.createRecord(actorId, {
+            ...data,
+            type: AuditRecordType.MISSION_AUDIT,
+            auditPlanId: planId,
+        });
+
+        return this.hydrateMission(mission);
+    }
+
+    static async getPlanRecommendations(planId: number) {
+        return AuditMission.findAll({
+            where: {
+                auditPlanId: planId,
+                type: AuditRecordType.PLAN_ACTION_AUDIT,
+            },
+            include: [
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: AuditMission, as: 'sourceMission', attributes: ['id', 'titre', 'code'], required: false },
+            ],
+            order: [['ordre', 'ASC'], ['updatedAt', 'DESC']],
+        });
+    }
+
+    static async getWorkflowHistory(planId: number) {
+        const events = await AuditPlanWorkflowEvent.findAll({
+            where: { planId },
+            include: [{ model: User, as: 'actor', attributes: ['id', 'prenom', 'nom', 'mail'], required: false }],
+            order: [['createdAt', 'ASC']],
+        });
+
+        return events.map((event) => {
+            const payload = event.toJSON() as any;
+            return {
+                ...payload,
+                fromStatusCode: LookupResolutionService.getStaticValue(AUDIT_LOOKUP_KEYS.PLAN_STATUS, event.fromStatusId)?.code || null,
+                fromStatusLabel: LookupResolutionService.getStaticValue(AUDIT_LOOKUP_KEYS.PLAN_STATUS, event.fromStatusId)?.label || null,
+                toStatusCode: LookupResolutionService.getStaticValue(AUDIT_LOOKUP_KEYS.PLAN_STATUS, event.toStatusId)?.code || null,
+                toStatusLabel: LookupResolutionService.getStaticValue(AUDIT_LOOKUP_KEYS.PLAN_STATUS, event.toStatusId)?.label || null,
+            };
+        });
+    }
+
+    static async getPlanGantt(planId: number) {
+        const missions = await this.getPlanMissions(planId);
+        return missions.map((mission: any) => ({
+            id: mission.id,
+            code: mission.code,
+            titre: mission.titre,
+            quarterCode: mission.quarterCode || null,
+            quarterLabel: mission.quarter || null,
+            statusCode: mission.statutCode || mission.statut,
+            statusLabel: mission.statutLabel || mission.statut,
+            datePrevueDebut: mission.datePrevueDebut,
+            datePrevueFin: mission.datePrevueFin,
+            dateReelleDebut: mission.dateReelleDebut,
+            dateReelleFin: mission.dateReelleFin,
+            progressPercent: mission.progressPercent || 0,
+        }));
+    }
+
+    static async getWorkProgramTemplates() {
+        return AuditingService.getChecklistTemplates();
+    }
+
+    private static async getMissionWorkflowHistory(missionId: number) {
+        const events = await AuditMissionWorkflowEvent.findAll({
+            where: { missionId },
+            include: [{ model: User, as: 'actor', attributes: ['id', 'prenom', 'nom', 'mail'], required: false }],
+            order: [['createdAt', 'ASC']],
+        });
+
+        return events.map((event) => ({
+            ...event.toJSON(),
+            workflowTypeLabel: event.workflowType === 'mission_order'
+                ? 'Ordre de mission'
+                : event.workflowType === 'work_program'
+                    ? 'Programme de travail'
+                    : 'Rapport',
+            fromStatusLabel: this.getWorkflowStatusLabel(event.workflowType as MissionWorkflowType, event.fromStatus),
+            toStatusLabel: this.getWorkflowStatusLabel(event.workflowType as MissionWorkflowType, event.toStatus),
+        }));
+    }
+
+    static async sendMissionOrder(missionId: number, actorUserId: number, actorRole: string, data: any = {}) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, MISSION_ORDER_MANAGER_ROLES);
+
+        if (!mission.chefMissionId || !mission.auditeurId) {
+            throw new Error('Affectez d abord un chef de mission et un auditeur avant l envoi de l ordre de mission');
+        }
+
+        const previousStatus = mission.missionOrderSentAt ? 'sent' : 'pending';
+        await mission.update({
+            missionOrderReference: String(data.reference || data.missionOrderReference || '').trim() || mission.missionOrderReference || `OM-${mission.id}`,
+            missionOrderSentAt: new Date(),
+            missionOrderSentById: actorUserId,
+        });
+
+        await this.createMissionWorkflowEvent(
+            mission.id,
+            actorUserId,
+            'mission_order',
+            previousStatus === 'sent' ? 'resend' : 'send',
+            previousStatus,
+            'sent',
+            typeof data.comment === 'string' ? data.comment : null
+        );
+
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async saveMissionWorkProgram(missionId: number, actorUserId: number, actorRole: string, data: any) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_EDITOR_ROLES);
+
+        if (!EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'))) {
+            throw new Error('Le programme de travail doit etre en brouillon ou retourne pour modification');
+        }
+
+        const rawItems = Array.isArray(data.items) ? data.items : [];
+        const items = rawItems
+            .map((item: any) => ({
+                id: Number(item.id) || null,
+                texte: String(item.texte || '').trim(),
+                estFait: Boolean(item.estFait),
+            }))
+            .filter((item: any) => item.texte);
+
+        const existingItems = await AuditMissionChecklistItem.scope('withDeleted').findAll({
+            where: { missionId },
+            order: [['createdAt', 'ASC']],
+        });
+        const keepIds = new Set<number>();
+
+        for (const item of items) {
+            const existing = item.id
+                ? existingItems.find((current) => current.id === item.id)
+                : null;
+
+            if (existing) {
+                keepIds.add(existing.id);
+                if (existing.is_deleted) {
+                    await restoreSoftDeletedInstance(existing);
+                }
+                await existing.update({
+                    texte: item.texte,
+                    estFait: item.estFait,
+                });
+            } else {
+                const created = await AuditMissionChecklistItem.create({
+                    missionId,
+                    texte: item.texte,
+                    estFait: item.estFait,
+                });
+                keepIds.add(created.id);
+            }
+        }
+
+        for (const existing of existingItems) {
+            if (!existing.is_deleted && !keepIds.has(existing.id)) {
+                await softDeleteInstance(existing);
+            }
+        }
+
+        const patch: Record<string, unknown> = {
+            workProgramPreparedById: actorUserId,
+        };
+
+        if (data.checklistTemplateId !== undefined) {
+            patch.checklistTemplateId = data.checklistTemplateId ? Number(data.checklistTemplateId) : null;
+        }
+
+        await mission.update(patch);
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async toggleMissionWorkProgramItem(missionId: number, itemId: number, actorUserId: number, actorRole: string, estFait: boolean) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_EXECUTION_ROLES);
+
+        if (!['validated', 'approved'].includes(String(mission.workProgramStatus || 'draft')) && !EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'))) {
+            throw new Error('Le programme de travail n est pas pret pour l execution');
+        }
+
+        await AuditingService.toggleMissionChecklistItem(missionId, itemId, estFait);
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async applyWorkProgramTransition(missionId: number, actorUserId: number, actorRole: string, data: any) {
+        const mission = await this.getMissionById(missionId);
+        const transition = String(data.transition || '').trim();
+        const currentStatus = String(mission.workProgramStatus || 'draft');
+        const checklistItems = await AuditingService.getMissionChecklistItems(missionId);
+
+        if (transition === 'submit') {
+            this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_EDITOR_ROLES);
+            if (!['draft', 'rework_requested'].includes(currentStatus)) {
+                throw new Error('Le programme de travail ne peut pas etre soumis dans ce statut');
+            }
+            if (checklistItems.length === 0) {
+                throw new Error('Ajoutez au moins un point de checklist avant la soumission');
+            }
+
+            await mission.update({
+                workProgramStatus: 'submitted',
+                workProgramSubmittedAt: new Date(),
+                workProgramPreparedById: actorUserId,
+                workProgramLastComment: String(data.comment || '').trim() || null,
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'work_program', 'submit', currentStatus, 'submitted', data.comment);
+        } else if (transition === 'validate') {
+            this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_VALIDATOR_ROLES);
+            if (currentStatus !== 'submitted') {
+                throw new Error('Le programme de travail doit etre soumis avant validation');
+            }
+
+            await mission.update({
+                workProgramStatus: 'validated',
+                workProgramValidatedAt: new Date(),
+                workProgramValidatedById: actorUserId,
+                workProgramLastComment: String(data.comment || '').trim() || null,
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'work_program', 'validate', currentStatus, 'validated', data.comment);
+        } else if (transition === 'approve') {
+            this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_APPROVER_ROLES);
+            if (currentStatus !== 'validated') {
+                throw new Error('Le programme de travail doit etre valide avant approbation');
+            }
+
+            await mission.update({
+                workProgramStatus: 'approved',
+                workProgramApprovedAt: new Date(),
+                workProgramApprovedById: actorUserId,
+                workProgramLastComment: String(data.comment || '').trim() || null,
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'work_program', 'approve', currentStatus, 'approved', data.comment);
+        } else if (transition === 'request_rework') {
+            if (isRoleAllowed(actorRole, WORK_PROGRAM_VALIDATOR_ROLES)) {
+                this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_VALIDATOR_ROLES);
+            } else {
+                this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_APPROVER_ROLES);
+            }
+
+            if (!['submitted', 'validated', 'approved'].includes(currentStatus)) {
+                throw new Error('Le retour pour rework n est pas possible dans ce statut');
+            }
+
+            if (!String(data.comment || '').trim()) {
+                throw new Error('Un commentaire est obligatoire pour retourner le programme de travail');
+            }
+
+            await mission.update({
+                workProgramStatus: 'rework_requested',
+                workProgramLastComment: String(data.comment || '').trim(),
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'work_program', 'request_rework', currentStatus, 'rework_requested', data.comment);
+        } else {
+            throw new Error('Transition du programme de travail inconnue');
+        }
+
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async saveMissionReport(missionId: number, actorUserId: number, actorRole: string, data: any) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_EDITOR_ROLES);
+
+        if (!EDITABLE_WORKFLOW_STATUSES.includes(String(mission.reportStatus || 'draft'))) {
+            throw new Error('Le rapport doit etre en brouillon ou retourne pour modification');
+        }
+
+        await mission.update({
+            rapport: String(data.rapport || '').trim() || null,
+            recommandations: String(data.recommandations || '').trim() || null,
+            reportPreparedById: actorUserId,
+        });
+
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async applyReportTransition(missionId: number, actorUserId: number, actorRole: string, data: any) {
+        const mission = await this.getMissionById(missionId);
+        const transition = String(data.transition || '').trim();
+        const currentStatus = String(mission.reportStatus || 'draft');
+
+        if (transition === 'submit') {
+            this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_SUBMITTER_ROLES);
+            if (!['draft', 'rework_requested'].includes(currentStatus)) {
+                throw new Error('Le rapport ne peut pas etre soumis dans ce statut');
+            }
+            if (!String(mission.rapport || '').trim()) {
+                throw new Error('Le rapport doit etre renseigne avant soumission');
+            }
+
+            await mission.update({
+                reportStatus: 'submitted',
+                reportSubmittedAt: new Date(),
+                reportPreparedById: actorUserId,
+                reportLastComment: String(data.comment || '').trim() || null,
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'report', 'submit', currentStatus, 'submitted', data.comment);
+        } else if (transition === 'validate') {
+            this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_VALIDATOR_ROLES);
+            if (currentStatus !== 'submitted') {
+                throw new Error('Le rapport doit etre soumis avant validation');
+            }
+
+            await mission.update({
+                reportStatus: 'validated',
+                reportValidatedAt: new Date(),
+                reportValidatedById: actorUserId,
+                reportLastComment: String(data.comment || '').trim() || null,
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'report', 'validate', currentStatus, 'validated', data.comment);
+        } else if (transition === 'approve') {
+            this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_APPROVER_ROLES);
+            if (currentStatus !== 'validated') {
+                throw new Error('Le rapport doit etre valide avant approbation');
+            }
+
+            await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', {
+                reportStatus: 'approved',
+                reportApprovedAt: new Date(),
+                reportApprovedById: actorUserId,
+                reportLastComment: String(data.comment || '').trim() || null,
+                statut: AuditMissionStatus.OK,
+                dateReelleFin: mission.dateReelleFin || new Date(),
+            }) as any);
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'report', 'approve', currentStatus, 'approved', data.comment);
+        } else if (transition === 'request_rework') {
+            if (isRoleAllowed(actorRole, REPORT_VALIDATOR_ROLES)) {
+                this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_VALIDATOR_ROLES);
+            } else {
+                this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_APPROVER_ROLES);
+            }
+
+            if (!['submitted', 'validated', 'approved'].includes(currentStatus)) {
+                throw new Error('Le retour pour rework n est pas possible dans ce statut');
+            }
+
+            if (!String(data.comment || '').trim()) {
+                throw new Error('Un commentaire est obligatoire pour retourner le rapport');
+            }
+
+            await mission.update({
+                reportStatus: 'rework_requested',
+                reportLastComment: String(data.comment || '').trim(),
+            });
+            await this.createMissionWorkflowEvent(missionId, actorUserId, 'report', 'request_rework', currentStatus, 'rework_requested', data.comment);
+        } else {
+            throw new Error('Transition du rapport inconnue');
+        }
+
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async getMissionWorkspace(missionId: number, actorRole: string, actorUserId: number) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionReadable(mission, actorRole, actorUserId);
+
+        const hydratedMission = await this.hydrateMission(mission);
+        const checklistItems = await AuditingService.getMissionChecklistItems(missionId);
+        const actionPlans = await AuditingService.getMissionActionPlanItems(missionId);
+        const workflowHistory = await this.getMissionWorkflowHistory(missionId);
+        const permissions = this.buildMissionPermissions(mission, actorRole, actorUserId);
+        const checklistDoneCount = checklistItems.filter((item: any) => item.estFait).length;
+
+        return {
+            mission: hydratedMission,
+            permissions,
+            missionOrder: {
+                status: mission.missionOrderSentAt ? 'sent' : 'pending',
+                statusLabel: this.getWorkflowStatusLabel('mission_order', mission.missionOrderSentAt ? 'sent' : 'pending'),
+                reference: mission.missionOrderReference || null,
+                sentAt: mission.missionOrderSentAt,
+                sentBy: (mission as any).missionOrderSender || null,
+            },
+            workProgram: {
+                status: mission.workProgramStatus || 'draft',
+                statusLabel: this.getWorkflowStatusLabel('work_program', mission.workProgramStatus || 'draft'),
+                lastComment: mission.workProgramLastComment || null,
+                submittedAt: mission.workProgramSubmittedAt,
+                validatedAt: mission.workProgramValidatedAt,
+                approvedAt: mission.workProgramApprovedAt,
+                preparedBy: (mission as any).workProgramPreparedBy || null,
+                validatedBy: (mission as any).workProgramValidatedBy || null,
+                approvedBy: (mission as any).workProgramApprovedBy || null,
+                checklistTemplateId: mission.checklistTemplateId || null,
+                completionPercent: checklistItems.length > 0 ? Math.round((checklistDoneCount / checklistItems.length) * 100) : 0,
+                items: checklistItems.map((item) => item.toJSON()),
+            },
+            report: {
+                status: mission.reportStatus || 'draft',
+                statusLabel: this.getWorkflowStatusLabel('report', mission.reportStatus || 'draft'),
+                lastComment: mission.reportLastComment || null,
+                submittedAt: mission.reportSubmittedAt,
+                validatedAt: mission.reportValidatedAt,
+                approvedAt: mission.reportApprovedAt,
+                preparedBy: (mission as any).reportPreparedBy || null,
+                validatedBy: (mission as any).reportValidatedBy || null,
+                approvedBy: (mission as any).reportApprovedBy || null,
+                rapport: mission.rapport || '',
+                recommandations: mission.recommandations || '',
+            },
+            actionPlans,
+            workflowHistory,
+        };
+    }
+
+    static async getMissionActionPlans(missionId: number, actorRole: string, actorUserId: number) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionReadable(mission, actorRole, actorUserId);
+        return AuditingService.getMissionActionPlanItems(missionId);
+    }
+
+    static async createMissionActionPlan(missionId: number, actorRole: string, actorUserId: number, data: any) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_CREATOR_ROLES);
+        return AuditingService.createMissionActionPlanItem(missionId, data);
+    }
+
+    static async updateMissionActionPlan(missionId: number, itemId: number, actorRole: string, actorUserId: number, data: any) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_UPDATE_ROLES);
+        return AuditingService.updateMissionActionPlanItem(missionId, itemId, data);
+    }
+
+    static async deleteMissionActionPlan(missionId: number, itemId: number, actorRole: string, actorUserId: number) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_DELETE_ROLES);
+        return AuditingService.deleteMissionActionPlanItem(missionId, itemId);
+    }
+
+    static async getSkills() {
+        return AuditSkill.findAll({ order: [['label', 'ASC']] });
+    }
+
+    static async createSkill(data: any) {
+        const payload = {
+            code: String(data.code || data.label || '').trim().toLowerCase().replace(/\s+/g, '_'),
+            label: String(data.label || '').trim(),
+            description: String(data.description || '').trim() || null,
+        };
+
+        if (!payload.code || !payload.label) {
+            throw new Error('Le code et le label de la competence sont obligatoires');
+        }
+
+        return AuditSkill.create(payload);
+    }
+
+    static async updateSkill(skillId: number, data: any) {
+        const skill = await AuditSkill.findByPk(skillId);
+        if (!skill) {
+            throw new Error('Competence introuvable');
+        }
+
+        await skill.update({
+            code: data.code !== undefined ? String(data.code || '').trim().toLowerCase().replace(/\s+/g, '_') : skill.code,
+            label: data.label !== undefined ? String(data.label || '').trim() : skill.label,
+            description: data.description !== undefined ? String(data.description || '').trim() || null : skill.description,
+        });
+
+        return skill;
+    }
+
+    static async deleteSkill(skillId: number) {
+        const skill = await AuditSkill.findByPk(skillId);
+        if (!skill) {
+            throw new Error('Competence introuvable');
+        }
+
+        await softDeleteInstance(skill);
+        return { message: 'Competence supprimee avec succes' };
+    }
+
+    static async restoreSkill(skillId: number) {
+        const skill = await AuditSkill.scope('withDeleted').findByPk(skillId);
+        if (!skill || !skill.is_deleted) {
+            throw new Error('Competence introuvable');
+        }
+
+        await restoreSoftDeletedInstance(skill);
+        return skill;
+    }
+
+    static async getMissionResources(missionId: number) {
+        const mission = await AuditMission.findByPk(missionId);
+        if (!mission) {
+            throw new Error('Mission introuvable');
+        }
+
+        const resources = await AuditMissionResource.findAll({
+            where: { missionId },
+            include: [{ model: User, as: 'user', attributes: ['id', 'nom', 'prenom', 'mail', 'poste'], required: false }],
+            order: [['createdAt', 'ASC']],
+        });
+        const requiredSkills = await AuditMissionRequiredSkill.findAll({
+            where: { missionId },
+            include: [{ model: AuditSkill, as: 'skill', required: false }],
+            order: [['createdAt', 'ASC']],
+        });
+
+        return {
+            resources: resources.map((item) => item.toJSON()),
+            requiredSkills: requiredSkills.map((item) => item.toJSON()),
+        };
+    }
+
+    static async updateMissionResources(missionId: number, data: any) {
+        const mission = await AuditMission.findByPk(missionId);
+        if (!mission) {
+            throw new Error('Mission introuvable');
+        }
+
+        const resources = Array.isArray(data.resources) ? data.resources : [];
+        const nextKeys = new Set<string>();
+
+        for (const resource of resources) {
+            const userId = Number(resource.userId);
+            const assignmentRole = resource.assignmentRole || resource.assignmentRoleCode || AuditMissionResourceRoleCode.AUDITEUR;
+            const allocationPercent = Math.max(0, Math.min(100, Number(resource.allocationPercent || 100)));
+
+            nextKeys.add(`${userId}:${assignmentRole}`);
+
+            const assignmentRoleId = await LookupResolutionService.requireLookupId(AUDIT_LOOKUP_KEYS.RESOURCE_ASSIGNMENT_ROLE, assignmentRole);
+            const existing = await AuditMissionResource.scope('withDeleted').findOne({
+                where: {
+                    missionId,
+                    userId,
+                    assignmentRoleId,
+                },
+            });
+
+            if (existing) {
+                if (existing.is_deleted) {
+                    await restoreSoftDeletedInstance(existing);
+                }
+                await existing.update({ allocationPercent });
+            } else {
+                await AuditMissionResource.create(await LookupResolutionService.resolveEntityPayload('auditMissionResource', {
+                    missionId,
+                    userId,
+                    assignmentRole,
+                    allocationPercent,
+                }));
+            }
+        }
+
+        const currentResources = await AuditMissionResource.findAll({ where: { missionId } });
+        for (const resource of currentResources) {
+            const resourceKey = `${resource.userId}:${(resource as any).assignmentRoleCode || (resource as any).assignmentRole}`;
+            if (!nextKeys.has(resourceKey)) {
+                await softDeleteInstance(resource);
+            }
+        }
+
+        if (Array.isArray(data.requiredSkillIds)) {
+            const nextSkillIds = new Set<number>(data.requiredSkillIds.map((value: any) => Number(value)).filter(Number.isFinite));
+            const existingSkillLinks = await AuditMissionRequiredSkill.scope('withDeleted').findAll({ where: { missionId } });
+
+            for (const skillId of nextSkillIds) {
+                const existing = existingSkillLinks.find((item) => item.skillId === skillId);
+                if (existing) {
+                    if (existing.is_deleted) {
+                        await restoreSoftDeletedInstance(existing);
+                    }
+                } else {
+                    await AuditMissionRequiredSkill.create({ missionId, skillId });
+                }
+            }
+
+            for (const item of existingSkillLinks) {
+                if (!nextSkillIds.has(item.skillId)) {
+                    await softDeleteInstance(item);
+                }
+            }
+        }
+
+        const activeResources = await AuditMissionResource.findAll({ where: { missionId } });
+        const chefMissionAssignment = activeResources.find((item: any) => ((item.assignmentRoleCode || item.assignmentRole) === AuditMissionResourceRoleCode.CHEF_MISSION));
+        const auditeurAssignment = activeResources.find((item: any) => ((item.assignmentRoleCode || item.assignmentRole) === AuditMissionResourceRoleCode.AUDITEUR));
+
+        await mission.update({
+            chefMissionId: chefMissionAssignment?.userId || null,
+            auditeurId: auditeurAssignment?.userId || null,
+        });
+
+        return this.getMissionResources(missionId);
+    }
+
+    static async getUserAuditSkills(userId: number) {
+        return UserAuditSkill.findAll({
+            where: { userId },
+            include: [{ model: AuditSkill, as: 'skill', required: false }],
+            order: [['createdAt', 'ASC']],
+        });
+    }
+
+    static async updateUserAuditSkills(userId: number, data: any) {
+        const skillIds = Array.isArray(data.skillIds)
+            ? data.skillIds.map((value: any) => Number(value)).filter(Number.isFinite)
+            : [];
+
+        const existingLinks = await UserAuditSkill.scope('withDeleted').findAll({ where: { userId } });
+        const nextIds = new Set<number>(skillIds);
+
+        for (const skillId of nextIds) {
+            const existing = existingLinks.find((item) => item.skillId === skillId);
+            if (existing) {
+                if (existing.is_deleted) {
+                    await restoreSoftDeletedInstance(existing);
+                }
+            } else {
+                await UserAuditSkill.create({ userId, skillId });
+            }
+        }
+
+        for (const link of existingLinks) {
+            if (!nextIds.has(link.skillId)) {
+                await softDeleteInstance(link);
+            }
+        }
+
+        return this.getUserAuditSkills(userId);
+    }
+
+    static async getSkillsReport(planId: number) {
+        const missions = await this.getPlanMissions(planId) as any[];
+        const userIds = Array.from(new Set(missions.flatMap((mission) => (mission.resourceAssignments || []).map((resource: any) => resource.userId))));
+        const userSkills = userIds.length > 0
+            ? await UserAuditSkill.findAll({
+                where: { userId: { [Op.in]: userIds } },
+                include: [{ model: AuditSkill, as: 'skill', required: false }],
+            })
+            : [];
+
+        const skillsByUserId = new Map<number, number[]>();
+        for (const link of userSkills) {
+            const existing = skillsByUserId.get(link.userId) || [];
+            existing.push(link.skillId);
+            skillsByUserId.set(link.userId, existing);
+        }
+
+        const missionCoverage = missions.map((mission) => {
+            const requiredSkillIds = (mission.requiredSkills || []).map((item: any) => item.skillId);
+            const availableSkillIds = Array.from(new Set(
+                (mission.resourceAssignments || [])
+                    .flatMap((resource: any) => skillsByUserId.get(resource.userId) || [])
+            ));
+
+            const coveredSkillIds = requiredSkillIds.filter((skillId: number) => availableSkillIds.includes(skillId));
+            const gapSkillIds = requiredSkillIds.filter((skillId: number) => !availableSkillIds.includes(skillId));
+            const coverage = requiredSkillIds.length === 0
+                ? 'covered'
+                : gapSkillIds.length === 0
+                    ? 'covered'
+                    : coveredSkillIds.length > 0
+                        ? 'partial'
+                        : 'gap';
+
+            return {
+                missionId: mission.id,
+                missionCode: mission.code,
+                missionTitle: mission.titre,
+                coverage,
+                requiredSkillCount: requiredSkillIds.length,
+                availableSkillCount: availableSkillIds.length,
+                coveredSkillCount: coveredSkillIds.length,
+                gapSkillCount: gapSkillIds.length,
+                requiredSkills: (mission.requiredSkills || []).map((item: any) => item.skill),
+                gapSkills: (mission.requiredSkills || []).filter((item: any) => gapSkillIds.includes(item.skillId)).map((item: any) => item.skill),
+            };
+        });
+
+        return {
+            summary: {
+                missionCount: missionCoverage.length,
+                coveredCount: missionCoverage.filter((item) => item.coverage === 'covered').length,
+                partialCount: missionCoverage.filter((item) => item.coverage === 'partial').length,
+                gapCount: missionCoverage.filter((item) => item.coverage === 'gap').length,
+            },
+            missions: missionCoverage,
+        };
+    }
+
+    static async getPlanExportData(planId: number, actorRole: string) {
+        const detail = await this.getPlanDetail(planId, actorRole);
+        return {
+            generatedAt: new Date().toISOString(),
+            detail,
+        };
+    }
+
+    static async getPlanDetail(planId: number, actorRole: string = UserRole.SUPER_ADMIN) {
+        const plan = await this.getPlanById(planId);
+        const missions = await this.getPlanMissions(planId);
+        const recommendations = await this.getPlanRecommendations(planId);
+        const workflowHistory = await this.getWorkflowHistory(planId);
+        const gantt = await this.getPlanGantt(planId);
+        const skillsReport = await this.getSkillsReport(planId);
+
+        return {
+            ...plan.toJSON(),
+            missions,
+            recommendations: recommendations.map((item) => item.toJSON()),
+            workflowHistory,
+            gantt,
+            skillsReport,
+            availableTransitions: this.getAvailableTransitions((plan as any).statusCode, actorRole),
+            summary: {
+                missionCount: missions.length,
+                recommendationCount: recommendations.length,
+                completedMissionCount: missions.filter((item: any) => item.statutCode === AuditMissionStatus.OK).length,
+                inProgressMissionCount: missions.filter((item: any) => item.statutCode === AuditMissionStatus.EN_COURS).length,
+            },
+        };
+    }
+}
+
+export default AuditPlanService;

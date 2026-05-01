@@ -7,7 +7,7 @@ import {
 } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
-import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
+import { getAuditorNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-auditor-checklist',
@@ -27,7 +27,7 @@ export class AuditorChecklistComponent implements OnInit {
   ) {}
 
   get navItems() {
-    return getAuditNavItems(this.currentUserRole);
+    return getAuditorNavItems(this.currentUserRole);
   }
 
   ngOnInit(): void {

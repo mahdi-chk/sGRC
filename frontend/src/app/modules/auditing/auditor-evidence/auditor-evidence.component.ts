@@ -3,7 +3,7 @@ import { AuditingService, AuditMission, AuditEvidence, AuditMissionStatus } from
 import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { UserRole } from '../../../core/models/user-role.enum';
-import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
+import { getAuditorNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-auditor-evidence',
@@ -26,7 +26,7 @@ export class AuditorEvidenceComponent implements OnInit {
   ) { }
 
   get navItems() {
-    return getAuditNavItems(this.currentUserRole);
+    return getAuditorNavItems(this.currentUserRole);
   }
 
   ngOnInit(): void {

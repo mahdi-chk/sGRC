@@ -10,6 +10,6 @@ export class AuditPlanGenCardComponent {
   constructor(private router: Router) { }
 
   onLaunch() {
-    this.router.navigate(['/dashboard/auditing'], { queryParams: { action: 'plan' } });
+    this.router.navigate(['/dashboard/audit-planning']);
   }
 }

@@ -52,7 +52,9 @@
         { "id": 3, "symbol": "COMMENT_ADDED", "code": "comment_added", "label": "COMMENT_ADDED", "sortOrder": 3 },
         { "id": 4, "symbol": "REMINDER", "code": "reminder", "label": "REMINDER", "sortOrder": 4 },
         { "id": 5, "symbol": "AUDIT_MISSION_ASSIGNED", "code": "audit_mission_assigned", "label": "AUDIT_MISSION_ASSIGNED", "sortOrder": 5 },
-        { "id": 6, "symbol": "AUDIT_REPORT_SUBMITTED", "code": "audit_report_submitted", "label": "AUDIT_REPORT_SUBMITTED", "sortOrder": 6 }
+        { "id": 6, "symbol": "AUDIT_REPORT_SUBMITTED", "code": "audit_report_submitted", "label": "AUDIT_REPORT_SUBMITTED", "sortOrder": 6 },
+        { "id": 7, "symbol": "AUDIT_PLAN_VALIDATION_REQUESTED", "code": "audit_plan_validation_requested", "label": "AUDIT_PLAN_VALIDATION_REQUESTED", "sortOrder": 7 },
+        { "id": 8, "symbol": "AUDIT_PLAN_STATUS_CHANGED", "code": "audit_plan_status_changed", "label": "AUDIT_PLAN_STATUS_CHANGED", "sortOrder": 8 }
       ]
     },
     {
@@ -125,6 +127,120 @@
         { "id": 1, "symbol": "NOK", "code": "nok", "label": "NOK", "sortOrder": 1 },
         { "id": 2, "symbol": "EN_COURS", "code": "en_cours", "label": "En cours", "sortOrder": 2 },
         { "id": 3, "symbol": "OK", "code": "ok", "label": "OK", "sortOrder": 3 }
+      ]
+    },
+    {
+      "key": "auditPlan.status",
+      "entityKey": "auditPlan",
+      "entityTable": "audit_plans",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "audit_plan_statuses",
+      "lookupModelName": "AuditPlanStatusLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "CREE", "code": "cree", "label": "Cree", "sortOrder": 1 },
+        { "id": 2, "symbol": "A_VALIDER", "code": "a_valider", "label": "A valider", "sortOrder": 2 },
+        { "id": 3, "symbol": "VALIDE_DIRECTION", "code": "valide_direction", "label": "Valide par Direction", "sortOrder": 3 },
+        { "id": 4, "symbol": "VALIDE_CONSEIL", "code": "valide_conseil", "label": "Valide par Conseil", "sortOrder": 4 },
+        { "id": 5, "symbol": "VALIDE_COMITE", "code": "valide_comite", "label": "Valide par Comite", "sortOrder": 5 },
+        { "id": 6, "symbol": "FERME", "code": "ferme", "label": "Ferme", "sortOrder": 6 },
+        { "id": 7, "symbol": "FERME_DEFINITIVEMENT", "code": "ferme_definitivement", "label": "Ferme definitivement", "sortOrder": 7 }
+      ]
+    },
+    {
+      "key": "auditPlan.nature",
+      "entityKey": "auditPlan",
+      "entityTable": "audit_plans",
+      "fieldName": "nature",
+      "foreignKey": "natureId",
+      "foreignKeyColumn": "nature_id",
+      "associationAlias": "natureLookup",
+      "lookupTable": "audit_plan_natures",
+      "lookupModelName": "AuditPlanNatureLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "ANNUEL", "code": "annuel", "label": "Annuel", "sortOrder": 1 },
+        { "id": 2, "symbol": "TRIMESTRIEL", "code": "trimestriel", "label": "Trimestriel", "sortOrder": 2 },
+        { "id": 3, "symbol": "SPECIFIQUE", "code": "specifique", "label": "Specifique", "sortOrder": 3 }
+      ]
+    },
+    {
+      "key": "auditPlanWorkflowEvent.transition",
+      "entityKey": "auditPlanWorkflowEvent",
+      "entityTable": "audit_plan_workflow_events",
+      "fieldName": "transition",
+      "foreignKey": "transitionId",
+      "foreignKeyColumn": "transition_id",
+      "associationAlias": "transitionLookup",
+      "lookupTable": "audit_plan_transitions",
+      "lookupModelName": "AuditPlanTransitionLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "DEMANDER_VALIDATION", "code": "demander_validation", "label": "Demander validation", "sortOrder": 1 },
+        { "id": 2, "symbol": "VALIDER_DIRECTION", "code": "valider_direction", "label": "Valider Direction", "sortOrder": 2 },
+        { "id": 3, "symbol": "DEMANDER_REVUE", "code": "demander_revue", "label": "Demander revue", "sortOrder": 3 },
+        { "id": 4, "symbol": "VALIDER_CONSEIL", "code": "valider_conseil", "label": "Valider Conseil", "sortOrder": 4 },
+        { "id": 5, "symbol": "VALIDER_COMITE", "code": "valider_comite", "label": "Valider Comite", "sortOrder": 5 },
+        { "id": 6, "symbol": "FERMER", "code": "fermer", "label": "Fermer", "sortOrder": 6 },
+        { "id": 7, "symbol": "REOUVRIR", "code": "reouvrir", "label": "Reouvrir", "sortOrder": 7 },
+        { "id": 8, "symbol": "FERMER_DEFINITIVEMENT", "code": "fermer_definitivement", "label": "Fermer definitivement", "sortOrder": 8 },
+        { "id": 9, "symbol": "DEFINIR_MODELE", "code": "definir_modele", "label": "Definir comme modele", "sortOrder": 9 }
+      ]
+    },
+    {
+      "key": "auditMission.category",
+      "entityKey": "auditMission",
+      "entityTable": "audit_missions",
+      "fieldName": "category",
+      "foreignKey": "categoryId",
+      "foreignKeyColumn": "categorie_id",
+      "associationAlias": "categoryLookup",
+      "lookupTable": "audit_mission_categories",
+      "lookupModelName": "AuditMissionCategoryLookup",
+      "allowNull": true,
+      "values": [
+        { "id": 1, "symbol": "OPERATIONNEL", "code": "operationnel", "label": "Operationnel", "sortOrder": 1 },
+        { "id": 2, "symbol": "CONFORMITE", "code": "conformite", "label": "Conformite", "sortOrder": 2 },
+        { "id": 3, "symbol": "FINANCIER", "code": "financier", "label": "Financier", "sortOrder": 3 },
+        { "id": 4, "symbol": "THEMATIQUE", "code": "thematique", "label": "Thematique", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "auditMission.quarter",
+      "entityKey": "auditMission",
+      "entityTable": "audit_missions",
+      "fieldName": "quarter",
+      "foreignKey": "quarterId",
+      "foreignKeyColumn": "quarter_id",
+      "associationAlias": "quarterLookup",
+      "lookupTable": "audit_mission_quarters",
+      "lookupModelName": "AuditMissionQuarterLookup",
+      "allowNull": true,
+      "values": [
+        { "id": 1, "symbol": "T1", "code": "t1", "label": "T1", "sortOrder": 1 },
+        { "id": 2, "symbol": "T2", "code": "t2", "label": "T2", "sortOrder": 2 },
+        { "id": 3, "symbol": "T3", "code": "t3", "label": "T3", "sortOrder": 3 },
+        { "id": 4, "symbol": "T4", "code": "t4", "label": "T4", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "auditMissionResource.assignmentRole",
+      "entityKey": "auditMissionResource",
+      "entityTable": "audit_mission_resources",
+      "fieldName": "assignmentRole",
+      "foreignKey": "assignmentRoleId",
+      "foreignKeyColumn": "assignment_role_id",
+      "associationAlias": "assignmentRoleLookup",
+      "lookupTable": "audit_mission_resource_assignment_roles",
+      "lookupModelName": "AuditMissionResourceAssignmentRoleLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "CHEF_MISSION", "code": "chef_mission", "label": "Chef de Mission", "sortOrder": 1 },
+        { "id": 2, "symbol": "AUDITEUR", "code": "auditeur", "label": "Auditeur", "sortOrder": 2 },
+        { "id": 3, "symbol": "SUPPORT", "code": "support", "label": "Support", "sortOrder": 3 }
       ]
     },
     {

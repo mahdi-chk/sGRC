@@ -39,9 +39,25 @@ export interface AuditMission {
     description?: string | null;
     statut: AuditMissionStatus | string;
     riskId?: number | null;
+    auditPlanId?: number | null;
     auditSeniorId: number;
+    chefMissionId?: number | null;
     auditeurId?: number | null;
+    auditedPrincipalId?: number | null;
     checklistTemplateId?: number | null;
+    category?: string | null;
+    categoryCode?: string | null;
+    categoryId?: number | null;
+    axe?: string | null;
+    evaluation?: string | null;
+    quarter?: string | null;
+    quarterCode?: string | null;
+    quarterId?: number | null;
+    datePrevueDebut?: string | Date | null;
+    datePrevueFin?: string | Date | null;
+    dateReelleDebut?: string | Date | null;
+    dateReelleFin?: string | Date | null;
+    progressPercent?: number | null;
     delai: any;
     rapport?: string | null;
     recommandations?: string | null;
@@ -57,8 +73,153 @@ export interface AuditMission {
     updatedAt: string | Date;
     risk?: any;
     auditSenior?: any;
+    chefMission?: any;
     auditeur?: any;
+    auditedPrincipal?: any;
+    auditPlan?: any;
     sourceMission?: any;
+    resourceAssignments?: AuditMissionResource[];
+    requiredSkills?: AuditMissionRequiredSkillLink[];
+}
+
+export interface LookupOption {
+    id: number;
+    code: string;
+    label: string;
+    description?: string | null;
+    sortOrder?: number | null;
+}
+
+export interface AuditPlan {
+    id: number;
+    nom: string;
+    calendrier?: string | null;
+    description?: string | null;
+    status?: string | null;
+    statusCode?: string | null;
+    statusId?: number | null;
+    nature?: string | null;
+    natureCode?: string | null;
+    natureId?: number | null;
+    isTemplate: boolean;
+    dateDebut?: string | Date | null;
+    dateFin?: string | Date | null;
+    createdById?: number;
+    createdBy?: any;
+    submittedAt?: string | Date | null;
+    validatedDirectionAt?: string | Date | null;
+    validatedCouncilAt?: string | Date | null;
+    validatedCommitteeAt?: string | Date | null;
+    closedAt?: string | Date | null;
+    closedDefinitivelyAt?: string | Date | null;
+    missionCount?: number;
+    recommendationCount?: number;
+    availableTransitions?: string[];
+    isEditable?: boolean;
+    missions?: AuditMission[];
+    recommendations?: AuditMission[];
+    workflowHistory?: AuditPlanWorkflowEvent[];
+    gantt?: AuditPlanGanttItem[];
+    skillsReport?: AuditSkillGapReport;
+    summary?: {
+        missionCount: number;
+        recommendationCount: number;
+        completedMissionCount: number;
+        inProgressMissionCount: number;
+    };
+}
+
+export interface AuditPlanWorkflowEvent {
+    id: number;
+    planId: number;
+    transition?: string | null;
+    transitionCode?: string | null;
+    transitionId?: number | null;
+    fromStatusId?: number | null;
+    fromStatusCode?: string | null;
+    fromStatusLabel?: string | null;
+    toStatusId?: number | null;
+    toStatusCode?: string | null;
+    toStatusLabel?: string | null;
+    actorUserId?: number;
+    actor?: any;
+    comment?: string | null;
+    createdAt: string | Date;
+}
+
+export interface AuditPlanTransitionPayload {
+    transition: string;
+    comment?: string | null;
+}
+
+export interface AuditPlanGanttItem {
+    id: number;
+    code?: string | null;
+    titre: string;
+    quarterCode?: string | null;
+    quarterLabel?: string | null;
+    statusCode?: string | null;
+    statusLabel?: string | null;
+    datePrevueDebut?: string | Date | null;
+    datePrevueFin?: string | Date | null;
+    dateReelleDebut?: string | Date | null;
+    dateReelleFin?: string | Date | null;
+    progressPercent?: number | null;
+}
+
+export interface AuditSkill {
+    id: number;
+    code: string;
+    label: string;
+    description?: string | null;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+}
+
+export interface AuditMissionRequiredSkillLink {
+    id: number;
+    missionId: number;
+    skillId: number;
+    skill?: AuditSkill;
+}
+
+export interface AuditMissionResource {
+    id?: number;
+    missionId?: number;
+    userId: number;
+    user?: any;
+    assignmentRole?: string | null;
+    assignmentRoleCode?: string | null;
+    assignmentRoleId?: number | null;
+    allocationPercent?: number | null;
+}
+
+export interface AuditMissionResourcesPayload {
+    resources: AuditMissionResource[];
+    requiredSkillIds?: number[];
+}
+
+export interface AuditSkillGapMission {
+    missionId: number;
+    missionCode?: string | null;
+    missionTitle: string;
+    coverage: 'covered' | 'partial' | 'gap';
+    requiredSkillCount: number;
+    availableSkillCount: number;
+    coveredSkillCount: number;
+    gapSkillCount: number;
+    requiredSkills: AuditSkill[];
+    gapSkills: AuditSkill[];
+}
+
+export interface AuditSkillGapReport {
+    summary: {
+        missionCount: number;
+        coveredCount: number;
+        partialCount: number;
+        gapCount: number;
+    };
+    missions: AuditSkillGapMission[];
 }
 
 export interface AuditChecklistTemplate {
@@ -134,6 +295,7 @@ export interface AuditEvidence {
 })
 export class AuditingService {
     private apiUrl = `${environment.apiUrl}/auditing`;
+    private planningApiUrl = `${environment.apiUrl}/audit-planning`;
 
     constructor(private http: HttpClient) { }
 
@@ -142,7 +304,7 @@ export class AuditingService {
         if (type !== 'all') {
             params = params.set('type', type);
         }
-        return this.http.get<AuditMission[]>(`${this.apiUrl}/missions`, { params });
+        return this.http.get<AuditMission[]>(`${this.planningApiUrl}/missions`, { params });
     }
 
     suggestPlan(type: AuditRecordType = AuditRecordType.MISSION_AUDIT): Observable<any[]> {
@@ -284,5 +446,100 @@ export class AuditingService {
 
     getReportsToReview(): Observable<AuditMission[]> {
         return this.http.get<AuditMission[]>(`${this.apiUrl}/reports`);
+    }
+
+    getAuditLookupOptions(key: string): Observable<LookupOption[]> {
+        return this.http.get<LookupOption[]>(`${this.apiUrl}/lookups/${encodeURIComponent(key)}`);
+    }
+
+    getPlans(filters?: Record<string, string | null | undefined>): Observable<AuditPlan[]> {
+        let params = new HttpParams();
+        Object.entries(filters || {}).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && String(value).trim() !== '') {
+                params = params.set(key, String(value));
+            }
+        });
+
+        return this.http.get<AuditPlan[]>(`${this.apiUrl}/plans`, { params });
+    }
+
+    createPlan(payload: Partial<AuditPlan>): Observable<AuditPlan> {
+        return this.http.post<AuditPlan>(`${this.apiUrl}/plans`, payload);
+    }
+
+    getPlan(planId: number): Observable<AuditPlan> {
+        return this.http.get<AuditPlan>(`${this.apiUrl}/plans/${planId}`);
+    }
+
+    updatePlan(planId: number, payload: Partial<AuditPlan>): Observable<AuditPlan> {
+        return this.http.put<AuditPlan>(`${this.apiUrl}/plans/${planId}`, payload);
+    }
+
+    deletePlan(planId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/plans/${planId}`);
+    }
+
+    restorePlan(planId: number): Observable<AuditPlan> {
+        return this.http.patch<AuditPlan>(`${this.apiUrl}/plans/${planId}/restore`, {});
+    }
+
+    applyPlanTransition(planId: number, payload: AuditPlanTransitionPayload): Observable<AuditPlan> {
+        return this.http.post<AuditPlan>(`${this.apiUrl}/plans/${planId}/transitions`, payload);
+    }
+
+    getPlanWorkflowHistory(planId: number): Observable<AuditPlanWorkflowEvent[]> {
+        return this.http.get<AuditPlanWorkflowEvent[]>(`${this.apiUrl}/plans/${planId}/workflow-history`);
+    }
+
+    getPlanMissions(planId: number): Observable<AuditMission[]> {
+        return this.http.get<AuditMission[]>(`${this.apiUrl}/plans/${planId}/missions`);
+    }
+
+    createPlanMission(planId: number, payload: Partial<AuditMission>): Observable<AuditMission> {
+        return this.http.post<AuditMission>(`${this.apiUrl}/plans/${planId}/missions`, payload);
+    }
+
+    getPlanRecommendations(planId: number): Observable<AuditMission[]> {
+        return this.http.get<AuditMission[]>(`${this.apiUrl}/plans/${planId}/recommendations`);
+    }
+
+    getPlanGantt(planId: number): Observable<AuditPlanGanttItem[]> {
+        return this.http.get<AuditPlanGanttItem[]>(`${this.apiUrl}/plans/${planId}/gantt`);
+    }
+
+    getPlanSkillsReport(planId: number): Observable<AuditSkillGapReport> {
+        return this.http.get<AuditSkillGapReport>(`${this.apiUrl}/plans/${planId}/skills-report`);
+    }
+
+    getPlanExportData(planId: number): Observable<any> {
+        return this.http.get<any>(`${this.apiUrl}/plans/${planId}/export`);
+    }
+
+    getSkills(): Observable<AuditSkill[]> {
+        return this.http.get<AuditSkill[]>(`${this.apiUrl}/skills`);
+    }
+
+    createSkill(payload: Partial<AuditSkill>): Observable<AuditSkill> {
+        return this.http.post<AuditSkill>(`${this.apiUrl}/skills`, payload);
+    }
+
+    updateSkill(skillId: number, payload: Partial<AuditSkill>): Observable<AuditSkill> {
+        return this.http.put<AuditSkill>(`${this.apiUrl}/skills/${skillId}`, payload);
+    }
+
+    deleteSkill(skillId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/skills/${skillId}`);
+    }
+
+    restoreSkill(skillId: number): Observable<AuditSkill> {
+        return this.http.patch<AuditSkill>(`${this.apiUrl}/skills/${skillId}/restore`, {});
+    }
+
+    getMissionResources(missionId: number): Observable<{ resources: AuditMissionResource[]; requiredSkills: AuditMissionRequiredSkillLink[] }> {
+        return this.http.get<{ resources: AuditMissionResource[]; requiredSkills: AuditMissionRequiredSkillLink[] }>(`${this.apiUrl}/missions/${missionId}/resources`);
+    }
+
+    updateMissionResources(missionId: number, payload: AuditMissionResourcesPayload): Observable<{ resources: AuditMissionResource[]; requiredSkills: AuditMissionRequiredSkillLink[] }> {
+        return this.http.put<{ resources: AuditMissionResource[]; requiredSkills: AuditMissionRequiredSkillLink[] }>(`${this.apiUrl}/missions/${missionId}/resources`, payload);
     }
 }

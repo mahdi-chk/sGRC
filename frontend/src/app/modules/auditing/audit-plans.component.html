@@ -1,0 +1,189 @@
+<div class="audit-page">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1><i class="fas fa-layer-group"></i> Module Plan d Audit</h1>
+        <p>Pilotez la liste des plans, leur validation et la construction de la feuille de route d audit.</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
+        <i class="fas fa-compass"></i> Construction du plan
+      </button>
+      <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openCreateModal()">
+        <i class="fas fa-plus"></i> Nouveau plan
+      </button>
+    </div>
+  </div>
+
+  <nav class="audit-tabs" *ngIf="navItems.length > 0">
+    <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="audit-tab">
+      {{ item.label }}
+    </a>
+  </nav>
+
+  <section class="plans-hero">
+    <div class="hero-copy">
+      <span class="hero-kicker">Plan d audit autonome</span>
+      <h2>Un espace dedie au cadrage avant l execution des audits.</h2>
+      <p>Commencez par structurer le plan, consolider les missions et valider le workflow avant de basculer vers l execution dans le module Audit.</p>
+      <div class="hero-actions">
+        <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
+          <i class="fas fa-magic"></i> Ouvrir la planification
+        </button>
+        <button class="btn-secondary" (click)="loadPlans()">
+          <i class="fas fa-rotate"></i> Actualiser la liste
+        </button>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat-card">
+        <span class="hero-stat-label">Plans</span>
+        <strong>{{ totalPlans }}</strong>
+      </div>
+      <div class="hero-stat-card">
+        <span class="hero-stat-label">Brouillons</span>
+        <strong>{{ draftPlans }}</strong>
+      </div>
+      <div class="hero-stat-card">
+        <span class="hero-stat-label">Valides</span>
+        <strong>{{ validatedPlans }}</strong>
+      </div>
+      <div class="hero-stat-card">
+        <span class="hero-stat-label">Missions</span>
+        <strong>{{ totalMissionCount }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="filters-bar premium mb-4">
+    <div class="filter-controls">
+      <div class="filter-group">
+        <input type="text" [(ngModel)]="filters.nom" placeholder="Nom du plan">
+      </div>
+      <div class="filter-group">
+        <select [(ngModel)]="filters.nature">
+          <option value="">Toutes les natures</option>
+          <option *ngFor="let option of natureOptions" [value]="option.code">{{ option.label }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select [(ngModel)]="filters.status">
+          <option value="">Tous les statuts</option>
+          <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <input type="date" [(ngModel)]="filters.dateDebut">
+      </div>
+      <div class="filter-group">
+        <input type="date" [(ngModel)]="filters.dateFin">
+      </div>
+      <button class="btn-ai-plan small" (click)="loadPlans()">Filtrer</button>
+      <button class="btn-reset" (click)="resetFilters()">Reinitialiser</button>
+    </div>
+  </div>
+
+  <div class="missions-card">
+    <div class="table-loading" *ngIf="isLoading">Chargement...</div>
+
+    <div class="table-scroll" *ngIf="!isLoading">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>Nature</th>
+            <th>Statut</th>
+            <th>Periode</th>
+            <th>Missions</th>
+            <th>Recommandations</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let plan of plans">
+            <td>{{ plan.id }}</td>
+            <td>{{ plan.nom }}</td>
+            <td>{{ plan.nature || '-' }}</td>
+            <td>{{ plan.status || '-' }}</td>
+            <td>
+              {{ plan.dateDebut ? (plan.dateDebut | date:'dd/MM/yyyy') : '-' }}
+              -
+              {{ plan.dateFin ? (plan.dateFin | date:'dd/MM/yyyy') : '-' }}
+            </td>
+            <td>{{ plan.missionCount || 0 }}</td>
+            <td>{{ plan.recommendationCount || 0 }}</td>
+            <td class="actions-cell">
+              <button class="action-btn btn-view" (click)="viewPlan(plan)" title="Consulter"><i class="fas fa-eye"></i></button>
+              <button class="action-btn btn-edit" *ngIf="isManagementRole && plan.isEditable" (click)="openEditModal(plan)" title="Modifier"><i class="fas fa-edit"></i></button>
+              <button class="action-btn btn-delete" *ngIf="isManagementRole" (click)="deletePlan(plan)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="plans-empty-panel" *ngIf="plans.length === 0">
+        <i class="fas fa-diagram-project"></i>
+        <h3>Aucun plan d audit disponible</h3>
+        <p>Commencez par creer un plan ou lancez la construction assistee pour preparer votre prochain cycle d audit.</p>
+        <div class="hero-actions">
+          <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openCreateModal()">
+            <i class="fas fa-plus"></i> Creer un plan
+          </button>
+          <button class="btn-secondary" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
+            <i class="fas fa-magic"></i> Construire le plan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <app-modal *ngIf="showCreateModal" [title]="editingPlanId ? 'Modifier le plan' : 'Creer un plan d audit'" (close)="showCreateModal = false">
+    <div #projected modal-body class="modal-form">
+      <div class="form-group full">
+        <label>Nom</label>
+        <input [(ngModel)]="planForm.nom" class="finput" type="text" placeholder="Plan 2026">
+      </div>
+      <div class="detail-grid">
+        <div class="form-group">
+          <label>Nature</label>
+          <select [(ngModel)]="planForm.natureCode" class="finput">
+            <option *ngFor="let option of natureOptions" [value]="option.code">{{ option.label }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Calendrier</label>
+          <input [(ngModel)]="planForm.calendrier" class="finput" type="text" placeholder="01/01/2026 - 31/12/2026">
+        </div>
+        <div class="form-group">
+          <label>Date de debut</label>
+          <input [(ngModel)]="planForm.dateDebut" class="finput" type="date">
+        </div>
+        <div class="form-group">
+          <label>Date de fin</label>
+          <input [(ngModel)]="planForm.dateFin" class="finput" type="date">
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="planForm.description" class="finput" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label>
+          <input [(ngModel)]="planForm.isTemplate" type="checkbox">
+          Definir comme modele
+        </label>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showCreateModal = false">Annuler</button>
+        <button class="btn-save" (click)="savePlan()" [disabled]="isSaving || !planForm.nom">
+          {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+</div>

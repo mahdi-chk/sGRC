@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditMission, AuditMissionStatus } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import { UserRole } from '../../../core/models/user-role.enum';
-import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
+import { getAuditorNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-auditor-report',
@@ -25,7 +25,7 @@ export class AuditorReportComponent implements OnInit {
   ) { }
 
   get navItems() {
-    return getAuditNavItems(this.currentUserRole);
+    return getAuditorNavItems(this.currentUserRole);
   }
 
   ngOnInit(): void {

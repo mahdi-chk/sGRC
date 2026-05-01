@@ -62,7 +62,7 @@ export class AuditeurDashboardComponent implements OnInit {
     }
 
     goToMissions() {
-        this.router.navigate(['/dashboard/auditor-missions']);
+        this.router.navigate(['/dashboard/audit-plans']);
     }
 
     onOpenModule(m: any, s: any) {

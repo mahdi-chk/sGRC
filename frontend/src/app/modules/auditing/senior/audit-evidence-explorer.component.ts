@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditEvidence } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
-import { getAuditNavItems, getStoredAuditRole } from '../audit-navigation';
+import { getAuditManagementNavItems, getStoredAuditRole } from '../audit-navigation';
 
 @Component({
   selector: 'app-audit-evidence-explorer',
@@ -23,7 +23,7 @@ export class AuditEvidenceExplorerComponent implements OnInit {
   ) { }
 
   get navItems() {
-    return getAuditNavItems(this.currentUserRole);
+    return getAuditManagementNavItems(this.currentUserRole);
   }
 
   ngOnInit(): void {

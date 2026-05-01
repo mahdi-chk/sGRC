@@ -270,6 +270,55 @@ class EmailService {
 
         return this.sendMail(mailOptions, 'Risk closed email failed');
     }
+
+    async sendAuditPlanValidationRequestedEmail(
+        recipient: { mail: string; nom: string; prenom: string },
+        plan: { nom: string; statusLabel: string }
+    ) {
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: recipient.mail,
+            subject: `Validation requise du plan d'audit : ${plan.nom}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${recipient.prenom},</h2>
+                    <p>Le plan d'audit suivant a ete soumis pour validation :</p>
+                    <p><strong>Plan :</strong> ${plan.nom}</p>
+                    <p><strong>Statut courant :</strong> ${plan.statusLabel}</p>
+                    <p>Veuillez vous connecter a la plateforme GRC pour traiter cette etape.</p>
+                    <br>
+                    <p>Cordialement,<br>L'equipe GRC</p>
+                </div>
+            `,
+        };
+
+        return this.sendMail(mailOptions, 'Audit plan validation request email failed');
+    }
+
+    async sendAuditPlanStatusChangedEmail(
+        recipient: { mail: string; nom: string; prenom: string },
+        plan: { nom: string; statusLabel: string; actorName: string }
+    ) {
+        const mailOptions = {
+            from: process.env.SMTP_FROM || '"GRC Platform" <noreply@example.com>',
+            to: recipient.mail,
+            subject: `Mise a jour du plan d'audit : ${plan.nom}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #2c3e50;">Bonjour ${recipient.prenom},</h2>
+                    <p>Le statut du plan d'audit suivant a ete mis a jour :</p>
+                    <p><strong>Plan :</strong> ${plan.nom}</p>
+                    <p><strong>Nouveau statut :</strong> ${plan.statusLabel}</p>
+                    <p><strong>Action realisee par :</strong> ${plan.actorName}</p>
+                    <p>Connectez-vous a la plateforme pour consulter le detail du workflow.</p>
+                    <br>
+                    <p>Cordialement,<br>L'equipe GRC</p>
+                </div>
+            `,
+        };
+
+        return this.sendMail(mailOptions, 'Audit plan status changed email failed');
+    }
 }
 
 export const emailService = new EmailService();

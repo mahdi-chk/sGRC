@@ -16,7 +16,7 @@ import { environment } from '../../../environments/environment';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getAuditNavItems, getStoredAuditRole } from './audit-navigation';
+import { getAuditManagementNavItems, getStoredAuditRole } from './audit-navigation';
 
 @Component({
   selector: 'app-auditing',
@@ -94,7 +94,7 @@ export class AuditingComponent implements OnInit {
   ) {}
 
   get navItems() {
-    return getAuditNavItems(this.currentUserRole);
+    return getAuditManagementNavItems(this.currentUserRole);
   }
 
   ngOnInit() {

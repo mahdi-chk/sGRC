@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getAuditNavItems, getStoredAuditRole } from '../../../../modules/auditing/audit-navigation';
+import { getAuditManagementNavItems, getStoredAuditRole } from '../../../../modules/auditing/audit-navigation';
 
 @Component({
     selector: 'app-audit-statistics',
@@ -45,7 +45,7 @@ export class AuditStatisticsComponent implements OnInit {
     constructor(private auditingService: AuditingService, private router: Router) { }
 
     get navItems() {
-        return getAuditNavItems(this.currentUserRole);
+        return getAuditManagementNavItems(this.currentUserRole);
     }
 
     ngOnInit() {

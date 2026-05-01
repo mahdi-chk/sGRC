@@ -8,6 +8,7 @@ export interface User {
   nom: string;
   prenom: string;
   mail: string;
+  poste?: string | null;
   roleId?: number;
   departementId?: number;
 }
@@ -26,5 +27,13 @@ export class UserService {
 
   getAssignableIncidentUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${this.apiUrl}/assignable/incidents`);
+  }
+
+  getUserAuditSkills(userId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${userId}/audit-skills`);
+  }
+
+  updateUserAuditSkills(userId: number, skillIds: number[]): Observable<any[]> {
+    return this.http.put<any[]>(`${this.apiUrl}/${userId}/audit-skills`, { skillIds });
   }
 }

@@ -6,7 +6,7 @@
       </button>
       <div>
         <h1><i class="fas fa-layer-group"></i> Module Plan d Audit</h1>
-        <p>Pilotez la liste des plans, leur validation et la construction de la feuille de route d audit.</p>
+        <p>Pilotez dans un seul module la creation, la validation, l assignation, l execution et le suivi du plan d audit.</p>
       </div>
     </div>
     <div class="header-actions">
@@ -27,9 +27,9 @@
 
   <section class="plans-hero">
     <div class="hero-copy">
-      <span class="hero-kicker">Plan d audit autonome</span>
-      <h2>Un espace dedie au cadrage avant l execution des audits.</h2>
-      <p>Commencez par structurer le plan, consolider les missions et valider le workflow avant de basculer vers l execution dans le module Audit.</p>
+      <span class="hero-kicker">Module unique Plan d Audit</span>
+      <h2>Un espace centralise pour tout le cycle de l audit avec filtrage par profil.</h2>
+      <p>{{ scopeDescription }}</p>
       <div class="hero-actions">
         <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
           <i class="fas fa-magic"></i> Ouvrir la planification
@@ -57,6 +57,35 @@
         <strong>{{ totalMissionCount }}</strong>
       </div>
     </div>
+  </section>
+
+  <section class="missions-card dashboard-spotlight">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Tableau de bord par profil</span>
+        <h3>{{ profileDashboardTitle }}</h3>
+      </div>
+    </div>
+    <div class="stats-grid compact">
+      <div class="stat-card total"><span class="label">Plans visibles</span><span class="value">{{ dashboardStats.plans }}</span></div>
+      <div class="stat-card pending"><span class="label">Missions</span><span class="value">{{ dashboardStats.missions }}</span></div>
+      <div class="stat-card completed"><span class="label">OK</span><span class="value">{{ dashboardStats.completed }}</span></div>
+      <div class="stat-card risks"><span class="label">En retard</span><span class="value">{{ dashboardStats.overdue }}</span></div>
+    </div>
+    <div class="stats-grid compact secondary-grid">
+      <div class="stat-card pending"><span class="label">En cours</span><span class="value">{{ dashboardStats.inProgress }}</span></div>
+      <div class="stat-card total"><span class="label">Plans en validation</span><span class="value">{{ dashboardStats.pendingValidation }}</span></div>
+    </div>
+    <div class="spotlight-list" *ngIf="spotlightItems.length > 0">
+      <article class="spotlight-item" *ngFor="let item of spotlightItems">
+        <div>
+          <strong>{{ item.title }}</strong>
+          <p>{{ item.subtitle }}</p>
+        </div>
+        <span class="status-chip">{{ item.status }}</span>
+      </article>
+    </div>
+    <p class="empty-state" *ngIf="spotlightItems.length === 0">Aucune mission a mettre en avant pour le moment.</p>
   </section>
 
   <div class="filters-bar premium mb-4">
@@ -99,7 +128,7 @@
             <th>Nature</th>
             <th>Statut</th>
             <th>Periode</th>
-            <th>Missions</th>
+            <th>{{ isScopedMissionView ? 'Missions visibles' : 'Missions' }}</th>
             <th>Recommandations</th>
             <th>Actions</th>
           </tr>

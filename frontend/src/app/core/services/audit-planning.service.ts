@@ -103,6 +103,26 @@ export interface AuditMissionWorkflowEvent {
     createdAt: string | Date;
 }
 
+export interface AuditEmailLog {
+    id: number;
+    planId?: number | null;
+    missionId?: number | null;
+    scope: string;
+    scopeLabel?: string;
+    templateCode: string;
+    subject: string;
+    recipientEmail: string;
+    recipientName?: string | null;
+    recipientUserId?: number | null;
+    recipientLabel?: string;
+    actorName?: string | null;
+    deliveryStatus: string;
+    deliveryStatusLabel?: string;
+    errorMessage?: string | null;
+    messageId?: string | null;
+    createdAt: string | Date;
+}
+
 export interface AuditMissionWorkspace {
     mission: AuditPlanMission;
     permissions: {
@@ -121,6 +141,8 @@ export interface AuditMissionWorkspace {
         canUpdateActionPlan: boolean;
         canDeleteActionPlan: boolean;
         canFollowActionPlan: boolean;
+        canUploadEvidence: boolean;
+        canDeleteEvidence: boolean;
     };
     missionOrder: {
         status: string;
@@ -158,6 +180,18 @@ export interface AuditMissionWorkspace {
     };
     actionPlans: AuditMissionActionPlanItem[];
     workflowHistory: AuditMissionWorkflowEvent[];
+    emailHistory: AuditEmailLog[];
+}
+
+export interface AuditEvidence {
+    id: number;
+    missionId: number;
+    filename: string;
+    path: string;
+    uploadedById: number;
+    createdAt: Date | string;
+    uploader?: any;
+    mission?: any;
 }
 
 export interface AuditRoleResponsibility {
@@ -224,6 +258,8 @@ export interface AuditPlanMission {
     sourceMission?: any;
     resourceAssignments?: AuditPlanMissionResource[];
     requiredSkills?: AuditPlanMissionRequiredSkillLink[];
+    is_deleted?: boolean;
+    deleted_at?: string | Date | null;
 }
 
 export interface AuditPlanTransitionPayload {
@@ -308,6 +344,7 @@ export interface AuditPlan {
     missions?: AuditPlanMission[];
     recommendations?: AuditPlanMission[];
     workflowHistory?: AuditPlanWorkflowEvent[];
+    emailHistory?: AuditEmailLog[];
     gantt?: AuditPlanGanttItem[];
     skillsReport?: AuditSkillGapReport;
     summary?: {
@@ -358,6 +395,10 @@ export class AuditPlanningService {
         return this.http.get<AuditPlan>(`${this.apiUrl}/plans/${planId}`);
     }
 
+    getMissions(): Observable<AuditPlanMission[]> {
+        return this.http.get<AuditPlanMission[]>(`${this.apiUrl}/missions`);
+    }
+
     updatePlan(planId: number, payload: Partial<AuditPlan>): Observable<AuditPlan> {
         return this.http.put<AuditPlan>(`${this.apiUrl}/plans/${planId}`, payload);
     }
@@ -382,8 +423,24 @@ export class AuditPlanningService {
         return this.http.get<AuditPlanMission[]>(`${this.apiUrl}/plans/${planId}/missions`);
     }
 
+    getDeletedPlanMissions(planId: number): Observable<AuditPlanMission[]> {
+        return this.http.get<AuditPlanMission[]>(`${this.apiUrl}/plans/${planId}/missions/deleted`);
+    }
+
     createPlanMission(planId: number, payload: Partial<AuditPlanMission>): Observable<AuditPlanMission> {
         return this.http.post<AuditPlanMission>(`${this.apiUrl}/plans/${planId}/missions`, payload);
+    }
+
+    updatePlanMission(planId: number, missionId: number, payload: Partial<AuditPlanMission>): Observable<AuditPlanMission> {
+        return this.http.put<AuditPlanMission>(`${this.apiUrl}/plans/${planId}/missions/${missionId}`, payload);
+    }
+
+    deletePlanMission(planId: number, missionId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/plans/${planId}/missions/${missionId}`);
+    }
+
+    restorePlanMission(planId: number, missionId: number): Observable<AuditPlanMission> {
+        return this.http.patch<AuditPlanMission>(`${this.apiUrl}/plans/${planId}/missions/${missionId}/restore`, {});
     }
 
     getPlanRecommendations(planId: number): Observable<AuditPlanMission[]> {
@@ -440,6 +497,20 @@ export class AuditPlanningService {
 
     sendMissionOrder(missionId: number, payload: { reference?: string | null; comment?: string | null }): Observable<AuditMissionWorkspace> {
         return this.http.post<AuditMissionWorkspace>(`${this.apiUrl}/missions/${missionId}/mission-order/send`, payload);
+    }
+
+    getMissionEvidence(missionId: number): Observable<AuditEvidence[]> {
+        return this.http.get<AuditEvidence[]>(`${this.apiUrl}/missions/${missionId}/evidence`);
+    }
+
+    addMissionEvidence(missionId: number, file: File): Observable<AuditEvidence> {
+        const formData = new FormData();
+        formData.append('evidenceFile', file);
+        return this.http.post<AuditEvidence>(`${this.apiUrl}/missions/${missionId}/evidence`, formData);
+    }
+
+    deleteMissionEvidence(missionId: number, evidenceId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/missions/${missionId}/evidence/${evidenceId}`);
     }
 
     saveMissionWorkProgram(missionId: number, payload: { checklistTemplateId?: number | null; items: Partial<AuditMissionChecklistItem>[] }): Observable<AuditMissionWorkspace> {

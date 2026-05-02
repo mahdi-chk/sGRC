@@ -75,7 +75,11 @@ router.post('/plans', authorizeRoles(...auditDivisionManagerRoles), async (req: 
 
 router.get('/plans/:id', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const plan = await AuditPlanService.getPlanDetail(parseInt(req.params.id as string, 10), req.user!.role);
+        const plan = await AuditPlanService.getPlanDetail(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(plan);
     } catch (error: any) {
         res.status(404).json({ message: 'Erreur lors du chargement du plan', error: error.message });
@@ -151,27 +155,39 @@ router.post('/plans/:id/missions', authorizeRoles(...auditDivisionManagerRoles),
     }
 });
 
-router.get('/plans/:id/recommendations', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.get('/plans/:id/recommendations', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const items = await AuditPlanService.getPlanRecommendations(parseInt(req.params.id as string, 10));
+        const items = await AuditPlanService.getPlanRecommendations(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(items);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement des recommandations', error: error.message });
     }
 });
 
-router.get('/plans/:id/gantt', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.get('/plans/:id/gantt', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const items = await AuditPlanService.getPlanGantt(parseInt(req.params.id as string, 10));
+        const items = await AuditPlanService.getPlanGantt(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(items);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement du planning', error: error.message });
     }
 });
 
-router.get('/plans/:id/skills-report', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.get('/plans/:id/skills-report', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const report = await AuditPlanService.getSkillsReport(parseInt(req.params.id as string, 10));
+        const report = await AuditPlanService.getSkillsReport(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(report);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement du rapport de competences', error: error.message });
@@ -180,7 +196,11 @@ router.get('/plans/:id/skills-report', authorizeRoles(...auditPlanReadRoles), as
 
 router.get('/plans/:id/export', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const data = await AuditPlanService.getPlanExportData(parseInt(req.params.id as string, 10), req.user!.role);
+        const data = await AuditPlanService.getPlanExportData(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de l export du plan', error: error.message });
@@ -232,18 +252,27 @@ router.patch('/skills/:id/restore', authorizeRoles(...auditDivisionManagerRoles)
     }
 });
 
-router.get('/missions/:id/resources', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.get('/missions/:id/resources', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const data = await AuditPlanService.getMissionResources(parseInt(req.params.id as string, 10));
+        const data = await AuditPlanService.getMissionResources(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement des ressources de la mission', error: error.message });
     }
 });
 
-router.put('/missions/:id/resources', authorizeRoles(...auditDivisionManagerRoles), async (req, res) => {
+router.put('/missions/:id/resources', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
-        const data = await AuditPlanService.updateMissionResources(parseInt(req.params.id as string, 10), req.body);
+        const data = await AuditPlanService.updateMissionResources(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id,
+            req.body
+        );
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la mise a jour des ressources de la mission', error: error.message });

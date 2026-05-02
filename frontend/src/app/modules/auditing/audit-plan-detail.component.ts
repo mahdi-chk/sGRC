@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   AuditChecklistTemplate,
+  AuditEvidence,
   AuditMissionActionPlanItem,
   AuditMissionActionPlanPayload,
   AuditMissionChecklistItem,
@@ -22,6 +23,23 @@ import {
 import { UserService } from '../../core/services/user.service';
 import { UserRole } from '../../core/models/user-role.enum';
 import { getAuditPlanningNavItems, getStoredAuditRole } from './audit-navigation';
+import { environment } from '../../../environments/environment';
+
+type AuditDetailTabId = 'informations' | 'workflow' | 'missions' | 'planning' | 'resources' | 'recommendations' | 'competences';
+
+type AuditDetailTab = {
+  id: AuditDetailTabId;
+  label: string;
+};
+
+type AuditMissionPanelId = 'overview' | 'assign' | 'process' | 'validate' | 'actions' | 'evidence';
+
+type AuditMissionPanel = {
+  id: AuditMissionPanelId;
+  label: string;
+  description: string;
+  icon: string;
+};
 
 @Component({
   selector: 'app-audit-plan-detail',
@@ -34,7 +52,8 @@ export class AuditPlanDetailComponent implements OnInit {
   plan: AuditPlan | null = null;
   missionWorkspace: AuditMissionWorkspace | null = null;
   responsibilityMatrix: AuditResponsibilityMatrixResponse | null = null;
-  activeTab: 'informations' | 'workflow' | 'missions' | 'planning' | 'resources' | 'recommendations' | 'competences' = 'informations';
+  activeTab: AuditDetailTabId = 'informations';
+  activeMissionPanel: AuditMissionPanelId = 'overview';
   isLoading = false;
   isTransitioning = false;
   isSavingMission = false;
@@ -59,14 +78,24 @@ export class AuditPlanDetailComponent implements OnInit {
   workProgramTemplates: AuditChecklistTemplate[] = [];
 
   showMissionModal = false;
+  showMissionEditModal = false;
   showActionPlanModal = false;
   selectedMissionId: number | null = null;
+  deletedMissions: AuditPlanMission[] = [];
   missionResources: AuditPlanMissionResource[] = [];
   selectedRequiredSkillIds: number[] = [];
   selectedUserSkillIds: number[] = [];
   selectedUserForSkillsId: number | null = null;
   selectedWorkProgramTemplateId: number | null = null;
   workProgramItems: Partial<AuditMissionChecklistItem>[] = [];
+  missionEvidence: AuditEvidence[] = [];
+  selectedEvidenceFile: File | null = null;
+  isUploadingEvidence = false;
+  isDeletingEvidence = false;
+  isSavingMissionUpdate = false;
+  isDeletingMission = false;
+  isRestoringMission = false;
+  backendUrl = environment.serverUrl;
 
   transitionForm: AuditPlanTransitionPayload = {
     transition: '',
@@ -96,8 +125,47 @@ export class AuditPlanDetailComponent implements OnInit {
   actionPlanForm: Partial<AuditMissionActionPlanItem> = this.emptyActionPlan();
 
   missionForm: Partial<AuditPlanMission> = this.emptyMission();
+  missionEditForm: Partial<AuditPlanMission> = this.emptyMission();
 
   readonly actionPlanStatuses = ['NOK', 'En cours', 'OK'];
+  readonly missionPanels: AuditMissionPanel[] = [
+    {
+      id: 'overview',
+      label: 'Vue',
+      description: 'Lire le statut, les dates et les prochaines actions.',
+      icon: 'fas fa-gauge-high'
+    },
+    {
+      id: 'assign',
+      label: 'Assigner',
+      description: 'Affecter les ressources et les competences.',
+      icon: 'fas fa-user-plus'
+    },
+    {
+      id: 'process',
+      label: 'Traiter',
+      description: 'Envoyer l ordre, preparer le programme et rediger.',
+      icon: 'fas fa-list-check'
+    },
+    {
+      id: 'validate',
+      label: 'Valider',
+      description: 'Soumettre, valider, approuver ou demander une reprise.',
+      icon: 'fas fa-circle-check'
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      description: 'Piloter les plans d action et recommandations.',
+      icon: 'fas fa-clipboard-list'
+    },
+    {
+      id: 'evidence',
+      label: 'Preuves',
+      description: 'Joindre et consulter les justificatifs.',
+      icon: 'fas fa-paperclip'
+    }
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -114,6 +182,19 @@ export class AuditPlanDetailComponent implements OnInit {
     return this.plan?.summary?.missionCount || this.plan?.missions?.length || 0;
   }
 
+  get planScopeLabel(): string {
+    switch (this.currentUserRole) {
+      case UserRole.CHEF_MISSION:
+        return 'Mes missions';
+      case UserRole.AUDITEUR:
+        return 'Mes missions assignees';
+      case UserRole.CONTROLLER:
+        return 'Mon perimetre de suivi';
+      default:
+        return 'Toutes les missions du plan';
+    }
+  }
+
   get recommendationCount(): number {
     return this.plan?.summary?.recommendationCount || this.plan?.recommendations?.length || 0;
   }
@@ -125,6 +206,44 @@ export class AuditPlanDetailComponent implements OnInit {
   get isManagementRole(): boolean {
     const role = this.currentUserRole;
     return role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE || role === UserRole.CHEF_MISSION || role === UserRole.SUPER_ADMIN;
+  }
+
+  get canViewResourcesTab(): boolean {
+    const role = this.currentUserRole;
+    return role === UserRole.AUDIT_DIRECTEUR
+      || role === UserRole.AUDIT_RESPONSABLE
+      || role === UserRole.CHEF_MISSION
+      || role === UserRole.AUDITEUR
+      || role === UserRole.SUPER_ADMIN;
+  }
+
+  get canViewSkillsTab(): boolean {
+    const role = this.currentUserRole;
+    return role === UserRole.AUDIT_DIRECTEUR
+      || role === UserRole.AUDIT_RESPONSABLE
+      || role === UserRole.CHEF_MISSION
+      || role === UserRole.SUPER_ADMIN;
+  }
+
+  get visibleTabs(): AuditDetailTab[] {
+    const tabs: AuditDetailTab[] = [
+      { id: 'informations', label: 'Informations' },
+      { id: 'workflow', label: 'Workflow' },
+      { id: 'missions', label: this.planScopeLabel },
+      { id: 'planning', label: 'Planning' },
+    ];
+
+    if (this.canViewResourcesTab) {
+      tabs.push({ id: 'resources', label: 'Ressources' });
+    }
+
+    tabs.push({ id: 'recommendations', label: 'Recommandations' });
+
+    if (this.canViewSkillsTab) {
+      tabs.push({ id: 'competences', label: 'Competences' });
+    }
+
+    return tabs;
   }
 
   get selectedMission(): AuditPlanMission | null {
@@ -175,6 +294,62 @@ export class AuditPlanDetailComponent implements OnInit {
     return Array.from(new Set(transitions));
   }
 
+  get allowedActionLabels(): string[] {
+    const permissions = this.missionWorkspace?.permissions;
+    if (!permissions) {
+      return [];
+    }
+
+    const labels: string[] = [];
+
+    if (permissions.canManageResources) {
+      labels.push('gerer les affectations');
+    }
+    if (permissions.canSendMissionOrder) {
+      labels.push('envoyer l ordre de mission');
+    }
+    if (permissions.canEditWorkProgram) {
+      labels.push('preparer le programme de travail');
+    }
+    if (permissions.canExecuteWorkProgram) {
+      labels.push('executer la checklist');
+    }
+    if (permissions.canValidateWorkProgram) {
+      labels.push('valider le programme');
+    }
+    if (permissions.canApproveWorkProgram) {
+      labels.push('approuver le programme');
+    }
+    if (permissions.canEditReport) {
+      labels.push('rediger le rapport');
+    }
+    if (permissions.canValidateReport) {
+      labels.push('valider le rapport');
+    }
+    if (permissions.canApproveReport) {
+      labels.push('approuver le rapport');
+    }
+    if (permissions.canCreateActionPlan) {
+      labels.push('creer des plans d action');
+    }
+    if (permissions.canFollowActionPlan) {
+      labels.push('suivre les plans d action');
+    }
+
+    return labels;
+  }
+
+  getEmailStatusClass(status?: string | null): string {
+    switch ((status || '').toLowerCase()) {
+      case 'sent':
+        return 'email-status success';
+      case 'failed':
+        return 'email-status danger';
+      default:
+        return 'email-status muted';
+    }
+  }
+
   ngOnInit(): void {
     this.planId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadLookups();
@@ -183,6 +358,14 @@ export class AuditPlanDetailComponent implements OnInit {
     this.loadResponsibilityMatrix();
     this.loadWorkProgramTemplates();
     this.loadPlan();
+  }
+
+  setActiveTab(tabId: AuditDetailTabId): void {
+    this.activeTab = tabId;
+  }
+
+  setMissionPanel(panelId: AuditMissionPanelId): void {
+    this.activeMissionPanel = panelId;
   }
 
   goBack(): void {
@@ -225,6 +408,19 @@ export class AuditPlanDetailComponent implements OnInit {
     };
   }
 
+  private toDateInputValue(value?: string | Date | null): string {
+    if (!value) {
+      return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return date.toISOString().split('T')[0];
+  }
+
   private updateMissionInPlan(updatedMission: AuditPlanMission): void {
     if (!this.plan?.missions) {
       return;
@@ -253,6 +449,7 @@ export class AuditPlanDetailComponent implements OnInit {
       comment: ''
     };
     this.updateMissionInPlan(workspace.mission);
+    this.loadMissionEvidence();
   }
 
   loadLookups(): void {
@@ -294,10 +491,14 @@ export class AuditPlanDetailComponent implements OnInit {
     this.auditPlanningService.getPlan(this.planId).subscribe({
       next: (plan) => {
         this.plan = plan;
+        this.loadDeletedMissions();
         this.isLoading = false;
         if (this.plan?.missions?.length) {
           const missionId = this.selectedMissionId || this.plan.missions[0].id;
           this.selectMission(missionId);
+        } else {
+          this.selectedMissionId = null;
+          this.missionWorkspace = null;
         }
       },
       error: (error) => {
@@ -390,6 +591,34 @@ export class AuditPlanDetailComponent implements OnInit {
     });
   }
 
+  loadMissionEvidence(): void {
+    if (!this.selectedMissionId) {
+      this.missionEvidence = [];
+      return;
+    }
+
+    this.auditPlanningService.getMissionEvidence(this.selectedMissionId).subscribe({
+      next: (data) => {
+        this.missionEvidence = data;
+      },
+      error: (error) => console.error(error)
+    });
+  }
+
+  loadDeletedMissions(): void {
+    if (!this.planId || !this.isManagementRole) {
+      this.deletedMissions = [];
+      return;
+    }
+
+    this.auditPlanningService.getDeletedPlanMissions(this.planId).subscribe({
+      next: (missions) => {
+        this.deletedMissions = missions;
+      },
+      error: (error) => console.error(error)
+    });
+  }
+
   loadMissionResources(): void {
     if (!this.selectedMissionId) {
       return;
@@ -401,6 +630,96 @@ export class AuditPlanDetailComponent implements OnInit {
         this.selectedRequiredSkillIds = data.requiredSkills.map((item) => item.skillId);
       },
       error: (error) => console.error(error)
+    });
+  }
+
+  openEditMissionModal(): void {
+    if (!this.selectedMission) {
+      return;
+    }
+
+    this.missionEditForm = {
+      ...this.selectedMission,
+      datePrevueDebut: this.toDateInputValue(this.selectedMission.datePrevueDebut),
+      datePrevueFin: this.toDateInputValue(this.selectedMission.datePrevueFin),
+      dateReelleDebut: this.toDateInputValue(this.selectedMission.dateReelleDebut),
+      dateReelleFin: this.toDateInputValue(this.selectedMission.dateReelleFin)
+    };
+    this.showMissionEditModal = true;
+  }
+
+  saveMissionEdits(): void {
+    if (!this.plan || !this.selectedMission || !this.missionEditForm.titre || !this.missionEditForm.objectifs) {
+      return;
+    }
+
+    this.isSavingMissionUpdate = true;
+    this.auditPlanningService.updatePlanMission(this.plan.id, this.selectedMission.id, {
+      titre: this.missionEditForm.titre,
+      objectifs: this.missionEditForm.objectifs,
+      responsabilites: this.missionEditForm.responsabilites || null,
+      statut: this.missionEditForm.statut || 'nok',
+      category: this.missionEditForm.categoryCode || this.missionEditForm.category || null,
+      quarter: this.missionEditForm.quarterCode || this.missionEditForm.quarter || null,
+      axe: this.missionEditForm.axe || null,
+      evaluation: this.missionEditForm.evaluation || null,
+      datePrevueDebut: this.missionEditForm.datePrevueDebut || null,
+      datePrevueFin: this.missionEditForm.datePrevueFin || null,
+      dateReelleDebut: this.missionEditForm.dateReelleDebut || null,
+      dateReelleFin: this.missionEditForm.dateReelleFin || null,
+      delai: this.missionEditForm.datePrevueFin || null
+    }).subscribe({
+      next: (mission) => {
+        this.updateMissionInPlan(mission);
+        this.showMissionEditModal = false;
+        this.isSavingMissionUpdate = false;
+        this.loadPlan();
+      },
+      error: (error) => {
+        console.error(error);
+        this.isSavingMissionUpdate = false;
+        alert(error?.error?.message || 'Erreur lors de la mise a jour de la mission.');
+      }
+    });
+  }
+
+  deleteSelectedMission(): void {
+    if (!this.plan || !this.selectedMission || !confirm(`Supprimer la mission ${this.selectedMission.titre} ?`)) {
+      return;
+    }
+
+    this.isDeletingMission = true;
+    this.auditPlanningService.deletePlanMission(this.plan.id, this.selectedMission.id).subscribe({
+      next: () => {
+        this.isDeletingMission = false;
+        this.selectedMissionId = null;
+        this.missionWorkspace = null;
+        this.loadPlan();
+      },
+      error: (error) => {
+        console.error(error);
+        this.isDeletingMission = false;
+        alert(error?.error?.message || 'Erreur lors de la suppression de la mission.');
+      }
+    });
+  }
+
+  restoreMission(missionId: number): void {
+    if (!this.plan) {
+      return;
+    }
+
+    this.isRestoringMission = true;
+    this.auditPlanningService.restorePlanMission(this.plan.id, missionId).subscribe({
+      next: () => {
+        this.isRestoringMission = false;
+        this.loadPlan();
+      },
+      error: (error) => {
+        console.error(error);
+        this.isRestoringMission = false;
+        alert(error?.error?.message || 'Erreur lors de la restauration de la mission.');
+      }
     });
   }
 
@@ -449,6 +768,59 @@ export class AuditPlanDetailComponent implements OnInit {
         alert(error?.error?.message || 'Erreur lors de la sauvegarde des ressources.');
       }
     });
+  }
+
+  onEvidenceFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedEvidenceFile = input.files?.[0] || null;
+  }
+
+  uploadEvidence(): void {
+    if (!this.selectedMissionId || !this.selectedEvidenceFile) {
+      return;
+    }
+
+    this.isUploadingEvidence = true;
+    this.auditPlanningService.addMissionEvidence(this.selectedMissionId, this.selectedEvidenceFile).subscribe({
+      next: () => {
+        this.selectedEvidenceFile = null;
+        this.isUploadingEvidence = false;
+        this.loadMissionEvidence();
+      },
+      error: (error) => {
+        console.error(error);
+        this.isUploadingEvidence = false;
+        alert(error?.error?.message || 'Erreur lors du televersement de la preuve.');
+      }
+    });
+  }
+
+  deleteEvidence(evidenceId: number): void {
+    if (!this.selectedMissionId || !confirm('Supprimer cette preuve ?')) {
+      return;
+    }
+
+    this.isDeletingEvidence = true;
+    this.auditPlanningService.deleteMissionEvidence(this.selectedMissionId, evidenceId).subscribe({
+      next: () => {
+        this.isDeletingEvidence = false;
+        this.loadMissionEvidence();
+      },
+      error: (error) => {
+        console.error(error);
+        this.isDeletingEvidence = false;
+        alert(error?.error?.message || 'Erreur lors de la suppression de la preuve.');
+      }
+    });
+  }
+
+  downloadEvidence(path: string): void {
+    const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
+    const normalizedPath = path.replace(/\\/g, '/');
+    const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
+    const token = sessionStorage.getItem('sgrc_token');
+    const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
+    window.open(urlWithToken, '_blank');
   }
 
   loadUserSkills(): void {

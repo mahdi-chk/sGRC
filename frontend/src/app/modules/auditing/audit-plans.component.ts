@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuditPlan, AuditPlanningService, LookupOption } from '../../core/services/audit-planning.service';
+import { AuditPlan, AuditPlanMission, AuditPlanningService, LookupOption } from '../../core/services/audit-planning.service';
 import { UserRole } from '../../core/models/user-role.enum';
 import { getAuditPlanningNavItems, getStoredAuditRole } from './audit-navigation';
 
@@ -12,6 +12,7 @@ import { getAuditPlanningNavItems, getStoredAuditRole } from './audit-navigation
 export class AuditPlansComponent implements OnInit {
   currentUserRole = getStoredAuditRole();
   plans: AuditPlan[] = [];
+  missions: AuditPlanMission[] = [];
   statusOptions: LookupOption[] = [];
   natureOptions: LookupOption[] = [];
 
@@ -19,6 +20,15 @@ export class AuditPlansComponent implements OnInit {
   isSaving = false;
   showCreateModal = false;
   editingPlanId: number | null = null;
+  dashboardStats = {
+    plans: 0,
+    missions: 0,
+    inProgress: 0,
+    completed: 0,
+    pendingValidation: 0,
+    overdue: 0
+  };
+  spotlightItems: Array<{ title: string; subtitle: string; status: string }> = [];
 
   filters = {
     nom: '',
@@ -55,14 +65,53 @@ export class AuditPlansComponent implements OnInit {
     return this.plans.reduce((total, plan) => total + Number(plan.missionCount || 0), 0);
   }
 
+  get isScopedMissionView(): boolean {
+    return this.currentUserRole === UserRole.CHEF_MISSION
+      || this.currentUserRole === UserRole.AUDITEUR
+      || this.currentUserRole === UserRole.CONTROLLER;
+  }
+
+  get scopeDescription(): string {
+    switch (this.currentUserRole) {
+      case UserRole.CHEF_MISSION:
+        return 'Vous voyez uniquement les plans contenant les missions qui vous sont affectees.';
+      case UserRole.AUDITEUR:
+        return 'Vous voyez uniquement les plans contenant vos missions d audit assignees.';
+      case UserRole.CONTROLLER:
+        return 'Vous voyez uniquement les plans relies a votre perimetre de suivi et de recommandations.';
+      default:
+        return 'Le module unique centralise creation, validation, assignation, execution, verification et suivi des plans d audit.';
+    }
+  }
+
   get isManagementRole(): boolean {
     const role = this.currentUserRole;
     return role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE || role === UserRole.CHEF_MISSION || role === UserRole.SUPER_ADMIN;
   }
 
+  get profileDashboardTitle(): string {
+    switch (this.currentUserRole) {
+      case UserRole.AUDIT_DIRECTEUR:
+        return 'Pilotage de validation et d approbation';
+      case UserRole.AUDIT_RESPONSABLE:
+        return 'Pilotage operationnel des plans et missions';
+      case UserRole.CHEF_MISSION:
+        return 'Execution des missions et livrables';
+      case UserRole.AUDITEUR:
+        return 'Suivi de mes missions et preuves';
+      case UserRole.CONTROLLER:
+        return 'Suivi des recommandations et plans d action';
+      case UserRole.TOP_MANAGEMENT:
+        return 'Vue consolidee du portefeuille d audit';
+      default:
+        return 'Vue consolidee du module Plan d Audit';
+    }
+  }
+
   ngOnInit(): void {
     this.loadLookups();
     this.loadPlans();
+    this.loadDashboardData();
   }
 
   goBack(): void {
@@ -95,11 +144,26 @@ export class AuditPlansComponent implements OnInit {
     this.auditPlanningService.getPlans(this.filters).subscribe({
       next: (plans) => {
         this.plans = plans;
+        this.buildDashboard();
         this.isLoading = false;
       },
       error: (error) => {
         console.error(error);
         this.isLoading = false;
+      }
+    });
+  }
+
+  loadDashboardData(): void {
+    this.auditPlanningService.getMissions().subscribe({
+      next: (missions) => {
+        this.missions = missions;
+        this.buildDashboard();
+      },
+      error: (error) => {
+        console.error(error);
+        this.missions = [];
+        this.buildDashboard();
       }
     });
   }
@@ -198,6 +262,46 @@ export class AuditPlansComponent implements OnInit {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[\s-]+/g, '_');
+  }
+
+  private buildDashboard(): void {
+    const now = new Date().getTime();
+    const inProgress = this.missions.filter((mission) => this.normalizeStatus(mission.statut) === 'en_cours').length;
+    const completed = this.missions.filter((mission) => this.normalizeStatus(mission.statut) === 'ok').length;
+    const overdue = this.missions.filter((mission) => {
+      if (!mission.delai) {
+        return false;
+      }
+      const due = new Date(mission.delai).getTime();
+      return !Number.isNaN(due) && due < now && this.normalizeStatus(mission.statut) !== 'ok';
+    }).length;
+    const pendingValidation = this.plans.filter((plan) => {
+      const status = this.normalizeStatus(plan.statusCode || plan.status);
+      return status.includes('a_valider') || status.includes('valide_direction') || status.includes('valide_conseil');
+    }).length;
+
+    this.dashboardStats = {
+      plans: this.plans.length,
+      missions: this.missions.length,
+      inProgress,
+      completed,
+      pendingValidation,
+      overdue
+    };
+
+    this.spotlightItems = this.missions
+      .slice()
+      .sort((a, b) => {
+        const aDate = a.delai ? new Date(a.delai).getTime() : Number.MAX_SAFE_INTEGER;
+        const bDate = b.delai ? new Date(b.delai).getTime() : Number.MAX_SAFE_INTEGER;
+        return aDate - bDate;
+      })
+      .slice(0, 4)
+      .map((mission) => ({
+        title: mission.titre,
+        subtitle: mission.delai ? `Echeance ${new Date(mission.delai).toLocaleDateString('fr-FR')}` : 'Sans echeance',
+        status: String(mission.statut || '-')
+      }));
   }
 
   private isDraftStatus(value?: string | null): boolean {

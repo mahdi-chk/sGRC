@@ -4,14 +4,29 @@ import { UserRole } from '../users/user.roles';
 import { AuditPlanService } from '../auditing/audit-plan.service';
 import { AuditingService } from '../auditing/auditing.service';
 import { AuditRecordType } from '../auditing/audit-mission.model';
+import { secureUpload } from '../../middleware/file.middleware';
 import { appLogger } from '../../utils/app-logger';
 import { AUDIT_ROLE_RESPONSIBILITY_MATRIX, AUDIT_WORK_PROGRAM_MODEL } from '../auditing/audit-responsibility-matrix';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
+const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'], 'evidenceFile', 15 * 1024 * 1024);
 
 const auditDivisionManagerRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
 const auditPlanningOperationalRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
 const auditPlanReadRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN];
+
+const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
+    const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+    const fullPath = path.join('src/storage', subDir, fileName);
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(fullPath, file.buffer);
+    return fullPath;
+};
 
 router.use(authenticateToken);
 
@@ -57,7 +72,11 @@ router.post('/plans', authorizeRoles(...auditDivisionManagerRoles), async (req: 
 
 router.get('/plans/:id', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const plan = await AuditPlanService.getPlanDetail(parseInt(req.params.id as string, 10), req.user!.role);
+        const plan = await AuditPlanService.getPlanDetail(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(plan);
     } catch (error: any) {
         res.status(404).json({ message: 'Erreur lors du chargement du plan', error: error.message });
@@ -117,10 +136,24 @@ router.get('/plans/:id/workflow-history', authorizeRoles(...auditPlanReadRoles),
 
 router.get('/plans/:id/missions', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
     try {
-        const missions = await AuditPlanService.getPlanMissions(parseInt(req.params.id as string, 10));
+        const authReq = req as AuthRequest;
+        const missions = await AuditPlanService.getPlanMissions(
+            parseInt(req.params.id as string, 10),
+            authReq.user!.role,
+            authReq.user!.id
+        );
         res.json(missions);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement des missions du plan', error: error.message });
+    }
+});
+
+router.get('/plans/:id/missions/deleted', authorizeRoles(...auditDivisionManagerRoles), async (req, res) => {
+    try {
+        const missions = await AuditPlanService.getDeletedPlanMissions(parseInt(req.params.id as string, 10));
+        res.json(missions);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors du chargement des missions archivees', error: error.message });
     }
 });
 
@@ -133,27 +166,79 @@ router.post('/plans/:id/missions', authorizeRoles(...auditDivisionManagerRoles),
     }
 });
 
-router.get('/plans/:id/recommendations', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.put('/plans/:planId/missions/:missionId', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
-        const items = await AuditPlanService.getPlanRecommendations(parseInt(req.params.id as string, 10));
+        const mission = await AuditPlanService.updatePlanMission(
+            parseInt(req.params.planId as string, 10),
+            parseInt(req.params.missionId as string, 10),
+            req.user!.role,
+            req.body
+        );
+        res.json(mission);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la mise a jour de la mission du plan', error: error.message });
+    }
+});
+
+router.delete('/plans/:planId/missions/:missionId', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
+    try {
+        const result = await AuditPlanService.deletePlanMission(
+            parseInt(req.params.planId as string, 10),
+            parseInt(req.params.missionId as string, 10),
+            req.user!.role
+        );
+        res.json(result);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression de la mission du plan', error: error.message });
+    }
+});
+
+router.patch('/plans/:planId/missions/:missionId/restore', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
+    try {
+        const mission = await AuditPlanService.restorePlanMission(
+            parseInt(req.params.planId as string, 10),
+            parseInt(req.params.missionId as string, 10),
+            req.user!.role
+        );
+        res.json(mission);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la restauration de la mission du plan', error: error.message });
+    }
+});
+
+router.get('/plans/:id/recommendations', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
+    try {
+        const items = await AuditPlanService.getPlanRecommendations(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(items);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement des recommandations', error: error.message });
     }
 });
 
-router.get('/plans/:id/gantt', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.get('/plans/:id/gantt', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const items = await AuditPlanService.getPlanGantt(parseInt(req.params.id as string, 10));
+        const items = await AuditPlanService.getPlanGantt(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(items);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement du planning', error: error.message });
     }
 });
 
-router.get('/plans/:id/skills-report', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
+router.get('/plans/:id/skills-report', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const report = await AuditPlanService.getSkillsReport(parseInt(req.params.id as string, 10));
+        const report = await AuditPlanService.getSkillsReport(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(report);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement du rapport de competences', error: error.message });
@@ -162,7 +247,11 @@ router.get('/plans/:id/skills-report', authorizeRoles(...auditPlanReadRoles), as
 
 router.get('/plans/:id/export', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
-        const data = await AuditPlanService.getPlanExportData(parseInt(req.params.id as string, 10), req.user!.role);
+        const data = await AuditPlanService.getPlanExportData(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de l export du plan', error: error.message });
@@ -228,16 +317,26 @@ router.patch('/skills/:id/restore', authorizeRoles(...auditDivisionManagerRoles)
 
 router.get('/missions/:id/resources', authorizeRoles(...auditPlanReadRoles), async (req, res) => {
     try {
-        const data = await AuditPlanService.getMissionResources(parseInt(req.params.id as string, 10));
+        const authReq = req as AuthRequest;
+        const data = await AuditPlanService.getMissionResources(
+            parseInt(req.params.id as string, 10),
+            authReq.user!.role,
+            authReq.user!.id
+        );
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors du chargement des ressources de la mission', error: error.message });
     }
 });
 
-router.put('/missions/:id/resources', authorizeRoles(...auditDivisionManagerRoles), async (req, res) => {
+router.put('/missions/:id/resources', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
-        const data = await AuditPlanService.updateMissionResources(parseInt(req.params.id as string, 10), req.body);
+        const data = await AuditPlanService.updateMissionResources(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id,
+            req.body
+        );
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la mise a jour des ressources de la mission', error: error.message });
@@ -277,6 +376,53 @@ router.post('/missions/:id/mission-order/send', authorizeRoles(...auditDivisionM
         res.json(data);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de l envoi de l ordre de mission', error: error.message });
+    }
+});
+
+router.get('/missions/:id/evidence', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
+    try {
+        const data = await AuditPlanService.getMissionEvidence(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
+        res.json(data);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors du chargement des preuves', error: error.message });
+    }
+});
+
+router.post('/missions/:id/evidence', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR), uploadEvidence, async (req: AuthRequest, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun fichier fourni' });
+        }
+
+        const filePath = saveToStorage(req.file, 'evidence');
+        const data = await AuditPlanService.addMissionEvidence(
+            parseInt(req.params.id as string, 10),
+            req.user!.role,
+            req.user!.id,
+            req.file.originalname,
+            filePath
+        );
+        res.status(201).json(data);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de l ajout de la preuve', error: error.message });
+    }
+});
+
+router.delete('/missions/:id/evidence/:evidenceId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR), async (req: AuthRequest, res) => {
+    try {
+        const data = await AuditPlanService.deleteMissionEvidence(
+            parseInt(req.params.id as string, 10),
+            parseInt(req.params.evidenceId as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
+        res.json(data);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression de la preuve', error: error.message });
     }
 });
 

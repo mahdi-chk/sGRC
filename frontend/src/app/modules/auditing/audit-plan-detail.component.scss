@@ -80,6 +80,46 @@
   gap: 18px;
 }
 
+.subsection-title {
+  margin: 18px 0 10px;
+}
+
+.email-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.email-status.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.email-status.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.email-status.muted {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-head h3 {
+  margin: 6px 0 0;
+}
+
 .role-grid {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -120,6 +160,12 @@
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   font-size: 0.86rem;
+}
+
+.role-chip.muted {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #0f4c81;
 }
 
 .eyebrow {
@@ -258,10 +304,147 @@
   }
 }
 
+.mission-function-nav {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.mission-function-nav button {
+  min-height: 104px;
+  padding: 14px;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+
+  i {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    background: #eef6ff;
+    color: #0f4c81;
+  }
+
+  span,
+  small {
+    display: block;
+  }
+
+  span {
+    color: #0f172a;
+    font-weight: 800;
+  }
+
+  small {
+    margin-top: 4px;
+    color: #64748b;
+    line-height: 1.35;
+  }
+}
+
+.mission-function-nav button:hover,
+.mission-function-nav button.active {
+  transform: translateY(-1px);
+  border-color: #0f4c81;
+  box-shadow: 0 14px 28px rgba(15, 76, 129, 0.12);
+}
+
+.mission-function-nav button.active {
+  background: #f8fbff;
+
+  i {
+    background: #0f4c81;
+    color: #fff;
+  }
+}
+
+.mission-overview-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.mission-overview-main,
+.assignment-workspace {
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.mission-next-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.mission-next-actions button {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+
+  i {
+    grid-row: span 2;
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  span {
+    color: #0f172a;
+    font-weight: 800;
+  }
+
+  small {
+    color: #64748b;
+  }
+}
+
+.assignment-workspace {
+  margin-top: 16px;
+}
+
+.resource-row.header-row {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.capability-strip {
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+  border: 1px solid #fed7aa;
 }
 
 .workflow-card.full-width {
@@ -333,6 +516,11 @@
   flex-wrap: wrap;
 }
 
+.large-action {
+  width: auto;
+  padding: 0 14px;
+}
+
 .compact {
   margin-bottom: 18px;
 }
@@ -347,12 +535,22 @@
   margin: 12px 0 0;
 }
 
+.archive-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
 @media (max-width: 1200px) {
   .mission-workspace-layout,
   .workflow-layout,
   .role-grid,
   .workspace-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mission-function-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .workspace-stats {
@@ -376,6 +574,11 @@
   .workspace-stats {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .mission-function-nav,
+  .mission-overview-panel {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -23,32 +23,57 @@
     </a>
   </nav>
 
-  <div class="plan-summary-strip">
-    <div class="summary-pill">
-      <span>{{ currentUserRole === 'top_management' ? 'Missions du plan' : 'Missions visibles' }}</span>
-      <strong>{{ missionCount }}</strong>
-    </div>
-    <div class="summary-pill">
-      <span>Recommandations</span>
-      <strong>{{ recommendationCount }}</strong>
-    </div>
-    <div class="summary-pill">
-      <span>Transitions</span>
-      <strong>{{ availableTransitionCount }}</strong>
-    </div>
-    <div class="summary-pill">
-      <span>Periode</span>
-      <strong>
-        {{ plan.dateDebut ? (plan.dateDebut | date:'dd/MM/yyyy') : '-' }}
-        /
-        {{ plan.dateFin ? (plan.dateFin | date:'dd/MM/yyyy') : '-' }}
-      </strong>
-    </div>
-  </div>
+  <section class="audit-submodule-shell">
+    <aside class="plan-context-card">
+      <span class="eyebrow">Plan d audit</span>
+      <h2>{{ plan.nom }}</h2>
+      <div class="plan-context-meta">
+        <span>{{ plan.nature || '-' }}</span>
+        <span>{{ plan.status || '-' }}</span>
+      </div>
+      <div class="plan-summary-strip">
+        <div class="summary-pill">
+          <span>{{ currentUserRole === 'top_management' ? 'Missions du plan' : 'Missions visibles' }}</span>
+          <strong>{{ missionCount }}</strong>
+        </div>
+        <div class="summary-pill">
+          <span>Recommandations</span>
+          <strong>{{ recommendationCount }}</strong>
+        </div>
+        <div class="summary-pill">
+          <span>Transitions</span>
+          <strong>{{ availableTransitionCount }}</strong>
+        </div>
+        <div class="summary-pill">
+          <span>Periode</span>
+          <strong>
+            {{ plan.dateDebut ? (plan.dateDebut | date:'dd/MM/yyyy') : '-' }}
+            /
+            {{ plan.dateFin ? (plan.dateFin | date:'dd/MM/yyyy') : '-' }}
+          </strong>
+        </div>
+      </div>
+    </aside>
 
-  <div class="tab-strip">
-    <button *ngFor="let tab of visibleTabs" [class.active]="activeTab === tab.id" (click)="setActiveTab(tab.id)">{{ tab.label }}</button>
-  </div>
+    <div class="submodule-navigation">
+      <div class="submodule-navigation-head">
+        <span class="eyebrow">Sous-modules</span>
+        <h3>{{ activeTabInfo?.label }}</h3>
+      </div>
+      <div class="tab-strip" role="tablist">
+        <button *ngFor="let tab of visibleTabs"
+                type="button"
+                role="tab"
+                [attr.aria-selected]="activeTab === tab.id"
+                [class.active]="activeTab === tab.id"
+                (click)="setActiveTab(tab.id)">
+          <i [class]="tab.icon"></i>
+          <span>{{ tab.label }}</span>
+          <small>{{ tab.description }}</small>
+        </button>
+      </div>
+    </div>
+  </section>
 
   <div class="missions-card" *ngIf="activeTab === 'informations'">
     <div class="detail-grid">
@@ -82,130 +107,136 @@
   </div>
 
   <div class="missions-card" *ngIf="activeTab === 'workflow'">
-    <div class="workflow-box" *ngIf="isManagementRole">
-      <div class="detail-grid">
-        <div class="form-group">
-          <label>Transition</label>
-          <select [(ngModel)]="transitionForm.transition" class="finput">
-            <option value="">Selectionner...</option>
-            <option *ngFor="let transition of plan.availableTransitions || []" [value]="transition">{{ transition }}</option>
-          </select>
+    <div class="workflow-box">
+      <div class="workflow-action-card" *ngIf="canApplyPlanTransition; else noPlanTransition">
+        <div class="workflow-action-head">
+          <div>
+            <span class="eyebrow">Action disponible</span>
+            <h3>Faire avancer le plan</h3>
+          </div>
+          <span class="status-badge">{{ planTransitionOptions.length }} choix</span>
         </div>
-        <div class="form-group full">
-          <label>Commentaire</label>
-          <textarea [(ngModel)]="transitionForm.comment" rows="3" class="finput"></textarea>
+        <div class="detail-grid">
+          <div class="form-group">
+            <label>Transition</label>
+            <select [(ngModel)]="transitionForm.transition" class="finput">
+              <option value="">Selectionner...</option>
+              <option *ngFor="let transition of planTransitionOptions" [value]="transition">
+                {{ formatPlanTransitionLabel(transition) }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Commentaire</label>
+            <textarea [(ngModel)]="transitionForm.comment" rows="3" class="finput"></textarea>
+          </div>
         </div>
+        <button class="btn-save" (click)="applyTransition()" [disabled]="!transitionForm.transition || isTransitioning">
+          {{ isTransitioning ? 'Traitement...' : 'Appliquer la transition' }}
+        </button>
       </div>
-      <button class="btn-save" (click)="applyTransition()" [disabled]="!transitionForm.transition || isTransitioning">
-        {{ isTransitioning ? 'Traitement...' : 'Appliquer la transition' }}
-      </button>
+      <ng-template #noPlanTransition>
+        <div class="workflow-empty-card">
+          <i class="fas fa-lock"></i>
+          <div>
+            <span class="eyebrow">Aucune transition</span>
+            <h3>Pas d action disponible maintenant</h3>
+            <p>{{ noPlanTransitionMessage }}</p>
+          </div>
+        </div>
+      </ng-template>
     </div>
 
     <div class="workflow-layout">
-      <div>
-        <h3>Workflow du plan</h3>
-        <table class="audit-table" *ngIf="plan.workflowHistory && plan.workflowHistory.length > 0">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Transition</th>
-              <th>De</th>
-              <th>Vers</th>
-              <th>Acteur</th>
-              <th>Commentaire</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of plan.workflowHistory">
-              <td>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ item.transition || item.transitionCode }}</td>
-              <td>{{ item.fromStatusLabel || '-' }}</td>
-              <td>{{ item.toStatusLabel || '-' }}</td>
-              <td>{{ item.actor ? (item.actor.prenom + ' ' + item.actor.nom) : '-' }}</td>
-              <td>{{ item.comment || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="empty-state" *ngIf="!plan.workflowHistory || plan.workflowHistory.length === 0">Aucun evenement plan pour le moment.</p>
+      <div class="workflow-panel">
+        <div class="workflow-panel-head">
+          <div>
+            <span class="eyebrow">Historique</span>
+            <h3>Workflow du plan</h3>
+          </div>
+          <span class="status-badge">{{ plan.workflowHistory?.length || 0 }} evenement(s)</span>
+        </div>
+        <div class="workflow-timeline" *ngIf="plan.workflowHistory && plan.workflowHistory.length > 0">
+          <article class="workflow-event" *ngFor="let item of plan.workflowHistory">
+            <div class="workflow-event-date">
+              <strong>{{ item.createdAt | date:'dd/MM/yyyy' }}</strong>
+              <span>{{ item.createdAt | date:'HH:mm' }}</span>
+            </div>
+            <div class="workflow-event-body">
+              <div class="workflow-event-title">
+                <strong>{{ formatWorkflowTransition(item) }}</strong>
+                <span>{{ item.actor ? (item.actor.prenom + ' ' + item.actor.nom) : '-' }}</span>
+              </div>
+              <div class="workflow-state-flow">
+                <span>{{ item.fromStatusLabel || '-' }}</span>
+                <i class="fas fa-arrow-right"></i>
+                <span>{{ item.toStatusLabel || '-' }}</span>
+              </div>
+              <p *ngIf="item.comment">{{ item.comment }}</p>
+            </div>
+          </article>
+        </div>
+        <p class="empty-state padded" *ngIf="!plan.workflowHistory || plan.workflowHistory.length === 0">Aucun evenement plan pour le moment.</p>
 
-        <h3 class="subsection-title">Emails du plan</h3>
-        <table class="audit-table" *ngIf="plan.emailHistory && plan.emailHistory.length > 0">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Modele</th>
-              <th>Destinataire</th>
-              <th>Statut</th>
-              <th>Objet</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of plan.emailHistory">
-              <td>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ item.templateCode }}</td>
-              <td>{{ item.recipientLabel || item.recipientEmail }}</td>
-              <td><span [class]="getEmailStatusClass(item.deliveryStatus)">{{ item.deliveryStatusLabel || item.deliveryStatus }}</span></td>
-              <td>
-                <div>{{ item.subject }}</div>
-                <small *ngIf="item.errorMessage">{{ item.errorMessage }}</small>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="empty-state" *ngIf="!plan.emailHistory || plan.emailHistory.length === 0">Aucun email plan pour le moment.</p>
+        <div class="workflow-panel-head subsection-title">
+          <div>
+            <span class="eyebrow">Notifications</span>
+            <h3>Emails du plan</h3>
+          </div>
+          <span class="status-badge">{{ plan.emailHistory?.length || 0 }} email(s)</span>
+        </div>
+        <div class="email-log-list" *ngIf="plan.emailHistory && plan.emailHistory.length > 0">
+          <article class="email-log-item" *ngFor="let item of plan.emailHistory">
+            <div class="email-log-date">
+              <strong>{{ item.createdAt | date:'dd/MM/yyyy' }}</strong>
+              <span>{{ item.createdAt | date:'HH:mm' }}</span>
+            </div>
+            <div class="email-log-body">
+              <div class="email-log-title">
+                <strong>{{ formatPlanTransitionLabel(item.templateCode) }}</strong>
+                <span [class]="getEmailStatusClass(item.deliveryStatus)">{{ item.deliveryStatusLabel || item.deliveryStatus }}</span>
+              </div>
+              <p>{{ item.recipientLabel || item.recipientEmail }}</p>
+              <small>{{ item.subject }}</small>
+              <small class="error-text" *ngIf="item.errorMessage">{{ item.errorMessage }}</small>
+            </div>
+          </article>
+        </div>
+        <p class="empty-state padded" *ngIf="!plan.emailHistory || plan.emailHistory.length === 0">Aucun email plan pour le moment.</p>
       </div>
 
-      <div>
-        <h3>Workflow de la mission selectionnee</h3>
-        <table class="audit-table" *ngIf="missionWorkspace?.workflowHistory?.length">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Bloc</th>
-              <th>Transition</th>
-              <th>De</th>
-              <th>Vers</th>
-              <th>Acteur</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of missionWorkspace?.workflowHistory">
-              <td>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ item.workflowTypeLabel || item.workflowType }}</td>
-              <td>{{ item.transitionCode }}</td>
-              <td>{{ item.fromStatusLabel || '-' }}</td>
-              <td>{{ item.toStatusLabel || '-' }}</td>
-              <td>{{ item.actor ? (item.actor.prenom + ' ' + item.actor.nom) : '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="empty-state" *ngIf="!missionWorkspace?.workflowHistory?.length">Aucun evenement mission pour le moment.</p>
+      <div class="workflow-panel side-panel">
+        <div class="workflow-panel-head">
+          <div>
+            <span class="eyebrow">Mission selectionnee</span>
+            <h3>Workflow mission</h3>
+          </div>
+          <span class="status-badge">{{ missionWorkspace?.workflowHistory?.length || 0 }}</span>
+        </div>
+        <div class="compact-event-list" *ngIf="missionWorkspace?.workflowHistory?.length">
+          <article class="compact-event" *ngFor="let item of missionWorkspace?.workflowHistory">
+            <strong>{{ item.workflowTypeLabel || item.workflowType }}</strong>
+            <span>{{ formatMissionWorkflowTransition(item.transitionCode) }}</span>
+            <small>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }} - {{ item.actor ? (item.actor.prenom + ' ' + item.actor.nom) : '-' }}</small>
+          </article>
+        </div>
+        <p class="empty-state padded" *ngIf="!missionWorkspace?.workflowHistory?.length">Aucun evenement mission pour le moment.</p>
 
-        <h3 class="subsection-title">Emails de la mission</h3>
-        <table class="audit-table" *ngIf="missionWorkspace?.emailHistory?.length">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Modele</th>
-              <th>Acteur</th>
-              <th>Destinataire</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of missionWorkspace?.emailHistory">
-              <td>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ item.templateCode }}</td>
-              <td>{{ item.actorName || '-' }}</td>
-              <td>
-                <div>{{ item.recipientLabel || item.recipientEmail }}</div>
-                <small>{{ item.subject }}</small>
-              </td>
-              <td><span [class]="getEmailStatusClass(item.deliveryStatus)">{{ item.deliveryStatusLabel || item.deliveryStatus }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="empty-state" *ngIf="!missionWorkspace?.emailHistory?.length">Aucun email mission pour le moment.</p>
+        <div class="workflow-panel-head subsection-title">
+          <div>
+            <span class="eyebrow">Notifications</span>
+            <h3>Emails mission</h3>
+          </div>
+          <span class="status-badge">{{ missionWorkspace?.emailHistory?.length || 0 }}</span>
+        </div>
+        <div class="compact-event-list" *ngIf="missionWorkspace?.emailHistory?.length">
+          <article class="compact-event" *ngFor="let item of missionWorkspace?.emailHistory">
+            <strong>{{ item.recipientLabel || item.recipientEmail }}</strong>
+            <span>{{ item.subject }}</span>
+            <small>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }} - {{ item.deliveryStatusLabel || item.deliveryStatus }}</small>
+          </article>
+        </div>
+        <p class="empty-state padded" *ngIf="!missionWorkspace?.emailHistory?.length">Aucun email mission pour le moment.</p>
       </div>
     </div>
   </div>
@@ -524,35 +555,29 @@
               </button>
             </div>
             <div class="card-body">
-              <table class="audit-table" *ngIf="workspace.actionPlans?.length">
-                <thead>
-                  <tr>
-                    <th>Ordre</th>
-                    <th>Regle / constat</th>
-                    <th>Recommandation</th>
-                    <th>Responsable</th>
-                    <th>Echeance</th>
-                    <th>Avancement</th>
-                    <th *ngIf="workspace.permissions.canUpdateActionPlan || workspace.permissions.canDeleteActionPlan">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let item of workspace.actionPlans">
-                    <td>{{ item.ordre }}</td>
-                    <td>{{ item.regleDnssi }}</td>
-                    <td>{{ item.recommandations }}</td>
-                    <td>{{ item.responsableNom || (item.responsable ? (item.responsable.prenom + ' ' + item.responsable.nom) : '-') }}</td>
-                    <td>{{ item.echeance || '-' }}</td>
-                    <td>{{ item.etatAvancement }}</td>
-                    <td *ngIf="workspace.permissions.canUpdateActionPlan || workspace.permissions.canDeleteActionPlan">
-                      <div class="inline-actions">
-                        <button class="action-btn btn-edit" *ngIf="workspace.permissions.canUpdateActionPlan" (click)="openActionPlanModal(item)" title="Modifier"><i class="fas fa-pen"></i></button>
-                        <button class="action-btn btn-delete" *ngIf="workspace.permissions.canDeleteActionPlan" (click)="deleteActionPlan(item)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+              <div class="action-plan-list" *ngIf="workspace.actionPlans?.length">
+                <div class="action-plan-card" *ngFor="let item of workspace.actionPlans">
+                  <div class="action-plan-order">#{{ item.ordre }}</div>
+                  <div class="action-plan-content">
+                    <div class="action-plan-head">
+                      <div>
+                        <span class="eyebrow">Regle / constat</span>
+                        <h4>{{ item.regleDnssi || '-' }}</h4>
                       </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                      <span class="status-badge">{{ item.etatAvancement || '-' }}</span>
+                    </div>
+                    <p>{{ item.recommandations || '-' }}</p>
+                    <div class="action-plan-meta">
+                      <span><i class="fas fa-user"></i> {{ item.responsableNom || (item.responsable ? (item.responsable.prenom + ' ' + item.responsable.nom) : '-') }}</span>
+                      <span><i class="fas fa-calendar-day"></i> {{ item.echeance || '-' }}</span>
+                    </div>
+                  </div>
+                  <div class="inline-actions" *ngIf="workspace.permissions.canUpdateActionPlan || workspace.permissions.canDeleteActionPlan">
+                    <button class="action-btn btn-edit" *ngIf="workspace.permissions.canUpdateActionPlan" (click)="openActionPlanModal(item)" title="Modifier"><i class="fas fa-pen"></i></button>
+                    <button class="action-btn btn-delete" *ngIf="workspace.permissions.canDeleteActionPlan" (click)="deleteActionPlan(item)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+                  </div>
+                </div>
+              </div>
               <p class="empty-state" *ngIf="!workspace.actionPlans?.length">Aucun plan d action saisi pour cette mission.</p>
             </div>
           </div>
@@ -578,30 +603,18 @@
                 </button>
               </div>
 
-              <table class="audit-table" *ngIf="missionEvidence.length > 0">
-                <thead>
-                  <tr>
-                    <th>Fichier</th>
-                    <th>Depot</th>
-                    <th>Par</th>
-                    <th *ngIf="workspace.permissions.canDeleteEvidence">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let evidence of missionEvidence">
-                    <td>
-                      <a href="javascript:void(0)" (click)="downloadEvidence(evidence.path)">{{ evidence.filename }}</a>
-                    </td>
-                    <td>{{ evidence.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-                    <td>{{ evidence.uploader ? (evidence.uploader.prenom + ' ' + evidence.uploader.nom) : '-' }}</td>
-                    <td *ngIf="workspace.permissions.canDeleteEvidence">
-                      <button class="action-btn btn-delete" (click)="deleteEvidence(evidence.id)" [disabled]="isDeletingEvidence" title="Supprimer">
-                        <i class="fas fa-trash-alt"></i>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="evidence-list" *ngIf="missionEvidence.length > 0">
+                <div class="evidence-card" *ngFor="let evidence of missionEvidence">
+                  <i class="fas fa-paperclip"></i>
+                  <div>
+                    <a href="javascript:void(0)" (click)="downloadEvidence(evidence.path)">{{ evidence.filename }}</a>
+                    <small>{{ evidence.createdAt | date:'dd/MM/yyyy HH:mm' }} - {{ evidence.uploader ? (evidence.uploader.prenom + ' ' + evidence.uploader.nom) : '-' }}</small>
+                  </div>
+                  <button class="action-btn btn-delete" *ngIf="workspace.permissions.canDeleteEvidence" (click)="deleteEvidence(evidence.id)" [disabled]="isDeletingEvidence" title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
               <p class="empty-state" *ngIf="missionEvidence.length === 0">Aucune preuve n a encore ete rattachee a cette mission.</p>
             </div>
           </div>
@@ -617,141 +630,154 @@
           <h3>Missions supprimees</h3>
         </div>
       </div>
-      <table class="audit-table" *ngIf="deletedMissions.length > 0">
-        <thead>
-          <tr>
-            <th>Mission</th>
-            <th>Categorie</th>
-            <th>Date suppression</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let mission of deletedMissions">
-            <td>{{ mission.titre }}</td>
-            <td>{{ mission.category || '-' }}</td>
-            <td>{{ mission.deleted_at ? (mission.deleted_at | date:'dd/MM/yyyy HH:mm') : '-' }}</td>
-            <td>
-              <button class="btn-secondary" (click)="restoreMission(mission.id)" [disabled]="isRestoringMission">
-                {{ isRestoringMission ? 'Restauration...' : 'Restaurer' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="archive-list" *ngIf="deletedMissions.length > 0">
+        <div class="archive-item" *ngFor="let mission of deletedMissions">
+          <div>
+            <h4>{{ mission.titre }}</h4>
+            <span>{{ mission.category || '-' }}</span>
+            <small>{{ mission.deleted_at ? (mission.deleted_at | date:'dd/MM/yyyy HH:mm') : '-' }}</small>
+          </div>
+          <button class="btn-secondary" (click)="restoreMission(mission.id)" [disabled]="isRestoringMission">
+            {{ isRestoringMission ? 'Restauration...' : 'Restaurer' }}
+          </button>
+        </div>
+      </div>
       <p class="empty-state" *ngIf="deletedMissions.length === 0">Aucune mission archivee pour ce plan.</p>
     </div>
   </div>
 
   <div class="missions-card" *ngIf="activeTab === 'planning'">
-    <table class="audit-table">
-      <thead>
-        <tr>
-          <th>Mission</th>
-          <th>T</th>
-          <th>Debut prevu</th>
-          <th>Fin prevue</th>
-          <th>Debut reel</th>
-          <th>Fin reelle</th>
-          <th>Avancement</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of plan.gantt">
-          <td>{{ item.titre }}</td>
-          <td>{{ item.quarterLabel || '-' }}</td>
-          <td>{{ item.datePrevueDebut ? (item.datePrevueDebut | date:'dd/MM/yyyy') : '-' }}</td>
-          <td>{{ item.datePrevueFin ? (item.datePrevueFin | date:'dd/MM/yyyy') : '-' }}</td>
-          <td>{{ item.dateReelleDebut ? (item.dateReelleDebut | date:'dd/MM/yyyy') : '-' }}</td>
-          <td>{{ item.dateReelleFin ? (item.dateReelleFin | date:'dd/MM/yyyy') : '-' }}</td>
-          <td>{{ item.progressPercent || 0 }}%</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="submodule-panel-head">
+      <div>
+        <span class="eyebrow">Planning</span>
+        <h3>Calendrier des missions</h3>
+      </div>
+      <span class="status-badge">{{ plan.gantt?.length || 0 }} mission(s)</span>
+    </div>
+    <div class="planning-board" *ngIf="plan.gantt?.length">
+      <div class="planning-item" *ngFor="let item of plan.gantt">
+        <div class="planning-quarter">{{ item.quarterLabel || '-' }}</div>
+        <div class="planning-content">
+          <div class="planning-head">
+            <h4>{{ item.titre }}</h4>
+            <strong>{{ item.progressPercent || 0 }}%</strong>
+          </div>
+          <div class="progress-track"><span [style.width.%]="item.progressPercent || 0"></span></div>
+          <div class="planning-dates">
+            <span><small>Prevu</small>{{ item.datePrevueDebut ? (item.datePrevueDebut | date:'dd/MM/yyyy') : '-' }} - {{ item.datePrevueFin ? (item.datePrevueFin | date:'dd/MM/yyyy') : '-' }}</span>
+            <span><small>Reel</small>{{ item.dateReelleDebut ? (item.dateReelleDebut | date:'dd/MM/yyyy') : '-' }} - {{ item.dateReelleFin ? (item.dateReelleFin | date:'dd/MM/yyyy') : '-' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="empty-state" *ngIf="!plan.gantt?.length">Aucun planning mission n est disponible pour ce plan.</p>
   </div>
 
   <div class="missions-card" *ngIf="activeTab === 'resources'">
+    <div class="submodule-panel-head">
+      <div>
+        <span class="eyebrow">Ressources</span>
+        <h3>Affectations et competences</h3>
+      </div>
+      <span class="status-badge">{{ missionResources.length }} ressource(s)</span>
+    </div>
     <p class="empty-state" *ngIf="!plan.missions?.length">Aucune ressource a afficher pour votre perimetre.</p>
-    <div class="detail-grid">
-      <div class="form-group">
-        <label>Mission</label>
-        <select class="finput" [ngModel]="selectedMissionId" (ngModelChange)="selectMission($event)">
-          <option *ngFor="let mission of plan.missions" [ngValue]="mission.id">{{ mission.titre }}</option>
-        </select>
+
+    <div class="resources-layout" *ngIf="plan.missions?.length">
+      <div class="resource-admin-panel">
+        <div class="form-group">
+          <label>Mission</label>
+          <select class="finput" [ngModel]="selectedMissionId" (ngModelChange)="selectMission($event)">
+            <option *ngFor="let mission of plan.missions" [ngValue]="mission.id">{{ mission.titre }}</option>
+          </select>
+        </div>
+
+        <div class="resource-editor" *ngIf="selectedMission">
+          <div class="section-actions" *ngIf="missionWorkspace?.permissions?.canManageResources">
+            <button class="btn-ai-plan" (click)="addResourceRow()"><i class="fas fa-plus"></i> Ajouter une ressource</button>
+          </div>
+          <div class="resource-card-list" *ngIf="missionResources.length">
+            <div class="resource-card" *ngFor="let resource of missionResources; let i = index">
+              <select class="finput" [(ngModel)]="resource.userId" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+                <option [ngValue]="0">Utilisateur</option>
+                <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
+              </select>
+              <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+                <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
+              </select>
+              <input class="finput" type="number" min="0" max="100" [(ngModel)]="resource.allocationPercent" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+              <span class="allocation-label">%</span>
+              <button class="action-btn btn-delete" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+            </div>
+          </div>
+          <p class="empty-state" *ngIf="missionResources.length === 0">Aucune ressource affectee pour cette mission.</p>
+
+          <div class="form-group full">
+            <label>Competences requises pour la mission</label>
+            <select class="finput multi" multiple [(ngModel)]="selectedRequiredSkillIds" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+              <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
+            </select>
+          </div>
+
+          <button class="btn-save" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="saveResources()" [disabled]="isSavingResources">
+            {{ isSavingResources ? 'Sauvegarde...' : 'Sauvegarder les ressources' }}
+          </button>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Utilisateur pour competences</label>
-        <select class="finput" [(ngModel)]="selectedUserForSkillsId" (ngModelChange)="loadUserSkills()">
-          <option [ngValue]="null">Selectionner...</option>
-          <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
-        </select>
+
+      <div class="resource-admin-panel side">
+        <div class="form-group">
+          <label>Utilisateur pour competences</label>
+          <select class="finput" [(ngModel)]="selectedUserForSkillsId" (ngModelChange)="loadUserSkills()">
+            <option [ngValue]="null">Selectionner...</option>
+            <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Competences disponibles</label>
+          <select class="finput multi" multiple [(ngModel)]="selectedUserSkillIds">
+            <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
+          </select>
+        </div>
+        <button class="btn-save" *ngIf="selectedUserForSkillsId" (click)="saveUserSkills()" [disabled]="isSavingUserSkills">
+          {{ isSavingUserSkills ? 'Sauvegarde...' : 'Sauvegarder les competences utilisateur' }}
+        </button>
       </div>
     </div>
-
-    <div class="resource-editor" *ngIf="selectedMission">
-      <div class="section-actions" *ngIf="missionWorkspace?.permissions?.canManageResources">
-        <button class="btn-ai-plan" (click)="addResourceRow()">Ajouter une ressource</button>
-      </div>
-      <div class="resource-row" *ngFor="let resource of missionResources; let i = index">
-        <select class="finput" [(ngModel)]="resource.userId" [disabled]="!missionWorkspace?.permissions?.canManageResources">
-          <option [ngValue]="0">Utilisateur</option>
-          <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
-        </select>
-        <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!missionWorkspace?.permissions?.canManageResources">
-          <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
-        </select>
-        <input class="finput" type="number" min="0" max="100" [(ngModel)]="resource.allocationPercent" [disabled]="!missionWorkspace?.permissions?.canManageResources">
-        <button class="action-btn btn-delete" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
-      </div>
-
-      <div class="form-group full">
-        <label>Competences requises pour la mission</label>
-        <select class="finput multi" multiple [(ngModel)]="selectedRequiredSkillIds" [disabled]="!missionWorkspace?.permissions?.canManageResources">
-          <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
-        </select>
-      </div>
-
-      <button class="btn-save" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="saveResources()" [disabled]="isSavingResources">
-        {{ isSavingResources ? 'Sauvegarde...' : 'Sauvegarder les ressources' }}
-      </button>
-    </div>
-
-    <div class="form-group full">
-      <label>Competences disponibles pour l'utilisateur selectionne</label>
-      <select class="finput multi" multiple [(ngModel)]="selectedUserSkillIds">
-        <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
-      </select>
-    </div>
-    <button class="btn-save" *ngIf="selectedUserForSkillsId" (click)="saveUserSkills()" [disabled]="isSavingUserSkills">
-      {{ isSavingUserSkills ? 'Sauvegarde...' : 'Sauvegarder les competences utilisateur' }}
-    </button>
   </div>
 
   <div class="missions-card" *ngIf="activeTab === 'recommendations'">
+    <div class="submodule-panel-head">
+      <div>
+        <span class="eyebrow">Recommandations</span>
+        <h3>Actions issues des missions</h3>
+      </div>
+      <span class="status-badge">{{ plan.recommendations?.length || 0 }} recommandation(s)</span>
+    </div>
     <p class="empty-state" *ngIf="!plan.recommendations?.length">Aucune recommandation visible pour votre profil sur ce plan.</p>
-    <table class="audit-table">
-      <thead>
-        <tr>
-          <th>Code</th>
-          <th>Recommandation</th>
-          <th>Mission source</th>
-          <th>Responsable</th>
-          <th>Statut</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of plan.recommendations">
-          <td>{{ item.code || item.id }}</td>
-          <td>{{ item.recommandations || item.objectifs || item.titre }}</td>
-          <td>{{ item.sourceMission?.titre || '-' }}</td>
-          <td>{{ item.auditeur ? (item.auditeur.prenom + ' ' + item.auditeur.nom) : '-' }}</td>
-          <td>{{ item.statut }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="recommendation-grid" *ngIf="plan.recommendations?.length">
+      <div class="recommendation-card" *ngFor="let item of plan.recommendations">
+        <div class="recommendation-head">
+          <span class="status-chip">#{{ item.code || item.id }}</span>
+          <span class="status-badge">{{ item.statut || '-' }}</span>
+        </div>
+        <h4>{{ item.recommandations || item.objectifs || item.titre || '-' }}</h4>
+        <div class="recommendation-meta">
+          <span><i class="fas fa-briefcase"></i> {{ item.sourceMission?.titre || '-' }}</span>
+          <span><i class="fas fa-user-check"></i> {{ item.auditeur ? (item.auditeur.prenom + ' ' + item.auditeur.nom) : '-' }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="missions-card" *ngIf="activeTab === 'competences'">
+    <div class="submodule-panel-head">
+      <div>
+        <span class="eyebrow">Competences</span>
+        <h3>Couverture par mission</h3>
+      </div>
+      <span class="status-badge">{{ plan.skillsReport?.missions?.length || 0 }} analyse(s)</span>
+    </div>
     <p class="empty-state" *ngIf="!plan.skillsReport?.missions?.length">Aucune analyse de competences n est disponible pour les missions visibles.</p>
     <div class="stats-grid compact" *ngIf="plan.skillsReport">
       <div class="stat-card total"><span class="label">Missions</span><span class="value">{{ plan.skillsReport.summary.missionCount }}</span></div>
@@ -759,40 +785,33 @@
       <div class="stat-card pending"><span class="label">Partielles</span><span class="value">{{ plan.skillsReport.summary.partialCount }}</span></div>
       <div class="stat-card risks"><span class="label">Gaps</span><span class="value">{{ plan.skillsReport.summary.gapCount }}</span></div>
     </div>
-    <table class="audit-table" *ngIf="plan.skillsReport">
-      <thead>
-        <tr>
-          <th>Mission</th>
-          <th>Couverture</th>
-          <th>Requises</th>
-          <th>Disponibles</th>
-          <th>Gaps</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of plan.skillsReport.missions">
-          <td>{{ item.missionTitle }}</td>
-          <td>{{ item.coverage }}</td>
-          <td>{{ item.requiredSkillCount }}</td>
-          <td>{{ item.availableSkillCount }}</td>
-          <td>{{ formatSkillLabels(item.gapSkills) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="skills-coverage-grid" *ngIf="plan.skillsReport">
+      <div class="skill-coverage-card" *ngFor="let item of plan.skillsReport.missions">
+        <div class="skill-coverage-head">
+          <h4>{{ item.missionTitle }}</h4>
+          <span class="status-badge">{{ item.coverage }}</span>
+        </div>
+        <div class="skill-metrics">
+          <span><small>Requises</small><strong>{{ item.requiredSkillCount }}</strong></span>
+          <span><small>Disponibles</small><strong>{{ item.availableSkillCount }}</strong></span>
+        </div>
+        <p [class.error-text]="item.gapSkills?.length">Gaps: {{ formatSkillLabels(item.gapSkills) || '-' }}</p>
+      </div>
+    </div>
   </div>
 
   <app-modal *ngIf="showMissionModal" title="Ajouter une mission au plan" (close)="showMissionModal = false">
     <div #projected modal-body class="modal-form">
       <div class="form-group full">
-        <label>Titre</label>
+        <label>Titre *</label>
         <input [(ngModel)]="missionForm.titre" class="finput" type="text">
       </div>
       <div class="form-group full">
-        <label>Objectifs</label>
+        <label>Objectifs *</label>
         <textarea [(ngModel)]="missionForm.objectifs" class="finput" rows="3"></textarea>
       </div>
       <div class="form-group full">
-        <label>Responsabilites</label>
+        <label>Responsabilites *</label>
         <textarea [(ngModel)]="missionForm.responsabilites" class="finput" rows="2"></textarea>
       </div>
       <div class="detail-grid">
@@ -815,7 +834,7 @@
           <input [(ngModel)]="missionForm.datePrevueDebut" class="finput" type="date">
         </div>
         <div class="form-group">
-          <label>Date prevue fin</label>
+          <label>Date prevue fin *</label>
           <input [(ngModel)]="missionForm.datePrevueFin" class="finput" type="date">
         </div>
       </div>
@@ -831,7 +850,7 @@
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showMissionModal = false">Annuler</button>
-        <button class="btn-save" (click)="saveMission()" [disabled]="isSavingMission || !missionForm.titre || !missionForm.objectifs">
+        <button class="btn-save" (click)="saveMission()" [disabled]="isSavingMission || !missionFormIsValid">
           {{ isSavingMission ? 'Sauvegarde...' : 'Ajouter la mission' }}
         </button>
       </div>
@@ -841,15 +860,15 @@
   <app-modal *ngIf="showMissionEditModal" title="Modifier la mission" (close)="showMissionEditModal = false">
     <div #projected modal-body class="modal-form">
       <div class="form-group full">
-        <label>Titre</label>
+        <label>Titre *</label>
         <input [(ngModel)]="missionEditForm.titre" class="finput" type="text">
       </div>
       <div class="form-group full">
-        <label>Objectifs</label>
+        <label>Objectifs *</label>
         <textarea [(ngModel)]="missionEditForm.objectifs" class="finput" rows="3"></textarea>
       </div>
       <div class="form-group full">
-        <label>Responsabilites</label>
+        <label>Responsabilites *</label>
         <textarea [(ngModel)]="missionEditForm.responsabilites" class="finput" rows="2"></textarea>
       </div>
       <div class="detail-grid">
@@ -872,7 +891,7 @@
           <input [(ngModel)]="missionEditForm.datePrevueDebut" class="finput" type="date">
         </div>
         <div class="form-group">
-          <label>Date prevue fin</label>
+          <label>Date prevue fin *</label>
           <input [(ngModel)]="missionEditForm.datePrevueFin" class="finput" type="date">
         </div>
       </div>
@@ -896,7 +915,7 @@
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showMissionEditModal = false">Annuler</button>
-        <button class="btn-save" (click)="saveMissionEdits()" [disabled]="isSavingMissionUpdate || !missionEditForm.titre || !missionEditForm.objectifs">
+        <button class="btn-save" (click)="saveMissionEdits()" [disabled]="isSavingMissionUpdate || !missionEditFormIsValid">
           {{ isSavingMissionUpdate ? 'Sauvegarde...' : 'Mettre a jour la mission' }}
         </button>
       </div>

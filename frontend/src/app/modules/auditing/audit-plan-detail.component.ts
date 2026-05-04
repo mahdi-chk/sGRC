@@ -30,6 +30,8 @@ type AuditDetailTabId = 'informations' | 'workflow' | 'missions' | 'planning' | 
 type AuditDetailTab = {
   id: AuditDetailTabId;
   label: string;
+  description: string;
+  icon: string;
 };
 
 type AuditMissionPanelId = 'overview' | 'assign' | 'process' | 'validate' | 'actions' | 'evidence';
@@ -128,6 +130,17 @@ export class AuditPlanDetailComponent implements OnInit {
   missionEditForm: Partial<AuditPlanMission> = this.emptyMission();
 
   readonly actionPlanStatuses = ['NOK', 'En cours', 'OK'];
+  readonly planTransitionLabels: Record<string, string> = {
+    demander_validation: 'Demander validation',
+    valider_direction: 'Valider Direction',
+    demander_revue: 'Demander une revue',
+    valider_conseil: 'Valider Conseil',
+    valider_comite: 'Valider Comite',
+    fermer: 'Fermer le plan',
+    reouvrir: 'Reouvrir le plan',
+    fermer_definitivement: 'Fermer definitivement',
+    definir_modele: 'Definir comme modele'
+  };
   readonly missionPanels: AuditMissionPanel[] = [
     {
       id: 'overview',
@@ -227,27 +240,130 @@ export class AuditPlanDetailComponent implements OnInit {
 
   get visibleTabs(): AuditDetailTab[] {
     const tabs: AuditDetailTab[] = [
-      { id: 'informations', label: 'Informations' },
-      { id: 'workflow', label: 'Workflow' },
-      { id: 'missions', label: this.planScopeLabel },
-      { id: 'planning', label: 'Planning' },
+      {
+        id: 'informations',
+        label: 'Informations',
+        description: 'Fiche plan',
+        icon: 'fas fa-circle-info'
+      },
+      {
+        id: 'workflow',
+        label: 'Workflow',
+        description: `${this.availableTransitionCount} transition(s)`,
+        icon: 'fas fa-code-branch'
+      },
+      {
+        id: 'missions',
+        label: this.planScopeLabel,
+        description: `${this.missionCount} mission(s)`,
+        icon: 'fas fa-diagram-project'
+      },
+      {
+        id: 'planning',
+        label: 'Planning',
+        description: 'Calendrier',
+        icon: 'fas fa-calendar-days'
+      },
     ];
 
     if (this.canViewResourcesTab) {
-      tabs.push({ id: 'resources', label: 'Ressources' });
+      tabs.push({
+        id: 'resources',
+        label: 'Ressources',
+        description: 'Equipe et competences',
+        icon: 'fas fa-users-gear'
+      });
     }
 
-    tabs.push({ id: 'recommendations', label: 'Recommandations' });
+    tabs.push({
+      id: 'recommendations',
+      label: 'Recommandations',
+      description: `${this.recommendationCount} element(s)`,
+      icon: 'fas fa-clipboard-list'
+    });
 
     if (this.canViewSkillsTab) {
-      tabs.push({ id: 'competences', label: 'Competences' });
+      tabs.push({
+        id: 'competences',
+        label: 'Competences',
+        description: 'Couverture',
+        icon: 'fas fa-award'
+      });
     }
 
     return tabs;
   }
 
+  get activeTabInfo(): AuditDetailTab | null {
+    return this.visibleTabs.find((tab) => tab.id === this.activeTab) || null;
+  }
+
+  get planTransitionOptions(): string[] {
+    return this.plan?.availableTransitions || [];
+  }
+
+  get canApplyPlanTransition(): boolean {
+    return this.planTransitionOptions.length > 0;
+  }
+
+  get noPlanTransitionMessage(): string {
+    const status = String(this.plan?.statusCode || this.plan?.status || '').toLowerCase();
+    const role = this.currentUserRole;
+
+    if (status === 'cree') {
+      if (role === UserRole.AUDIT_DIRECTEUR) {
+        return 'Le plan est encore en creation. Le Superviseur d audit doit d abord demander la validation.';
+      }
+      return 'Aucune transition disponible pour ce profil tant que le plan reste en creation. Le Superviseur d audit peut demander la validation ou definir ce plan comme modele.';
+    }
+
+    if (status === 'a_valider') {
+      return role === UserRole.AUDIT_DIRECTEUR
+        ? 'Aucune transition disponible pour ce plan. Actualisez la page si le statut vient de changer.'
+        : 'Le plan attend la validation de l Audit Directeur.';
+    }
+
+    if (status === 'valide_direction') {
+      return role === UserRole.AUDIT_RESPONSABLE
+        ? 'Aucune transition disponible pour ce plan. Actualisez la page si le statut vient de changer.'
+        : 'Le plan attend la mise a jour de validation Conseil par le Superviseur d audit.';
+    }
+
+    if (status === 'valide_conseil') {
+      return role === UserRole.AUDIT_RESPONSABLE
+        ? 'Aucune transition disponible pour ce plan. Actualisez la page si le statut vient de changer.'
+        : 'Le plan attend la mise a jour de validation Comite par le Superviseur d audit.';
+    }
+
+    if (status === 'valide_comite') {
+      return 'Le plan est valide par le Comite. Le Superviseur d audit peut le fermer ou demander une revue.';
+    }
+
+    if (status === 'ferme') {
+      return 'Le plan est ferme. Le Superviseur d audit peut le rouvrir ou le fermer definitivement.';
+    }
+
+    if (status === 'ferme_definitivement') {
+      return 'Le plan est ferme definitivement. Aucune transition n est possible.';
+    }
+
+    return 'Aucune transition disponible pour votre profil et le statut actuel du plan.';
+  }
+
+  formatPlanTransitionLabel(transition?: string | null): string {
+    return this.planTransitionLabels[String(transition || '')] || String(transition || '-');
+  }
+
   get selectedMission(): AuditPlanMission | null {
     return this.plan?.missions?.find((mission) => mission.id === this.selectedMissionId) || null;
+  }
+
+  get missionFormIsValid(): boolean {
+    return this.hasRequiredMissionFields(this.missionForm);
+  }
+
+  get missionEditFormIsValid(): boolean {
+    return this.hasRequiredMissionFields(this.missionEditForm);
   }
 
   get currentRoleDefinition(): AuditRoleResponsibility | null {
@@ -350,6 +466,21 @@ export class AuditPlanDetailComponent implements OnInit {
     }
   }
 
+  formatWorkflowTransition(item: any): string {
+    return this.formatPlanTransitionLabel(item?.transitionCode || item?.transition || '');
+  }
+
+  formatMissionWorkflowTransition(transition?: string | null): string {
+    const labels: Record<string, string> = {
+      submit: 'Soumettre',
+      validate: 'Valider',
+      approve: 'Approuver',
+      request_rework: 'Demander correction',
+      send: 'Envoyer'
+    };
+    return labels[String(transition || '')] || String(transition || '-');
+  }
+
   ngOnInit(): void {
     this.planId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadLookups();
@@ -419,6 +550,24 @@ export class AuditPlanDetailComponent implements OnInit {
     }
 
     return date.toISOString().split('T')[0];
+  }
+
+  private hasRequiredMissionFields(form: Partial<AuditPlanMission>): boolean {
+    return Boolean(
+      String(form.titre || '').trim()
+      && String(form.objectifs || '').trim()
+      && String(form.responsabilites || '').trim()
+      && String(form.datePrevueFin || '').trim()
+    );
+  }
+
+  private getBackendErrorMessage(error: any, fallback: string): string {
+    const payload = error?.error;
+    if (payload?.error) {
+      return `${payload.message || fallback}: ${payload.error}`;
+    }
+
+    return payload?.message || fallback;
   }
 
   private updateMissionInPlan(updatedMission: AuditPlanMission): void {
@@ -534,15 +683,15 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveMission(): void {
-    if (!this.plan || !this.missionForm.titre || !this.missionForm.objectifs) {
+    if (!this.plan || !this.missionFormIsValid) {
       return;
     }
 
     this.isSavingMission = true;
     this.auditPlanningService.createPlanMission(this.plan.id, {
-      titre: this.missionForm.titre,
-      objectifs: this.missionForm.objectifs,
-      responsabilites: this.missionForm.responsabilites || null,
+      titre: String(this.missionForm.titre || '').trim(),
+      objectifs: String(this.missionForm.objectifs || '').trim(),
+      responsabilites: String(this.missionForm.responsabilites || '').trim(),
       statut: this.missionForm.statut || 'nok',
       category: this.missionForm.categoryCode || null,
       quarter: this.missionForm.quarterCode || null,
@@ -562,7 +711,7 @@ export class AuditPlanDetailComponent implements OnInit {
       error: (error) => {
         console.error(error);
         this.isSavingMission = false;
-        alert(error?.error?.message || 'Erreur lors de la creation de la mission.');
+        alert(this.getBackendErrorMessage(error, 'Erreur lors de la creation de la mission.'));
       }
     });
   }
@@ -649,15 +798,15 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveMissionEdits(): void {
-    if (!this.plan || !this.selectedMission || !this.missionEditForm.titre || !this.missionEditForm.objectifs) {
+    if (!this.plan || !this.selectedMission || !this.missionEditFormIsValid) {
       return;
     }
 
     this.isSavingMissionUpdate = true;
     this.auditPlanningService.updatePlanMission(this.plan.id, this.selectedMission.id, {
-      titre: this.missionEditForm.titre,
-      objectifs: this.missionEditForm.objectifs,
-      responsabilites: this.missionEditForm.responsabilites || null,
+      titre: String(this.missionEditForm.titre || '').trim(),
+      objectifs: String(this.missionEditForm.objectifs || '').trim(),
+      responsabilites: String(this.missionEditForm.responsabilites || '').trim(),
       statut: this.missionEditForm.statut || 'nok',
       category: this.missionEditForm.categoryCode || this.missionEditForm.category || null,
       quarter: this.missionEditForm.quarterCode || this.missionEditForm.quarter || null,
@@ -678,7 +827,7 @@ export class AuditPlanDetailComponent implements OnInit {
       error: (error) => {
         console.error(error);
         this.isSavingMissionUpdate = false;
-        alert(error?.error?.message || 'Erreur lors de la mise a jour de la mission.');
+        alert(this.getBackendErrorMessage(error, 'Erreur lors de la mise a jour de la mission.'));
       }
     });
   }

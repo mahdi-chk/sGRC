@@ -70,6 +70,7 @@ const PLAN_READ_ROLES = [
 
 const PLAN_WRITE_ROLES = [
     UserRole.SUPER_ADMIN,
+    UserRole.AUDIT_DIRECTEUR,
     UserRole.AUDIT_RESPONSABLE,
 ] as const;
 
@@ -347,9 +348,14 @@ export class AuditPlanService {
     }
 
     private static ensurePlanEditable(plan: AuditPlan) {
-        if ((plan as any).statusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
+        if (this.getPlanStatusCode(plan) === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
             throw new Error('Le plan est ferme definitivement et ne peut plus etre modifie');
         }
+    }
+
+    private static getPlanStatusCode(plan: AuditPlan): string {
+        const payload = plan.toJSON() as any;
+        return String(payload.statusCode || (plan as any).status || payload.status || '').trim();
     }
 
     private static buildPlanFilterWhere(role: string, userId: number, filter: PlanFilter = {}) {
@@ -493,8 +499,8 @@ export class AuditPlanService {
             ...plan.toJSON(),
             missionCount: missionCountMap.get(plan.id) || 0,
             recommendationCount: recommendationCountMap.get(plan.id) || 0,
-            availableTransitions: this.getAvailableTransitions((plan as any).statusCode, role),
-            isEditable: (plan as any).statusCode !== AuditPlanStatusCode.FERME_DEFINITIVEMENT,
+            availableTransitions: this.getAvailableTransitions(this.getPlanStatusCode(plan), role),
+            isEditable: this.getPlanStatusCode(plan) !== AuditPlanStatusCode.FERME_DEFINITIVEMENT,
         }));
     }
 
@@ -555,7 +561,7 @@ export class AuditPlanService {
             throw new Error('Le plan n est pas supprime');
         }
 
-        if ((plan as any).statusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
+        if (this.getPlanStatusCode(plan) === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
             throw new Error('Un plan ferme definitivement ne peut pas etre restaure');
         }
 
@@ -569,37 +575,35 @@ export class AuditPlanService {
 
     private static getAvailableTransitions(statusCode: string, role: string) {
         const transitions: string[] = [];
-        const isDivisionChief = role === UserRole.AUDIT_RESPONSABLE || role === UserRole.SUPER_ADMIN;
+        const isSupervisor = role === UserRole.AUDIT_RESPONSABLE || role === UserRole.SUPER_ADMIN;
         const isDirector = role === UserRole.AUDIT_DIRECTEUR || role === UserRole.SUPER_ADMIN;
-        const isCouncil = role === UserRole.TOP_MANAGEMENT || role === UserRole.SUPER_ADMIN;
-        const isCommittee = role === UserRole.TOP_MANAGEMENT || role === UserRole.SUPER_ADMIN;
 
-        if (statusCode === AuditPlanStatusCode.CREE && isDivisionChief) {
+        if (statusCode === AuditPlanStatusCode.CREE && isSupervisor) {
             transitions.push(AuditPlanTransitionCode.DEMANDER_VALIDATION, AuditPlanTransitionCode.DEFINIR_MODELE);
         }
         if (statusCode === AuditPlanStatusCode.A_VALIDER && isDirector) {
             transitions.push(AuditPlanTransitionCode.VALIDER_DIRECTION, AuditPlanTransitionCode.DEMANDER_REVUE);
         }
         if (statusCode === AuditPlanStatusCode.VALIDE_DIRECTION) {
-            if (isCouncil) {
+            if (isSupervisor) {
                 transitions.push(AuditPlanTransitionCode.VALIDER_CONSEIL);
             }
-            if (isDirector || isDivisionChief) {
+            if (isDirector || isSupervisor) {
                 transitions.push(AuditPlanTransitionCode.DEMANDER_REVUE);
             }
         }
         if (statusCode === AuditPlanStatusCode.VALIDE_CONSEIL) {
-            if (isCommittee) {
+            if (isSupervisor) {
                 transitions.push(AuditPlanTransitionCode.VALIDER_COMITE);
             }
-            if (isDirector || isCouncil) {
+            if (isDirector || isSupervisor) {
                 transitions.push(AuditPlanTransitionCode.DEMANDER_REVUE);
             }
         }
-        if (statusCode === AuditPlanStatusCode.VALIDE_COMITE && isDirector) {
+        if (statusCode === AuditPlanStatusCode.VALIDE_COMITE && isSupervisor) {
             transitions.push(AuditPlanTransitionCode.FERMER, AuditPlanTransitionCode.DEMANDER_REVUE);
         }
-        if (statusCode === AuditPlanStatusCode.FERME && isDirector) {
+        if (statusCode === AuditPlanStatusCode.FERME && isSupervisor) {
             transitions.push(AuditPlanTransitionCode.REOUVRIR, AuditPlanTransitionCode.FERMER_DEFINITIVEMENT);
         }
 
@@ -754,16 +758,17 @@ export class AuditPlanService {
 
     static async applyTransition(planId: number, actorUserId: number, actorRole: string, transitionCode: string, comment?: string | null) {
         const plan = await this.getPlanById(planId);
-        const availableTransitions = this.getAvailableTransitions((plan as any).statusCode, actorRole);
+        const currentStatusCode = this.getPlanStatusCode(plan);
+        const availableTransitions = this.getAvailableTransitions(currentStatusCode, actorRole);
         if (!availableTransitions.includes(transitionCode)) {
             throw new Error('Transition non autorisee pour ce role ou ce statut');
         }
 
-        if ((plan as any).statusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
+        if (currentStatusCode === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
             throw new Error('Le plan est ferme definitivement');
         }
 
-        const { targetStatusCode, patch } = this.resolveTransition((plan as any).statusCode, transitionCode, comment);
+        const { targetStatusCode, patch } = this.resolveTransition(currentStatusCode, transitionCode, comment);
         const targetStatusId = await LookupResolutionService.requireLookupId(AUDIT_LOOKUP_KEYS.PLAN_STATUS, targetStatusCode);
 
         const updatePayload: Record<string, unknown> = {
@@ -1912,7 +1917,7 @@ export class AuditPlanService {
             emailHistory,
             gantt,
             skillsReport,
-            availableTransitions: this.getAvailableTransitions((plan as any).statusCode, actorRole),
+            availableTransitions: this.getAvailableTransitions(this.getPlanStatusCode(plan), actorRole),
             summary: {
                 missionCount: missions.length,
                 recommendationCount: recommendations.length,

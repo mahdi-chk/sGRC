@@ -68,6 +68,7 @@ export class AuditPlanDetailComponent implements OnInit {
   isSavingReport = false;
   isApplyingReportTransition = false;
   isSavingActionPlan = false;
+  isApplyingRecommendationTransition = false;
 
   statusOptions: LookupOption[] = [];
   natureOptions: LookupOption[] = [];
@@ -82,6 +83,7 @@ export class AuditPlanDetailComponent implements OnInit {
   showMissionModal = false;
   showMissionEditModal = false;
   showActionPlanModal = false;
+  showRecommendationWorkflowModal = false;
   showWorkProgramTemplateModal = false;
   selectedMissionId: number | null = null;
   deletedMissions: AuditPlanMission[] = [];
@@ -134,11 +136,42 @@ export class AuditPlanDetailComponent implements OnInit {
   };
 
   actionPlanForm: Partial<AuditMissionActionPlanItem> = this.emptyActionPlan();
+  selectedRecommendation: AuditMissionActionPlanItem | null = null;
+  recommendationTransitionForm: {
+    transition: string;
+    comment: string;
+    planAction: string;
+    tauxAvancement: number | null;
+    evaluationAvancement: string;
+  } = {
+    transition: '',
+    comment: '',
+    planAction: '',
+    tauxAvancement: null,
+    evaluationAvancement: ''
+  };
 
   missionForm: Partial<AuditPlanMission> = this.emptyMission();
   missionEditForm: Partial<AuditPlanMission> = this.emptyMission();
 
   readonly actionPlanStatuses = ['NOK', 'En cours', 'OK'];
+  readonly recommendationEvaluationOptions = [
+    { code: 'dans_les_temps', label: 'Dans les temps' },
+    { code: 'en_retard', label: 'En retard' }
+  ];
+  readonly recommendationTransitionLabels: Record<string, string> = {
+    envoyer_recommandation: 'Envoyer la recommandation',
+    soumettre_plan_action: 'Soumettre le plan d action',
+    demander_revue_plan_action: 'Demander de revoir le plan d action',
+    valider_plan_action: 'Valider le plan d action',
+    demander_mise_a_jour_avancement: 'Demander la mise a jour du taux',
+    soumettre_taux_avancement: 'Soumettre le taux d avancement',
+    demander_revue_taux_avancement: 'Demander de revoir le taux',
+    valider_avancement_100: 'Valider avancement 100%',
+    fermer_recommandation: 'Fermer la recommandation',
+    reouvrir: 'Reouvrir',
+    fermer_definitivement: 'Fermer definitivement'
+  };
   readonly planTransitionLabels: Record<string, string> = {
     demander_validation: 'Demander validation',
     valider_direction: 'Valider Direction',
@@ -445,6 +478,31 @@ export class AuditPlanDetailComponent implements OnInit {
     return this.editingWorkProgramTemplateId ? 'Enregistrer les modifications' : 'Creer le modele';
   }
 
+  get selectedRecommendationTransitionRequiresComment(): boolean {
+    return ['demander_revue_plan_action', 'demander_revue_taux_avancement'].includes(this.recommendationTransitionForm.transition);
+  }
+
+  get selectedRecommendationTransitionRequiresPlanAction(): boolean {
+    return this.recommendationTransitionForm.transition === 'soumettre_plan_action';
+  }
+
+  get selectedRecommendationTransitionRequiresProgress(): boolean {
+    return this.recommendationTransitionForm.transition === 'soumettre_taux_avancement';
+  }
+
+  get canSubmitRecommendationTransition(): boolean {
+    const progress = Number(this.recommendationTransitionForm.tauxAvancement);
+    return Boolean(
+      this.selectedRecommendation
+      && this.recommendationTransitionForm.transition
+      && !this.isApplyingRecommendationTransition
+      && String(this.recommendationTransitionForm.comment || '').length <= 500
+      && (!this.selectedRecommendationTransitionRequiresComment || String(this.recommendationTransitionForm.comment || '').trim())
+      && (!this.selectedRecommendationTransitionRequiresPlanAction || String(this.recommendationTransitionForm.planAction || '').trim())
+      && (!this.selectedRecommendationTransitionRequiresProgress || (Number.isFinite(progress) && progress >= 0 && progress <= 100))
+    );
+  }
+
   get reportFormIsValid(): boolean {
     return String(this.reportForm.rapport || '').trim().length >= 10
       && String(this.reportForm.rapport || '').length <= 5000
@@ -601,9 +659,19 @@ export class AuditPlanDetailComponent implements OnInit {
       validate: 'Valider',
       approve: 'Approuver',
       request_rework: 'Demander correction',
-      send: 'Envoyer'
+      send: 'Envoyer',
+      ...this.recommendationTransitionLabels
     };
     return labels[String(transition || '')] || String(transition || '-');
+  }
+
+  formatRecommendationTransition(transition?: string | null): string {
+    return this.recommendationTransitionLabels[String(transition || '')] || String(transition || '-');
+  }
+
+  formatRecommendationEvaluation(value?: string | null): string {
+    const option = this.recommendationEvaluationOptions.find((item) => item.code === value);
+    return option?.label || String(value || '-');
   }
 
   ngOnInit(): void {
@@ -1404,6 +1472,46 @@ export class AuditPlanDetailComponent implements OnInit {
       this.actionPlanForm = this.emptyActionPlan();
     }
     this.showActionPlanModal = true;
+  }
+
+  openRecommendationWorkflowModal(item: AuditMissionActionPlanItem, transition?: string): void {
+    this.selectedRecommendation = item;
+    this.recommendationTransitionForm = {
+      transition: transition || '',
+      comment: '',
+      planAction: item.planAction || '',
+      tauxAvancement: item.tauxAvancement ?? 0,
+      evaluationAvancement: item.evaluationAvancement || ''
+    };
+    this.showRecommendationWorkflowModal = true;
+  }
+
+  applyRecommendationTransition(): void {
+    if (!this.selectedMissionId || !this.selectedRecommendation || !this.canSubmitRecommendationTransition) {
+      return;
+    }
+
+    this.isApplyingRecommendationTransition = true;
+    this.auditPlanningService.applyRecommendationTransition(this.selectedMissionId, this.selectedRecommendation.id, {
+      transition: this.recommendationTransitionForm.transition,
+      comment: String(this.recommendationTransitionForm.comment || '').trim() || null,
+      planAction: String(this.recommendationTransitionForm.planAction || '').trim() || null,
+      tauxAvancement: this.recommendationTransitionForm.tauxAvancement,
+      evaluationAvancement: String(this.recommendationTransitionForm.evaluationAvancement || '').trim() || null
+    }).subscribe({
+      next: (workspace) => {
+        this.applyMissionWorkspace(workspace);
+        this.isApplyingRecommendationTransition = false;
+        this.showRecommendationWorkflowModal = false;
+        this.selectedRecommendation = null;
+        this.loadPlan();
+      },
+      error: (error) => {
+        console.error(error);
+        this.isApplyingRecommendationTransition = false;
+        alert(error?.error?.message || 'Erreur lors de la transition de la recommandation.');
+      }
+    });
   }
 
   saveActionPlan(): void {

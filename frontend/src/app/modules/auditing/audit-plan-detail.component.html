@@ -575,15 +575,24 @@
                         <span class="eyebrow">Regle / constat</span>
                         <h4>{{ item.regleDnssi || '-' }}</h4>
                       </div>
-                      <span class="status-badge">{{ item.etatAvancement || '-' }}</span>
+                      <span class="status-badge">{{ item.workflowStatusLabel || item.etatAvancement || '-' }}</span>
                     </div>
                     <p>{{ item.recommandations || '-' }}</p>
                     <div class="action-plan-meta">
                       <span><i class="fas fa-user"></i> {{ item.responsableNom || (item.responsable ? (item.responsable.prenom + ' ' + item.responsable.nom) : '-') }}</span>
                       <span><i class="fas fa-calendar-day"></i> {{ item.echeance || '-' }}</span>
+                      <span><i class="fas fa-chart-line"></i> {{ item.tauxAvancement || 0 }}%</span>
+                      <span><i class="fas fa-clock"></i> {{ formatRecommendationEvaluation(item.evaluationAvancement) }}</span>
+                    </div>
+                    <div class="recommendation-workflow-summary" *ngIf="item.planAction || item.commentaireWorkflow">
+                      <p *ngIf="item.planAction"><strong>Plan d action:</strong> {{ item.planAction }}</p>
+                      <p *ngIf="item.commentaireWorkflow"><strong>Commentaire:</strong> {{ item.commentaireWorkflow }}</p>
                     </div>
                   </div>
-                  <div class="inline-actions" *ngIf="workspace.permissions.canUpdateActionPlan || workspace.permissions.canDeleteActionPlan">
+                  <div class="inline-actions action-stack" *ngIf="workspace.permissions.canUpdateActionPlan || workspace.permissions.canDeleteActionPlan || item.availableTransitions?.length">
+                    <button class="btn-secondary compact-action" *ngFor="let transition of item.availableTransitions" (click)="openRecommendationWorkflowModal(item, transition)">
+                      {{ formatRecommendationTransition(transition) }}
+                    </button>
                     <button class="action-btn btn-edit" *ngIf="workspace.permissions.canUpdateActionPlan" (click)="openActionPlanModal(item)" title="Modifier"><i class="fas fa-pen"></i></button>
                     <button class="action-btn btn-delete" *ngIf="workspace.permissions.canDeleteActionPlan" (click)="deleteActionPlan(item)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
                   </div>
@@ -994,6 +1003,53 @@
         <button class="btn-cancel" (click)="showActionPlanModal = false">Annuler</button>
         <button class="btn-save" (click)="saveActionPlan()" [disabled]="isSavingActionPlan || !actionPlanFormIsValid">
           {{ isSavingActionPlan ? 'Sauvegarde...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </app-modal>
+
+  <app-modal *ngIf="showRecommendationWorkflowModal" title="Workflow de la recommandation" (close)="showRecommendationWorkflowModal = false">
+    <div #projected modal-body class="modal-form">
+      <div class="workflow-recommendation-context" *ngIf="selectedRecommendation">
+        <span class="status-badge">{{ selectedRecommendation.workflowStatusLabel || '-' }}</span>
+        <h3>{{ selectedRecommendation.regleDnssi || '-' }}</h3>
+        <p>{{ selectedRecommendation.recommandations || '-' }}</p>
+      </div>
+      <div class="detail-grid">
+        <div class="form-group full">
+          <label>Transition *</label>
+          <select [(ngModel)]="recommendationTransitionForm.transition" class="finput" required>
+            <option value="">Selectionner...</option>
+            <option *ngFor="let transition of selectedRecommendation?.availableTransitions || []" [value]="transition">
+              {{ formatRecommendationTransition(transition) }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group full" *ngIf="selectedRecommendationTransitionRequiresPlanAction">
+          <label>Plan d action *</label>
+          <textarea [(ngModel)]="recommendationTransitionForm.planAction" class="finput" rows="5" required maxlength="3000"></textarea>
+        </div>
+        <div class="form-group" *ngIf="selectedRecommendationTransitionRequiresProgress">
+          <label>Taux d avancement *</label>
+          <input [(ngModel)]="recommendationTransitionForm.tauxAvancement" class="finput" type="number" min="0" max="100" step="1" required>
+        </div>
+        <div class="form-group" *ngIf="selectedRecommendationTransitionRequiresProgress">
+          <label>Evaluation d avancement</label>
+          <select [(ngModel)]="recommendationTransitionForm.evaluationAvancement" class="finput">
+            <option value="">Selectionner...</option>
+            <option *ngFor="let option of recommendationEvaluationOptions" [value]="option.code">{{ option.label }}</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Commentaire</label>
+          <textarea [(ngModel)]="recommendationTransitionForm.comment" class="finput" rows="3" maxlength="500"></textarea>
+          <small class="field-note" *ngIf="selectedRecommendationTransitionRequiresComment">Commentaire obligatoire pour demander une revue.</small>
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showRecommendationWorkflowModal = false">Annuler</button>
+        <button class="btn-save" (click)="applyRecommendationTransition()" [disabled]="!canSubmitRecommendationTransition">
+          {{ isApplyingRecommendationTransition ? 'Traitement...' : 'Appliquer la transition' }}
         </button>
       </div>
     </div>

@@ -36,7 +36,19 @@ type TransitionResult = {
     patch: Record<string, unknown>;
 };
 
-type MissionWorkflowType = 'mission_order' | 'work_program' | 'report';
+type MissionWorkflowType = 'mission_order' | 'work_program' | 'report' | 'recommendation';
+type RecommendationTransitionCode =
+    | 'envoyer_recommandation'
+    | 'soumettre_plan_action'
+    | 'demander_revue_plan_action'
+    | 'valider_plan_action'
+    | 'demander_mise_a_jour_avancement'
+    | 'soumettre_taux_avancement'
+    | 'demander_revue_taux_avancement'
+    | 'valider_avancement_100'
+    | 'fermer_recommandation'
+    | 'reouvrir'
+    | 'fermer_definitivement';
 
 type MissionPermissions = {
     canManageResources: boolean;
@@ -86,6 +98,10 @@ const REPORT_APPROVER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR] a
 const ACTION_PLAN_CREATOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
 const ACTION_PLAN_UPDATE_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER] as const;
 const ACTION_PLAN_DELETE_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION] as const;
+const RECOMMENDATION_AUDIT_OWNER_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
+const RECOMMENDATION_AUDIT_MANAGER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
+const RECOMMENDATION_AUDITED_ROLES = [UserRole.SUPER_ADMIN, UserRole.CONTROLLER] as const;
+const RECOMMENDATION_FINAL_CLOSER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
 const EVIDENCE_UPLOAD_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
 const EVIDENCE_DELETE_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
 
@@ -105,6 +121,21 @@ const REPORT_STATUS_LABELS: Record<string, string> = {
     validated: 'Valide par le chef de division',
     approved: 'Approuve par le directeur',
     rework_requested: 'Retourne pour rework',
+};
+
+const RECOMMENDATION_STATUS_LABELS: Record<string, string> = {
+    cree: 'Cree',
+    recommandation_a_envoyer: 'Recommandation a envoyer',
+    plan_actions_a_soumettre: 'Plan d actions a soumettre',
+    plan_actions_a_revoir: 'Plan d actions a revoir',
+    plan_actions_a_valider: 'Plan d actions a valider',
+    plan_action_valide: 'Plan d action valide',
+    plan_actions_a_mettre_a_jour: 'Plan d actions a mettre a jour',
+    plan_actions_mis_a_jour: 'Plan d actions mis a jour',
+    avancement_100_a_valider: 'Avancement 100% a valider',
+    avancement_100_valide: 'Avancement 100% valide',
+    ferme: 'Ferme',
+    ferme_definitivement: 'Ferme definitivement',
 };
 
 const MISSION_ORDER_STATUS_LABELS: Record<string, string> = {
@@ -218,7 +249,9 @@ export class AuditPlanService {
             ? WORK_PROGRAM_STATUS_LABELS
             : type === 'report'
                 ? REPORT_STATUS_LABELS
-                : MISSION_ORDER_STATUS_LABELS;
+                : type === 'recommendation'
+                    ? RECOMMENDATION_STATUS_LABELS
+                    : MISSION_ORDER_STATUS_LABELS;
 
         return mapping[normalized] || normalized;
     }
@@ -1179,7 +1212,9 @@ export class AuditPlanService {
                 ? 'Ordre de mission'
                 : event.workflowType === 'work_program'
                     ? 'Programme de travail'
-                    : 'Rapport',
+                    : event.workflowType === 'recommendation'
+                        ? 'Recommandation'
+                        : 'Rapport',
             fromStatusLabel: this.getWorkflowStatusLabel(event.workflowType as MissionWorkflowType, event.fromStatus),
             toStatusLabel: this.getWorkflowStatusLabel(event.workflowType as MissionWorkflowType, event.toStatus),
         }));
@@ -1583,7 +1618,7 @@ export class AuditPlanService {
 
         const hydratedMission = await this.hydrateMission(mission);
         const checklistItems = await AuditingService.getMissionChecklistItems(missionId);
-        const actionPlans = await AuditingService.getMissionActionPlanItems(missionId);
+        const actionPlanItems = await AuditingService.getMissionActionPlanItems(missionId);
         const workflowHistory = await this.getMissionWorkflowHistory(missionId);
         const emailHistory = await this.getMissionEmailHistory(missionId, actorRole, actorUserId);
         const permissions = this.buildMissionPermissions(mission, actorRole, actorUserId);
@@ -1626,7 +1661,7 @@ export class AuditPlanService {
                 rapport: mission.rapport || '',
                 recommandations: mission.recommandations || '',
             },
-            actionPlans,
+            actionPlans: this.enrichRecommendationItems(mission, actionPlanItems, actorRole, actorUserId),
             workflowHistory,
             emailHistory,
         };
@@ -1656,28 +1691,368 @@ export class AuditPlanService {
         return AuditingService.deleteMissionEvidence(evidenceId);
     }
 
+    private static isRecommendationAuditOwner(sourceMission: AuditMission, role: string, userId: number) {
+        return role === UserRole.SUPER_ADMIN
+            || (role === UserRole.CHEF_MISSION && sourceMission.chefMissionId === userId)
+            || (role === UserRole.AUDITEUR && sourceMission.auditeurId === userId);
+    }
+
+    private static isRecommendationAuditedActor(recommendation: AuditMission, role: string, userId: number) {
+        return role === UserRole.SUPER_ADMIN
+            || (role === UserRole.CONTROLLER && (!recommendation.auditedPrincipalId || recommendation.auditedPrincipalId === userId));
+    }
+
+    private static getRecommendationAvailableTransitions(sourceMission: AuditMission, recommendation: AuditMission, role: string, userId: number): RecommendationTransitionCode[] {
+        const status = String(recommendation.recommendationWorkflowStatus || 'cree');
+        const isOwner = this.isRecommendationAuditOwner(sourceMission, role, userId);
+        const isAudited = this.isRecommendationAuditedActor(recommendation, role, userId);
+        const isManager = isRoleAllowed(role, RECOMMENDATION_AUDIT_MANAGER_ROLES);
+        const transitions: RecommendationTransitionCode[] = [];
+
+        if (['cree', 'recommandation_a_envoyer'].includes(status) && isOwner) {
+            transitions.push('envoyer_recommandation');
+        }
+
+        if (['plan_actions_a_soumettre', 'plan_actions_a_revoir'].includes(status) && isAudited) {
+            transitions.push('soumettre_plan_action');
+        }
+
+        if (status === 'plan_actions_a_valider') {
+            if (isOwner) {
+                transitions.push('demander_revue_plan_action');
+            }
+            if (isManager) {
+                transitions.push('valider_plan_action');
+            }
+        }
+
+        if (status === 'plan_action_valide' && isOwner) {
+            transitions.push('demander_mise_a_jour_avancement');
+        }
+
+        if (status === 'plan_actions_a_mettre_a_jour' && isAudited) {
+            transitions.push('soumettre_taux_avancement');
+        }
+
+        if (['plan_actions_mis_a_jour', 'avancement_100_a_valider'].includes(status)) {
+            if (isOwner) {
+                transitions.push('demander_revue_taux_avancement');
+            }
+            if (isManager && Number(recommendation.progressPercent || 0) === 100) {
+                transitions.push('valider_avancement_100');
+            }
+        }
+
+        if (status === 'avancement_100_valide' && isOwner) {
+            transitions.push('fermer_recommandation');
+        }
+
+        if (status === 'ferme' && isRoleAllowed(role, RECOMMENDATION_FINAL_CLOSER_ROLES)) {
+            transitions.push('reouvrir', 'fermer_definitivement');
+        }
+
+        return transitions;
+    }
+
+    private static async getRecommendationRecord(missionId: number, itemId: number) {
+        const item = await AuditMission.findOne({
+            where: {
+                id: itemId,
+                type: AuditRecordType.PLAN_ACTION_AUDIT,
+                sourceMissionId: missionId,
+            },
+            include: [
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom'], required: false },
+            ],
+        });
+
+        if (!item) {
+            throw new Error('Recommandation introuvable');
+        }
+
+        return item;
+    }
+
+    private static enrichRecommendationItems(sourceMission: AuditMission, items: any[], role: string, userId: number) {
+        return items.map((item) => {
+            const status = String(item.workflowStatus || 'cree');
+            const pseudoRecord = {
+                ...item,
+                recommendationWorkflowStatus: status,
+                progressPercent: item.tauxAvancement ?? 0,
+                auditedPrincipalId: item.coordinateurAuditeId ?? null,
+            } as AuditMission;
+
+            return {
+                ...item,
+                workflowStatus: status,
+                workflowStatusLabel: this.getWorkflowStatusLabel('recommendation', status),
+                availableTransitions: this.getRecommendationAvailableTransitions(sourceMission, pseudoRecord, role, userId),
+            };
+        });
+    }
+
+    private static buildRecommendationPatch(transition: RecommendationTransitionCode, recommendation: AuditMission, data: any, actorUserId: number) {
+        const currentStatus = String(recommendation.recommendationWorkflowStatus || 'cree');
+        const comment = String(data.comment || data.commentaireWorkflow || '').trim();
+        const planAction = String(data.planAction || data.recommendationPlanAction || recommendation.recommendationPlanAction || '').trim();
+        const tauxAvancement = data.tauxAvancement !== undefined || data.progressPercent !== undefined
+            ? Number(data.tauxAvancement ?? data.progressPercent)
+            : Number(recommendation.progressPercent || 0);
+        const evaluationAvancement = String(data.evaluationAvancement || data.recommendationEvaluationAvancement || '').trim() || null;
+        const now = new Date();
+
+        const requireComment = () => {
+            if (!comment) {
+                throw new Error('Un commentaire est obligatoire pour demander une revue');
+            }
+        };
+
+        if (transition === 'envoyer_recommandation') {
+            if (!['cree', 'recommandation_a_envoyer'].includes(currentStatus)) {
+                throw new Error('La recommandation ne peut pas etre envoyee dans ce statut');
+            }
+            if (!String(recommendation.recommandations || '').trim()) {
+                throw new Error('La recommandation doit etre renseignee avant envoi');
+            }
+            return {
+                status: 'plan_actions_a_soumettre',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_soumettre',
+                    recommendationSentAt: now,
+                    recommendationLastComment: comment || null,
+                },
+            };
+        }
+
+        if (transition === 'soumettre_plan_action') {
+            if (!['plan_actions_a_soumettre', 'plan_actions_a_revoir'].includes(currentStatus)) {
+                throw new Error('Le plan d action ne peut pas etre soumis dans ce statut');
+            }
+            if (!planAction) {
+                throw new Error('Le plan d action est obligatoire avant soumission');
+            }
+            return {
+                status: 'plan_actions_a_valider',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_valider',
+                    recommendationPlanAction: planAction,
+                    recommendationPlanSubmittedAt: now,
+                    recommendationLastComment: comment || null,
+                    auditedPrincipalId: recommendation.auditedPrincipalId || actorUserId,
+                },
+            };
+        }
+
+        if (transition === 'demander_revue_plan_action') {
+            if (currentStatus !== 'plan_actions_a_valider') {
+                throw new Error('La revue du plan d action est possible uniquement apres soumission');
+            }
+            requireComment();
+            return {
+                status: 'plan_actions_a_revoir',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_revoir',
+                    recommendationLastComment: comment,
+                },
+            };
+        }
+
+        if (transition === 'valider_plan_action') {
+            if (currentStatus !== 'plan_actions_a_valider') {
+                throw new Error('Le plan d action doit etre soumis avant validation');
+            }
+            return {
+                status: 'plan_action_valide',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_action_valide',
+                    recommendationPlanValidatedAt: now,
+                    recommendationLastComment: comment || null,
+                },
+            };
+        }
+
+        if (transition === 'demander_mise_a_jour_avancement') {
+            if (!['plan_action_valide', 'plan_actions_mis_a_jour'].includes(currentStatus)) {
+                throw new Error('La mise a jour d avancement ne peut pas etre demandee dans ce statut');
+            }
+            return {
+                status: 'plan_actions_a_mettre_a_jour',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_mettre_a_jour',
+                    recommendationLastComment: comment || null,
+                },
+            };
+        }
+
+        if (transition === 'soumettre_taux_avancement') {
+            if (currentStatus !== 'plan_actions_a_mettre_a_jour') {
+                throw new Error('Le taux d avancement ne peut pas etre soumis dans ce statut');
+            }
+            if (!Number.isFinite(tauxAvancement) || tauxAvancement < 0 || tauxAvancement > 100) {
+                throw new Error('Le taux d avancement doit etre compris entre 0 et 100');
+            }
+            const nextStatus = tauxAvancement === 100 ? 'avancement_100_a_valider' : 'plan_actions_mis_a_jour';
+            return {
+                status: nextStatus,
+                patch: {
+                    recommendationWorkflowStatus: nextStatus,
+                    recommendationEvaluationAvancement: evaluationAvancement,
+                    recommendationProgressSubmittedAt: now,
+                    recommendationLastComment: comment || null,
+                    progressPercent: tauxAvancement,
+                    statut: tauxAvancement === 100 ? AuditMissionStatus.OK : AuditMissionStatus.EN_COURS,
+                    auditedPrincipalId: recommendation.auditedPrincipalId || actorUserId,
+                },
+            };
+        }
+
+        if (transition === 'demander_revue_taux_avancement') {
+            if (!['plan_actions_mis_a_jour', 'avancement_100_a_valider'].includes(currentStatus)) {
+                throw new Error('La revue du taux d avancement est possible uniquement apres mise a jour');
+            }
+            requireComment();
+            return {
+                status: 'plan_actions_a_mettre_a_jour',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_mettre_a_jour',
+                    recommendationLastComment: comment,
+                },
+            };
+        }
+
+        if (transition === 'valider_avancement_100') {
+            if (!['plan_actions_mis_a_jour', 'avancement_100_a_valider'].includes(currentStatus)) {
+                throw new Error('L avancement doit etre soumis avant validation');
+            }
+            if (Number(recommendation.progressPercent || 0) !== 100) {
+                throw new Error('Seul un avancement a 100% peut etre valide');
+            }
+            return {
+                status: 'avancement_100_valide',
+                patch: {
+                    recommendationWorkflowStatus: 'avancement_100_valide',
+                    recommendationProgressValidatedAt: now,
+                    recommendationLastComment: comment || null,
+                    statut: AuditMissionStatus.OK,
+                },
+            };
+        }
+
+        if (transition === 'fermer_recommandation') {
+            if (currentStatus !== 'avancement_100_valide') {
+                throw new Error('La recommandation doit avoir un avancement 100% valide avant fermeture');
+            }
+            return {
+                status: 'ferme',
+                patch: {
+                    recommendationWorkflowStatus: 'ferme',
+                    recommendationClosedAt: now,
+                    recommendationLastComment: comment || null,
+                    statut: AuditMissionStatus.OK,
+                },
+            };
+        }
+
+        if (transition === 'reouvrir') {
+            if (currentStatus !== 'ferme') {
+                throw new Error('Seule une recommandation fermee peut etre rouverte');
+            }
+            return {
+                status: 'plan_action_valide',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_action_valide',
+                    recommendationClosedAt: null,
+                    recommendationLastComment: comment || null,
+                },
+            };
+        }
+
+        if (transition === 'fermer_definitivement') {
+            if (currentStatus !== 'ferme') {
+                throw new Error('Seule une recommandation fermee peut etre fermee definitivement');
+            }
+            return {
+                status: 'ferme_definitivement',
+                patch: {
+                    recommendationWorkflowStatus: 'ferme_definitivement',
+                    recommendationFinalClosedAt: now,
+                    recommendationLastComment: comment || null,
+                    statut: AuditMissionStatus.OK,
+                },
+            };
+        }
+
+        throw new Error('Transition de recommandation inconnue');
+    }
+
     static async getMissionActionPlans(missionId: number, actorRole: string, actorUserId: number) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionReadable(mission, actorRole, actorUserId);
-        return AuditingService.getMissionActionPlanItems(missionId);
+        const items = await AuditingService.getMissionActionPlanItems(missionId);
+        return this.enrichRecommendationItems(mission, items, actorRole, actorUserId);
     }
 
     static async createMissionActionPlan(missionId: number, actorRole: string, actorUserId: number, data: any) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_CREATOR_ROLES);
-        return AuditingService.createMissionActionPlanItem(missionId, data);
+        const item = await AuditingService.createMissionActionPlanItem(missionId, {
+            ...data,
+            recommendationWorkflowStatus: 'cree',
+        });
+        return this.enrichRecommendationItems(mission, [item], actorRole, actorUserId)[0];
     }
 
     static async updateMissionActionPlan(missionId: number, itemId: number, actorRole: string, actorUserId: number, data: any) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_UPDATE_ROLES);
-        return AuditingService.updateMissionActionPlanItem(missionId, itemId, data);
+        const recommendation = await this.getRecommendationRecord(missionId, itemId);
+        if (String(recommendation.recommendationWorkflowStatus || '') === 'ferme_definitivement') {
+            throw new Error('Une recommandation fermee definitivement ne peut plus etre modifiee');
+        }
+        const item = await AuditingService.updateMissionActionPlanItem(missionId, itemId, data);
+        return this.enrichRecommendationItems(mission, [item], actorRole, actorUserId)[0];
     }
 
     static async deleteMissionActionPlan(missionId: number, itemId: number, actorRole: string, actorUserId: number) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_DELETE_ROLES);
         return AuditingService.deleteMissionActionPlanItem(missionId, itemId);
+    }
+
+    static async applyRecommendationTransition(missionId: number, itemId: number, actorRole: string, actorUserId: number, data: any) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionReadable(mission, actorRole, actorUserId);
+
+        const recommendation = await this.getRecommendationRecord(missionId, itemId);
+        const transition = String(data.transition || '').trim() as RecommendationTransitionCode;
+        const availableTransitions = this.getRecommendationAvailableTransitions(mission, recommendation, actorRole, actorUserId);
+        if (!availableTransitions.includes(transition)) {
+            throw new Error('Transition non autorisee pour votre profil ou le statut actuel');
+        }
+
+        const currentStatus = String(recommendation.recommendationWorkflowStatus || 'cree');
+        const result = this.buildRecommendationPatch(transition, recommendation, data, actorUserId);
+        await recommendation.update(await LookupResolutionService.resolveEntityPayload('auditMission', result.patch) as any);
+        await this.createMissionWorkflowEvent(
+            recommendation.id,
+            actorUserId,
+            'recommendation',
+            transition,
+            currentStatus,
+            result.status,
+            data.comment || data.commentaireWorkflow || null
+        );
+
+        return this.getMissionWorkspace(missionId, actorRole, actorUserId);
+    }
+
+    static async getRecommendationWorkflowEvents(missionId: number, itemId: number, actorRole: string, actorUserId: number) {
+        const mission = await this.getMissionById(missionId);
+        this.ensureMissionReadable(mission, actorRole, actorUserId);
+        await this.getRecommendationRecord(missionId, itemId);
+        return this.getMissionWorkflowHistory(itemId);
     }
 
     static async getSkills() {

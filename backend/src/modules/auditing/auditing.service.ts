@@ -260,6 +260,14 @@ export class AuditingService {
             priorite: this.normalizePriority(merged.priorite),
             rapport: null,
             recommandations,
+            recommendationWorkflowStatus: this.cleanString(merged.recommendationWorkflowStatus) || 'cree',
+            recommendationLastComment: this.cleanString(merged.recommendationLastComment),
+            recommendationPlanAction: this.cleanString(merged.recommendationPlanAction !== undefined ? merged.recommendationPlanAction : merged.planAction),
+            recommendationEvaluationAvancement: this.cleanString(
+                merged.recommendationEvaluationAvancement !== undefined
+                    ? merged.recommendationEvaluationAvancement
+                    : merged.evaluationAvancement
+            ),
             sourceExcelFile: this.cleanString(merged.sourceExcelFile),
             sourceExcelSheet: this.cleanString(merged.sourceExcelSheet),
             sourceExcelRow: this.toInteger(merged.sourceExcelRow),
@@ -397,10 +405,26 @@ export class AuditingService {
             responsableNom: responsibleName,
             echeance: record.delai || null,
             etatAvancement: this.toLegacyProgressStatus(record.statutCode || record.statut),
+            workflowStatus: record.recommendationWorkflowStatus || 'cree',
+            workflowStatusLabel: null,
+            availableTransitions: [],
+            planAction: record.recommendationPlanAction || '',
+            tauxAvancement: record.progressPercent ?? 0,
+            evaluationAvancement: record.recommendationEvaluationAvancement || null,
+            commentaireWorkflow: record.recommendationLastComment || null,
+            dateEnvoi: record.recommendationSentAt || null,
+            dateSoumissionPlan: record.recommendationPlanSubmittedAt || null,
+            dateValidationPlan: record.recommendationPlanValidatedAt || null,
+            dateMiseAJourAvancement: record.recommendationProgressSubmittedAt || null,
+            dateValidationAvancement: record.recommendationProgressValidatedAt || null,
+            dateFermeture: record.recommendationClosedAt || null,
+            dateFermetureDefinitive: record.recommendationFinalClosedAt || null,
             sourceExcelFile: record.sourceExcelFile || null,
             sourceExcelSheet: record.sourceExcelSheet || null,
             sourceExcelRow: record.sourceExcelRow ?? null,
             responsable: record.auditeur || null,
+            coordinateurAuditeId: record.auditedPrincipalId ?? null,
+            coordinateurAudite: record.auditedPrincipal || null,
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
         };
@@ -984,7 +1008,10 @@ export class AuditingService {
                 type: AuditRecordType.PLAN_ACTION_AUDIT,
                 sourceMissionId: missionId,
             },
-            include: [{ model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false }],
+            include: [
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom'], required: false },
+            ],
             order: [['ordre', 'ASC'], ['createdAt', 'ASC']]
         });
 
@@ -1004,7 +1031,10 @@ export class AuditingService {
         });
 
         const reloaded = await AuditMission.findByPk(created.id, {
-            include: [{ model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false }]
+            include: [
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom'], required: false },
+            ]
         });
 
         return this.mapActionPlanRecordToLegacyItem(reloaded);
@@ -1023,7 +1053,10 @@ export class AuditingService {
         });
 
         const updated = await AuditMission.findByPk(itemId, {
-            include: [{ model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false }]
+            include: [
+                { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom'], required: false },
+            ]
         });
 
         return this.mapActionPlanRecordToLegacyItem(updated);

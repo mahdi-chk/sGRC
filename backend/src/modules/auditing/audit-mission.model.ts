@@ -88,6 +88,17 @@ export class AuditMission extends LookupAwareModel {
     public reportPreparedById!: number | null;
     public reportValidatedById!: number | null;
     public reportApprovedById!: number | null;
+    public recommendationWorkflowStatus!: string;
+    public recommendationLastComment!: string | null;
+    public recommendationPlanAction!: string | null;
+    public recommendationEvaluationAvancement!: string | null;
+    public recommendationSentAt!: Date | null;
+    public recommendationPlanSubmittedAt!: Date | null;
+    public recommendationPlanValidatedAt!: Date | null;
+    public recommendationProgressSubmittedAt!: Date | null;
+    public recommendationProgressValidatedAt!: Date | null;
+    public recommendationClosedAt!: Date | null;
+    public recommendationFinalClosedAt!: Date | null;
     public is_deleted!: boolean;
     public deleted_at!: Date | null;
     public readonly createdAt!: Date;
@@ -368,6 +379,51 @@ AuditMission.init(
                 model: 'users',
                 key: 'id',
             },
+        },
+        recommendationWorkflowStatus: {
+            type: DataTypes.STRING(60),
+            allowNull: false,
+            defaultValue: 'cree',
+        },
+        recommendationLastComment: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        recommendationPlanAction: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        recommendationEvaluationAvancement: {
+            type: DataTypes.STRING(40),
+            allowNull: true,
+        },
+        recommendationSentAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        recommendationPlanSubmittedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        recommendationPlanValidatedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        recommendationProgressSubmittedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        recommendationProgressValidatedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        recommendationClosedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        recommendationFinalClosedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
         },
         ...softDeleteAttributes,
     },

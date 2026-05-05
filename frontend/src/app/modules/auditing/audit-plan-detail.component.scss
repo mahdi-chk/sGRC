@@ -837,6 +837,19 @@
   gap: 8px;
 }
 
+.action-stack {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 210px;
+}
+
+.compact-action {
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
 .resource-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr 120px 56px;
@@ -1055,6 +1068,36 @@
   margin: 10px 0;
   color: #334155;
   overflow-wrap: anywhere;
+}
+
+.recommendation-workflow-summary {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+
+  p {
+    margin: 6px 0;
+  }
+}
+
+.workflow-recommendation-context {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+
+  h3 {
+    margin: 10px 0 6px;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0;
+    color: #475569;
+    overflow-wrap: anywhere;
+  }
 }
 
 .action-plan-meta,

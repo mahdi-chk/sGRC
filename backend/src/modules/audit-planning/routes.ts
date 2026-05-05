@@ -594,6 +594,35 @@ router.delete('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPE
     }
 });
 
+router.post('/missions/:id/action-plans/:itemId/transitions', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
+    try {
+        const data = await AuditPlanService.applyRecommendationTransition(
+            parseInt(req.params.id as string, 10),
+            parseInt(req.params.itemId as string, 10),
+            req.user!.role,
+            req.user!.id,
+            req.body
+        );
+        res.json(data);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la transition de la recommandation', error: error.message });
+    }
+});
+
+router.get('/missions/:id/action-plans/:itemId/workflow-events', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
+    try {
+        const data = await AuditPlanService.getRecommendationWorkflowEvents(
+            parseInt(req.params.id as string, 10),
+            parseInt(req.params.itemId as string, 10),
+            req.user!.role,
+            req.user!.id
+        );
+        res.json(data);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors du chargement de l historique de la recommandation', error: error.message });
+    }
+});
+
 router.post('/suggest-plan', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
         const requestedType = String(req.body?.type || req.query?.type || AuditRecordType.MISSION_AUDIT);

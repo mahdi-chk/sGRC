@@ -71,6 +71,22 @@ export interface AuditMissionActionPlanItem {
     responsableNom: string | null;
     echeance: string | null;
     etatAvancement: string;
+    workflowStatus?: string;
+    workflowStatusLabel?: string | null;
+    availableTransitions?: string[];
+    planAction?: string | null;
+    tauxAvancement?: number | null;
+    evaluationAvancement?: string | null;
+    commentaireWorkflow?: string | null;
+    coordinateurAuditeId?: number | null;
+    coordinateurAudite?: any;
+    dateEnvoi?: string | Date | null;
+    dateSoumissionPlan?: string | Date | null;
+    dateValidationPlan?: string | Date | null;
+    dateMiseAJourAvancement?: string | Date | null;
+    dateValidationAvancement?: string | Date | null;
+    dateFermeture?: string | Date | null;
+    dateFermetureDefinitive?: string | Date | null;
     responsable?: any;
 }
 
@@ -85,6 +101,11 @@ export interface AuditMissionActionPlanPayload {
     responsableNom?: string | null;
     echeance?: string | null;
     etatAvancement?: string;
+    planAction?: string | null;
+    tauxAvancement?: number | null;
+    evaluationAvancement?: string | null;
+    commentaireWorkflow?: string | null;
+    coordinateurAuditeId?: number | null;
 }
 
 export interface AuditMissionWorkflowEvent {
@@ -559,6 +580,14 @@ export class AuditPlanningService {
 
     deleteMissionActionPlan(missionId: number, itemId: number): Observable<any> {
         return this.http.delete(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}`);
+    }
+
+    applyRecommendationTransition(missionId: number, itemId: number, payload: { transition: string; comment?: string | null; planAction?: string | null; tauxAvancement?: number | null; evaluationAvancement?: string | null }): Observable<AuditMissionWorkspace> {
+        return this.http.post<AuditMissionWorkspace>(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}/transitions`, payload);
+    }
+
+    getRecommendationWorkflowEvents(missionId: number, itemId: number): Observable<AuditMissionWorkflowEvent[]> {
+        return this.http.get<AuditMissionWorkflowEvent[]>(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}/workflow-events`);
     }
 
     suggestPlan(type: AuditPlanningRecordType = AuditPlanningRecordType.MISSION_AUDIT, planId?: number | null): Observable<any[]> {

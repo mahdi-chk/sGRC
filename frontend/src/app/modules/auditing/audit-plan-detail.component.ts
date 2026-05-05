@@ -306,8 +306,24 @@ export class AuditPlanDetailComponent implements OnInit {
     return this.planTransitionOptions.length > 0;
   }
 
+  get selectedPlanTransitionRequiresComment(): boolean {
+    return this.transitionForm.transition === 'demander_revue';
+  }
+
+  get canSubmitPlanTransition(): boolean {
+    return Boolean(
+      this.transitionForm.transition
+      && !this.isTransitioning
+      && (!this.selectedPlanTransitionRequiresComment || String(this.transitionForm.comment || '').trim())
+    );
+  }
+
   get noPlanTransitionMessage(): string {
-    const status = String(this.plan?.statusCode || this.plan?.status || '').toLowerCase();
+    const status = String(this.plan?.statusCode || this.plan?.status || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
     const role = this.currentUserRole;
 
     if (status === 'cree') {
@@ -359,11 +375,70 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   get missionFormIsValid(): boolean {
-    return this.hasRequiredMissionFields(this.missionForm);
+    return this.hasRequiredMissionFields(this.missionForm) && !this.isMissionDateRangeInvalid(this.missionForm);
   }
 
   get missionEditFormIsValid(): boolean {
-    return this.hasRequiredMissionFields(this.missionEditForm);
+    return this.hasRequiredMissionFields(this.missionEditForm)
+      && !this.isMissionDateRangeInvalid(this.missionEditForm)
+      && !this.isMissionRealDateRangeInvalid(this.missionEditForm);
+  }
+
+  get missionFormDateRangeInvalid(): boolean {
+    return this.isMissionDateRangeInvalid(this.missionForm);
+  }
+
+  get missionEditFormDateRangeInvalid(): boolean {
+    return this.isMissionDateRangeInvalid(this.missionEditForm);
+  }
+
+  get missionEditRealDateRangeInvalid(): boolean {
+    return this.isMissionRealDateRangeInvalid(this.missionEditForm);
+  }
+
+  get resourcesFormIsValid(): boolean {
+    return this.missionResources.every((item) => {
+      const allocation = Number(item.allocationPercent ?? 100);
+      return Boolean(
+        Number(item.userId || 0) > 0
+        && String(item.assignmentRoleCode || item.assignmentRole || '').trim()
+        && Number.isFinite(allocation)
+        && allocation >= 0
+        && allocation <= 100
+      );
+    });
+  }
+
+  get missionOrderFormIsValid(): boolean {
+    return String(this.missionOrderForm.reference || '').length <= 80
+      && String(this.missionOrderForm.comment || '').length <= 500;
+  }
+
+  get workProgramFormIsValid(): boolean {
+    return this.workProgramItems.every((item) => {
+      const text = String(item.texte || '').trim();
+      return text.length >= 3 && text.length <= 300;
+    });
+  }
+
+  get reportFormIsValid(): boolean {
+    return String(this.reportForm.rapport || '').trim().length >= 10
+      && String(this.reportForm.rapport || '').length <= 5000
+      && String(this.reportForm.recommandations || '').length <= 3000;
+  }
+
+  get actionPlanFormIsValid(): boolean {
+    const priorite = Number(this.actionPlanForm.priorite || 0);
+    return Boolean(
+      String(this.actionPlanForm.regleDnssi || '').trim()
+      && String(this.actionPlanForm.regleDnssi || '').length <= 1000
+      && String(this.actionPlanForm.recommandations || '').trim()
+      && String(this.actionPlanForm.recommandations || '').length <= 2000
+      && (!this.actionPlanForm.planActionType || String(this.actionPlanForm.planActionType).length <= 80)
+      && (!this.actionPlanForm.responsableNom || String(this.actionPlanForm.responsableNom).length <= 120)
+      && (!this.actionPlanForm.horizon || String(this.actionPlanForm.horizon).length <= 80)
+      && (!this.actionPlanForm.priorite || (Number.isFinite(priorite) && priorite >= 1 && priorite <= 3))
+    );
   }
 
   get currentRoleDefinition(): AuditRoleResponsibility | null {
@@ -408,6 +483,32 @@ export class AuditPlanDetailComponent implements OnInit {
       transitions.push('approve', 'request_rework');
     }
     return Array.from(new Set(transitions));
+  }
+
+  get selectedWorkProgramTransitionRequiresComment(): boolean {
+    return this.workProgramTransitionForm.transition === 'request_rework';
+  }
+
+  get canSubmitWorkProgramTransition(): boolean {
+    return Boolean(
+      this.workProgramTransitionForm.transition
+      && !this.isApplyingWorkProgramTransition
+      && String(this.workProgramTransitionForm.comment || '').length <= 500
+      && (!this.selectedWorkProgramTransitionRequiresComment || String(this.workProgramTransitionForm.comment || '').trim())
+    );
+  }
+
+  get selectedReportTransitionRequiresComment(): boolean {
+    return this.reportTransitionForm.transition === 'request_rework';
+  }
+
+  get canSubmitReportTransition(): boolean {
+    return Boolean(
+      this.reportTransitionForm.transition
+      && !this.isApplyingReportTransition
+      && String(this.reportTransitionForm.comment || '').length <= 500
+      && (!this.selectedReportTransitionRequiresComment || String(this.reportTransitionForm.comment || '').trim())
+    );
   }
 
   get allowedActionLabels(): string[] {
@@ -554,11 +655,32 @@ export class AuditPlanDetailComponent implements OnInit {
 
   private hasRequiredMissionFields(form: Partial<AuditPlanMission>): boolean {
     return Boolean(
-      String(form.titre || '').trim()
-      && String(form.objectifs || '').trim()
-      && String(form.responsabilites || '').trim()
+      String(form.titre || '').trim().length >= 3
+      && String(form.titre || '').length <= 160
+      && String(form.objectifs || '').trim().length >= 10
+      && String(form.objectifs || '').length <= 2000
+      && String(form.responsabilites || '').trim().length >= 3
+      && String(form.responsabilites || '').length <= 1000
       && String(form.datePrevueFin || '').trim()
+      && String(form.axe || '').length <= 120
+      && String(form.evaluation || '').length <= 120
     );
+  }
+
+  private isMissionDateRangeInvalid(form: Partial<AuditPlanMission>): boolean {
+    if (!form.datePrevueDebut || !form.datePrevueFin) {
+      return false;
+    }
+
+    return new Date(form.datePrevueFin).getTime() < new Date(form.datePrevueDebut).getTime();
+  }
+
+  private isMissionRealDateRangeInvalid(form: Partial<AuditPlanMission>): boolean {
+    if (!form.dateReelleDebut || !form.dateReelleFin) {
+      return false;
+    }
+
+    return new Date(form.dateReelleFin).getTime() < new Date(form.dateReelleDebut).getTime();
   }
 
   private getBackendErrorMessage(error: any, fallback: string): string {
@@ -672,7 +794,8 @@ export class AuditPlanDetailComponent implements OnInit {
       error: (error) => {
         console.error(error);
         this.isTransitioning = false;
-        alert(error?.error?.message || 'Erreur lors de la transition du plan.');
+        alert(this.getBackendErrorMessage(error, 'Erreur lors de la transition du plan.'));
+        this.loadPlan();
       }
     });
   }
@@ -723,7 +846,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   loadMissionWorkspace(): void {
-    if (!this.selectedMissionId) {
+    if (!this.selectedMissionId || !this.resourcesFormIsValid) {
       return;
     }
 
@@ -769,7 +892,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   loadMissionResources(): void {
-    if (!this.selectedMissionId) {
+    if (!this.selectedMissionId || !this.workProgramFormIsValid) {
       return;
     }
 
@@ -888,7 +1011,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveResources(): void {
-    if (!this.selectedMissionId) {
+    if (!this.selectedMissionId || !this.missionOrderFormIsValid) {
       return;
     }
 
@@ -1032,7 +1155,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveWorkProgram(): void {
-    if (!this.selectedMissionId) {
+    if (!this.selectedMissionId || !this.reportFormIsValid) {
       return;
     }
 
@@ -1068,7 +1191,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   applyWorkProgramTransition(): void {
-    if (!this.selectedMissionId || !this.workProgramTransitionForm.transition) {
+    if (!this.selectedMissionId || !this.canSubmitWorkProgramTransition) {
       return;
     }
 
@@ -1127,7 +1250,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   applyReportTransition(): void {
-    if (!this.selectedMissionId || !this.reportTransitionForm.transition) {
+    if (!this.selectedMissionId || !this.canSubmitReportTransition) {
       return;
     }
 
@@ -1156,7 +1279,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveActionPlan(): void {
-    if (!this.selectedMissionId || !this.actionPlanForm.regleDnssi || !this.actionPlanForm.recommandations) {
+    if (!this.selectedMissionId || !this.actionPlanFormIsValid) {
       return;
     }
 

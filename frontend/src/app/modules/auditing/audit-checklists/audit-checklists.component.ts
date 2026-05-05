@@ -43,6 +43,20 @@ export class AuditChecklistsComponent implements OnInit {
     return getAuditManagementNavItems(this.currentUserRole);
   }
 
+  get checklistTemplateIsValid(): boolean {
+    const title = this.newTemplate.titre.trim();
+    const items = this.newTemplate.itemsText
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    return title.length >= 3
+      && title.length <= 120
+      && this.newTemplate.description.length <= 500
+      && items.length > 0
+      && items.every((item) => item.length >= 3 && item.length <= 300);
+  }
+
   ngOnInit(): void {
     this.loadTemplates();
     this.loadMissions();
@@ -91,7 +105,7 @@ export class AuditChecklistsComponent implements OnInit {
       .map((item) => item.trim())
       .filter((item) => !!item);
 
-    if (!this.newTemplate.titre.trim() || items.length === 0) {
+    if (!this.checklistTemplateIsValid) {
       this.error = 'Le titre et au moins un item de checklist sont obligatoires.';
       return;
     }

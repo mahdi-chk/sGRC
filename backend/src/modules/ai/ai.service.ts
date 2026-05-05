@@ -75,6 +75,14 @@ interface UserSession {
     lastAccess: number;
 }
 
+type AuditPlanGenerationContext = {
+    planId?: number | null;
+    nom?: string | null;
+    dateDebut?: string | Date | null;
+    dateFin?: string | Date | null;
+    status?: string | null;
+};
+
 export class AIService {
     private static sessions = new Map<string, UserSession>();
     private static TTL = 30 * 60 * 1000; // 30 minutes
@@ -100,6 +108,14 @@ export class AIService {
 
         if (Array.isArray(parsed?.items)) {
             return parsed.items;
+        }
+
+        if (Array.isArray(parsed?.missions)) {
+            return parsed.missions;
+        }
+
+        if (Array.isArray(parsed?.suggestions)) {
+            return parsed.suggestions;
         }
 
         return [parsed];
@@ -138,6 +154,143 @@ export class AIService {
         });
 
         return Array.from(normalizedResults.values());
+    }
+
+    private static normalizeLookupCode(value: unknown, allowedCodes: string[], fallback: string): string {
+        const normalized = String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\s-]+/g, '_');
+
+        return allowedCodes.includes(normalized) ? normalized : fallback;
+    }
+
+    private static normalizeDateValue(value: unknown): string | null {
+        if (!value) {
+            return null;
+        }
+
+        const date = new Date(String(value));
+        if (Number.isNaN(date.getTime())) {
+            return null;
+        }
+
+        return date.toISOString().split('T')[0];
+    }
+
+    private static addDays(date: Date, days: number): Date {
+        const next = new Date(date);
+        next.setDate(next.getDate() + days);
+        return next;
+    }
+
+    private static getFallbackMissionDates(index: number, delayDays: number, planContext?: AuditPlanGenerationContext): { start: string; end: string } {
+        const planStart = this.normalizeDateValue(planContext?.dateDebut);
+        const planEnd = this.normalizeDateValue(planContext?.dateFin);
+        const base = planStart ? new Date(planStart) : new Date();
+        let start = this.addDays(base, index * 14);
+        if (planEnd && start.getTime() > new Date(planEnd).getTime()) {
+            start = new Date(planEnd);
+        }
+        let end = this.addDays(start, Math.max(delayDays, 1));
+
+        if (planEnd && end.getTime() > new Date(planEnd).getTime()) {
+            end = new Date(planEnd);
+        }
+
+        if (end.getTime() < start.getTime()) {
+            end = start;
+        }
+
+        return {
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0],
+        };
+    }
+
+    private static quarterFromDate(dateValue: string): string {
+        const month = new Date(dateValue).getMonth() + 1;
+        if (month <= 3) return 't1';
+        if (month <= 6) return 't2';
+        if (month <= 9) return 't3';
+        return 't4';
+    }
+
+    private static normalizeAuditPlanSuggestions(
+        suggestions: any[],
+        risks: any[],
+        generationType: string,
+        planContext?: AuditPlanGenerationContext
+    ): any[] {
+        const requestedRiskIds = risks
+            .map((risk) => this.toPositiveInteger(risk?.id))
+            .filter((riskId): riskId is number => riskId !== null);
+        const requestedRiskIdSet = new Set(requestedRiskIds);
+        const isActionPlan = generationType === AuditRecordType.PLAN_ACTION_AUDIT;
+
+        return suggestions
+            .map((item, index) => {
+                const explicitRiskId = this.toPositiveInteger(item?.riskId);
+                const fallbackRiskId = suggestions.length === risks.length
+                    ? requestedRiskIds[index] ?? null
+                    : null;
+                const riskId = explicitRiskId && requestedRiskIdSet.has(explicitRiskId)
+                    ? explicitRiskId
+                    : fallbackRiskId;
+
+                if (!riskId) {
+                    return null;
+                }
+
+                const delaiSuggestion = Number.parseInt(String(item?.delaiSuggestion || ''), 10);
+                const normalizedDelay = Number.isInteger(delaiSuggestion) && delaiSuggestion > 0
+                    ? delaiSuggestion
+                    : 30;
+                const fallbackDates = this.getFallbackMissionDates(index, normalizedDelay, planContext);
+                const datePrevueDebut = this.normalizeDateValue(item?.datePrevueDebut) || fallbackDates.start;
+                const datePrevueFin = this.normalizeDateValue(item?.datePrevueFin) || fallbackDates.end;
+                const titre = this.cleanText(String(item?.titre || item?.regleDnssi || `Audit du risque ${riskId}`));
+                const responsabilites = this.cleanText(String(
+                    item?.responsabilites
+                    || item?.responsableNom
+                    || item?.responsableSuggestion
+                    || 'Responsable audit et equipe de mission'
+                ));
+                const planActionType = this.cleanText(String(item?.planActionType || item?.typePlanAction || 'Audit des controles'));
+
+                if (isActionPlan) {
+                    const recommandations = this.cleanText(String(item?.recommandations || item?.objectifs || titre));
+                    return {
+                        titre,
+                        regleDnssi: this.cleanText(String(item?.regleDnssi || titre)),
+                        recommandations,
+                        responsabilites,
+                        delaiSuggestion: normalizedDelay,
+                        riskId,
+                        horizon: ['court_terme', 'moyen_terme'].includes(String(item?.horizon)) ? String(item.horizon) : 'court_terme',
+                        priorite: [1, 2, 3].includes(Number(item?.priorite)) ? Number(item.priorite) : 2,
+                        planActionType,
+                    };
+                }
+
+                return {
+                    titre,
+                    objectifs: this.cleanText(String(item?.objectifs || item?.recommandations || titre)),
+                    responsabilites,
+                    category: this.normalizeLookupCode(item?.category || item?.categoryCode || item?.categorie, ['operationnel', 'conformite', 'financier', 'thematique'], 'thematique'),
+                    quarter: this.normalizeLookupCode(item?.quarter || item?.quarterCode || item?.trimestre, ['t1', 't2', 't3', 't4'], this.quarterFromDate(datePrevueDebut)),
+                    datePrevueDebut,
+                    datePrevueFin: new Date(datePrevueFin).getTime() < new Date(datePrevueDebut).getTime() ? datePrevueDebut : datePrevueFin,
+                    axe: this.cleanText(String(item?.axe || planActionType || 'Controle interne')),
+                    evaluation: this.cleanText(String(item?.evaluation || 'Evaluation des controles et de la couverture du risque')),
+                    delaiSuggestion: normalizedDelay,
+                    riskId,
+                    planActionType,
+                };
+            })
+            .filter(Boolean);
     }
 
     private static maskSessionId(sessionId: string): string {
@@ -274,13 +427,17 @@ export class AIService {
     private static async buildAuditPlanPrompt(
         riskMapping: string,
         standardsContext: string,
-        generationType: string
+        generationType: string,
+        planContext?: AuditPlanGenerationContext
     ): Promise<string> {
         return AIPromptBuilder.buildPrompt({
             name: 'audit_plan_generation',
             businessPayload: {
                 standardsContext,
                 generationType,
+                planContext: planContext || null,
+                missionCategoryCodes: ['operationnel', 'conformite', 'financier', 'thematique'],
+                missionQuarterCodes: ['t1', 't2', 't3', 't4'],
             },
             userInput: riskMapping,
         });
@@ -713,7 +870,8 @@ export class AIService {
     static async generateAuditPlan(
         risks: any[],
         role: UserRole = UserRole.AUDIT_DIRECTEUR,
-        generationType: string = AuditRecordType.MISSION_AUDIT
+        generationType: string = AuditRecordType.MISSION_AUDIT,
+        planContext?: AuditPlanGenerationContext
     ): Promise<any[]> {
         if (!risks || risks.length === 0) return [];
 
@@ -747,8 +905,22 @@ export class AIService {
                 }
             }
 
-            const riskMapping = cappedRisks.map(r => `${r.id}: ${r.titre}`).join('\n');
-            const auditPlanPrompt = await this.buildAuditPlanPrompt(riskMapping, standardsContext, generationType);
+            const riskMapping = JSON.stringify(cappedRisks.map(r => ({
+                riskId: r.id,
+                titre: r.titre,
+                explication: r.explication,
+                domaine: r.domaine,
+                macroProcessus: r.macroProcessus,
+                processus: r.processus,
+                niveauRisque: r.niveauRisque || r.cotationRisqueNet || r.cotationRisqueBrut,
+                niveauCotationRisqueNet: r.niveauCotationRisqueNet,
+                probabilite: r.probabilite,
+                impact: r.impact,
+                niveauMaitrise: r.niveauMaitrise,
+                dmrExistant: r.dmrExistant,
+                planActionTraitement: r.planActionTraitement,
+            })), null, 2);
+            const auditPlanPrompt = await this.buildAuditPlanPrompt(riskMapping, standardsContext, generationType, planContext);
 
             appLogger.debug('AI', 'Audit plan prompt built', {
                 riskCount: cappedRisks.length,
@@ -774,7 +946,12 @@ export class AIService {
             appLogger.debug('AI', 'Audit plan raw response received', {
                 responseLength: content.length,
             });
-            const plan = this.parseJsonArrayResponse(content);
+            const plan = this.normalizeAuditPlanSuggestions(
+                this.parseJsonArrayResponse(content),
+                cappedRisks,
+                generationType,
+                planContext
+            );
 
             if (!plan.length) {
                 appLogger.warn('AI', 'Audit plan generation returned no suggestions', {
@@ -791,11 +968,7 @@ export class AIService {
                 });
             }
 
-            return plan.map(item => ({
-                ...item,
-                delaiSuggestion: item.delaiSuggestion ? parseInt(item.delaiSuggestion.toString()) : 30,
-                riskId: item.riskId ? parseInt(item.riskId.toString()) : 0
-            }));
+            return plan;
         } catch (error: any) {
             const ollamaDetail = error.response?.data?.error || error.response?.data || '';
             appLogger.error('AI', 'Audit plan generation failed', {

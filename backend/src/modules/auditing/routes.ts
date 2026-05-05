@@ -282,17 +282,20 @@ router.put('/missions/:id/resources', authorizeRoles(...auditDivisionManagerRole
 router.post('/suggest-plan', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
         const requestedType = String(req.body?.type || req.query?.type || AuditRecordType.MISSION_AUDIT);
+        const requestedPlanId = req.body?.planId ? Number(req.body.planId) : null;
         appLogger.info('Auditing', 'Suggested AI planning request received', {
             userId: req.user!.id,
             role: req.user!.role,
             requestedType,
+            requestedPlanId,
         });
-        const plan = await AuditingService.suggestAnnualPlan(req.user!.role, requestedType);
+        const plan = await AuditingService.suggestAnnualPlan(req.user!.role, requestedType, requestedPlanId);
         appLogger.info('Auditing', 'Suggested AI planning generated', {
             userId: req.user!.id,
             role: req.user!.role,
             suggestionCount: Array.isArray(plan) ? plan.length : 0,
             requestedType,
+            requestedPlanId,
         });
         res.json(plan);
     } catch (error: any) {

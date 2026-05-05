@@ -7,7 +7,7 @@ export interface AuditNavItem {
   section: 'planning';
 }
 
-const AUDIT_DIRECTOR_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN];
+const AUDIT_CONSTRUCTION_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
 const AUDIT_PLANNING_ROLES = [
   UserRole.AUDIT_DIRECTEUR,
   UserRole.AUDIT_RESPONSABLE,
@@ -28,7 +28,7 @@ export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
   {
     label: 'Construction du Plan',
     route: '/dashboard/audit-planning',
-    roles: AUDIT_DIRECTOR_ROLES,
+    roles: AUDIT_CONSTRUCTION_ROLES,
     section: 'planning'
   },
   {

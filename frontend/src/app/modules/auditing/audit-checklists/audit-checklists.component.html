@@ -80,7 +80,7 @@
                         <div class="form-grid compact-grid">
                             <label class="field field-wide">
                                 <span>Modele de checklist</span>
-                                <select [(ngModel)]="selectedTemplateId">
+                                <select [(ngModel)]="selectedTemplateId" required>
                                     <option [ngValue]="null">Selectionner une checklist</option>
                                     <option *ngFor="let template of templates" [ngValue]="template.id">{{ template.titre }}</option>
                                 </select>
@@ -130,7 +130,7 @@
                     </div>
                     <div class="row-actions">
                         <button class="btn-secondary" *ngIf="editingTemplateId" (click)="cancelEdit()">Annuler</button>
-                        <button class="btn-primary" (click)="saveNewTemplate()" [disabled]="isSaving">
+                        <button class="btn-primary" (click)="saveNewTemplate()" [disabled]="isSaving || !checklistTemplateIsValid">
                             {{ editingTemplateId ? 'Enregistrer les modifications' : 'Creer la checklist' }}
                         </button>
                     </div>
@@ -138,16 +138,16 @@
 
                 <div class="form-grid">
                     <label class="field field-wide">
-                        <span>Titre</span>
-                        <input [(ngModel)]="newTemplate.titre" placeholder="Checklist ISO 27001 - Revue d acces">
+                        <span>Titre *</span>
+                        <input [(ngModel)]="newTemplate.titre" placeholder="Checklist ISO 27001 - Revue d acces" required minlength="3" maxlength="120">
                     </label>
                     <label class="field field-wide">
                         <span>Description</span>
-                        <textarea rows="3" [(ngModel)]="newTemplate.description" placeholder="Contexte et objectif de la checklist."></textarea>
+                        <textarea rows="3" [(ngModel)]="newTemplate.description" placeholder="Contexte et objectif de la checklist." maxlength="500"></textarea>
                     </label>
                     <label class="field field-wide">
-                        <span>Items</span>
-                        <textarea rows="8" [(ngModel)]="newTemplate.itemsText" placeholder="Un item par ligne"></textarea>
+                        <span>Items *</span>
+                        <textarea rows="8" [(ngModel)]="newTemplate.itemsText" placeholder="Un item par ligne" required minlength="3" maxlength="5000"></textarea>
                     </label>
                 </div>
             </div>

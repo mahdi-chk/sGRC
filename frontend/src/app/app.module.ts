@@ -170,7 +170,7 @@ const routes: Routes = [
       // Routes Plan d Audit
       { path: 'audit-plans', component: AuditPlansComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },
       { path: 'audit-plans/:id', component: AuditPlanDetailComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN] } },
       { path: 'auditing', redirectTo: 'audit-plans', pathMatch: 'full' },
       { path: 'audit-checklists', redirectTo: 'audit-plans', pathMatch: 'full' },
       { path: 'audit-evidence-explorer', redirectTo: 'audit-plans', pathMatch: 'full' },

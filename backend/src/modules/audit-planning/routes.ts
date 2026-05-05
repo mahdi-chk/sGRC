@@ -166,6 +166,20 @@ router.post('/plans/:id/missions', authorizeRoles(...auditDivisionManagerRoles),
     }
 });
 
+router.post('/plans/:id/suggested-missions', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
+    try {
+        const missions = await AuditPlanService.createPlanMissionsFromSuggestions(
+            parseInt(req.params.id as string, 10),
+            req.user!.id,
+            req.user!.role,
+            req.body?.missions
+        );
+        res.status(201).json(missions);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la creation des missions suggerees', error: error.message });
+    }
+});
+
 router.put('/plans/:planId/missions/:missionId', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
         const mission = await AuditPlanService.updatePlanMission(
@@ -556,12 +570,14 @@ router.delete('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPE
 router.post('/suggest-plan', authorizeRoles(...auditDivisionManagerRoles), async (req: AuthRequest, res) => {
     try {
         const requestedType = String(req.body?.type || req.query?.type || AuditRecordType.MISSION_AUDIT);
+        const requestedPlanId = req.body?.planId ? Number(req.body.planId) : null;
         appLogger.info('AuditPlanning', 'Suggested AI planning request received', {
             userId: req.user!.id,
             role: req.user!.role,
             requestedType,
+            requestedPlanId,
         });
-        const plan = await AuditingService.suggestAnnualPlan(req.user!.role, requestedType);
+        const plan = await AuditingService.suggestAnnualPlan(req.user!.role, requestedType, requestedPlanId);
         res.json(plan);
     } catch (error: any) {
         appLogger.error('AuditPlanning', 'Suggested AI planning request failed', {

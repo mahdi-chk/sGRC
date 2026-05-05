@@ -134,11 +134,11 @@
         <div #projected modal-body class="modal-form">
             <div class="form-group full">
                 <label>Note d'import</label>
-                <input type="text" class="finput" [(ngModel)]="importPlanActionType" placeholder="Optionnel">
+                <input type="text" class="finput" [(ngModel)]="importPlanActionType" placeholder="Optionnel" maxlength="80">
             </div>
             <div class="form-group full">
-                <label>Fichier Excel</label>
-                <input type="file" class="finput" accept=".xlsx,.xls" (change)="onImportFileSelected($event)">
+                <label>Fichier Excel *</label>
+                <input type="file" class="finput" accept=".xlsx,.xls" (change)="onImportFileSelected($event)" required>
                 <small class="field-hint" *ngIf="importFile">{{ importFile.name }}</small>
             </div>
             <div class="form-footer">
@@ -154,8 +154,8 @@
         <div #projected modal-body class="modal-form">
             <p>Selectionnez le responsable pour <strong>{{ selectedMission?.regleDnssi || selectedMission?.titre }}</strong></p>
             <div class="form-group">
-                <label>Responsable</label>
-                <select class="finput" [(ngModel)]="selectedAuditorId">
+                <label>Responsable *</label>
+                <select class="finput" [(ngModel)]="selectedAuditorId" required>
                     <option value="">Selectionner...</option>
                     <option *ngFor="let u of auditors" [value]="u.id">{{ u.prenom }} {{ u.nom }}</option>
                 </select>
@@ -172,12 +172,12 @@
     <app-modal *ngIf="showReportModal" title="Soumettre Rapport d'Audit" (close)="showReportModal = false">
         <div #projected modal-body class="modal-form">
             <div class="form-group full">
-                <label>Rapport Final d'Audit</label>
-                <textarea [(ngModel)]="reportData.rapport" rows="6" class="finput"></textarea>
+                <label>Rapport Final d'Audit *</label>
+                <textarea [(ngModel)]="reportData.rapport" rows="6" class="finput" required minlength="10" maxlength="5000"></textarea>
             </div>
             <div class="form-group full">
                 <label>Recommandations</label>
-                <textarea [(ngModel)]="reportData.recommandations" rows="4" class="finput"></textarea>
+                <textarea [(ngModel)]="reportData.recommandations" rows="4" class="finput" maxlength="3000"></textarea>
             </div>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showReportModal = false">Annuler</button>
@@ -255,28 +255,28 @@
     <app-modal *ngIf="showEditModal" [title]="isCreateMode ? 'Creer un audit' : 'Modifier l audit'" (close)="showEditModal = false">
         <div #projected modal-body class="modal-form" *ngIf="selectedMission">
             <div class="form-group full">
-                <label>Titre</label>
-                <input type="text" [(ngModel)]="selectedMission.titre" class="finput" placeholder="Audit de revue">
+                <label>Titre *</label>
+                <input type="text" [(ngModel)]="selectedMission.titre" class="finput" placeholder="Audit de revue" required minlength="3" maxlength="160">
             </div>
             <div class="form-group full">
-                <label>Objectifs</label>
-                <textarea [(ngModel)]="selectedMission.objectifs" class="finput" rows="3"></textarea>
+                <label>Objectifs *</label>
+                <textarea [(ngModel)]="selectedMission.objectifs" class="finput" rows="3" required minlength="10" maxlength="2000"></textarea>
             </div>
             <div class="form-group full">
-                <label>Responsabilites</label>
-                <textarea [(ngModel)]="selectedMission.responsabilites" class="finput" rows="2"></textarea>
+                <label>Responsabilites *</label>
+                <textarea [(ngModel)]="selectedMission.responsabilites" class="finput" rows="2" required minlength="3" maxlength="1000"></textarea>
             </div>
             <div class="detail-grid">
                 <div class="form-group">
                     <label>Horizon</label>
-                    <select [(ngModel)]="selectedMission.horizon" class="finput">
+                    <select [(ngModel)]="selectedMission.horizon" class="finput" required>
                         <option [value]="AuditMissionHorizon.COURT_TERME">{{ horizonLabelMap[AuditMissionHorizon.COURT_TERME] }}</option>
                         <option [value]="AuditMissionHorizon.MOYEN_TERME">{{ horizonLabelMap[AuditMissionHorizon.MOYEN_TERME] }}</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Priorite</label>
-                    <select [(ngModel)]="selectedMission.priorite" class="finput">
+                    <select [(ngModel)]="selectedMission.priorite" class="finput" required>
                         <option [ngValue]="1">1</option>
                         <option [ngValue]="2">2</option>
                         <option [ngValue]="3">3</option>
@@ -288,7 +288,7 @@
                 </div>
                 <div class="form-group">
                     <label>Etat</label>
-                    <select [(ngModel)]="selectedMission.statut" class="finput">
+                    <select [(ngModel)]="selectedMission.statut" class="finput" required>
                         <option [value]="AuditMissionStatus.NOK">{{ statusLabelMap[AuditMissionStatus.NOK] }}</option>
                         <option [value]="AuditMissionStatus.EN_COURS">{{ statusLabelMap[AuditMissionStatus.EN_COURS] }}</option>
                         <option [value]="AuditMissionStatus.OK">{{ statusLabelMap[AuditMissionStatus.OK] }}</option>

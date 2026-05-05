@@ -549,11 +549,15 @@ export class AuditPlanningService {
         return this.http.delete(`${this.apiUrl}/missions/${missionId}/action-plans/${itemId}`);
     }
 
-    suggestPlan(type: AuditPlanningRecordType = AuditPlanningRecordType.MISSION_AUDIT): Observable<any[]> {
-        return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, { type });
+    suggestPlan(type: AuditPlanningRecordType = AuditPlanningRecordType.MISSION_AUDIT, planId?: number | null): Observable<any[]> {
+        return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, { type, planId });
     }
 
     createMissionsFromPlan(missions: any[], type: AuditPlanningRecordType = AuditPlanningRecordType.MISSION_AUDIT): Observable<any> {
         return this.http.post(`${this.apiUrl}/create-missions`, { missions, type });
+    }
+
+    createSuggestedMissionsInPlan(planId: number, missions: any[]): Observable<AuditPlanMission[]> {
+        return this.http.post<AuditPlanMission[]>(`${this.apiUrl}/plans/${planId}/suggested-missions`, { missions });
     }
 }

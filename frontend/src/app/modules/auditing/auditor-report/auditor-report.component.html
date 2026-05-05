@@ -51,14 +51,14 @@
                         <label><i class="fas fa-align-left"></i> Résultats de l'Audit (Rapport) <span class="req">*</span></label>
                         <textarea [(ngModel)]="reportData.rapport" rows="10" 
                             placeholder="Décrivez vos constatations, les écarts identifiés et les points forts..."
-                            class="finput"></textarea>
+                            class="finput" required minlength="10" maxlength="5000"></textarea>
                     </div>
 
                     <div class="form-section">
                         <label><i class="fas fa-lightbulb"></i> Recommandations <span class="req">*</span></label>
                         <textarea [(ngModel)]="reportData.recommandations" rows="5" 
                             placeholder="Proposez des actions correctives pour remédier aux faiblesses identifiées..."
-                            class="finput"></textarea>
+                            class="finput" required minlength="10" maxlength="3000"></textarea>
                     </div>
 
                     <div class="form-actions-bar">

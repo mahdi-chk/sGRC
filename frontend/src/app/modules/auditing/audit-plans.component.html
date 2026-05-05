@@ -10,7 +10,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn-secondary" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
+      <button class="btn-secondary" *ngIf="canOpenPlanningWorkspace" (click)="openPlanningWorkspace()">
         <i class="fas fa-compass"></i> Construction du plan
       </button>
       <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openCreateModal()">
@@ -31,7 +31,7 @@
       <h2>Un espace centralise pour tout le cycle de l audit avec filtrage par profil.</h2>
       <p>{{ scopeDescription }}</p>
       <div class="hero-actions">
-        <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
+        <button class="btn-ai-plan" *ngIf="canOpenPlanningWorkspace" (click)="openPlanningWorkspace()">
           <i class="fas fa-magic"></i> Ouvrir la planification
         </button>
         <button class="btn-secondary" (click)="loadPlans()">
@@ -89,9 +89,9 @@
   </section>
 
   <div class="filters-bar premium mb-4">
-    <div class="filter-controls">
-      <div class="filter-group">
-        <input type="text" [(ngModel)]="filters.nom" placeholder="Nom du plan">
+      <div class="filter-controls">
+        <div class="filter-group">
+        <input type="text" [(ngModel)]="filters.nom" placeholder="Nom du plan" maxlength="120">
       </div>
       <div class="filter-group">
         <select [(ngModel)]="filters.nature">
@@ -163,7 +163,7 @@
           <button class="btn-ai-plan" *ngIf="isManagementRole" (click)="openCreateModal()">
             <i class="fas fa-plus"></i> Creer un plan
           </button>
-          <button class="btn-secondary" *ngIf="isManagementRole" (click)="openPlanningWorkspace()">
+          <button class="btn-secondary" *ngIf="canOpenPlanningWorkspace" (click)="openPlanningWorkspace()">
             <i class="fas fa-magic"></i> Construire le plan
           </button>
         </div>
@@ -174,19 +174,21 @@
   <app-modal *ngIf="showCreateModal" [title]="editingPlanId ? 'Modifier le plan' : 'Creer un plan d audit'" (close)="showCreateModal = false">
     <div #projected modal-body class="modal-form">
       <div class="form-group full">
-        <label>Nom</label>
-        <input [(ngModel)]="planForm.nom" class="finput" type="text" placeholder="Plan 2026">
+        <label>Nom *</label>
+        <input [(ngModel)]="planForm.nom" class="finput" type="text" placeholder="Plan 2026" required minlength="3" maxlength="120">
+        <small class="field-note">Obligatoire, 3 a 120 caracteres.</small>
       </div>
       <div class="detail-grid">
         <div class="form-group">
-          <label>Nature</label>
-          <select [(ngModel)]="planForm.natureCode" class="finput">
+          <label>Nature *</label>
+          <select [(ngModel)]="planForm.natureCode" class="finput" required>
             <option *ngFor="let option of natureOptions" [value]="option.code">{{ option.label }}</option>
           </select>
         </div>
         <div class="form-group">
           <label>Calendrier</label>
-          <input [(ngModel)]="planForm.calendrier" class="finput" type="text" placeholder="01/01/2026 - 31/12/2026">
+          <input [(ngModel)]="planForm.calendrier" class="finput" type="text" placeholder="01/01/2026 - 31/12/2026" maxlength="120">
+          <small class="field-note">Optionnel, maximum 120 caracteres.</small>
         </div>
         <div class="form-group">
           <label>Date de debut</label>
@@ -195,11 +197,13 @@
         <div class="form-group">
           <label>Date de fin</label>
           <input [(ngModel)]="planForm.dateFin" class="finput" type="date">
+          <small class="field-note" *ngIf="isPlanDateRangeInvalid">La date de fin doit etre posterieure ou egale a la date de debut.</small>
         </div>
       </div>
       <div class="form-group full">
         <label>Description</label>
-        <textarea [(ngModel)]="planForm.description" class="finput" rows="4"></textarea>
+        <textarea [(ngModel)]="planForm.description" class="finput" rows="4" maxlength="500"></textarea>
+        <small class="field-note">Optionnel, {{ (planForm.description || '').length }}/500 caracteres.</small>
       </div>
       <div class="form-group">
         <label>
@@ -207,9 +211,12 @@
           Definir comme modele
         </label>
       </div>
+      <div class="form-errors full" *ngIf="planFormSubmitted && planFormErrors.length > 0">
+        <p *ngFor="let error of planFormErrors">{{ error }}</p>
+      </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showCreateModal = false">Annuler</button>
-        <button class="btn-save" (click)="savePlan()" [disabled]="isSaving || !planForm.nom">
+        <button class="btn-save" (click)="savePlan()" [disabled]="isSaving || !isPlanFormValid">
           {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
         </button>
       </div>

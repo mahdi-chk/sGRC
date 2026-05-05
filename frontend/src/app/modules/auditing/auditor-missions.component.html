@@ -189,15 +189,15 @@
         <div #projected modal-body class="modal-form">
             <div class="form-group full">
                 <label>Rapport Final d Audit <span class="req">*</span></label>
-                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Decrivez les resultats de l audit..." class="finput"></textarea>
+                <textarea [(ngModel)]="reportData.rapport" rows="6" placeholder="Decrivez les resultats de l audit..." class="finput" required minlength="10" maxlength="5000"></textarea>
             </div>
             <div class="form-group full">
                 <label>Recommandations <span class="req">*</span></label>
-                <textarea [(ngModel)]="reportData.recommandations" rows="4" placeholder="Actions correctives suggerees..." class="finput"></textarea>
+                <textarea [(ngModel)]="reportData.recommandations" rows="4" placeholder="Actions correctives suggerees..." class="finput" required minlength="10" maxlength="3000"></textarea>
             </div>
             <div class="form-footer">
                 <button class="btn-cancel" (click)="showReportModal = false">Annuler</button>
-                <button class="btn-save" (click)="submitReport()" [disabled]="!reportData.rapport || isLoading">
+                <button class="btn-save" (click)="submitReport()" [disabled]="!reportData.rapport || !reportData.recommandations || isLoading">
                     {{ isLoading ? 'Envoi...' : 'Soumettre le Rapport' }}
                 </button>
             </div>
@@ -244,7 +244,7 @@
     <app-modal *ngIf="showEvidenceModal" title="Tracabilite des preuves" (close)="showEvidenceModal = false">
         <div #projected modal-body class="modal-form">
             <div class="evidence-upload-section">
-                <input type="file" (change)="onFileSelected($event)" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png">
+                <input type="file" (change)="onFileSelected($event)" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" required>
                 <button class="btn-primary" (click)="uploadEvidence()" [disabled]="!selectedFile || isUploading">
                     <i class="fas fa-upload"></i> {{ isUploading ? 'Televersement...' : 'Ajouter Preuve' }}
                 </button>

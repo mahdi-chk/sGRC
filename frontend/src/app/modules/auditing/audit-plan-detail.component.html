@@ -119,7 +119,7 @@
         <div class="detail-grid">
           <div class="form-group">
             <label>Transition</label>
-            <select [(ngModel)]="transitionForm.transition" class="finput">
+            <select [(ngModel)]="transitionForm.transition" class="finput" required>
               <option value="">Selectionner...</option>
               <option *ngFor="let transition of planTransitionOptions" [value]="transition">
                 {{ formatPlanTransitionLabel(transition) }}
@@ -128,10 +128,11 @@
           </div>
           <div class="form-group full">
             <label>Commentaire</label>
-            <textarea [(ngModel)]="transitionForm.comment" rows="3" class="finput"></textarea>
+            <textarea [(ngModel)]="transitionForm.comment" rows="3" class="finput" maxlength="500"></textarea>
+            <small class="field-note" *ngIf="selectedPlanTransitionRequiresComment">Commentaire obligatoire pour demander une revue.</small>
           </div>
         </div>
-        <button class="btn-save" (click)="applyTransition()" [disabled]="!transitionForm.transition || isTransitioning">
+        <button class="btn-save" (click)="applyTransition()" [disabled]="!canSubmitPlanTransition">
           {{ isTransitioning ? 'Traitement...' : 'Appliquer la transition' }}
         </button>
       </div>
@@ -369,14 +370,14 @@
             <span></span>
           </div>
           <div class="resource-row" *ngFor="let resource of missionResources; let i = index">
-            <select class="finput" [(ngModel)]="resource.userId" [disabled]="!workspace.permissions.canManageResources">
+            <select class="finput" [(ngModel)]="resource.userId" [disabled]="!workspace.permissions.canManageResources" required>
               <option [ngValue]="0">Utilisateur</option>
               <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
             </select>
-            <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!workspace.permissions.canManageResources">
+            <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!workspace.permissions.canManageResources" required>
               <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
             </select>
-            <input class="finput" type="number" min="0" max="100" [(ngModel)]="resource.allocationPercent" [disabled]="!workspace.permissions.canManageResources">
+            <input class="finput" type="number" min="0" max="100" step="1" [(ngModel)]="resource.allocationPercent" [disabled]="!workspace.permissions.canManageResources" required>
             <button class="action-btn btn-delete" *ngIf="workspace.permissions.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
           </div>
 
@@ -390,7 +391,7 @@
           </div>
 
           <div class="section-actions" *ngIf="workspace.permissions.canManageResources">
-            <button class="btn-save" (click)="saveResources()" [disabled]="isSavingResources">
+            <button class="btn-save" (click)="saveResources()" [disabled]="isSavingResources || !resourcesFormIsValid">
               {{ isSavingResources ? 'Sauvegarde...' : 'Sauvegarder les affectations' }}
             </button>
           </div>
@@ -412,14 +413,15 @@
               <div class="detail-grid" *ngIf="workspace.permissions.canSendMissionOrder">
                 <div class="form-group">
                   <label>Reference</label>
-                  <input [(ngModel)]="missionOrderForm.reference" class="finput" type="text">
+                  <input [(ngModel)]="missionOrderForm.reference" class="finput" type="text" maxlength="80">
+                  <small class="field-note">Optionnel, maximum 80 caracteres.</small>
                 </div>
                 <div class="form-group full">
                   <label>Commentaire</label>
-                  <textarea [(ngModel)]="missionOrderForm.comment" class="finput" rows="2"></textarea>
+                  <textarea [(ngModel)]="missionOrderForm.comment" class="finput" rows="2" maxlength="500"></textarea>
                 </div>
               </div>
-              <button class="btn-save" *ngIf="workspace.permissions.canSendMissionOrder" (click)="saveMissionOrder()" [disabled]="isSavingMissionOrder">
+              <button class="btn-save" *ngIf="workspace.permissions.canSendMissionOrder" (click)="saveMissionOrder()" [disabled]="isSavingMissionOrder || !missionOrderFormIsValid">
                 {{ isSavingMissionOrder ? 'Envoi...' : 'Envoyer l ordre de mission' }}
               </button>
             </div>
@@ -453,12 +455,12 @@
 
               <div class="checklist-editor" *ngIf="workspace.permissions.canEditWorkProgram && activeMissionPanel === 'process'">
                 <div class="checklist-row" *ngFor="let item of workProgramItems; let i = index">
-                  <input class="finput" type="text" [(ngModel)]="item.texte" placeholder="Point de controle">
+                  <input class="finput" type="text" [(ngModel)]="item.texte" placeholder="Point de controle" required minlength="3" maxlength="300">
                   <button class="action-btn btn-delete" (click)="removeWorkProgramItem(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
                 </div>
                 <div class="section-actions">
                   <button class="btn-secondary" (click)="addWorkProgramItem()">Ajouter une ligne</button>
-                  <button class="btn-save" (click)="saveWorkProgram()" [disabled]="isSavingWorkProgram">
+                  <button class="btn-save" (click)="saveWorkProgram()" [disabled]="isSavingWorkProgram || !workProgramFormIsValid">
                     {{ isSavingWorkProgram ? 'Sauvegarde...' : 'Sauvegarder le programme' }}
                   </button>
                 </div>
@@ -479,17 +481,18 @@
               <div class="detail-grid" *ngIf="workProgramTransitions.length > 0 && activeMissionPanel === 'validate'">
                 <div class="form-group">
                   <label>Transition</label>
-                  <select [(ngModel)]="workProgramTransitionForm.transition" class="finput">
+                  <select [(ngModel)]="workProgramTransitionForm.transition" class="finput" required>
                     <option value="">Selectionner...</option>
                     <option *ngFor="let transition of workProgramTransitions" [value]="transition">{{ transition }}</option>
                   </select>
                 </div>
                 <div class="form-group full">
                   <label>Commentaire</label>
-                  <textarea [(ngModel)]="workProgramTransitionForm.comment" rows="2" class="finput"></textarea>
+                  <textarea [(ngModel)]="workProgramTransitionForm.comment" rows="2" class="finput" maxlength="500"></textarea>
+                  <small class="field-note" *ngIf="selectedWorkProgramTransitionRequiresComment">Commentaire obligatoire pour demander une correction.</small>
                 </div>
               </div>
-              <button class="btn-save" *ngIf="workProgramTransitions.length > 0 && activeMissionPanel === 'validate'" (click)="applyWorkProgramTransition()" [disabled]="isApplyingWorkProgramTransition || !workProgramTransitionForm.transition">
+              <button class="btn-save" *ngIf="workProgramTransitions.length > 0 && activeMissionPanel === 'validate'" (click)="applyWorkProgramTransition()" [disabled]="!canSubmitWorkProgramTransition">
                 {{ isApplyingWorkProgramTransition ? 'Traitement...' : 'Appliquer la transition programme' }}
               </button>
             </div>
@@ -514,31 +517,34 @@
               <div class="detail-grid" *ngIf="workspace.permissions.canEditReport && activeMissionPanel === 'process'">
                 <div class="form-group full">
                   <label>Rapport</label>
-                  <textarea [(ngModel)]="reportForm.rapport" class="finput" rows="6"></textarea>
+                  <textarea [(ngModel)]="reportForm.rapport" class="finput" rows="6" required minlength="10" maxlength="5000"></textarea>
+                  <small class="field-note">Obligatoire, 10 a 5000 caracteres.</small>
                 </div>
                 <div class="form-group full">
                   <label>Recommandations et constats</label>
-                  <textarea [(ngModel)]="reportForm.recommandations" class="finput" rows="4"></textarea>
+                  <textarea [(ngModel)]="reportForm.recommandations" class="finput" rows="4" maxlength="3000"></textarea>
+                  <small class="field-note">Optionnel, maximum 3000 caracteres.</small>
                 </div>
               </div>
-              <button class="btn-save" *ngIf="workspace.permissions.canEditReport && activeMissionPanel === 'process'" (click)="saveReport()" [disabled]="isSavingReport">
+              <button class="btn-save" *ngIf="workspace.permissions.canEditReport && activeMissionPanel === 'process'" (click)="saveReport()" [disabled]="isSavingReport || !reportFormIsValid">
                 {{ isSavingReport ? 'Sauvegarde...' : 'Sauvegarder le rapport' }}
               </button>
 
               <div class="detail-grid" *ngIf="reportTransitions.length > 0 && activeMissionPanel === 'validate'">
                 <div class="form-group">
                   <label>Transition</label>
-                  <select [(ngModel)]="reportTransitionForm.transition" class="finput">
+                  <select [(ngModel)]="reportTransitionForm.transition" class="finput" required>
                     <option value="">Selectionner...</option>
                     <option *ngFor="let transition of reportTransitions" [value]="transition">{{ transition }}</option>
                   </select>
                 </div>
                 <div class="form-group full">
                   <label>Commentaire</label>
-                  <textarea [(ngModel)]="reportTransitionForm.comment" rows="2" class="finput"></textarea>
+                  <textarea [(ngModel)]="reportTransitionForm.comment" rows="2" class="finput" maxlength="500"></textarea>
+                  <small class="field-note" *ngIf="selectedReportTransitionRequiresComment">Commentaire obligatoire pour demander une correction.</small>
                 </div>
               </div>
-              <button class="btn-save" *ngIf="reportTransitions.length > 0 && activeMissionPanel === 'validate'" (click)="applyReportTransition()" [disabled]="isApplyingReportTransition || !reportTransitionForm.transition">
+              <button class="btn-save" *ngIf="reportTransitions.length > 0 && activeMissionPanel === 'validate'" (click)="applyReportTransition()" [disabled]="!canSubmitReportTransition">
                 {{ isApplyingReportTransition ? 'Traitement...' : 'Appliquer la transition rapport' }}
               </button>
             </div>
@@ -594,7 +600,7 @@
               <div class="detail-grid" *ngIf="workspace.permissions.canUploadEvidence">
                 <div class="form-group full">
                   <label>Ajouter une preuve</label>
-                  <input class="finput" type="file" (change)="onEvidenceFileSelected($event)">
+                  <input class="finput" type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" (change)="onEvidenceFileSelected($event)" required>
                 </div>
               </div>
               <div class="section-actions" *ngIf="workspace.permissions.canUploadEvidence">
@@ -698,14 +704,14 @@
           </div>
           <div class="resource-card-list" *ngIf="missionResources.length">
             <div class="resource-card" *ngFor="let resource of missionResources; let i = index">
-              <select class="finput" [(ngModel)]="resource.userId" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+              <select class="finput" [(ngModel)]="resource.userId" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
                 <option [ngValue]="0">Utilisateur</option>
                 <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
               </select>
-              <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+              <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
                 <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
               </select>
-              <input class="finput" type="number" min="0" max="100" [(ngModel)]="resource.allocationPercent" [disabled]="!missionWorkspace?.permissions?.canManageResources">
+              <input class="finput" type="number" min="0" max="100" step="1" [(ngModel)]="resource.allocationPercent" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
               <span class="allocation-label">%</span>
               <button class="action-btn btn-delete" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
             </div>
@@ -719,7 +725,7 @@
             </select>
           </div>
 
-          <button class="btn-save" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="saveResources()" [disabled]="isSavingResources">
+          <button class="btn-save" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="saveResources()" [disabled]="isSavingResources || !resourcesFormIsValid">
             {{ isSavingResources ? 'Sauvegarde...' : 'Sauvegarder les ressources' }}
           </button>
         </div>
@@ -728,7 +734,7 @@
       <div class="resource-admin-panel side">
         <div class="form-group">
           <label>Utilisateur pour competences</label>
-          <select class="finput" [(ngModel)]="selectedUserForSkillsId" (ngModelChange)="loadUserSkills()">
+        <select class="finput" [(ngModel)]="selectedUserForSkillsId" (ngModelChange)="loadUserSkills()" required>
             <option [ngValue]="null">Selectionner...</option>
             <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
           </select>
@@ -804,15 +810,18 @@
     <div #projected modal-body class="modal-form">
       <div class="form-group full">
         <label>Titre *</label>
-        <input [(ngModel)]="missionForm.titre" class="finput" type="text">
+        <input [(ngModel)]="missionForm.titre" class="finput" type="text" required minlength="3" maxlength="160">
+        <small class="field-note">Obligatoire, 3 a 160 caracteres.</small>
       </div>
       <div class="form-group full">
         <label>Objectifs *</label>
-        <textarea [(ngModel)]="missionForm.objectifs" class="finput" rows="3"></textarea>
+        <textarea [(ngModel)]="missionForm.objectifs" class="finput" rows="3" required minlength="10" maxlength="2000"></textarea>
+        <small class="field-note">Obligatoire, 10 a 2000 caracteres.</small>
       </div>
       <div class="form-group full">
         <label>Responsabilites *</label>
-        <textarea [(ngModel)]="missionForm.responsabilites" class="finput" rows="2"></textarea>
+        <textarea [(ngModel)]="missionForm.responsabilites" class="finput" rows="2" required minlength="3" maxlength="1000"></textarea>
+        <small class="field-note">Obligatoire, 3 a 1000 caracteres.</small>
       </div>
       <div class="detail-grid">
         <div class="form-group">
@@ -835,17 +844,18 @@
         </div>
         <div class="form-group">
           <label>Date prevue fin *</label>
-          <input [(ngModel)]="missionForm.datePrevueFin" class="finput" type="date">
+          <input [(ngModel)]="missionForm.datePrevueFin" class="finput" type="date" required>
+          <small class="field-note" *ngIf="missionFormDateRangeInvalid">La fin prevue doit etre posterieure ou egale au debut prevu.</small>
         </div>
       </div>
       <div class="detail-grid">
         <div class="form-group">
           <label>Axe</label>
-          <input [(ngModel)]="missionForm.axe" class="finput" type="text">
+          <input [(ngModel)]="missionForm.axe" class="finput" type="text" maxlength="120">
         </div>
         <div class="form-group">
           <label>Evaluation</label>
-          <input [(ngModel)]="missionForm.evaluation" class="finput" type="text">
+          <input [(ngModel)]="missionForm.evaluation" class="finput" type="text" maxlength="120">
         </div>
       </div>
       <div class="form-footer">
@@ -861,15 +871,15 @@
     <div #projected modal-body class="modal-form">
       <div class="form-group full">
         <label>Titre *</label>
-        <input [(ngModel)]="missionEditForm.titre" class="finput" type="text">
+        <input [(ngModel)]="missionEditForm.titre" class="finput" type="text" required minlength="3" maxlength="160">
       </div>
       <div class="form-group full">
         <label>Objectifs *</label>
-        <textarea [(ngModel)]="missionEditForm.objectifs" class="finput" rows="3"></textarea>
+        <textarea [(ngModel)]="missionEditForm.objectifs" class="finput" rows="3" required minlength="10" maxlength="2000"></textarea>
       </div>
       <div class="form-group full">
         <label>Responsabilites *</label>
-        <textarea [(ngModel)]="missionEditForm.responsabilites" class="finput" rows="2"></textarea>
+        <textarea [(ngModel)]="missionEditForm.responsabilites" class="finput" rows="2" required minlength="3" maxlength="1000"></textarea>
       </div>
       <div class="detail-grid">
         <div class="form-group">
@@ -892,7 +902,8 @@
         </div>
         <div class="form-group">
           <label>Date prevue fin *</label>
-          <input [(ngModel)]="missionEditForm.datePrevueFin" class="finput" type="date">
+          <input [(ngModel)]="missionEditForm.datePrevueFin" class="finput" type="date" required>
+          <small class="field-note" *ngIf="missionEditFormDateRangeInvalid">La fin prevue doit etre posterieure ou egale au debut prevu.</small>
         </div>
       </div>
       <div class="detail-grid">
@@ -903,14 +914,15 @@
         <div class="form-group">
           <label>Date reelle fin</label>
           <input [(ngModel)]="missionEditForm.dateReelleFin" class="finput" type="date">
+          <small class="field-note" *ngIf="missionEditRealDateRangeInvalid">La fin reelle doit etre posterieure ou egale au debut reel.</small>
         </div>
         <div class="form-group">
           <label>Axe</label>
-          <input [(ngModel)]="missionEditForm.axe" class="finput" type="text">
+          <input [(ngModel)]="missionEditForm.axe" class="finput" type="text" maxlength="120">
         </div>
         <div class="form-group">
           <label>Evaluation</label>
-          <input [(ngModel)]="missionEditForm.evaluation" class="finput" type="text">
+          <input [(ngModel)]="missionEditForm.evaluation" class="finput" type="text" maxlength="120">
         </div>
       </div>
       <div class="form-footer">
@@ -927,11 +939,11 @@
       <div class="detail-grid">
         <div class="form-group">
           <label>Ordre</label>
-          <input [(ngModel)]="actionPlanForm.ordre" class="finput" type="number">
+          <input [(ngModel)]="actionPlanForm.ordre" class="finput" type="number" min="0" step="1">
         </div>
         <div class="form-group">
           <label>Type</label>
-          <input [(ngModel)]="actionPlanForm.planActionType" class="finput" type="text">
+          <input [(ngModel)]="actionPlanForm.planActionType" class="finput" type="text" maxlength="80">
         </div>
         <div class="form-group">
           <label>Priorite</label>
@@ -945,12 +957,12 @@
         </div>
       </div>
       <div class="form-group full">
-        <label>Regle / constat</label>
-        <textarea [(ngModel)]="actionPlanForm.regleDnssi" class="finput" rows="2"></textarea>
+        <label>Regle / constat *</label>
+        <textarea [(ngModel)]="actionPlanForm.regleDnssi" class="finput" rows="2" required maxlength="1000"></textarea>
       </div>
       <div class="form-group full">
-        <label>Recommandation</label>
-        <textarea [(ngModel)]="actionPlanForm.recommandations" class="finput" rows="3"></textarea>
+        <label>Recommandation *</label>
+        <textarea [(ngModel)]="actionPlanForm.recommandations" class="finput" rows="3" required maxlength="2000"></textarea>
       </div>
       <div class="detail-grid">
         <div class="form-group">
@@ -962,7 +974,7 @@
         </div>
         <div class="form-group">
           <label>Nom responsable libre</label>
-          <input [(ngModel)]="actionPlanForm.responsableNom" class="finput" type="text">
+          <input [(ngModel)]="actionPlanForm.responsableNom" class="finput" type="text" maxlength="120">
         </div>
         <div class="form-group">
           <label>Echeance</label>
@@ -970,12 +982,12 @@
         </div>
         <div class="form-group">
           <label>Horizon</label>
-          <input [(ngModel)]="actionPlanForm.horizon" class="finput" type="text">
+          <input [(ngModel)]="actionPlanForm.horizon" class="finput" type="text" maxlength="80">
         </div>
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showActionPlanModal = false">Annuler</button>
-        <button class="btn-save" (click)="saveActionPlan()" [disabled]="isSavingActionPlan || !actionPlanForm.regleDnssi || !actionPlanForm.recommandations">
+        <button class="btn-save" (click)="saveActionPlan()" [disabled]="isSavingActionPlan || !actionPlanFormIsValid">
           {{ isSavingActionPlan ? 'Sauvegarde...' : 'Enregistrer' }}
         </button>
       </div>

@@ -5,6 +5,7 @@
 
 import { Op } from 'sequelize';
 import { AuditMission, AuditMissionStatus, AuditRecordType } from './audit-mission.model';
+import { AuditPlan } from './audit-plan.model';
 import { Risk } from '../risk/risk.model';
 import { AIService } from '../ai/ai.service';
 import { User } from '../users/user.model';
@@ -631,7 +632,7 @@ export class AuditingService {
         }));
     }
 
-    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_DIRECTEUR, type: string = AuditRecordType.MISSION_AUDIT) {
+    static async suggestAnnualPlan(role: UserRole = UserRole.AUDIT_DIRECTEUR, type: string = AuditRecordType.MISSION_AUDIT, planId?: number | null) {
         const risks = await Risk.findAll({
             where: {
                 statutId: [
@@ -647,14 +648,38 @@ export class AuditingService {
         }
 
         const normalizedType = this.normalizeRecordType(type);
+        const targetPlan = planId ? await AuditPlan.findByPk(planId) : null;
+        const planContext = targetPlan
+            ? {
+                planId: targetPlan.id,
+                nom: targetPlan.nom,
+                dateDebut: targetPlan.dateDebut,
+                dateFin: targetPlan.dateFin,
+                status: (targetPlan as any).statusCode || (targetPlan as any).status || null,
+            }
+            : undefined;
         const sortedRisks = [...risks].sort((a, b) => (b.niveauCotationRisqueNet || 0) - (a.niveauCotationRisqueNet || 0));
-        const suggestions = await AIService.generateAuditPlan(sortedRisks, role, normalizedType);
+        const suggestions = await AIService.generateAuditPlan(sortedRisks, role, normalizedType, planContext);
         return suggestions.map((item) => ({
             ...item,
             type: normalizedType,
             planActionType: item.planActionType || item.typePlanAction || null,
-            regleDnssi: item.regleDnssi || item.titre || null,
-            recommandations: item.recommandations || item.objectifs || item.titre || null,
+            ...(normalizedType === AuditRecordType.PLAN_ACTION_AUDIT
+                ? {
+                    regleDnssi: item.regleDnssi || item.titre || null,
+                    recommandations: item.recommandations || item.objectifs || item.titre || null,
+                }
+                : {
+                    titre: item.titre,
+                    objectifs: item.objectifs || item.recommandations || item.titre,
+                    responsabilites: item.responsabilites || item.responsableNom || 'A definir',
+                    category: item.category || item.categoryCode || null,
+                    quarter: item.quarter || item.quarterCode || null,
+                    datePrevueDebut: item.datePrevueDebut || null,
+                    datePrevueFin: item.datePrevueFin || null,
+                    axe: item.axe || null,
+                    evaluation: item.evaluation || null,
+                }),
         }));
     }
 

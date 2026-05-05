@@ -937,6 +937,52 @@ export class AuditPlanService {
         return this.hydrateMission(mission);
     }
 
+    static async createPlanMissionsFromSuggestions(planId: number, actorId: number, actorRole: string, missionsData: any[]) {
+        this.ensurePlanWritable(actorRole);
+        const plan = await this.getPlanById(planId);
+        this.ensurePlanEditable(plan);
+
+        const eligibleStatuses = [
+            AuditPlanStatusCode.CREE,
+            AuditPlanStatusCode.A_VALIDER,
+            AuditPlanStatusCode.VALIDE_DIRECTION,
+            AuditPlanStatusCode.VALIDE_CONSEIL,
+            AuditPlanStatusCode.VALIDE_COMITE,
+        ] as string[];
+
+        if (!eligibleStatuses.includes(this.getPlanStatusCode(plan))) {
+            throw new Error('Les suggestions IA peuvent etre ajoutees uniquement a un plan en creation, a valider ou deja valide');
+        }
+
+        if (!Array.isArray(missionsData) || missionsData.length === 0) {
+            throw new Error('Aucune mission selectionnee');
+        }
+
+        const created: any[] = [];
+
+        for (const data of missionsData) {
+            const mission = await AuditingService.createRecord(actorId, {
+                ...data,
+                type: AuditRecordType.MISSION_AUDIT,
+                auditPlanId: planId,
+                titre: data.titre || data.regleDnssi || data.code,
+                objectifs: data.objectifs || data.recommandations || data.titre || data.regleDnssi,
+                responsabilites: data.responsabilites || data.responsableNom || 'A definir',
+                category: data.category || data.categoryCode || data.categorie || null,
+                quarter: data.quarter || data.quarterCode || data.trimestre || null,
+                datePrevueDebut: data.datePrevueDebut || null,
+                datePrevueFin: data.datePrevueFin || data.delai || null,
+                axe: data.axe || null,
+                evaluation: data.evaluation || null,
+                delai: data.datePrevueFin || data.delai || new Date(Date.now() + (Number(data.delaiSuggestion) || 30) * 24 * 60 * 60 * 1000),
+            });
+
+            created.push(await this.hydrateMission(mission));
+        }
+
+        return created;
+    }
+
     static async updatePlanMission(planId: number, missionId: number, actorRole: string, data: any) {
         this.ensurePlanWritable(actorRole);
 

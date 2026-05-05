@@ -307,8 +307,8 @@ export class AuditingService {
         return this.http.get<AuditMission[]>(`${this.planningApiUrl}/missions`, { params });
     }
 
-    suggestPlan(type: AuditRecordType = AuditRecordType.MISSION_AUDIT): Observable<any[]> {
-        return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, { type });
+    suggestPlan(type: AuditRecordType = AuditRecordType.MISSION_AUDIT, planId?: number | null): Observable<any[]> {
+        return this.http.post<any[]>(`${this.apiUrl}/suggest-plan`, { type, planId });
     }
 
     createMissionsFromPlan(missions: any[], type: AuditRecordType = AuditRecordType.MISSION_AUDIT): Observable<any> {

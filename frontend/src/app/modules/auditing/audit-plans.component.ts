@@ -39,6 +39,7 @@ export class AuditPlansComponent implements OnInit {
   };
 
   planForm: Partial<AuditPlan> = this.emptyPlan();
+  planFormSubmitted = false;
 
   constructor(
     private auditPlanningService: AuditPlanningService,
@@ -86,7 +87,61 @@ export class AuditPlansComponent implements OnInit {
 
   get isManagementRole(): boolean {
     const role = this.currentUserRole;
-    return role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE || role === UserRole.CHEF_MISSION || role === UserRole.SUPER_ADMIN;
+    return role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE || role === UserRole.SUPER_ADMIN;
+  }
+
+  get canOpenPlanningWorkspace(): boolean {
+    return this.isManagementRole;
+  }
+
+  get isPlanFormValid(): boolean {
+    const nom = String(this.planForm.nom || '').trim();
+    const nature = String(this.planForm.natureCode || '').trim();
+    return nom.length >= 3
+      && nom.length <= 120
+      && !!nature
+      && !this.isPlanDateRangeInvalid
+      && String(this.planForm.calendrier || '').length <= 120
+      && String(this.planForm.description || '').length <= 500;
+  }
+
+  get isPlanDateRangeInvalid(): boolean {
+    if (!this.planForm.dateDebut || !this.planForm.dateFin) {
+      return false;
+    }
+
+    return new Date(this.planForm.dateFin).getTime() < new Date(this.planForm.dateDebut).getTime();
+  }
+
+  get planFormErrors(): string[] {
+    const errors: string[] = [];
+    const nom = String(this.planForm.nom || '').trim();
+
+    if (nom.length === 0) {
+      errors.push('Le nom du plan est obligatoire.');
+    } else if (nom.length < 3) {
+      errors.push('Le nom doit contenir au moins 3 caracteres.');
+    } else if (nom.length > 120) {
+      errors.push('Le nom ne doit pas depasser 120 caracteres.');
+    }
+
+    if (!String(this.planForm.natureCode || '').trim()) {
+      errors.push('La nature du plan est obligatoire.');
+    }
+
+    if (this.isPlanDateRangeInvalid) {
+      errors.push('La date de fin doit etre posterieure ou egale a la date de debut.');
+    }
+
+    if (String(this.planForm.calendrier || '').length > 120) {
+      errors.push('Le calendrier ne doit pas depasser 120 caracteres.');
+    }
+
+    if (String(this.planForm.description || '').length > 500) {
+      errors.push('La description ne doit pas depasser 500 caracteres.');
+    }
+
+    return errors;
   }
 
   get profileDashboardTitle(): string {
@@ -182,6 +237,7 @@ export class AuditPlansComponent implements OnInit {
   openCreateModal(): void {
     this.editingPlanId = null;
     this.planForm = this.emptyPlan();
+    this.planFormSubmitted = false;
     this.showCreateModal = true;
   }
 
@@ -196,11 +252,17 @@ export class AuditPlansComponent implements OnInit {
       dateFin: plan.dateFin ? new Date(plan.dateFin).toISOString().split('T')[0] : '',
       isTemplate: !!plan.isTemplate
     };
+    this.planFormSubmitted = false;
     this.showCreateModal = true;
   }
 
   savePlan(): void {
-    if (!this.planForm.nom || !this.planForm.natureCode || this.isSaving) {
+    this.planFormSubmitted = true;
+
+    if (!this.isPlanFormValid || this.isSaving) {
+      if (this.planFormErrors.length > 0) {
+        alert(this.planFormErrors[0]);
+      }
       return;
     }
 

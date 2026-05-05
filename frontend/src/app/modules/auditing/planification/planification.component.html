@@ -16,9 +16,9 @@
             <button class="btn-secondary" (click)="goToAudits()">
                 <i class="fas fa-arrow-right"></i> Module Audit
             </button>
-            <button class="btn-ai-plan" (click)="generatePlan()" [disabled]="isGeneratingPlan">
+            <button class="btn-ai-plan" (click)="generatePlan()" [disabled]="!canGenerateSuggestions">
                 <i class="fas" [class.fa-magic]="!isGeneratingPlan" [class.fa-spinner]="isGeneratingPlan" [class.fa-spin]="isGeneratingPlan"></i>
-                {{ isGeneratingPlan ? 'Analyse IA...' : 'Nouvelle Suggestion' }}
+                {{ isGeneratingPlan ? 'Analyse IA...' : (isCreatingPlan ? 'Creation plan...' : 'Nouvelle Suggestion') }}
             </button>
         </div>
     </div>
@@ -30,21 +30,130 @@
     </nav>
 
     <section class="planning-shell">
+        <div class="target-plan-panel">
+            <div class="target-plan-head">
+                <div>
+                    <span class="eyebrow">Plan cible</span>
+                    <h2>Rattacher les suggestions IA a un plan en creation ou valide</h2>
+                </div>
+                <div class="mode-switch">
+                    <button type="button" [class.active]="planMode === 'existing'" (click)="setPlanMode('existing')">
+                        <i class="fas fa-folder-open"></i> Plan existant
+                    </button>
+                    <button type="button" [class.active]="planMode === 'new'" (click)="setPlanMode('new')">
+                        <i class="fas fa-plus"></i> Nouveau plan
+                    </button>
+                </div>
+            </div>
+
+            <div class="existing-plan-list" *ngIf="planMode === 'existing'">
+                <div class="target-plan-toolbar">
+                    <p>Selectionnez un plan deja cree au statut creation ou valide pour recevoir les missions suggerees.</p>
+                    <button class="btn-secondary" type="button" (click)="loadPlans()" [disabled]="isLoadingPlans">
+                        <i class="fas fa-rotate"></i> Actualiser
+                    </button>
+                </div>
+
+                <div class="table-loading" *ngIf="isLoadingPlans">Chargement des plans...</div>
+
+                <div class="target-plan-table-wrap" *ngIf="!isLoadingPlans && availablePlans.length > 0">
+                    <table class="target-plan-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Nature</th>
+                                <th>Statut</th>
+                                <th>Periode</th>
+                                <th>Missions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let plan of availablePlans" [class.selected]="selectedPlanId === plan.id" (click)="selectPlan(plan)">
+                                <td>
+                                    <i class="fas" [class.fa-check-circle]="selectedPlanId === plan.id" [class.fa-circle]="selectedPlanId !== plan.id"></i>
+                                </td>
+                                <td>{{ plan.id }}</td>
+                                <td>{{ plan.nom }}</td>
+                                <td>{{ plan.nature || '-' }}</td>
+                                <td><span class="status-chip">{{ plan.status || 'Cree' }}</span></td>
+                                <td>{{ getPlanPeriod(plan) }}</td>
+                                <td>{{ plan.missionCount || 0 }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="plans-empty-inline" *ngIf="!isLoadingPlans && availablePlans.length === 0">
+                    <i class="fas fa-folder-open"></i>
+                    <div>
+                        <strong>Aucun plan eligible disponible</strong>
+                        <p>Cliquez sur Nouveau plan pour afficher le formulaire et creer un plan cible.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="target-plan-body new-plan-grid" *ngIf="planMode === 'new'">
+                <div class="form-group full">
+                    <label>Nom du plan</label>
+                    <input [(ngModel)]="planForm.nom" type="text" placeholder="Plan d audit 2026" required minlength="3" maxlength="120">
+                    <span class="field-hint">Obligatoire, 3 a 120 caracteres.</span>
+                    <span class="field-error" *ngIf="planFormSubmitted && !planForm.nom">Le nom est obligatoire.</span>
+                </div>
+                <div class="form-group">
+                    <label>Nature</label>
+                    <select [(ngModel)]="planForm.natureCode" required>
+                        <option value="annuel">Annuel</option>
+                        <option value="trimestriel">Trimestriel</option>
+                        <option value="specifique">Specifique</option>
+                    </select>
+                    <span class="field-hint">Obligatoire.</span>
+                </div>
+                <div class="form-group">
+                    <label>Calendrier</label>
+                    <input [(ngModel)]="planForm.calendrier" type="text" placeholder="01/01/2026 - 31/12/2026" maxlength="120">
+                    <span class="field-hint">Maximum 120 caracteres.</span>
+                </div>
+                <div class="form-group">
+                    <label>Date de debut</label>
+                    <input [(ngModel)]="planForm.dateDebut" type="date" required>
+                    <span class="field-hint">Obligatoire.</span>
+                    <span class="field-error" *ngIf="planFormSubmitted && !planForm.dateDebut">La date de debut est obligatoire.</span>
+                </div>
+                <div class="form-group">
+                    <label>Date de fin</label>
+                    <input [(ngModel)]="planForm.dateFin" type="date" required>
+                    <span class="field-hint">Obligatoire, superieure ou egale a la date de debut.</span>
+                    <span class="field-error" *ngIf="planFormSubmitted && !planForm.dateFin">La date de fin est obligatoire.</span>
+                    <span class="field-error" *ngIf="isDateRangeInvalid">La date de fin doit etre posterieure ou egale a la date de debut.</span>
+                </div>
+                <div class="form-group full">
+                    <label>Description</label>
+                    <textarea [(ngModel)]="planForm.description" rows="3" maxlength="500"></textarea>
+                    <span class="field-hint">{{ (planForm.description || '').length }}/500 caracteres</span>
+                </div>
+                <div class="form-errors full" *ngIf="planFormSubmitted && planFormErrors.length > 0">
+                    <p *ngFor="let error of planFormErrors">{{ error }}</p>
+                </div>
+            </div>
+        </div>
+
         <div class="planning-overview">
             <div class="overview-card accent">
                 <span class="eyebrow">Etape 1</span>
+                <strong>Choisir le plan cible</strong>
+                <p>{{ selectedPlan ? selectedPlan.nom : 'Les suggestions seront rattachees au plan selectionne ou au nouveau plan.' }}</p>
+            </div>
+            <div class="overview-card">
+                <span class="eyebrow">Etape 2</span>
                 <strong>Analyser les risques</strong>
                 <p>Le moteur propose des missions a partir des risques et des objectifs de controle.</p>
             </div>
             <div class="overview-card">
-                <span class="eyebrow">Etape 2</span>
-                <strong>Selectionner les suggestions</strong>
-                <p>{{ selectedSuggestionsCount }} mission(s) selectionnee(s) pour la prochaine creation.</p>
-            </div>
-            <div class="overview-card">
                 <span class="eyebrow">Etape 3</span>
-                <strong>Basculer vers l execution</strong>
-                <p>Les missions validees sont ensuite suivies dans le module Audit.</p>
+                <strong>Ajouter au plan</strong>
+                <p>{{ selectedSuggestionsCount }} mission(s) selectionnee(s) seront ajoutees au plan en creation.</p>
             </div>
         </div>
     </section>
@@ -53,12 +162,12 @@
         <div class="plan-header-row">
             <div>
                 <h3>Suggestions IA pour les missions</h3>
-                <p class="selection-caption">{{ selectedSuggestionsCount }} mission(s) prete(s) a etre creee(s).</p>
+                <p class="selection-caption">{{ selectedSuggestionsCount }} mission(s) prete(s) a etre ajoutee(s) au plan.</p>
             </div>
             <div class="plan-actions">
                 <button class="btn-cancel" (click)="suggestedPlan = []">Effacer</button>
-                <button class="btn-save" (click)="createMissions()" [disabled]="isCreatingMissions">
-                    <i class="fas fa-check-circle"></i> Valider et Creer Missions
+                <button class="btn-save" (click)="createMissions()" [disabled]="isCreatingMissions || selectedSuggestionsCount === 0">
+                    <i class="fas fa-check-circle"></i> Valider et Ajouter au Plan
                 </button>
             </div>
         </div>
@@ -75,6 +184,14 @@
                     </div>
                     <p class="obj"><strong>Objectif:</strong> {{ suggestion.recommandations || suggestion.objectifs }}</p>
                     <p class="resp"><strong>Responsable:</strong> {{ suggestion.responsabilites || 'A definir' }}</p>
+                    <div class="mission-attrs">
+                        <span><strong>Categorie:</strong> {{ suggestion.category || suggestion.categoryCode || '-' }}</span>
+                        <span><strong>Trimestre:</strong> {{ suggestion.quarter || suggestion.quarterCode || '-' }}</span>
+                        <span><strong>Debut:</strong> {{ suggestion.datePrevueDebut || '-' }}</span>
+                        <span><strong>Fin:</strong> {{ suggestion.datePrevueFin || '-' }}</span>
+                        <span><strong>Axe:</strong> {{ suggestion.axe || '-' }}</span>
+                        <span><strong>Evaluation:</strong> {{ suggestion.evaluation || '-' }}</span>
+                    </div>
                     <div class="card-footer">
                         <i class="far fa-calendar-alt"></i> Delai suggere: {{ suggestion.delaiSuggestion || 30 }} jours
                     </div>
@@ -86,8 +203,8 @@
     <div class="empty-state-ai" *ngIf="suggestedPlan.length === 0 && !isGeneratingPlan">
         <i class="fas fa-robot"></i>
         <h3>Besoin d'aide pour construire le plan ?</h3>
-        <p>Lancez une suggestion pour obtenir une premiere vague de missions d'audit priorisees, puis basculez vers l'execution quand la selection est prete.</p>
-        <button class="btn-primary-ghost" (click)="generatePlan()">Generer des suggestions</button>
+        <p>Choisissez ou creez un plan en creation, puis lancez une suggestion pour obtenir une premiere vague de missions d'audit priorisees.</p>
+        <button class="btn-primary-ghost" (click)="generatePlan()" [disabled]="!canGenerateSuggestions">Generer des suggestions</button>
     </div>
 
     <div class="loading-ai" *ngIf="isGeneratingPlan">

@@ -82,6 +82,7 @@ export class AuditPlanDetailComponent implements OnInit {
   showMissionModal = false;
   showMissionEditModal = false;
   showActionPlanModal = false;
+  showWorkProgramTemplateModal = false;
   selectedMissionId: number | null = null;
   deletedMissions: AuditPlanMission[] = [];
   missionResources: AuditPlanMissionResource[] = [];
@@ -89,11 +90,19 @@ export class AuditPlanDetailComponent implements OnInit {
   selectedUserSkillIds: number[] = [];
   selectedUserForSkillsId: number | null = null;
   selectedWorkProgramTemplateId: number | null = null;
+  editingWorkProgramTemplateId: number | null = null;
   workProgramItems: Partial<AuditMissionChecklistItem>[] = [];
+  workProgramTemplateForm: { titre: string; description: string; itemsText: string } = {
+    titre: '',
+    description: '',
+    itemsText: ''
+  };
   missionEvidence: AuditEvidence[] = [];
   selectedEvidenceFile: File | null = null;
   isUploadingEvidence = false;
   isDeletingEvidence = false;
+  isSavingWorkProgramTemplate = false;
+  isDeletingWorkProgramTemplate = false;
   isSavingMissionUpdate = false;
   isDeletingMission = false;
   isRestoringMission = false;
@@ -415,10 +424,25 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   get workProgramFormIsValid(): boolean {
-    return this.workProgramItems.every((item) => {
+    return this.workProgramItems.length > 0 && this.workProgramItems.every((item) => {
       const text = String(item.texte || '').trim();
       return text.length >= 3 && text.length <= 300;
     });
+  }
+
+  get workProgramTemplateFormIsValid(): boolean {
+    const titre = String(this.workProgramTemplateForm.titre || '').trim();
+    const description = String(this.workProgramTemplateForm.description || '');
+    const items = this.parseWorkProgramTemplateItems();
+    return titre.length >= 3
+      && titre.length <= 120
+      && description.length <= 500
+      && items.length > 0
+      && items.every((item) => item.length >= 3 && item.length <= 300);
+  }
+
+  get workProgramTemplateSubmitLabel(): string {
+    return this.editingWorkProgramTemplateId ? 'Enregistrer les modifications' : 'Creer le modele';
   }
 
   get reportFormIsValid(): boolean {
@@ -1140,6 +1164,110 @@ export class AuditPlanDetailComponent implements OnInit {
     }));
   }
 
+  openWorkProgramTemplateManager(): void {
+    this.resetWorkProgramTemplateForm();
+    this.showWorkProgramTemplateModal = true;
+    this.loadWorkProgramTemplates();
+  }
+
+  resetWorkProgramTemplateForm(prefillFromProgram = false): void {
+    this.editingWorkProgramTemplateId = null;
+    this.workProgramTemplateForm = {
+      titre: '',
+      description: '',
+      itemsText: prefillFromProgram
+        ? this.workProgramItems
+          .map((item) => String(item.texte || '').trim())
+          .filter((item) => !!item)
+          .join('\n')
+        : ''
+    };
+  }
+
+  editWorkProgramTemplate(template: AuditChecklistTemplate): void {
+    this.editingWorkProgramTemplateId = template.id;
+    this.workProgramTemplateForm = {
+      titre: template.titre || '',
+      description: template.description || '',
+      itemsText: (template.items || []).map((item) => item.texte).join('\n')
+    };
+  }
+
+  useWorkProgramTemplate(template: AuditChecklistTemplate): void {
+    this.selectedWorkProgramTemplateId = template.id;
+    this.loadSelectedTemplate();
+    this.showWorkProgramTemplateModal = false;
+  }
+
+  private parseWorkProgramTemplateItems(): string[] {
+    return String(this.workProgramTemplateForm.itemsText || '')
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => !!item);
+  }
+
+  saveWorkProgramTemplate(): void {
+    if (!this.workProgramTemplateFormIsValid) {
+      return;
+    }
+
+    const payload = {
+      titre: String(this.workProgramTemplateForm.titre || '').trim(),
+      description: String(this.workProgramTemplateForm.description || '').trim() || null,
+      items: this.parseWorkProgramTemplateItems()
+    };
+    const request = this.editingWorkProgramTemplateId
+      ? this.auditPlanningService.updateWorkProgramTemplate(this.editingWorkProgramTemplateId, payload)
+      : this.auditPlanningService.createWorkProgramTemplate(payload);
+
+    this.isSavingWorkProgramTemplate = true;
+    request.subscribe({
+      next: (template) => {
+        const existingIndex = this.workProgramTemplates.findIndex((item) => item.id === template.id);
+        this.workProgramTemplates = existingIndex >= 0
+          ? this.workProgramTemplates.map((item) => item.id === template.id ? template : item)
+          : [template, ...this.workProgramTemplates];
+        this.selectedWorkProgramTemplateId = template.id;
+        this.workProgramItems = (template.items || []).map((item) => ({
+          texte: item.texte,
+          estFait: false
+        }));
+        this.resetWorkProgramTemplateForm();
+        this.isSavingWorkProgramTemplate = false;
+      },
+      error: (error) => {
+        console.error(error);
+        this.isSavingWorkProgramTemplate = false;
+        alert(error?.error?.message || 'Erreur lors de la sauvegarde du modele de programme de travail.');
+      }
+    });
+  }
+
+  deleteWorkProgramTemplate(template: AuditChecklistTemplate): void {
+    if (!confirm(`Supprimer le modele "${template.titre}" ?`)) {
+      return;
+    }
+
+    this.isDeletingWorkProgramTemplate = true;
+    this.auditPlanningService.deleteWorkProgramTemplate(template.id).subscribe({
+      next: () => {
+        this.workProgramTemplates = this.workProgramTemplates.filter((item) => item.id !== template.id);
+        if (this.selectedWorkProgramTemplateId === template.id) {
+          this.selectedWorkProgramTemplateId = null;
+        }
+        if (this.editingWorkProgramTemplateId === template.id) {
+          this.resetWorkProgramTemplateForm();
+        }
+        this.isDeletingWorkProgramTemplate = false;
+      },
+      error: (error) => {
+        console.error(error);
+        this.isDeletingWorkProgramTemplate = false;
+        alert(error?.error?.message || 'Erreur lors de la suppression du modele de programme de travail.');
+      }
+    });
+  }
+
   addWorkProgramItem(): void {
     this.workProgramItems = [
       ...this.workProgramItems,
@@ -1155,7 +1283,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveWorkProgram(): void {
-    if (!this.selectedMissionId || !this.reportFormIsValid) {
+    if (!this.selectedMissionId || !this.workProgramFormIsValid) {
       return;
     }
 

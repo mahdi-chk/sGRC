@@ -440,6 +440,11 @@
               <p><strong>Commentaire de workflow:</strong> {{ workspace.workProgram.lastComment || '-' }}</p>
 
               <div class="detail-grid" *ngIf="workspace.permissions.canEditWorkProgram && activeMissionPanel === 'process'">
+                <div class="form-group full template-management-head">
+                  <button class="btn-secondary" (click)="openWorkProgramTemplateManager()">
+                    <i class="fas fa-list-check"></i> Gerer les modeles
+                  </button>
+                </div>
                 <div class="form-group">
                   <label>Modele</label>
                   <select class="finput" [(ngModel)]="selectedWorkProgramTemplateId">
@@ -990,6 +995,77 @@
         <button class="btn-save" (click)="saveActionPlan()" [disabled]="isSavingActionPlan || !actionPlanFormIsValid">
           {{ isSavingActionPlan ? 'Sauvegarde...' : 'Enregistrer' }}
         </button>
+      </div>
+    </div>
+  </app-modal>
+
+  <app-modal class="template-manager-modal" *ngIf="showWorkProgramTemplateModal" title="Gestion des modeles de programme de travail" (close)="showWorkProgramTemplateModal = false">
+    <div #projected modal-body class="modal-form">
+      <div class="template-manager-layout">
+        <section class="template-manager-form">
+          <div class="template-manager-head">
+            <div>
+              <h3>{{ editingWorkProgramTemplateId ? 'Modifier le modele' : 'Nouveau modele' }}</h3>
+              <p>{{ editingWorkProgramTemplateId ? 'Mettez a jour le modele selectionne.' : 'Creez une checklist reutilisable.' }}</p>
+            </div>
+            <button class="btn-secondary" *ngIf="editingWorkProgramTemplateId" (click)="resetWorkProgramTemplateForm()">Nouveau</button>
+          </div>
+      <div class="form-group full">
+        <label>Titre *</label>
+        <input [(ngModel)]="workProgramTemplateForm.titre" class="finput" type="text" placeholder="Checklist Audit SI" required minlength="3" maxlength="120">
+        <small class="field-note">Obligatoire, 3 a 120 caracteres.</small>
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <textarea [(ngModel)]="workProgramTemplateForm.description" class="finput" rows="3" maxlength="500" placeholder="Objectif et contexte du modele"></textarea>
+        <small class="field-note">Optionnel, maximum 500 caracteres.</small>
+      </div>
+      <div class="form-group full">
+        <label>Lignes de controle *</label>
+        <textarea [(ngModel)]="workProgramTemplateForm.itemsText" class="finput" rows="8" required minlength="3" maxlength="5000" placeholder="Une ligne par point de controle"></textarea>
+        <small class="field-note">Obligatoire. Une ligne = un point de controle, 3 a 300 caracteres par ligne.</small>
+      </div>
+      <div class="form-footer">
+            <button class="btn-secondary" (click)="resetWorkProgramTemplateForm(true)">Depuis le programme actuel</button>
+        <button class="btn-save" (click)="saveWorkProgramTemplate()" [disabled]="isSavingWorkProgramTemplate || !workProgramTemplateFormIsValid">
+              {{ isSavingWorkProgramTemplate ? 'Sauvegarde...' : workProgramTemplateSubmitLabel }}
+        </button>
+      </div>
+        </section>
+
+        <section class="template-manager-list">
+          <div class="template-manager-head">
+            <div>
+              <h3>Modeles existants</h3>
+              <p>{{ workProgramTemplates.length }} modele(s)</p>
+            </div>
+          </div>
+
+          <div class="empty-state" *ngIf="workProgramTemplates.length === 0">
+            <p>Aucun modele disponible.</p>
+          </div>
+
+          <article class="template-card" *ngFor="let template of workProgramTemplates">
+            <div class="template-card-head">
+              <div>
+                <strong>{{ template.titre }}</strong>
+                <small>{{ template.items?.length || 0 }} ligne(s)</small>
+              </div>
+            </div>
+            <p>{{ template.description || 'Sans description' }}</p>
+            <ul>
+              <li *ngFor="let item of (template.items || []).slice(0, 4)">{{ item.texte }}</li>
+            </ul>
+            <div class="row-actions">
+              <button class="btn-secondary" (click)="useWorkProgramTemplate(template)">Utiliser</button>
+              <button class="btn-secondary" (click)="editWorkProgramTemplate(template)">Modifier</button>
+              <button class="btn-danger" (click)="deleteWorkProgramTemplate(template)" [disabled]="isDeletingWorkProgramTemplate">Supprimer</button>
+            </div>
+          </article>
+        </section>
+      </div>
+      <div class="form-footer">
+        <button class="btn-cancel" (click)="showWorkProgramTemplateModal = false">Fermer</button>
       </div>
     </div>
   </app-modal>

@@ -366,6 +366,33 @@ router.get('/work-program-templates', authorizeRoles(...auditPlanReadRoles), asy
     }
 });
 
+router.post('/work-program-templates', authorizeRoles(...auditPlanningOperationalRoles), async (req: AuthRequest, res) => {
+    try {
+        const template = await AuditingService.createChecklistTemplate(req.user!.id, req.body);
+        res.status(201).json(template);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la creation du modele de programme de travail', error: error.message });
+    }
+});
+
+router.put('/work-program-templates/:id', authorizeRoles(...auditPlanningOperationalRoles), async (req: AuthRequest, res) => {
+    try {
+        const template = await AuditingService.updateChecklistTemplate(parseInt(req.params.id as string, 10), req.body);
+        res.json(template);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la modification du modele de programme de travail', error: error.message });
+    }
+});
+
+router.delete('/work-program-templates/:id', authorizeRoles(...auditPlanningOperationalRoles), async (req, res) => {
+    try {
+        const result = await AuditingService.deleteChecklistTemplate(parseInt(req.params.id as string, 10));
+        res.json(result);
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression du modele de programme de travail', error: error.message });
+    }
+});
+
 router.get('/missions/:id/workspace', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
     try {
         const data = await AuditPlanService.getMissionWorkspace(

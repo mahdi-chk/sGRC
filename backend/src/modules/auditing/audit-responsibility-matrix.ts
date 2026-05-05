@@ -34,6 +34,7 @@ export const AUDIT_ROLE_RESPONSIBILITY_MATRIX: AuditRoleResponsibility[] = [
             'Cree et planifie les missions d audit incluses dans le plan',
             'Affecte les auditeurs aux differentes missions',
             'Valide le plan avant sa soumission au directeur',
+            'Cree et modifie les programmes de travail des missions',
             'Valide les programmes de travail prepares par les chefs de mission',
             'Valide les rapports d audit finalises',
             'Supervise l avancement des missions et valide les livrables',
@@ -73,4 +74,3 @@ export const AUDIT_ROLE_RESPONSIBILITY_MATRIX: AuditRoleResponsibility[] = [
         ],
     },
 ];
-

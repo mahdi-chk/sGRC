@@ -75,7 +75,7 @@ const PLAN_WRITE_ROLES = [
 ] as const;
 
 const MISSION_ORDER_MANAGER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
-const WORK_PROGRAM_EDITOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION] as const;
+const WORK_PROGRAM_EDITOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION] as const;
 const WORK_PROGRAM_EXECUTION_ROLES = [UserRole.SUPER_ADMIN, UserRole.CHEF_MISSION, UserRole.AUDITEUR] as const;
 const WORK_PROGRAM_VALIDATOR_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE] as const;
 const WORK_PROGRAM_APPROVER_ROLES = [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR] as const;
@@ -228,7 +228,7 @@ export class AuditPlanService {
         const isAssignedAuditor = role === UserRole.AUDITEUR && mission.auditeurId === userId;
         const isGlobalManager = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.AUDIT_DIRECTEUR, UserRole.CONTROLLER].includes(role);
         const canEditWorkProgram = isRoleAllowed(role, WORK_PROGRAM_EDITOR_ROLES)
-            && (role === UserRole.SUPER_ADMIN || isAssignedChef)
+            && (role === UserRole.SUPER_ADMIN || role === UserRole.AUDIT_RESPONSABLE || isAssignedChef)
             && EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'));
         const canEditReport = isRoleAllowed(role, REPORT_EDITOR_ROLES)
             && (
@@ -244,7 +244,7 @@ export class AuditPlanService {
             canEditWorkProgram,
             canExecuteWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EXECUTION_ROLES) && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor),
             canSubmitWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EDITOR_ROLES)
-                && (role === UserRole.SUPER_ADMIN || isAssignedChef)
+                && (role === UserRole.SUPER_ADMIN || role === UserRole.AUDIT_RESPONSABLE || isAssignedChef)
                 && ['draft', 'rework_requested'].includes(String(mission.workProgramStatus || 'draft')),
             canValidateWorkProgram: isRoleAllowed(role, WORK_PROGRAM_VALIDATOR_ROLES) && String(mission.workProgramStatus || 'draft') === 'submitted',
             canApproveWorkProgram: isRoleAllowed(role, WORK_PROGRAM_APPROVER_ROLES) && String(mission.workProgramStatus || 'draft') === 'validated',

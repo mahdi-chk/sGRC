@@ -869,6 +869,10 @@
   align-items: flex-end;
 }
 
+.detail-grid > .full {
+  grid-column: 1 / -1;
+}
+
 .empty-state {
   color: #64748b;
   margin: 12px 0 0;
@@ -1202,12 +1206,172 @@
   }
 }
 
+.template-management-head {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: -6px;
+
+  .btn-secondary {
+    min-height: 44px;
+  }
+}
+
+:host ::ng-deep app-modal.template-manager-modal .modal {
+  max-width: 1120px;
+}
+
+:host ::ng-deep app-modal.template-manager-modal .modal-body {
+  padding: 26px 30px 24px;
+}
+
+.template-manager-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(360px, 1.05fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.template-manager-form,
+.template-manager-list {
+  min-width: 0;
+}
+
+.template-manager-form {
+  display: grid;
+  gap: 14px;
+}
+
+.template-manager-list {
+  display: grid;
+  gap: 12px;
+  max-height: 620px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.template-manager-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 0.86rem;
+  }
+}
+
+.template-manager-form .form-group {
+  gap: 6px;
+}
+
+.template-manager-form .field-note {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.template-manager-form .form-footer {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.template-manager-form .btn-save,
+.template-manager-form .btn-secondary {
+  min-height: 44px;
+  white-space: normal;
+}
+
+.template-card {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+
+  p {
+    margin: 10px 0;
+    color: #475569;
+    overflow-wrap: anywhere;
+  }
+
+  ul {
+    margin: 0 0 12px;
+    padding-left: 18px;
+    color: #334155;
+  }
+
+  li {
+    margin-bottom: 4px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.template-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  strong,
+  small {
+    display: block;
+  }
+
+  strong {
+    color: #0f172a;
+    overflow-wrap: anywhere;
+  }
+
+  small {
+    margin-top: 4px;
+    color: #64748b;
+    font-weight: 700;
+  }
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.template-card .btn-secondary,
+.template-card .btn-danger {
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.btn-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: none;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #fecaca;
+}
+
 @media (max-width: 1200px) {
   .audit-submodule-shell,
   .mission-workspace-layout,
   .workflow-layout,
   .role-grid,
-  .workspace-grid {
+  .workspace-grid,
+  .template-manager-layout {
     grid-template-columns: 1fr;
   }
 

@@ -467,6 +467,18 @@ export class AuditPlanningService {
         return this.http.get<AuditChecklistTemplate[]>(`${this.apiUrl}/work-program-templates`);
     }
 
+    createWorkProgramTemplate(payload: { titre: string; description?: string | null; items: string[] }): Observable<AuditChecklistTemplate> {
+        return this.http.post<AuditChecklistTemplate>(`${this.apiUrl}/work-program-templates`, payload);
+    }
+
+    updateWorkProgramTemplate(templateId: number, payload: { titre: string; description?: string | null; items: string[] }): Observable<AuditChecklistTemplate> {
+        return this.http.put<AuditChecklistTemplate>(`${this.apiUrl}/work-program-templates/${templateId}`, payload);
+    }
+
+    deleteWorkProgramTemplate(templateId: number): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/work-program-templates/${templateId}`);
+    }
+
     createSkill(payload: Partial<AuditSkill>): Observable<AuditSkill> {
         return this.http.post<AuditSkill>(`${this.apiUrl}/skills`, payload);
     }

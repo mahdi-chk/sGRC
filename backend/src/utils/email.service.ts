@@ -467,6 +467,14 @@ class EmailService {
                 subject: `[${missionLabel}] : Affectation de la mission d'audit`,
                 body: `<p>La mission d'audit <strong>${missionLabel}</strong> vous a ete affectee.</p>${missionIdLine}<p>Veuillez vous connecter a l'application pour consulter vos responsabilites et demarrer les travaux.</p>`,
             },
+            audit_action_plan_assigned: {
+                subject: `[${missionLabel}] : Affectation du plan d'action audit`,
+                body: `<p>Le plan d'action audit <strong>${missionLabel}</strong> vous a ete affecte.</p>${missionIdLine}${referenceLine}${dueDateLine}<p>Veuillez vous connecter a l'application sGRC pour traiter les actions attendues.</p>`,
+            },
+            audit_action_plan_status_changed: {
+                subject: `[${missionLabel}] : Mise a jour du traitement du plan d'action`,
+                body: `<p>Le traitement du plan d'action audit <strong>${missionLabel}</strong> a ete mis a jour.</p>${referenceLine}${actorLine}${commentLine}${dueDateLine}<p>Merci de consulter l'application sGRC pour suivre l'avancement.</p>`,
+            },
             mission_order_sent: {
                 subject: `[${missionLabel}] : Ordre de mission envoye`,
                 body: `<p>L'ordre de mission relatif a <strong>${missionLabel}</strong> a ete envoye.</p>${referenceLine}${commentLine}<p>Merci de consulter l'application pour prendre connaissance des instructions.</p>`,
@@ -502,6 +510,66 @@ class EmailService {
             report_rework_requested: {
                 subject: `[${missionLabel}] : Rapport d'audit retourne pour correction`,
                 body: `<p>Le rapport d'audit de la mission <strong>${missionLabel}</strong> a ete retourne pour correction.</p>${actorLine}${commentLine}<p>Merci de reviser le rapport dans l'application.</p>`,
+            },
+            envoyer_recommandation: {
+                subject: `[${missionLabel}] : Recommendation a traiter`,
+                body: `<p>Une recommandation est disponible pour preparation du plan d'action.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de vous connecter a l'application sGRC pour la traiter.</p>`,
+            },
+            soumettre_plan_action: {
+                subject: `[${missionLabel}] : Plan d'action soumis`,
+                body: `<p>Un plan d'action a ete soumis pour revue.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de le verifier dans l'application sGRC.</p>`,
+            },
+            demander_revue_plan_action: {
+                subject: `[${missionLabel}] : Revue du plan d'action demandee`,
+                body: `<p>Le plan d'action d'une recommandation doit etre revu.</p>${referenceLine}${actorLine}${commentLine}<p>Merci d'apporter les ajustements demandes.</p>`,
+            },
+            demander_validation_plan_action: {
+                subject: `[${missionLabel}] : Validation du plan d'action demandee`,
+                body: `<p>Un plan d'action de recommandation est soumis pour validation.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de traiter la demande dans l'application sGRC.</p>`,
+            },
+            demander_revue_validation_plan_action: {
+                subject: `[${missionLabel}] : Plan d'action retourne pour revue`,
+                body: `<p>La validation du plan d'action necessite une revue complementaire.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de revoir le plan d'action dans l'application sGRC.</p>`,
+            },
+            valider_plan_action: {
+                subject: `[${missionLabel}] : Plan d'action valide`,
+                body: `<p>Le plan d'action de la recommandation a ete valide.</p>${referenceLine}${actorLine}${commentLine}<p>Le suivi de l'avancement peut continuer.</p>`,
+            },
+            demander_mise_a_jour_avancement: {
+                subject: `[${missionLabel}] : Mise a jour du taux d'avancement demandee`,
+                body: `<p>Une mise a jour du taux d'avancement est demandee pour une recommandation.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de renseigner le taux, l'evaluation et le commentaire d'avancement.</p>`,
+            },
+            soumettre_taux_avancement: {
+                subject: `[${missionLabel}] : Taux d'avancement soumis`,
+                body: `<p>Le taux d'avancement d'une recommandation a ete soumis.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de le verifier dans l'application sGRC.</p>`,
+            },
+            demander_revue_taux_avancement: {
+                subject: `[${missionLabel}] : Revue du taux d'avancement demandee`,
+                body: `<p>Le taux d'avancement soumis necessite une revue.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de mettre a jour l'avancement dans l'application sGRC.</p>`,
+            },
+            demander_validation_avancement_100: {
+                subject: `[${missionLabel}] : Validation avancement 100% demandee`,
+                body: `<p>Une recommandation est soumise pour validation de l'avancement a 100%.</p>${referenceLine}${actorLine}${commentLine}<p>Merci de traiter cette validation dans l'application sGRC.</p>`,
+            },
+            demander_revoir_100: {
+                subject: `[${missionLabel}] : Revue de l'avancement 100% demandee`,
+                body: `<p>L'avancement 100% d'une recommandation doit etre revu.</p>${referenceLine}${actorLine}${commentLine}<p>Merci d'apporter les corrections demandees.</p>`,
+            },
+            valider_avancement_100: {
+                subject: `[${missionLabel}] : Avancement 100% valide`,
+                body: `<p>L'avancement 100% de la recommandation a ete valide.</p>${referenceLine}${actorLine}${commentLine}<p>La recommandation peut etre fermee selon le workflow.</p>`,
+            },
+            fermer_recommandation: {
+                subject: `[${missionLabel}] : Recommendation fermee`,
+                body: `<p>La recommandation a ete fermee.</p>${referenceLine}${actorLine}${commentLine}<p>Elle reste disponible pour reouverture ou fermeture definitive selon vos droits.</p>`,
+            },
+            reouvrir: {
+                subject: `[${missionLabel}] : Recommendation rouverte`,
+                body: `<p>La recommandation a ete rouverte.</p>${referenceLine}${actorLine}${commentLine}<p>Le suivi reprend dans l'application sGRC.</p>`,
+            },
+            fermer_definitivement: {
+                subject: `[${missionLabel}] : Recommendation fermee definitivement`,
+                body: `<p>La recommandation a ete fermee definitivement.</p>${referenceLine}${actorLine}${commentLine}<p>Aucune transition supplementaire n'est attendue.</p>`,
             },
         };
 

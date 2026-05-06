@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuditPlan, AuditPlanMission, AuditPlanningService, LookupOption } from '../../core/services/audit-planning.service';
+import { AuditPlan, AuditPlanMission, AuditPlanningRecordType, AuditPlanningService, LookupOption } from '../../core/services/audit-planning.service';
 import { UserRole } from '../../core/models/user-role.enum';
 import { getAuditPlanningNavItems, getStoredAuditRole } from './audit-navigation';
 
@@ -210,7 +210,11 @@ export class AuditPlansComponent implements OnInit {
   }
 
   loadDashboardData(): void {
-    this.auditPlanningService.getMissions().subscribe({
+    const recordType = this.currentUserRole === UserRole.CONTROLLER
+      ? AuditPlanningRecordType.PLAN_ACTION_AUDIT
+      : null;
+
+    this.auditPlanningService.getMissions(recordType).subscribe({
       next: (missions) => {
         this.missions = missions;
         this.buildDashboard();
@@ -239,6 +243,10 @@ export class AuditPlansComponent implements OnInit {
     this.planForm = this.emptyPlan();
     this.planFormSubmitted = false;
     this.showCreateModal = true;
+  }
+
+  get scopedWorkItemLabel(): string {
+    return this.currentUserRole === UserRole.CONTROLLER ? 'Recommandations' : 'Missions';
   }
 
   openEditModal(plan: AuditPlan): void {

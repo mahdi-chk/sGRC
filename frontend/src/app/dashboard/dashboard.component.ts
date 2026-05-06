@@ -153,6 +153,16 @@ export class DashboardComponent {
     }
   }
 
+  onNotificationClick(n: Notification) {
+    this.markAsRead(n);
+
+    const route = this.getNotificationRoute(n);
+    if (route) {
+      this.showNotifDropdown = false;
+      this.router.navigate(route.commands, route.extras || {});
+    }
+  }
+
   markAllAsRead() {
     const visibleUnreadIds = this.notifications
       .filter(n => !n.isRead)
@@ -179,7 +189,8 @@ export class DashboardComponent {
         return notificationType === NotificationType.RISK_ASSIGNED ||
           notificationType === NotificationType.STATUS_CHANGED ||
           notificationType === NotificationType.COMMENT_ADDED ||
-          notificationType === NotificationType.REMINDER;
+          notificationType === NotificationType.REMINDER ||
+          this.isActionPlanNotificationType(notificationType);
       });
     }
 
@@ -247,6 +258,56 @@ export class DashboardComponent {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[\s-]+/g, '_');
+  }
+
+  private isActionPlanNotificationType(notificationType: string): boolean {
+    return notificationType === NotificationType.AUDIT_PLAN_VALIDATION_REQUESTED ||
+      notificationType === NotificationType.AUDIT_PLAN_STATUS_CHANGED ||
+      notificationType === NotificationType.AUDIT_MISSION_ASSIGNED ||
+      notificationType === NotificationType.AUDIT_REPORT_SUBMITTED;
+  }
+
+  private getNotificationRoute(notification: Notification): { commands: any[]; extras?: any } | null {
+    const notificationType = this.getNotificationType(notification);
+
+    if (this.isActionPlanNotificationType(notificationType)) {
+      if (notification.auditMissionId) {
+        return {
+          commands: ['/dashboard/actions-centralized'],
+          extras: { queryParams: { q: `AUD-${notification.auditMissionId}` } }
+        };
+      }
+
+      return { commands: ['/dashboard/actions-notifications'] };
+    }
+
+    if (notification.riskId) {
+      return { commands: ['/dashboard/treatment-plans'] };
+    }
+
+    if (notificationType === NotificationType.REMINDER) {
+      return { commands: ['/dashboard/actions-notifications'] };
+    }
+
+    return null;
+  }
+
+  getNotificationIcon(notification: Notification): string {
+    const notificationType = this.getNotificationType(notification);
+
+    if (this.isActionPlanNotificationType(notificationType)) {
+      return 'fa-tasks';
+    }
+
+    if (notificationType === NotificationType.REMINDER) {
+      return 'fa-bell';
+    }
+
+    if (notificationType === NotificationType.RISK_ASSIGNED) {
+      return 'fa-user-check';
+    }
+
+    return 'fa-info-circle';
   }
 
   get visibleSubNavItems(): NavItem[] {

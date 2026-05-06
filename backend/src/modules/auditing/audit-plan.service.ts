@@ -40,11 +40,15 @@ type MissionWorkflowType = 'mission_order' | 'work_program' | 'report' | 'recomm
 type RecommendationTransitionCode =
     | 'envoyer_recommandation'
     | 'soumettre_plan_action'
+    | 'demander_validation_plan_action'
     | 'demander_revue_plan_action'
+    | 'demander_revue_validation_plan_action'
     | 'valider_plan_action'
     | 'demander_mise_a_jour_avancement'
     | 'soumettre_taux_avancement'
     | 'demander_revue_taux_avancement'
+    | 'demander_validation_avancement_100'
+    | 'demander_revoir_100'
     | 'valider_avancement_100'
     | 'fermer_recommandation'
     | 'reouvrir'
@@ -380,6 +384,29 @@ export class AuditPlanService {
         }
     }
 
+    private static async syncMissionAssigneeFieldsFromResources(mission: AuditMission, clearMissing = false) {
+        const activeResources = await AuditMissionResource.findAll({ where: { missionId: mission.id } });
+        const chefMissionRoleId = LookupResolutionService.getStaticValue(
+            AUDIT_LOOKUP_KEYS.RESOURCE_ASSIGNMENT_ROLE,
+            AuditMissionResourceRoleCode.CHEF_MISSION
+        )?.id;
+        const auditeurRoleId = LookupResolutionService.getStaticValue(
+            AUDIT_LOOKUP_KEYS.RESOURCE_ASSIGNMENT_ROLE,
+            AuditMissionResourceRoleCode.AUDITEUR
+        )?.id;
+
+        const chefMissionAssignment = activeResources.find((item) => item.assignmentRoleId === chefMissionRoleId);
+        const auditeurAssignment = activeResources.find((item) => item.assignmentRoleId === auditeurRoleId);
+        const chefMissionId = chefMissionAssignment?.userId || (clearMissing ? null : mission.chefMissionId || null);
+        const auditeurId = auditeurAssignment?.userId || (clearMissing ? null : mission.auditeurId || null);
+
+        if (mission.chefMissionId !== chefMissionId || mission.auditeurId !== auditeurId) {
+            await mission.update({ chefMissionId, auditeurId });
+        }
+
+        return mission;
+    }
+
     private static ensurePlanEditable(plan: AuditPlan) {
         if (this.getPlanStatusCode(plan) === AuditPlanStatusCode.FERME_DEFINITIVEMENT) {
             throw new Error('Le plan est ferme definitivement et ne peut plus etre modifie');
@@ -438,6 +465,56 @@ export class AuditPlanService {
             return missions.map((mission) => mission.id);
         }
 
+        if (role === UserRole.CONTROLLER) {
+            const sourceMissions = await AuditMission.findAll({
+                where: {
+                    auditPlanId: planId,
+                    type: AuditRecordType.MISSION_AUDIT,
+                },
+                attributes: ['id', 'auditedPrincipalId'],
+            });
+            const sourceMissionIds = sourceMissions.map((mission) => mission.id);
+            const visibleMissionIds = new Set<number>(
+                sourceMissions
+                    .filter((mission) => mission.auditedPrincipalId === userId)
+                    .map((mission) => mission.id)
+            );
+
+            if (sourceMissionIds.length > 0) {
+                const resourceAssignments = await AuditMissionResource.findAll({
+                    where: {
+                        missionId: { [Op.in]: sourceMissionIds },
+                        userId,
+                    },
+                    attributes: ['missionId'],
+                });
+
+                for (const assignment of resourceAssignments) {
+                    visibleMissionIds.add(assignment.missionId);
+                }
+            }
+
+            const assignedRecommendations = await AuditMission.findAll({
+                where: {
+                    type: AuditRecordType.PLAN_ACTION_AUDIT,
+                    auditedPrincipalId: userId,
+                    [Op.or]: [
+                        { auditPlanId: planId },
+                        ...(sourceMissionIds.length > 0 ? [{ sourceMissionId: { [Op.in]: sourceMissionIds } }] : []),
+                    ],
+                },
+                attributes: ['sourceMissionId'],
+            });
+
+            for (const recommendation of assignedRecommendations) {
+                if (recommendation.sourceMissionId) {
+                    visibleMissionIds.add(recommendation.sourceMissionId);
+                }
+            }
+
+            return Array.from(visibleMissionIds);
+        }
+
         const missions = await AuditMission.findAll({
             where: {
                 auditPlanId: planId,
@@ -486,38 +563,170 @@ export class AuditPlanService {
         });
 
         if (this.isMissionScopedRole(role) && plans.length > 0) {
-            const scopedMissions = await AuditMission.findAll({
-                where: {
-                    auditPlanId: { [Op.in]: plans.map((plan) => plan.id) },
-                    type: AuditRecordType.MISSION_AUDIT,
-                    ...this.buildMissionScopeWhere(role, userId),
-                },
-                attributes: ['auditPlanId'],
-            });
+            const candidatePlanIds = plans.map((plan) => plan.id);
+            const visiblePlanIds = new Set<number>();
 
-            const visiblePlanIds = new Set<number>(
-                scopedMissions
-                    .map((mission) => mission.auditPlanId)
-                    .filter((planId): planId is number => Number.isFinite(planId))
-            );
+            if (role === UserRole.CONTROLLER) {
+                const planMissions = await AuditMission.findAll({
+                    where: {
+                        auditPlanId: { [Op.in]: candidatePlanIds },
+                        type: AuditRecordType.MISSION_AUDIT,
+                    },
+                    attributes: ['id', 'auditPlanId', 'auditedPrincipalId'],
+                });
+                const missionPlanMap = new Map<number, number>();
+
+                for (const mission of planMissions) {
+                    if (mission.auditPlanId) {
+                        missionPlanMap.set(mission.id, mission.auditPlanId);
+                    }
+                    if (mission.auditPlanId && mission.auditedPrincipalId === userId) {
+                        visiblePlanIds.add(mission.auditPlanId);
+                    }
+                }
+
+                if (missionPlanMap.size > 0) {
+                    const resourceAssignments = await AuditMissionResource.findAll({
+                        where: {
+                            missionId: { [Op.in]: Array.from(missionPlanMap.keys()) },
+                            userId,
+                        },
+                        attributes: ['missionId'],
+                    });
+
+                    for (const assignment of resourceAssignments) {
+                        const sourcePlanId = missionPlanMap.get(assignment.missionId);
+                        if (sourcePlanId) {
+                            visiblePlanIds.add(sourcePlanId);
+                        }
+                    }
+                }
+
+                const assignedRecommendations = await AuditMission.findAll({
+                    where: {
+                        type: AuditRecordType.PLAN_ACTION_AUDIT,
+                        auditedPrincipalId: userId,
+                        [Op.or]: [
+                            { auditPlanId: { [Op.in]: candidatePlanIds } },
+                            ...(missionPlanMap.size > 0 ? [{ sourceMissionId: { [Op.in]: Array.from(missionPlanMap.keys()) } }] : []),
+                        ],
+                    },
+                    attributes: ['auditPlanId', 'sourceMissionId'],
+                });
+
+                for (const recommendation of assignedRecommendations) {
+                    if (recommendation.auditPlanId) {
+                        visiblePlanIds.add(recommendation.auditPlanId);
+                    } else if (recommendation.sourceMissionId) {
+                        const sourcePlanId = missionPlanMap.get(recommendation.sourceMissionId);
+                        if (sourcePlanId) {
+                            visiblePlanIds.add(sourcePlanId);
+                        }
+                    }
+                }
+            } else {
+                const scopedMissions = await AuditMission.findAll({
+                    where: {
+                        auditPlanId: { [Op.in]: candidatePlanIds },
+                        type: AuditRecordType.MISSION_AUDIT,
+                        ...this.buildMissionScopeWhere(role, userId),
+                    },
+                    attributes: ['auditPlanId'],
+                });
+
+                for (const mission of scopedMissions) {
+                    if (mission.auditPlanId) {
+                        visiblePlanIds.add(mission.auditPlanId);
+                    }
+                }
+            }
 
             plans = plans.filter((plan) => visiblePlanIds.has(plan.id));
         }
 
+        const missionCountMap = new Map<number, number>();
+        const recommendationCountMap = new Map<number, number>();
         const planIds = plans.map((plan) => plan.id);
         const missions = planIds.length > 0
             ? await AuditMission.findAll({
-                where: { auditPlanId: { [Op.in]: planIds } },
-                attributes: ['id', 'auditPlanId', 'type', 'statutId'],
+                where: {
+                    auditPlanId: { [Op.in]: planIds },
+                    ...(role !== UserRole.CONTROLLER ? {} : { type: AuditRecordType.MISSION_AUDIT }),
+                },
+                attributes: ['id', 'auditPlanId', 'type', 'statutId', 'auditedPrincipalId'],
             })
             : [];
 
-        const missionCountMap = new Map<number, number>();
-        const recommendationCountMap = new Map<number, number>();
+        let visibleControllerSourceMissionIds = new Set<number>();
+
+        if (role === UserRole.CONTROLLER && planIds.length > 0) {
+            const missionPlanMap = new Map<number, number>();
+
+            for (const mission of missions) {
+                if (mission.auditPlanId) {
+                    missionPlanMap.set(mission.id, mission.auditPlanId);
+                }
+                if (mission.auditPlanId && mission.auditedPrincipalId === userId) {
+                    visibleControllerSourceMissionIds.add(mission.id);
+                }
+            }
+
+            if (missionPlanMap.size > 0) {
+                const resourceAssignments = await AuditMissionResource.findAll({
+                    where: {
+                        missionId: { [Op.in]: Array.from(missionPlanMap.keys()) },
+                        userId,
+                    },
+                    attributes: ['missionId'],
+                });
+
+                for (const assignment of resourceAssignments) {
+                    visibleControllerSourceMissionIds.add(assignment.missionId);
+                }
+            }
+
+            const assignedRecommendations = await AuditMission.findAll({
+                where: {
+                    type: AuditRecordType.PLAN_ACTION_AUDIT,
+                    [Op.or]: [
+                        {
+                            auditedPrincipalId: userId,
+                            [Op.or]: [
+                                { auditPlanId: { [Op.in]: planIds } },
+                                ...(missionPlanMap.size > 0 ? [{ sourceMissionId: { [Op.in]: Array.from(missionPlanMap.keys()) } }] : []),
+                            ],
+                        },
+                        ...(visibleControllerSourceMissionIds.size > 0 ? [{ sourceMissionId: { [Op.in]: Array.from(visibleControllerSourceMissionIds) } }] : []),
+                    ],
+                },
+                attributes: ['id', 'auditPlanId', 'sourceMissionId'],
+            });
+
+            for (const recommendation of assignedRecommendations) {
+                const sourcePlanId = recommendation.sourceMissionId
+                    ? missionPlanMap.get(recommendation.sourceMissionId)
+                    : null;
+                const planId = recommendation.auditPlanId || sourcePlanId || null;
+
+                if (planId) {
+                    recommendationCountMap.set(planId, (recommendationCountMap.get(planId) || 0) + 1);
+                }
+                if (recommendation.sourceMissionId) {
+                    visibleControllerSourceMissionIds.add(recommendation.sourceMissionId);
+                }
+            }
+        }
 
         for (const mission of missions) {
             const planId = mission.auditPlanId || 0;
             if (!planId) {
+                continue;
+            }
+
+            if (role === UserRole.CONTROLLER) {
+                if (visibleControllerSourceMissionIds.has(mission.id)) {
+                    missionCountMap.set(planId, (missionCountMap.get(planId) || 0) + 1);
+                }
                 continue;
             }
 
@@ -895,8 +1104,11 @@ export class AuditPlanService {
     }
 
     static async getPlanMissions(planId: number, actorRole: string = UserRole.SUPER_ADMIN, actorUserId?: number) {
-        const scopedWhere = actorUserId !== undefined
-            ? this.buildMissionScopeWhere(actorRole, actorUserId)
+        const visibleMissionIds = actorUserId !== undefined && this.isMissionScopedRole(actorRole)
+            ? await this.getVisibleMissionIds(planId, actorRole, actorUserId)
+            : [];
+        const scopedWhere = actorUserId !== undefined && this.isMissionScopedRole(actorRole)
+            ? (visibleMissionIds.length > 0 ? { id: { [Op.in]: visibleMissionIds } } : { id: -1 })
             : {};
         const missions = await AuditMission.findAll({
             where: {
@@ -923,10 +1135,11 @@ export class AuditPlanService {
 
     static async listMissions(role: string, userId: number, filter: { type?: string | null } = {}) {
         this.ensurePlanReadable(role);
+        const requestedType = filter.type || AuditRecordType.MISSION_AUDIT;
 
         const where: Record<string, unknown> = {
             auditPlanId: { [Op.ne]: null },
-            type: filter.type || AuditRecordType.MISSION_AUDIT,
+            type: requestedType,
         };
 
         if (role === UserRole.CHEF_MISSION) {
@@ -934,7 +1147,43 @@ export class AuditPlanService {
         } else if (role === UserRole.AUDITEUR) {
             where.auditeurId = userId;
         } else if (role === UserRole.CONTROLLER) {
-            where.auditedPrincipalId = userId;
+            const planMissions = await AuditMission.findAll({
+                where: {
+                    auditPlanId: { [Op.ne]: null },
+                    type: AuditRecordType.MISSION_AUDIT,
+                },
+                attributes: ['id', 'auditedPrincipalId'],
+            });
+            const missionIds = planMissions.map((mission) => mission.id);
+            const visibleMissionIds = new Set<number>(
+                planMissions
+                    .filter((mission) => mission.auditedPrincipalId === userId)
+                    .map((mission) => mission.id)
+            );
+
+            if (missionIds.length > 0) {
+                const resourceAssignments = await AuditMissionResource.findAll({
+                    where: {
+                        missionId: { [Op.in]: missionIds },
+                        userId,
+                    },
+                    attributes: ['missionId'],
+                });
+
+                for (const assignment of resourceAssignments) {
+                    visibleMissionIds.add(assignment.missionId);
+                }
+            }
+
+            if (requestedType === AuditRecordType.PLAN_ACTION_AUDIT) {
+                delete where.auditPlanId;
+                (where as any)[Op.or] = [
+                    { auditedPrincipalId: userId },
+                    ...(visibleMissionIds.size > 0 ? [{ sourceMissionId: { [Op.in]: Array.from(visibleMissionIds) } }] : []),
+                ];
+            } else {
+                where.id = visibleMissionIds.size > 0 ? { [Op.in]: Array.from(visibleMissionIds) } : -1;
+            }
         }
 
         const missions = await AuditMission.findAll({
@@ -1090,27 +1339,93 @@ export class AuditPlanService {
     }
 
     static async getPlanRecommendations(planId: number, actorRole: string = UserRole.SUPER_ADMIN, actorUserId?: number) {
-        let sourceMissionFilter: Record<string, unknown> = {};
+        let visibleMissionIds: number[] = [];
+
+        if (actorUserId !== undefined && actorRole === UserRole.CONTROLLER) {
+            const planMissions = await AuditMission.findAll({
+                where: {
+                    auditPlanId: planId,
+                    type: AuditRecordType.MISSION_AUDIT,
+                },
+                attributes: ['id', 'auditedPrincipalId'],
+            });
+            const sourceMissionIds = planMissions.map((mission) => mission.id);
+            const directlyVisibleMissionIds = new Set<number>(
+                planMissions
+                    .filter((mission) => mission.auditedPrincipalId === actorUserId)
+                    .map((mission) => mission.id)
+            );
+
+            if (sourceMissionIds.length > 0) {
+                const resourceAssignments = await AuditMissionResource.findAll({
+                    where: {
+                        missionId: { [Op.in]: sourceMissionIds },
+                        userId: actorUserId,
+                    },
+                    attributes: ['missionId'],
+                });
+
+                for (const assignment of resourceAssignments) {
+                    directlyVisibleMissionIds.add(assignment.missionId);
+                }
+            }
+
+            return AuditMission.findAll({
+                where: {
+                    type: AuditRecordType.PLAN_ACTION_AUDIT,
+                    [Op.or]: [
+                        {
+                            auditedPrincipalId: actorUserId,
+                            [Op.or]: [
+                                { auditPlanId: planId },
+                                ...(sourceMissionIds.length > 0 ? [{ sourceMissionId: { [Op.in]: sourceMissionIds } }] : []),
+                            ],
+                        },
+                        ...(directlyVisibleMissionIds.size > 0 ? [{ sourceMissionId: { [Op.in]: Array.from(directlyVisibleMissionIds) } }] : []),
+                    ],
+                },
+                include: [
+                    { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                    { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                    { model: AuditMission, as: 'sourceMission', attributes: ['id', 'titre', 'code'], required: false },
+                ],
+                order: [['ordre', 'ASC'], ['updatedAt', 'DESC']],
+            });
+        }
 
         if (actorUserId !== undefined && this.isMissionScopedRole(actorRole)) {
-            const visibleMissionIds = await this.getVisibleMissionIds(planId, actorRole, actorUserId);
+            visibleMissionIds = await this.getVisibleMissionIds(planId, actorRole, actorUserId);
             if (visibleMissionIds.length === 0) {
                 return [];
             }
-
-            sourceMissionFilter = {
-                sourceMissionId: { [Op.in]: visibleMissionIds },
-            };
+        } else {
+            const planMissions = await AuditMission.findAll({
+                where: {
+                    auditPlanId: planId,
+                    type: AuditRecordType.MISSION_AUDIT,
+                },
+                attributes: ['id'],
+            });
+            visibleMissionIds = planMissions.map((mission) => mission.id);
         }
+
+        const planScope = visibleMissionIds.length > 0
+            ? {
+                [Op.or]: [
+                    { auditPlanId: planId },
+                    { sourceMissionId: { [Op.in]: visibleMissionIds } },
+                ],
+            }
+            : { auditPlanId: planId };
 
         return AuditMission.findAll({
             where: {
-                auditPlanId: planId,
                 type: AuditRecordType.PLAN_ACTION_AUDIT,
-                ...sourceMissionFilter,
+                ...planScope,
             },
             include: [
                 { model: User, as: 'auditeur', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
+                { model: User, as: 'auditedPrincipal', attributes: ['id', 'prenom', 'nom', 'mail'], required: false },
                 { model: AuditMission, as: 'sourceMission', attributes: ['id', 'titre', 'code'], required: false },
             ],
             order: [['ordre', 'ASC'], ['updatedAt', 'DESC']],
@@ -1235,6 +1550,7 @@ export class AuditPlanService {
     static async sendMissionOrder(missionId: number, actorUserId: number, actorRole: string, data: any = {}) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, MISSION_ORDER_MANAGER_ROLES);
+        await this.syncMissionAssigneeFieldsFromResources(mission);
 
         if (!mission.chefMissionId || !mission.auditeurId) {
             throw new Error('Affectez d abord un chef de mission et un auditeur avant l envoi de l ordre de mission');
@@ -1717,11 +2033,16 @@ export class AuditPlanService {
             transitions.push('soumettre_plan_action');
         }
 
-        if (status === 'plan_actions_a_valider') {
+        if (status === 'plan_actions_a_revoir') {
             if (isOwner) {
                 transitions.push('demander_revue_plan_action');
+                transitions.push('demander_validation_plan_action');
             }
+        }
+
+        if (status === 'plan_actions_a_valider') {
             if (isManager) {
+                transitions.push('demander_revue_validation_plan_action');
                 transitions.push('valider_plan_action');
             }
         }
@@ -1737,8 +2058,12 @@ export class AuditPlanService {
         if (['plan_actions_mis_a_jour', 'avancement_100_a_valider'].includes(status)) {
             if (isOwner) {
                 transitions.push('demander_revue_taux_avancement');
+                if (status === 'plan_actions_mis_a_jour' && Number(recommendation.progressPercent || 0) === 100) {
+                    transitions.push('demander_validation_avancement_100');
+                }
             }
-            if (isManager && Number(recommendation.progressPercent || 0) === 100) {
+            if (status === 'avancement_100_a_valider' && isManager && Number(recommendation.progressPercent || 0) === 100) {
+                transitions.push('demander_revoir_100');
                 transitions.push('valider_avancement_100');
             }
         }
@@ -1772,6 +2097,101 @@ export class AuditPlanService {
         }
 
         return item;
+    }
+
+    private static async getAuditDivisionRecipientIds() {
+        const roleId = LookupResolutionService.getStaticValue('user.role', UserRole.AUDIT_RESPONSABLE)?.id;
+        if (!roleId) {
+            return [];
+        }
+
+        const users = await User.findAll({
+            where: { roleId },
+            attributes: ['id'],
+        });
+
+        return users.map((user) => user.id);
+    }
+
+    private static async getRecommendationWorkflowRecipientIds(sourceMission: AuditMission, recommendation: AuditMission, transition: RecommendationTransitionCode) {
+        const auditOwnerIds = [sourceMission.chefMissionId, sourceMission.auditeurId];
+        const auditedId = recommendation.auditedPrincipalId || sourceMission.auditedPrincipalId;
+        const divisionIds = await this.getAuditDivisionRecipientIds();
+
+        switch (transition) {
+            case 'envoyer_recommandation':
+            case 'demander_revue_plan_action':
+            case 'demander_mise_a_jour_avancement':
+            case 'demander_revue_taux_avancement':
+            case 'demander_revoir_100':
+                return [auditedId];
+            case 'soumettre_plan_action':
+            case 'demander_revue_validation_plan_action':
+            case 'valider_plan_action':
+            case 'soumettre_taux_avancement':
+            case 'valider_avancement_100':
+            case 'reouvrir':
+            case 'fermer_definitivement':
+                return auditOwnerIds;
+            case 'demander_validation_plan_action':
+            case 'demander_validation_avancement_100':
+            case 'fermer_recommandation':
+                return divisionIds;
+            default:
+                return [];
+        }
+    }
+
+    private static buildRecommendationNotificationContent(recommendation: AuditMission, transition: RecommendationTransitionCode, nextStatus: string) {
+        const recommendationLabel = String(recommendation.regleDnssi || recommendation.recommandations || `#${recommendation.id}`).trim();
+        const statusLabel = this.getWorkflowStatusLabel('recommendation', nextStatus);
+
+        const transitionLabels: Record<RecommendationTransitionCode, string> = {
+            envoyer_recommandation: 'a ete envoyee pour preparation du plan d action',
+            soumettre_plan_action: 'a recu un plan d action a revoir',
+            demander_validation_plan_action: 'est soumise pour validation du plan d action',
+            demander_revue_plan_action: 'necessite une revue du plan d action',
+            demander_revue_validation_plan_action: 'a ete retournee pour revue avant validation',
+            valider_plan_action: 'a un plan d action valide',
+            demander_mise_a_jour_avancement: 'necessite une mise a jour du taux d avancement',
+            soumettre_taux_avancement: 'a recu une mise a jour du taux d avancement',
+            demander_revue_taux_avancement: 'necessite une revue du taux d avancement',
+            demander_validation_avancement_100: 'est soumise pour validation de l avancement 100%',
+            demander_revoir_100: 'necessite une revue de l avancement 100%',
+            valider_avancement_100: 'a un avancement 100% valide',
+            fermer_recommandation: 'a ete fermee',
+            reouvrir: 'a ete rouverte',
+            fermer_definitivement: 'a ete fermee definitivement',
+        };
+
+        return `La recommandation ${recommendationLabel} ${transitionLabels[transition]}. Statut: ${statusLabel}`;
+    }
+
+    private static async notifyRecommendationWorkflow(sourceMission: AuditMission, recommendation: AuditMission, actorUserId: number, transition: RecommendationTransitionCode, nextStatus: string, comment?: string | null) {
+        const recipientIds = await this.getRecommendationWorkflowRecipientIds(sourceMission, recommendation, transition);
+        const notificationType = ['demander_validation_plan_action', 'demander_validation_avancement_100'].includes(transition)
+            ? NotificationType.AUDIT_PLAN_VALIDATION_REQUESTED
+            : NotificationType.AUDIT_PLAN_STATUS_CHANGED;
+        const content = this.buildRecommendationNotificationContent(recommendation, transition, nextStatus);
+
+        await this.notifyMissionWorkflowParticipants(
+            sourceMission,
+            actorUserId,
+            notificationType,
+            content,
+            recipientIds
+        );
+
+        await this.sendMissionWorkflowEmails(
+            sourceMission,
+            actorUserId,
+            recipientIds,
+            {
+                transitionCode: transition,
+                comment: comment || null,
+                reference: String(recommendation.regleDnssi || recommendation.recommandations || `#${recommendation.id}`).trim(),
+            }
+        );
     }
 
     private static enrichRecommendationItems(sourceMission: AuditMission, items: any[], role: string, userId: number) {
@@ -1834,9 +2254,9 @@ export class AuditPlanService {
                 throw new Error('Le plan d action est obligatoire avant soumission');
             }
             return {
-                status: 'plan_actions_a_valider',
+                status: 'plan_actions_a_revoir',
                 patch: {
-                    recommendationWorkflowStatus: 'plan_actions_a_valider',
+                    recommendationWorkflowStatus: 'plan_actions_a_revoir',
                     recommendationPlanAction: planAction,
                     recommendationPlanSubmittedAt: now,
                     recommendationLastComment: comment || null,
@@ -1846,8 +2266,35 @@ export class AuditPlanService {
         }
 
         if (transition === 'demander_revue_plan_action') {
+            if (currentStatus !== 'plan_actions_a_revoir') {
+                throw new Error('La demande de revue du plan d action est possible uniquement apres reception');
+            }
+            requireComment();
+            return {
+                status: 'plan_actions_a_soumettre',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_soumettre',
+                    recommendationLastComment: comment,
+                },
+            };
+        }
+
+        if (transition === 'demander_validation_plan_action') {
+            if (currentStatus !== 'plan_actions_a_revoir') {
+                throw new Error('Le plan d action doit etre revu avant demande de validation');
+            }
+            return {
+                status: 'plan_actions_a_valider',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_valider',
+                    recommendationLastComment: comment || null,
+                },
+            };
+        }
+
+        if (transition === 'demander_revue_validation_plan_action') {
             if (currentStatus !== 'plan_actions_a_valider') {
-                throw new Error('La revue du plan d action est possible uniquement apres soumission');
+                throw new Error('La revue par la division d audit est possible uniquement apres demande de validation');
             }
             requireComment();
             return {
@@ -1893,11 +2340,16 @@ export class AuditPlanService {
             if (!Number.isFinite(tauxAvancement) || tauxAvancement < 0 || tauxAvancement > 100) {
                 throw new Error('Le taux d avancement doit etre compris entre 0 et 100');
             }
-            const nextStatus = tauxAvancement === 100 ? 'avancement_100_a_valider' : 'plan_actions_mis_a_jour';
+            if (!evaluationAvancement) {
+                throw new Error('L evaluation d avancement est obligatoire');
+            }
+            if (!comment) {
+                throw new Error('Un commentaire est obligatoire pour expliquer l avancement');
+            }
             return {
-                status: nextStatus,
+                status: 'plan_actions_mis_a_jour',
                 patch: {
-                    recommendationWorkflowStatus: nextStatus,
+                    recommendationWorkflowStatus: 'plan_actions_mis_a_jour',
                     recommendationEvaluationAvancement: evaluationAvancement,
                     recommendationProgressSubmittedAt: now,
                     recommendationLastComment: comment || null,
@@ -1922,8 +2374,38 @@ export class AuditPlanService {
             };
         }
 
+        if (transition === 'demander_validation_avancement_100') {
+            if (currentStatus !== 'plan_actions_mis_a_jour') {
+                throw new Error('La validation 100% peut etre demandee uniquement apres mise a jour');
+            }
+            if (Number(recommendation.progressPercent || 0) !== 100) {
+                throw new Error('La demande de validation 100% exige un taux a 100%');
+            }
+            return {
+                status: 'avancement_100_a_valider',
+                patch: {
+                    recommendationWorkflowStatus: 'avancement_100_a_valider',
+                    recommendationLastComment: comment || null,
+                },
+            };
+        }
+
+        if (transition === 'demander_revoir_100') {
+            if (currentStatus !== 'avancement_100_a_valider') {
+                throw new Error('La revue du 100% est possible uniquement apres demande de validation');
+            }
+            requireComment();
+            return {
+                status: 'plan_actions_a_mettre_a_jour',
+                patch: {
+                    recommendationWorkflowStatus: 'plan_actions_a_mettre_a_jour',
+                    recommendationLastComment: comment,
+                },
+            };
+        }
+
         if (transition === 'valider_avancement_100') {
-            if (!['plan_actions_mis_a_jour', 'avancement_100_a_valider'].includes(currentStatus)) {
+            if (currentStatus !== 'avancement_100_a_valider') {
                 throw new Error('L avancement doit etre soumis avant validation');
             }
             if (Number(recommendation.progressPercent || 0) !== 100) {
@@ -1999,7 +2481,7 @@ export class AuditPlanService {
         this.ensureMissionRole(mission, actorRole, actorUserId, ACTION_PLAN_CREATOR_ROLES);
         const item = await AuditingService.createMissionActionPlanItem(missionId, {
             ...data,
-            recommendationWorkflowStatus: 'cree',
+            recommendationWorkflowStatus: 'recommandation_a_envoyer',
         });
         return this.enrichRecommendationItems(mission, [item], actorRole, actorUserId)[0];
     }
@@ -2041,6 +2523,14 @@ export class AuditPlanService {
             'recommendation',
             transition,
             currentStatus,
+            result.status,
+            data.comment || data.commentaireWorkflow || null
+        );
+        await this.notifyRecommendationWorkflow(
+            mission,
+            recommendation,
+            actorUserId,
+            transition,
             result.status,
             data.comment || data.commentaireWorkflow || null
         );
@@ -2197,14 +2687,7 @@ export class AuditPlanService {
             }
         }
 
-        const activeResources = await AuditMissionResource.findAll({ where: { missionId } });
-        const chefMissionAssignment = activeResources.find((item: any) => ((item.assignmentRoleCode || item.assignmentRole) === AuditMissionResourceRoleCode.CHEF_MISSION));
-        const auditeurAssignment = activeResources.find((item: any) => ((item.assignmentRoleCode || item.assignmentRole) === AuditMissionResourceRoleCode.AUDITEUR));
-
-        await mission.update({
-            chefMissionId: chefMissionAssignment?.userId || null,
-            auditeurId: auditeurAssignment?.userId || null,
-        });
+        await this.syncMissionAssigneeFieldsFromResources(mission, true);
 
         return this.getMissionResources(missionId, actorRole, actorUserId);
     }
@@ -2320,7 +2803,22 @@ export class AuditPlanService {
             : [];
 
         if (actorUserId !== undefined && this.isMissionScopedRole(actorRole) && visibleMissionIds.length === 0) {
-            throw new Error('Aucune mission de ce plan n est affectee a votre profil');
+            if (actorRole !== UserRole.CONTROLLER) {
+                throw new Error('Aucune mission de ce plan n est affectee a votre profil');
+            }
+
+            const assignedRecommendation = await AuditMission.findOne({
+                where: {
+                    auditPlanId: planId,
+                    type: AuditRecordType.PLAN_ACTION_AUDIT,
+                    auditedPrincipalId: actorUserId,
+                },
+                attributes: ['id'],
+            });
+
+            if (!assignedRecommendation) {
+                throw new Error('Aucune recommandation de ce plan n est affectee a votre profil');
+            }
         }
 
         const missions = await this.getPlanMissions(planId, actorRole, actorUserId);

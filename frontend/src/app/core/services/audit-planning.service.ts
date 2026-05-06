@@ -416,8 +416,9 @@ export class AuditPlanningService {
         return this.http.get<AuditPlan>(`${this.apiUrl}/plans/${planId}`);
     }
 
-    getMissions(): Observable<AuditPlanMission[]> {
-        return this.http.get<AuditPlanMission[]>(`${this.apiUrl}/missions`);
+    getMissions(type?: AuditPlanningRecordType | string | null): Observable<AuditPlanMission[]> {
+        const params = type ? new HttpParams().set('type', String(type)) : undefined;
+        return this.http.get<AuditPlanMission[]>(`${this.apiUrl}/missions`, { params });
     }
 
     updatePlan(planId: number, payload: Partial<AuditPlan>): Observable<AuditPlan> {

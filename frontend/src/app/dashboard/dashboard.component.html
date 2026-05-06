@@ -32,9 +32,9 @@
             <div *ngIf="notifications.length === 0" class="empty-notif">
               Aucune notification
             </div>
-            <div *ngFor="let n of notifications" class="notif-item" [class.unread]="!n.isRead" (click)="markAsRead(n)">
+            <div *ngFor="let n of notifications" class="notif-item" [class.unread]="!n.isRead" (click)="onNotificationClick(n)">
               <div class="notif-icon">
-                <i class="fas fa-info-circle text-primary"></i>
+                <i class="fas" [ngClass]="getNotificationIcon(n)"></i>
               </div>
               <div class="notif-content">
                 <p>{{ n.content }}</p>

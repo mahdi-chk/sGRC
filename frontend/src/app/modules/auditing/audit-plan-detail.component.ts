@@ -9,6 +9,7 @@ import {
   AuditMissionActionPlanItem,
   AuditMissionActionPlanPayload,
   AuditMissionChecklistItem,
+  AuditMissionWorkflowEvent,
   AuditMissionWorkspace,
   AuditPlan,
   AuditPlanMission,
@@ -137,6 +138,8 @@ export class AuditPlanDetailComponent implements OnInit {
 
   actionPlanForm: Partial<AuditMissionActionPlanItem> = this.emptyActionPlan();
   selectedRecommendation: AuditMissionActionPlanItem | null = null;
+  recommendationWorkflowHistory: AuditMissionWorkflowEvent[] = [];
+  isLoadingRecommendationWorkflowHistory = false;
   recommendationTransitionForm: {
     transition: string;
     comment: string;
@@ -162,11 +165,15 @@ export class AuditPlanDetailComponent implements OnInit {
   readonly recommendationTransitionLabels: Record<string, string> = {
     envoyer_recommandation: 'Envoyer la recommandation',
     soumettre_plan_action: 'Soumettre le plan d action',
+    demander_validation_plan_action: 'Demander validation du plan',
     demander_revue_plan_action: 'Demander de revoir le plan d action',
+    demander_revue_validation_plan_action: 'Demander une revue du plan',
     valider_plan_action: 'Valider le plan d action',
     demander_mise_a_jour_avancement: 'Demander la mise a jour du taux',
     soumettre_taux_avancement: 'Soumettre le taux d avancement',
     demander_revue_taux_avancement: 'Demander de revoir le taux',
+    demander_validation_avancement_100: 'Demander validation 100%',
+    demander_revoir_100: 'Demander de revoir le 100%',
     valider_avancement_100: 'Valider avancement 100%',
     fermer_recommandation: 'Fermer la recommandation',
     reouvrir: 'Reouvrir',
@@ -260,7 +267,7 @@ export class AuditPlanDetailComponent implements OnInit {
 
   get isManagementRole(): boolean {
     const role = this.currentUserRole;
-    return role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE || role === UserRole.CHEF_MISSION || role === UserRole.SUPER_ADMIN;
+    return role === UserRole.AUDIT_DIRECTEUR || role === UserRole.AUDIT_RESPONSABLE || role === UserRole.SUPER_ADMIN;
   }
 
   get canViewResourcesTab(): boolean {
@@ -451,6 +458,35 @@ export class AuditPlanDetailComponent implements OnInit {
     });
   }
 
+  get hasChefMissionAssignment(): boolean {
+    const mission = this.missionWorkspace?.mission || this.selectedMission;
+    return Boolean(mission?.chefMissionId || this.missionResources.some((item) =>
+      Number(item.userId || 0) > 0
+      && String(item.assignmentRoleCode || item.assignmentRole || '') === 'chef_mission'
+    ));
+  }
+
+  get hasAuditeurAssignment(): boolean {
+    const mission = this.missionWorkspace?.mission || this.selectedMission;
+    return Boolean(mission?.auditeurId || this.missionResources.some((item) =>
+      Number(item.userId || 0) > 0
+      && String(item.assignmentRoleCode || item.assignmentRole || '') === 'auditeur'
+    ));
+  }
+
+  get missingMissionAssignmentsLabel(): string {
+    const missingRoles = [
+      !this.hasChefMissionAssignment ? 'un chef de mission' : '',
+      !this.hasAuditeurAssignment ? 'un auditeur' : '',
+    ].filter(Boolean);
+
+    return missingRoles.join(' et ');
+  }
+
+  get missionHasRequiredAssignments(): boolean {
+    return this.hasChefMissionAssignment && this.hasAuditeurAssignment;
+  }
+
   get missionOrderFormIsValid(): boolean {
     return String(this.missionOrderForm.reference || '').length <= 80
       && String(this.missionOrderForm.comment || '').length <= 500;
@@ -479,7 +515,13 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   get selectedRecommendationTransitionRequiresComment(): boolean {
-    return ['demander_revue_plan_action', 'demander_revue_taux_avancement'].includes(this.recommendationTransitionForm.transition);
+    return [
+      'demander_revue_plan_action',
+      'demander_revue_validation_plan_action',
+      'soumettre_taux_avancement',
+      'demander_revue_taux_avancement',
+      'demander_revoir_100'
+    ].includes(this.recommendationTransitionForm.transition);
   }
 
   get selectedRecommendationTransitionRequiresPlanAction(): boolean {
@@ -487,6 +529,10 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   get selectedRecommendationTransitionRequiresProgress(): boolean {
+    return this.recommendationTransitionForm.transition === 'soumettre_taux_avancement';
+  }
+
+  get selectedRecommendationTransitionRequiresEvaluation(): boolean {
     return this.recommendationTransitionForm.transition === 'soumettre_taux_avancement';
   }
 
@@ -500,6 +546,7 @@ export class AuditPlanDetailComponent implements OnInit {
       && (!this.selectedRecommendationTransitionRequiresComment || String(this.recommendationTransitionForm.comment || '').trim())
       && (!this.selectedRecommendationTransitionRequiresPlanAction || String(this.recommendationTransitionForm.planAction || '').trim())
       && (!this.selectedRecommendationTransitionRequiresProgress || (Number.isFinite(progress) && progress >= 0 && progress <= 100))
+      && (!this.selectedRecommendationTransitionRequiresEvaluation || String(this.recommendationTransitionForm.evaluationAvancement || '').trim())
     );
   }
 
@@ -938,7 +985,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   loadMissionWorkspace(): void {
-    if (!this.selectedMissionId || !this.resourcesFormIsValid) {
+    if (!this.selectedMissionId) {
       return;
     }
 
@@ -984,7 +1031,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   loadMissionResources(): void {
-    if (!this.selectedMissionId || !this.workProgramFormIsValid) {
+    if (!this.selectedMissionId) {
       return;
     }
 
@@ -1103,7 +1150,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveResources(): void {
-    if (!this.selectedMissionId || !this.missionOrderFormIsValid) {
+    if (!this.selectedMissionId || !this.resourcesFormIsValid) {
       return;
     }
 
@@ -1407,7 +1454,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   saveMissionOrder(): void {
-    if (!this.selectedMissionId) {
+    if (!this.selectedMissionId || !this.missionOrderFormIsValid || !this.missionHasRequiredAssignments) {
       return;
     }
 
@@ -1421,7 +1468,7 @@ export class AuditPlanDetailComponent implements OnInit {
       error: (error) => {
         console.error(error);
         this.isSavingMissionOrder = false;
-        alert(error?.error?.message || 'Erreur lors de l envoi de l ordre de mission.');
+        alert(this.getBackendErrorMessage(error, 'Erreur lors de l envoi de l ordre de mission.'));
       }
     });
   }
@@ -1476,6 +1523,7 @@ export class AuditPlanDetailComponent implements OnInit {
 
   openRecommendationWorkflowModal(item: AuditMissionActionPlanItem, transition?: string): void {
     this.selectedRecommendation = item;
+    this.recommendationWorkflowHistory = [];
     this.recommendationTransitionForm = {
       transition: transition || '',
       comment: '',
@@ -1484,6 +1532,26 @@ export class AuditPlanDetailComponent implements OnInit {
       evaluationAvancement: item.evaluationAvancement || ''
     };
     this.showRecommendationWorkflowModal = true;
+    this.loadRecommendationWorkflowHistory(item.id);
+  }
+
+  loadRecommendationWorkflowHistory(itemId: number): void {
+    if (!this.selectedMissionId || !itemId) {
+      this.recommendationWorkflowHistory = [];
+      return;
+    }
+
+    this.isLoadingRecommendationWorkflowHistory = true;
+    this.auditPlanningService.getRecommendationWorkflowEvents(this.selectedMissionId, itemId).subscribe({
+      next: (events) => {
+        this.recommendationWorkflowHistory = events;
+        this.isLoadingRecommendationWorkflowHistory = false;
+      },
+      error: (error) => {
+        console.error(error);
+        this.isLoadingRecommendationWorkflowHistory = false;
+      }
+    });
   }
 
   applyRecommendationTransition(): void {
@@ -1504,6 +1572,7 @@ export class AuditPlanDetailComponent implements OnInit {
         this.isApplyingRecommendationTransition = false;
         this.showRecommendationWorkflowModal = false;
         this.selectedRecommendation = null;
+        this.recommendationWorkflowHistory = [];
         this.loadPlan();
       },
       error: (error) => {

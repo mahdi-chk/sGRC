@@ -368,7 +368,7 @@ const resolveReminderRecipients = async (
     sourceType: ActionSourceType,
     entityId: number,
     actorUserId: number
-): Promise<{ recipients: User[]; title: string; relation: Record<string, number> }> => {
+): Promise<{ recipients: User[]; title: string; dueDate: string | null; relation: Record<string, number> }> => {
     if (sourceType === 'risk') {
         const risk = await Risk.findByPk(entityId);
         if (!risk) {
@@ -383,6 +383,7 @@ const resolveReminderRecipients = async (
         return {
             recipients,
             title: risk.titre,
+            dueDate: toIsoString((risk as any).dateEcheance || (risk as any).prochaineEcheance),
             relation: { riskId: risk.id },
         };
     }
@@ -400,6 +401,7 @@ const resolveReminderRecipients = async (
         return {
             recipients,
             title: incident.titre,
+            dueDate: toIsoString((incident as any).dateEcheance),
             relation: {},
         };
     }
@@ -417,6 +419,7 @@ const resolveReminderRecipients = async (
     return {
         recipients,
         title: mission.titre,
+        dueDate: toIsoString(mission.delai),
         relation: { auditMissionId: mission.id },
     };
 };
@@ -693,26 +696,52 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
         }
 
         if (dueThisMonth > 0) {
+            const dueSoonSendAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
             notifications.push({
                 id: 'notif-due-soon',
                 title: `${dueThisMonth} action(s) a suivre sous 30 jours`,
                 channel: 'email',
                 audience: 'Responsables de traitement',
                 trigger: 'Echeance proche',
-                nextSendAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+                nextSendAt: dueSoonSendAt,
+                escalationLevel: 'niveau_1',
+                status: 'active',
+            });
+
+            notifications.push({
+                id: 'notif-due-soon-app',
+                title: `${dueThisMonth} rappel(s) app pour echeances proches`,
+                channel: 'in_app',
+                audience: 'Responsables assignes',
+                trigger: 'Echeance proche',
+                nextSendAt: dueSoonSendAt,
                 escalationLevel: 'niveau_1',
                 status: 'active',
             });
         }
 
         if (openRegistry.length > 0) {
+            const weeklySendAt = getNextMondayMorning(now).toISOString();
+
             notifications.push({
                 id: 'notif-weekly-summary',
                 title: 'Synthese hebdomadaire du portefeuille actions',
                 channel: 'email',
                 audience: 'Top management et pilotage GRC',
                 trigger: 'Revue hebdomadaire programmee',
-                nextSendAt: getNextMondayMorning(now).toISOString(),
+                nextSendAt: weeklySendAt,
+                escalationLevel: 'niveau_1',
+                status: 'planifiee',
+            });
+
+            notifications.push({
+                id: 'notif-weekly-summary-app',
+                title: 'Resume app hebdomadaire du portefeuille actions',
+                channel: 'in_app',
+                audience: 'Top management et pilotage GRC',
+                trigger: 'Revue hebdomadaire programmee',
+                nextSendAt: weeklySendAt,
                 escalationLevel: 'niveau_1',
                 status: 'planifiee',
             });
@@ -843,7 +872,7 @@ router.post('/:actionId/remind', authorizeRoles(...allowedRoles), async (req: Au
 
         const reminderReference = getActionReference(parsed.sourceType, parsed.entityId);
         const note = cleanText(req.body?.note);
-        const { recipients, title, relation } = await resolveReminderRecipients(parsed.sourceType, parsed.entityId, req.user!.id);
+        const { recipients, title, dueDate, relation } = await resolveReminderRecipients(parsed.sourceType, parsed.entityId, req.user!.id);
 
         if (!recipients.length) {
             return res.status(400).json({
@@ -852,8 +881,9 @@ router.post('/:actionId/remind', authorizeRoles(...allowedRoles), async (req: Au
         }
 
         const actorLabel = req.user?.email ? ` par ${req.user.email}` : '';
-        const baseContent = `Relance sur l action ${reminderReference} - ${title}. Merci de mettre a jour son avancement${actorLabel}.`;
-        const content = note ? `${baseContent} Note: ${note}` : baseContent;
+        const deadlineLabel = dueDate ? new Date(dueDate).toLocaleDateString('fr-FR') : 'non definie';
+        const baseContent = `Rappel plan d action ${reminderReference} : ${title}. Prochaine echeance : ${deadlineLabel}. Merci de vous connecter a la plateforme pour verifier le suivi et mettre a jour l avancement${actorLabel}.`;
+        const content = note ? `${baseContent} Note : ${note}` : baseContent;
 
         await Promise.all(
             recipients.map((recipient) =>

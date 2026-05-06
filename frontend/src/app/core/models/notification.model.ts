@@ -5,6 +5,8 @@ export enum NotificationType {
     REMINDER = 'reminder',
     AUDIT_MISSION_ASSIGNED = 'audit_mission_assigned',
     AUDIT_REPORT_SUBMITTED = 'audit_report_submitted',
+    AUDIT_PLAN_VALIDATION_REQUESTED = 'audit_plan_validation_requested',
+    AUDIT_PLAN_STATUS_CHANGED = 'audit_plan_status_changed',
 }
 
 

@@ -28,6 +28,7 @@ type MissionListFilter = {
 
 type ActionPlanImportOptions = {
     sourceMissionId?: number | null;
+    auditPlanId?: number | null;
     riskId?: number | null;
     planActionType?: string | null;
     replaceExisting?: boolean;
@@ -93,6 +94,96 @@ export class AuditingService {
         }
 
         return 'NOK';
+    }
+
+    private static getProgressStatusLabel(value: unknown): string {
+        const normalized = this.normalizeProgressStatus(value);
+
+        if (normalized === AuditMissionStatus.OK) {
+            return 'OK';
+        }
+
+        if (normalized === AuditMissionStatus.EN_COURS) {
+            return 'En cours';
+        }
+
+        return 'NOK';
+    }
+
+    private static buildUserDisplayName(user: User | null): string {
+        return user ? `${user.prenom || ''} ${user.nom || ''}`.trim() || user.mail : 'Utilisateur';
+    }
+
+    private static formatDateFr(value: unknown): string | null {
+        if (!value) {
+            return null;
+        }
+
+        const date = new Date(value as any);
+        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('fr-FR');
+    }
+
+    private static async notifyActionPlanTreatmentChanged(
+        mission: AuditMission,
+        previousStatus: string,
+        previousProgress: number,
+        actorUserId?: number | null
+    ) {
+        const currentStatus = this.normalizeProgressStatus((mission as any).statutCode || mission.statut);
+        const currentProgress = Number(mission.progressPercent || 0);
+        const statusChanged = currentStatus !== previousStatus;
+        const progressChanged = currentProgress !== previousProgress;
+
+        if (!statusChanged && !progressChanged) {
+            return;
+        }
+
+        const recipientIds = Array.from(new Set([
+            mission.auditSeniorId,
+            mission.chefMissionId,
+            mission.auditeurId,
+        ].filter((id): id is number => Number.isFinite(id) && id !== actorUserId)));
+
+        if (!recipientIds.length) {
+            return;
+        }
+
+        const recipients = await User.findAll({
+            where: { id: { [Op.in]: recipientIds } },
+            attributes: ['id', 'nom', 'prenom', 'mail'],
+        });
+        const actor = actorUserId
+            ? await User.findByPk(actorUserId, { attributes: ['id', 'nom', 'prenom', 'mail'] })
+            : null;
+        const actorName = actor ? this.buildUserDisplayName(actor) : null;
+        const statusPart = statusChanged
+            ? `Statut : ${this.getProgressStatusLabel(previousStatus)} -> ${this.getProgressStatusLabel(currentStatus)}.`
+            : `Statut : ${this.getProgressStatusLabel(currentStatus)}.`;
+        const progressPart = progressChanged ? ` Avancement : ${previousProgress}% -> ${currentProgress}%.` : '';
+        const content = `Traitement du plan d action audit "${mission.titre}" mis a jour. ${statusPart}${progressPart}`;
+
+        await Promise.all(recipients.map(async (recipient) => {
+            await Notification.create(await LookupResolutionService.resolveEntityPayload('notification', {
+                userId: recipient.id,
+                type: NotificationType.AUDIT_PLAN_STATUS_CHANGED,
+                content,
+                auditMissionId: mission.id,
+            }));
+
+            await emailService.sendAuditMissionWorkflowEmail(
+                { mail: recipient.mail, nom: recipient.nom, prenom: recipient.prenom, userId: recipient.id },
+                {
+                    missionTitle: mission.titre,
+                    missionId: mission.id,
+                    planId: mission.auditPlanId || null,
+                    transitionCode: 'audit_action_plan_status_changed',
+                    actorName,
+                    reference: mission.code || `PA-AUD-${mission.id}`,
+                    dueDate: this.formatDateFr(mission.delai),
+                    comment: `${statusPart}${progressPart}`,
+                }
+            );
+        }));
     }
 
     private static normalizeHorizon(value: unknown): string | null {
@@ -260,7 +351,7 @@ export class AuditingService {
             priorite: this.normalizePriority(merged.priorite),
             rapport: null,
             recommandations,
-            recommendationWorkflowStatus: this.cleanString(merged.recommendationWorkflowStatus) || 'cree',
+            recommendationWorkflowStatus: this.cleanString(merged.recommendationWorkflowStatus) || 'recommandation_a_envoyer',
             recommendationLastComment: this.cleanString(merged.recommendationLastComment),
             recommendationPlanAction: this.cleanString(merged.recommendationPlanAction !== undefined ? merged.recommendationPlanAction : merged.planAction),
             recommendationEvaluationAvancement: this.cleanString(
@@ -789,7 +880,19 @@ export class AuditingService {
                     auditMissionId: missionId
                 }));
 
-                if (!isPlan) {
+                if (isPlan) {
+                    await emailService.sendAuditMissionWorkflowEmail(
+                        { mail: auditeur.mail, nom: auditeur.nom, prenom: auditeur.prenom, userId: auditeur.id },
+                        {
+                            missionTitle: mission.titre,
+                            missionId: mission.id,
+                            planId: mission.auditPlanId || null,
+                            transitionCode: 'audit_action_plan_assigned',
+                            reference: mission.code || `PA-AUD-${mission.id}`,
+                            dueDate: this.formatDateFr(mission.delai),
+                        }
+                    );
+                } else {
                     await emailService.sendAuditMissionAssignedEmail(
                         { mail: auditeur.mail, nom: auditeur.nom, prenom: auditeur.prenom },
                         { titre: mission.titre, id: mission.id }
@@ -843,10 +946,13 @@ export class AuditingService {
         return mission;
     }
 
-    static async updateMission(missionId: number, data: any) {
+    static async updateMission(missionId: number, data: any, actorUserId?: number | null) {
         const mission = await AuditMission.findByPk(missionId);
         if (!mission) throw new Error('Enregistrement introuvable');
 
+        const isActionPlan = mission.type === AuditRecordType.PLAN_ACTION_AUDIT;
+        const previousStatus = this.normalizeProgressStatus((mission as any).statutCode || mission.statut);
+        const previousProgress = Number(mission.progressPercent || 0);
         const payload = mission.type === AuditRecordType.PLAN_ACTION_AUDIT
             ? await this.buildActionPlanPayload(data, mission.get({ plain: true }) as Partial<AuditMission>)
             : this.buildMissionPayload(data, mission.get({ plain: true }) as Partial<AuditMission>);
@@ -855,7 +961,17 @@ export class AuditingService {
         await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', payload));
         await this.ensureCode(mission);
 
-        return await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior', 'chefMission', 'auditedPrincipal', 'auditPlan', 'sourceMission'] });
+        const updatedMission = await AuditMission.findByPk(missionId, { include: ['auditeur', 'risk', 'auditSenior', 'chefMission', 'auditedPrincipal', 'auditPlan', 'sourceMission'] });
+
+        if (isActionPlan && updatedMission) {
+            try {
+                await this.notifyActionPlanTreatmentChanged(updatedMission, previousStatus, previousProgress, actorUserId || null);
+            } catch (error) {
+                appLogger.error('Auditing', 'Action plan treatment notifications failed', error);
+            }
+        }
+
+        return updatedMission;
     }
 
     static async deleteMission(missionId: number) {
@@ -940,6 +1056,7 @@ export class AuditingService {
         const rows = await this.parseActionPlanImportRowsRobust(file, {
             auditSeniorId: actorId,
             type: AuditRecordType.PLAN_ACTION_AUDIT,
+            auditPlanId: options.auditPlanId ?? null,
             riskId: options.riskId ?? null,
             sourceMissionId: options.sourceMissionId ?? null,
             planActionType: options.planActionType ?? null,
@@ -1086,6 +1203,7 @@ export class AuditingService {
 
         await this.importActionPlans(mission.auditSeniorId, file, {
             sourceMissionId: missionId,
+            auditPlanId: mission.auditPlanId,
             riskId: mission.riskId,
             replaceExisting: false,
         });

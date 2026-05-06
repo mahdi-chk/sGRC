@@ -350,26 +350,52 @@ export class ActionsService {
     }
 
     if (dueThisMonth > 0) {
+      const dueSoonSendAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
       notifications.push({
         id: 'notif-due-soon',
         title: `${dueThisMonth} action(s) a suivre sous 30 jours`,
         channel: 'email',
         audience: 'Responsables de traitement',
         trigger: 'Echeance proche',
-        nextSendAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        nextSendAt: dueSoonSendAt,
+        escalationLevel: 'niveau_1',
+        status: 'active'
+      });
+
+      notifications.push({
+        id: 'notif-due-soon-app',
+        title: `${dueThisMonth} rappel(s) app pour echeances proches`,
+        channel: 'in_app',
+        audience: 'Responsables assignes',
+        trigger: 'Echeance proche',
+        nextSendAt: dueSoonSendAt,
         escalationLevel: 'niveau_1',
         status: 'active'
       });
     }
 
     if (items.length > 0) {
+      const weeklySendAt = this.getNextMondayMorning(now).toISOString();
+
       notifications.push({
         id: 'notif-weekly-summary',
         title: 'Synthese hebdomadaire du portefeuille actions',
         channel: 'email',
         audience: 'Top management et pilotage GRC',
         trigger: 'Revue hebdomadaire programmee',
-        nextSendAt: this.getNextMondayMorning(now).toISOString(),
+        nextSendAt: weeklySendAt,
+        escalationLevel: 'niveau_1',
+        status: 'planifiee'
+      });
+
+      notifications.push({
+        id: 'notif-weekly-summary-app',
+        title: 'Resume app hebdomadaire du portefeuille actions',
+        channel: 'in_app',
+        audience: 'Top management et pilotage GRC',
+        trigger: 'Revue hebdomadaire programmee',
+        nextSendAt: weeklySendAt,
         escalationLevel: 'niveau_1',
         status: 'planifiee'
       });

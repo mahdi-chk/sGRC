@@ -368,9 +368,9 @@ router.put('/missions/:id/assign', authorizeRoles(...auditDivisionManagerRoles),
     }
 });
 
-router.put('/missions/:id', authorizeRoles(...auditMissionManagementRoles), async (req, res) => {
+router.put('/missions/:id', authorizeRoles(...auditMissionManagementRoles), async (req: AuthRequest, res) => {
     try {
-        const mission = await AuditingService.updateMission(parseInt(req.params.id as string, 10), req.body);
+        const mission = await AuditingService.updateMission(parseInt(req.params.id as string, 10), req.body, req.user!.id);
         res.json(mission);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la modification', error: error.message });
@@ -433,12 +433,12 @@ router.post('/action-plans', authorizeRoles(...auditMissionManagementRoles), asy
     }
 });
 
-router.put('/action-plans/:id', authorizeRoles(...auditAllRoles), async (req, res) => {
+router.put('/action-plans/:id', authorizeRoles(...auditAllRoles), async (req: AuthRequest, res) => {
     try {
         const item = await AuditingService.updateMission(parseInt(req.params.id as string, 10), {
             ...req.body,
             type: AuditRecordType.PLAN_ACTION_AUDIT,
-        });
+        }, req.user!.id);
         res.json(item);
     } catch (error: any) {
         res.status(400).json({ message: 'Erreur lors de la mise à jour du plan d actions', error: error.message });

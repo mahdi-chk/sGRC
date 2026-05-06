@@ -364,6 +364,34 @@
   font-weight: 700;
 }
 
+.allocation-note {
+  color: #475569;
+  font-weight: 600;
+}
+
+.mission-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-save:disabled,
+.btn-secondary:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.75;
+  transform: none;
+}
+
+.btn-save:disabled:hover,
+.btn-secondary:disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
 .email-log-body p {
   margin: 8px 0 4px;
   color: #334155;
@@ -1095,6 +1123,17 @@
 
   p {
     margin: 0;
+    color: #475569;
+    overflow-wrap: anywhere;
+  }
+}
+
+.recommendation-history {
+  margin-top: 16px;
+  padding-top: 8px;
+
+  .compact-event p {
+    margin: 6px 0 0;
     color: #475569;
     overflow-wrap: anywhere;
   }

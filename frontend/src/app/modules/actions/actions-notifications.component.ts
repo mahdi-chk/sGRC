@@ -68,6 +68,10 @@ export class ActionsNotificationsComponent implements OnInit {
     return this.notifications.filter(item => item.channel === 'email').length;
   }
 
+  get appCount(): number {
+    return this.notifications.filter(item => item.channel === 'in_app').length;
+  }
+
   formatDate(value: string | null | undefined): string {
     if (!value) {
       return 'Non planifie';

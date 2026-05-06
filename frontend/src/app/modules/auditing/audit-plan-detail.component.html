@@ -380,6 +380,9 @@
             <input class="finput" type="number" min="0" max="100" step="1" [(ngModel)]="resource.allocationPercent" [disabled]="!workspace.permissions.canManageResources" required>
             <button class="action-btn btn-delete" *ngIf="workspace.permissions.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
           </div>
+          <small class="field-note allocation-note" *ngIf="missionResources.length > 0">
+            Allocation = pourcentage de disponibilite de la ressource sur cette mission. Exemple: 100 = temps plein, 50 = mi-temps.
+          </small>
 
           <p class="empty-state" *ngIf="missionResources.length === 0">Aucune ressource affectee pour cette mission.</p>
 
@@ -421,9 +424,17 @@
                   <textarea [(ngModel)]="missionOrderForm.comment" class="finput" rows="2" maxlength="500"></textarea>
                 </div>
               </div>
-              <button class="btn-save" *ngIf="workspace.permissions.canSendMissionOrder" (click)="saveMissionOrder()" [disabled]="isSavingMissionOrder || !missionOrderFormIsValid">
-                {{ isSavingMissionOrder ? 'Envoi...' : 'Envoyer l ordre de mission' }}
-              </button>
+              <small class="field-note" *ngIf="workspace.permissions.canSendMissionOrder && !missionHasRequiredAssignments">
+                Role manquant avant l envoi de l ordre de mission : {{ missingMissionAssignmentsLabel }}.
+              </small>
+              <div class="mission-order-actions" *ngIf="workspace.permissions.canSendMissionOrder">
+                <button class="btn-secondary" type="button" *ngIf="!missionHasRequiredAssignments" (click)="setMissionPanel('assign')">
+                  Affecter l equipe
+                </button>
+                <button class="btn-save" type="button" (click)="saveMissionOrder()" [disabled]="isSavingMissionOrder || !missionOrderFormIsValid || !missionHasRequiredAssignments">
+                  {{ isSavingMissionOrder ? 'Envoi...' : 'Envoyer l ordre de mission' }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -730,6 +741,9 @@
               <button class="action-btn btn-delete" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
             </div>
           </div>
+          <small class="field-note allocation-note" *ngIf="missionResources.length > 0">
+            Allocation = pourcentage de disponibilite de la ressource sur cette mission. Exemple: 100 = temps plein, 50 = mi-temps.
+          </small>
           <p class="empty-state" *ngIf="missionResources.length === 0">Aucune ressource affectee pour cette mission.</p>
 
           <div class="form-group full">
@@ -1034,17 +1048,36 @@
           <input [(ngModel)]="recommendationTransitionForm.tauxAvancement" class="finput" type="number" min="0" max="100" step="1" required>
         </div>
         <div class="form-group" *ngIf="selectedRecommendationTransitionRequiresProgress">
-          <label>Evaluation d avancement</label>
+          <label>Evaluation d avancement *</label>
           <select [(ngModel)]="recommendationTransitionForm.evaluationAvancement" class="finput">
             <option value="">Selectionner...</option>
             <option *ngFor="let option of recommendationEvaluationOptions" [value]="option.code">{{ option.label }}</option>
           </select>
         </div>
         <div class="form-group full">
-          <label>Commentaire</label>
+          <label>Commentaire{{ selectedRecommendationTransitionRequiresComment ? ' *' : '' }}</label>
           <textarea [(ngModel)]="recommendationTransitionForm.comment" class="finput" rows="3" maxlength="500"></textarea>
-          <small class="field-note" *ngIf="selectedRecommendationTransitionRequiresComment">Commentaire obligatoire pour demander une revue.</small>
+          <small class="field-note" *ngIf="selectedRecommendationTransitionRequiresComment">Commentaire obligatoire pour cette transition.</small>
         </div>
+      </div>
+      <div class="recommendation-history">
+        <div class="workflow-panel-head subsection-title">
+          <div>
+            <span class="eyebrow">Historique</span>
+            <h3>Evenements de la recommandation</h3>
+          </div>
+          <span class="status-badge">{{ recommendationWorkflowHistory.length }}</span>
+        </div>
+        <p class="empty-state padded" *ngIf="isLoadingRecommendationWorkflowHistory">Chargement de l historique...</p>
+        <div class="compact-event-list" *ngIf="!isLoadingRecommendationWorkflowHistory && recommendationWorkflowHistory.length">
+          <article class="compact-event" *ngFor="let item of recommendationWorkflowHistory">
+            <strong>{{ formatMissionWorkflowTransition(item.transitionCode) }}</strong>
+            <span>{{ item.fromStatusLabel || '-' }} -> {{ item.toStatusLabel || '-' }}</span>
+            <small>{{ item.createdAt | date:'dd/MM/yyyy HH:mm' }} - {{ item.actor ? (item.actor.prenom + ' ' + item.actor.nom) : '-' }}</small>
+            <p *ngIf="item.comment">{{ item.comment }}</p>
+          </article>
+        </div>
+        <p class="empty-state padded" *ngIf="!isLoadingRecommendationWorkflowHistory && !recommendationWorkflowHistory.length">Aucun evenement recommandation pour le moment.</p>
       </div>
       <div class="form-footer">
         <button class="btn-cancel" (click)="showRecommendationWorkflowModal = false">Annuler</button>

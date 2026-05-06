@@ -1,7 +1,7 @@
 import { Department } from '../departments/department.model';
 import { Risk } from '../risk/risk.model';
 import { AuditMission } from '../auditing/audit-mission.model';
-import { isAuditCoordinationRole, UserRole } from '../users/user.roles';
+import { UserRole } from '../users/user.roles';
 import { Op } from 'sequelize';
 import { appLogger } from '../../utils/app-logger';
 
@@ -120,14 +120,30 @@ export class AIDataService {
 
         // Filtres pour Audit
         if (type === 'audit') {
-            if (isAuditCoordinationRole(role)) {
+            if (role === UserRole.AUDIT_DIRECTEUR || role === 'audit_senior') {
                 return { auditSeniorId: userId };
+            }
+            if (role === UserRole.AUDIT_RESPONSABLE) {
+                return {};
+            }
+            if (role === UserRole.CHEF_MISSION) {
+                return { chefMissionId: userId };
             }
             if (role === UserRole.AUDITEUR) {
                 return { auditeurId: userId };
             }
+            if (role === UserRole.CONTROLLER) {
+                return { auditedPrincipalId: userId };
+            }
             // Fallback pour audit (voir les missions où il est impliqué)
-            return { [Op.or]: [{ auditSeniorId: userId }, { auditeurId: userId }] };
+            return {
+                [Op.or]: [
+                    { auditSeniorId: userId },
+                    { chefMissionId: userId },
+                    { auditeurId: userId },
+                    { auditedPrincipalId: userId },
+                ],
+            };
         }
 
         // Par défaut (Risque), accès restreint aux rôles liés

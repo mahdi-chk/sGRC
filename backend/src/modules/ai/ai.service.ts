@@ -9,7 +9,7 @@ import { RAGEngine } from './rag.engine';
 import { AIDataService } from './ai.data.service';
 import { AIPromptBuilder } from './ai-prompt-builder';
 import { DocumentTextExtractor } from './document-text-extractor';
-import { isAuditRole, UserRole } from '../users/user.roles';
+import { UserRole } from '../users/user.roles';
 import { AuditRecordType } from '../auditing/audit-mission.model';
 import { Response } from 'express';
 import * as mammoth from 'mammoth';
@@ -322,8 +322,24 @@ export class AIService {
             return 'assistant_role_risk';
         }
 
-        if (isAuditRole(role)) {
-            return 'assistant_role_audit';
+        if (role === UserRole.AUDIT_DIRECTEUR || role === 'audit_senior') {
+            return 'assistant_role_audit_directeur';
+        }
+
+        if (role === UserRole.AUDIT_RESPONSABLE) {
+            return 'assistant_role_audit_responsable';
+        }
+
+        if (role === UserRole.CHEF_MISSION) {
+            return 'assistant_role_chef_mission';
+        }
+
+        if (role === UserRole.AUDITEUR) {
+            return 'assistant_role_auditeur';
+        }
+
+        if (role === UserRole.CONTROLLER) {
+            return 'assistant_role_controller';
         }
 
         if (role === UserRole.TOP_MANAGEMENT) {

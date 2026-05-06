@@ -27,8 +27,15 @@ export const AUDIT_ALL_ROLES = [
     UserRole.AUDITEUR,
 ] as const;
 
+export const CONTROL_ROLES = [
+    UserRole.CONTROLLER,
+] as const;
+
 export const isAuditCoordinationRole = (role: string): boolean =>
     AUDIT_COORDINATION_ROLES.includes(role as (typeof AUDIT_COORDINATION_ROLES)[number]);
 
 export const isAuditRole = (role: string): boolean =>
     AUDIT_ALL_ROLES.includes(role as (typeof AUDIT_ALL_ROLES)[number]);
+
+export const isControlRole = (role: string): boolean =>
+    CONTROL_ROLES.includes(role as (typeof CONTROL_ROLES)[number]);

@@ -63,12 +63,12 @@ export function sanitizeFile(file: Express.Multer.File): Buffer {
 
     if (ext === 'pdf') {
         const content = buffer.toString('binary');
-        // Neutralize common JS triggers in PDF
+        // Keep PDF byte offsets stable: changing token lengths can corrupt xref tables.
         const sanitizedContent = content
-            .replace(/\/JS\b/g, '/__DISABLED_JS__')
-            .replace(/\/JavaScript\b/g, '/__DISABLED_JAVASCRIPT__')
-            .replace(/\/AA\b/g, '/__DISABLED_AA__') // Additional Actions
-            .replace(/\/OpenAction\b/g, '/__DISABLED_OPENACTION__');
+            .replace(/\/JavaScript\b/g, '/DisabledJS')
+            .replace(/\/OpenAction\b/g, '/DisabledOA')
+            .replace(/\/JS\b/g, '/XX')
+            .replace(/\/AA\b/g, '/XX'); // Additional Actions
         
         buffer = Buffer.from(sanitizedContent, 'binary');
     }

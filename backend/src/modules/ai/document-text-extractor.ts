@@ -519,7 +519,7 @@ export class DocumentTextExtractor {
             nativePdfText = await this.extractTextFromPdfBufferNative(buffer);
         } catch (error: any) {
             nativePdfError = error;
-            if (!useOcrForPdf) {
+            if (!useOcrForPdf && options.requireUsableText !== false) {
                 throw error;
             }
         }

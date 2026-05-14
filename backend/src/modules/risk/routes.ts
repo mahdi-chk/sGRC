@@ -15,7 +15,7 @@ import { Department } from '../departments/department.model';
 import { Incident, IncidentStatus } from '../incidents/incident.model';
 import { Organigramme } from '../organigramme/organigramme.model';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
-import { AUDIT_COORDINATION_ROLES, isAuditCoordinationRole, UserRole } from '../users/user.roles';
+import { AUDIT_COORDINATION_ROLES, isAuditCoordinationRole, USER_ROLE_CODES, UserRole } from '../users/user.roles';
 import { emailService } from '../../utils/email.service';
 import { Notification, NotificationType } from '../notifications/notification.model';
 import { AIService } from '../ai/ai.service';
@@ -123,7 +123,7 @@ router.post('/', authorizeRoles(UserRole.RISK_MANAGER, UserRole.SUPER_ADMIN), up
  * RÉCUPÉRER TOUS LES RISQUES
  * Filtre les résultats en fonction du rôle de l'utilisateur.
  */
-router.get('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, ...AUDIT_COORDINATION_ROLES, UserRole.RISK_MANAGER, UserRole.RISK_AGENT), async (req: AuthRequest, res) => {
+router.get('/', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res) => {
     try {
         const { role, id } = req.user!;
         let risks;

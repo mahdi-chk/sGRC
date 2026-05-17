@@ -15,7 +15,15 @@ export class DashboardViewComponent implements OnInit {
     stats: ReportingStats | null = null;
     kpis: KPI[] = [];
     isLoading = true;
+    selectedPeriod = 'all';
     readonly navItems = REPORTING_NAV_ITEMS;
+    readonly periodOptions = [
+        { value: 'all', label: 'Tout' },
+        { value: '30', label: '30 j' },
+        { value: '90', label: '90 j' },
+        { value: '180', label: '180 j' },
+        { value: '365', label: '12 mois' },
+    ];
 
     readonly riskLevelOrder = [
         RiskLevel.LOW,
@@ -72,8 +80,8 @@ export class DashboardViewComponent implements OnInit {
     loadStats(): void {
         this.isLoading = true;
         forkJoin({
-            stats: this.reportingService.getStats(),
-            kpis: this.reportingService.getKpis(),
+            stats: this.reportingService.getStats(this.selectedPeriod),
+            kpis: this.reportingService.getKpis(this.selectedPeriod),
         }).subscribe(
             ({ stats, kpis }) => {
                 this.stats = stats;
@@ -85,6 +93,15 @@ export class DashboardViewComponent implements OnInit {
                 this.isLoading = false;
             },
         );
+    }
+
+    setPeriod(period: string): void {
+        if (this.selectedPeriod === period) {
+            return;
+        }
+
+        this.selectedPeriod = period;
+        this.loadStats();
     }
 
     getPercent(value: number, total: number): number {
@@ -138,6 +155,29 @@ export class DashboardViewComponent implements OnInit {
     getKpiProgress(id: string): number {
         const value = this.getKpiValue(id);
         return this.getKpiUnit(id) === '%' ? Math.max(0, Math.min(100, value)) : 100;
+    }
+
+    getKpiStatus(id: string): string {
+        return this.kpis.find((kpi) => kpi.id === id)?.status || 'good';
+    }
+
+    getTrendMax(): number {
+        const values = (this.stats?.trend || []).reduce((allValues: number[], month) => [
+            ...allValues,
+            month.risks,
+            month.incidents,
+            month.audits,
+        ], []);
+
+        return Math.max(1, ...values);
+    }
+
+    getTrendHeight(value: number): number {
+        return Math.max(4, Math.round((value / this.getTrendMax()) * 100));
+    }
+
+    getDomainPercent(value: number): number {
+        return Math.max(0, Math.min(100, value));
     }
 
     getMatrixCount(level: RiskLevel, status: RiskStatus): number {

@@ -4,22 +4,49 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ReportingStats {
+    filters?: {
+        period: string;
+        periodLabel: string;
+    };
     risks: {
         total: number;
         byStatus: LookupStatEntry[];
         byLevel: LookupStatEntry[];
+        byDomain: DomainStatEntry[];
         matrix: ReportingRiskMatrixCell[];
+        deadlines: {
+            overdue: number;
+            dueSoon: number;
+            unassigned: number;
+        };
+        exposure: {
+            score: number;
+            averageNetScore: number;
+            openCritical: number;
+        };
         recent: ReportingRecentItem[];
     };
     incidents: {
         total: number;
         byStatus: LookupStatEntry[];
+        byLevel: LookupStatEntry[];
+        sla: {
+            open: number;
+            overdue: number;
+        };
         recent: ReportingRecentItem[];
     };
     audits: {
         total: number;
         byStatus: LookupStatEntry[];
+        progress: {
+            average: number;
+            completed: number;
+            inProgress: number;
+            overdue: number;
+        };
     };
+    trend: ReportingTrendEntry[];
 }
 
 export interface LookupStatEntry {
@@ -47,6 +74,11 @@ export interface KPI {
     label: string;
     value: number;
     unit: string;
+    target?: number;
+    status?: 'good' | 'warning' | 'critical';
+    category?: string;
+    description?: string;
+    inverseTarget?: boolean;
 }
 
 export interface ReportingRiskMatrixCell {
@@ -57,6 +89,20 @@ export interface ReportingRiskMatrixCell {
     statusCode: string | null;
     statusLabel: string | null;
     count: number;
+}
+
+export interface DomainStatEntry {
+    label: string;
+    count: number;
+    percent: number;
+}
+
+export interface ReportingTrendEntry {
+    key: string;
+    label: string;
+    risks: number;
+    incidents: number;
+    audits: number;
 }
 
 export interface MultiEntityData {
@@ -75,12 +121,16 @@ export class ReportingService {
 
     constructor(private http: HttpClient) { }
 
-    getStats(): Observable<ReportingStats> {
-        return this.http.get<ReportingStats>(`${this.apiUrl}/stats`);
+    getStats(period: string = 'all'): Observable<ReportingStats> {
+        return this.http.get<ReportingStats>(`${this.apiUrl}/stats`, {
+            params: { period }
+        });
     }
 
-    getKpis(): Observable<KPI[]> {
-        return this.http.get<KPI[]>(`${this.apiUrl}/kpis`);
+    getKpis(period: string = 'all'): Observable<KPI[]> {
+        return this.http.get<KPI[]>(`${this.apiUrl}/kpis`, {
+            params: { period }
+        });
     }
 
     getMultiEntityData(): Observable<MultiEntityData[]> {

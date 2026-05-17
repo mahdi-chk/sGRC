@@ -10,6 +10,15 @@
             </div>
         </div>
         <div class="header-right">
+            <div class="period-switcher">
+                <button
+                    *ngFor="let option of periodOptions"
+                    type="button"
+                    [class.active]="selectedPeriod === option.value"
+                    (click)="setPeriod(option.value)">
+                    {{ option.label }}
+                </button>
+            </div>
             <button class="btn-refresh" (click)="loadStats()" [disabled]="isLoading">
                 <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
             </button>
@@ -56,13 +65,50 @@
                     <span class="kpi-label">Missions d audit</span>
                 </div>
             </div>
+            <div class="kpi-card kpi-critical" [ngClass]="getKpiStatus('risk_exposure')">
+                <div class="kpi-icon"><i class="fas fa-shield-virus"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-value">{{ stats.risks.exposure.score }}%</span>
+                    <span class="kpi-label">Exposition risque</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-deadline" [ngClass]="getKpiStatus('overdue_risks')">
+                <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-value">{{ stats.risks.deadlines.overdue }}</span>
+                    <span class="kpi-label">Risques en retard</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="executive-strip">
+            <div class="executive-score">
+                <span class="score-label">Perimetre</span>
+                <strong>{{ stats.filters?.periodLabel || 'Toutes les donnees' }}</strong>
+            </div>
+            <div class="executive-signal warning">
+                <span>Risques critiques ouverts</span>
+                <strong>{{ stats.risks.exposure.openCritical }}</strong>
+            </div>
+            <div class="executive-signal neutral">
+                <span>Echeances a 30 jours</span>
+                <strong>{{ stats.risks.deadlines.dueSoon }}</strong>
+            </div>
+            <div class="executive-signal info">
+                <span>Incidents ouverts</span>
+                <strong>{{ stats.incidents.sla.open }}</strong>
+            </div>
+            <div class="executive-signal success">
+                <span>Avancement audit moyen</span>
+                <strong>{{ stats.audits.progress.average }}%</strong>
+            </div>
         </div>
 
         <div class="insight-grid">
             <div class="module-card premium kpi-detail-card">
                 <h3><i class="fas fa-gauge-high"></i> KPI de pilotage</h3>
                 <div class="kpi-detail-list">
-                    <div class="kpi-detail-item" *ngFor="let kpi of kpis">
+                    <div class="kpi-detail-item" *ngFor="let kpi of kpis" [ngClass]="kpi.status">
                         <div class="kpi-detail-top">
                             <span>{{ kpi.label }}</span>
                             <strong>{{ kpi.value }}{{ kpi.unit }}</strong>
@@ -70,6 +116,7 @@
                         <div class="kpi-progress-bar">
                             <div class="fill" [style.width.%]="getKpiProgress(kpi.id)"></div>
                         </div>
+                        <small *ngIf="kpi.description">{{ kpi.description }}</small>
                     </div>
                 </div>
             </div>
@@ -98,6 +145,40 @@
         </div>
 
         <div class="dashboard-grid">
+            <div class="module-card premium chart-card wide-card">
+                <h3><i class="fas fa-chart-column"></i> Tendance consolidee sur 6 mois</h3>
+                <div class="trend-chart">
+                    <div class="trend-month" *ngFor="let month of stats.trend">
+                        <div class="trend-bars">
+                            <span class="trend-bar risk" [style.height.%]="getTrendHeight(month.risks)" [title]="'Risques: ' + month.risks"></span>
+                            <span class="trend-bar incident" [style.height.%]="getTrendHeight(month.incidents)" [title]="'Incidents: ' + month.incidents"></span>
+                            <span class="trend-bar audit" [style.height.%]="getTrendHeight(month.audits)" [title]="'Audits: ' + month.audits"></span>
+                        </div>
+                        <span class="trend-label">{{ month.label }}</span>
+                    </div>
+                </div>
+                <div class="mini-legend">
+                    <span><i class="risk"></i> Risques</span>
+                    <span><i class="incident"></i> Incidents</span>
+                    <span><i class="audit"></i> Audits</span>
+                </div>
+            </div>
+
+            <div class="module-card premium chart-card">
+                <h3><i class="fas fa-layer-group"></i> Top domaines de risque</h3>
+                <div class="domain-chart">
+                    <div class="domain-row" *ngFor="let domain of stats.risks.byDomain">
+                        <div class="domain-top">
+                            <span>{{ domain.label }}</span>
+                            <strong>{{ domain.count }}</strong>
+                        </div>
+                        <div class="domain-track">
+                            <div class="domain-fill" [style.width.%]="getDomainPercent(domain.percent)"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="module-card premium chart-card">
                 <h3><i class="fas fa-signal"></i> Severite des risques</h3>
                 <div class="chart-container donut-wrapper">
@@ -150,6 +231,22 @@
                             <div class="bar-track">
                                 <div class="bar-fill" [style.width.%]="getPercent(status.count, stats.incidents.total)" [ngClass]="getStatusClass(status)">
                                     <span class="bar-value">{{ status.count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="module-card premium chart-card">
+                <h3><i class="fas fa-fire-flame-curved"></i> Gravite des incidents</h3>
+                <div class="chart-container bar-wrapper">
+                    <div class="bar-chart">
+                        <div class="bar-group" *ngFor="let level of stats.incidents.byLevel">
+                            <div class="bar-label">{{ getRiskLevelLabel(level) }}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill severity" [style.width.%]="getPercent(level.count, stats.incidents.total)" [ngClass]="getRiskLevelClass(level)">
+                                    <span class="bar-value">{{ level.count }}</span>
                                 </div>
                             </div>
                         </div>

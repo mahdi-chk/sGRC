@@ -6,10 +6,19 @@
             </button>
             <div>
                 <h1><i class="fas fa-tachometer-alt"></i> Indicateurs de Performance (KPI)</h1>
-                <p>Suivi en temps réel des objectifs de conformité et de gestion des risques.</p>
+                <p>Suivi en temps reel des objectifs de conformite, de risques, d incidents et d audit.</p>
             </div>
         </div>
         <div class="header-right">
+            <div class="period-switcher">
+                <button
+                    *ngFor="let option of periodOptions"
+                    type="button"
+                    [class.active]="selectedPeriod === option.value"
+                    (click)="setPeriod(option.value)">
+                    {{ option.label }}
+                </button>
+            </div>
             <button class="btn-refresh" (click)="loadKpis()" [disabled]="isLoading">
                 <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
             </button>
@@ -33,19 +42,30 @@
     </div>
 
     <div *ngIf="!isLoading" class="kpi-grid">
-        <div *ngFor="let kpi of kpis" class="kpi-detail-card premium">
+        <div *ngFor="let kpi of kpis" class="kpi-detail-card premium" [ngClass]="kpi.status">
             <div class="kpi-header">
-                <span class="kpi-label">{{ kpi.label }}</span>
-                <div class="kpi-trend positive"><i class="fas fa-caret-up"></i></div>
+                <div>
+                    <span class="kpi-category">{{ kpi.category || 'Pilotage' }}</span>
+                    <span class="kpi-label">{{ kpi.label }}</span>
+                </div>
+                <div class="kpi-trend" [ngClass]="kpi.status">
+                    <i class="fas" [ngClass]="{
+                        'fa-check': kpi.status === 'good',
+                        'fa-exclamation': kpi.status === 'warning',
+                        'fa-arrow-up': kpi.status === 'critical'
+                    }"></i>
+                </div>
             </div>
             <div class="kpi-body">
                 <span class="kpi-value-large">{{ kpi.value }}{{ kpi.unit }}</span>
                 <div class="kpi-progress-bar">
-                    <div class="fill" [style.width.%]="kpi.unit === '%' ? kpi.value : 100"></div>
+                    <div class="fill" [style.width.%]="getProgress(kpi)"></div>
                 </div>
             </div>
             <div class="kpi-footer">
-                <span class="kpi-meta">Mise à jour: Aujourd'hui</span>
+                <span class="kpi-status">{{ getStatusLabel(kpi) }}</span>
+                <span class="kpi-meta" *ngIf="kpi.target !== undefined">Cible: {{ kpi.target }}{{ kpi.unit }}</span>
+                <span class="kpi-description" *ngIf="kpi.description">{{ kpi.description }}</span>
             </div>
         </div>
     </div>

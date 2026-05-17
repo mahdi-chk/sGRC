@@ -713,3 +713,211 @@
         min-width: 2rem;
     }
 }
+
+.statistics-page {
+    .audit-kpi-row {
+        margin-bottom: 26px;
+    }
+
+    .kpi-card {
+        min-height: 112px;
+        justify-content: center;
+
+        &.kpi-danger {
+            border-left-color: #ef4444;
+
+            .kpi-value {
+                color: #ef4444;
+            }
+        }
+
+        &.kpi-warning {
+            border-left-color: #f59e0b;
+
+            .kpi-value {
+                color: #f59e0b;
+            }
+        }
+    }
+
+    .audit-bars {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .split-diagram,
+    .mini-bars,
+    .timeline-chart {
+        min-height: 230px;
+    }
+
+    .split-diagram {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 24px;
+    }
+
+    .split-track {
+        display: flex;
+        height: 36px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+    }
+
+    .split-segment {
+        min-width: 6px;
+        transition: width 0.8s ease;
+    }
+
+    .diagram-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .diagram-row,
+    .mini-bar-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #334155;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .diagram-name,
+    .mini-bar-head span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .diagram-value,
+    .mini-bar-head strong {
+        color: #64748b;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+
+    .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+        flex: 0 0 auto;
+    }
+
+    .mini-bars {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    .mini-bar-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mini-bar-track {
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #eef2f7;
+    }
+
+    .mini-bar-fill {
+        height: 100%;
+        min-width: 4px;
+        border-radius: 999px;
+        transition: width 0.8s ease;
+    }
+
+    .timeline-chart {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+        gap: 14px;
+        align-items: end;
+        padding-top: 8px;
+    }
+
+    .timeline-column {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        text-align: center;
+    }
+
+    .timeline-stack {
+        width: 100%;
+        max-width: 46px;
+        height: 130px;
+        display: flex;
+        align-items: end;
+        border-radius: 12px;
+        background: #eef2f7;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .timeline-fill {
+        width: 100%;
+        min-height: 6px;
+        border-radius: 12px 12px 0 0;
+        background: linear-gradient(180deg, #0ea5e9, #2563eb);
+        transition: height 0.8s ease;
+    }
+
+    .timeline-count {
+        color: #0f172a;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .timeline-label {
+        max-width: 100%;
+        color: #64748b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .timeline-column small {
+        color: #94a3b8;
+        font-size: 0.72rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .domain-list.enhanced .fill,
+    .mini-bar-fill,
+    .split-segment,
+    .dot {
+        &.series-1 { background: #2563eb; }
+        &.series-2 { background: #10b981; }
+        &.series-3 { background: #f59e0b; }
+        &.series-4 { background: #ef4444; }
+        &.series-5 { background: #8b5cf6; }
+        &.series-6 { background: #0f766e; }
+    }
+
+    .progress-lite .fill {
+        &.danger { background: #ef4444; }
+        &.warning { background: #f59e0b; }
+        &.info { background: #3b82f6; }
+    }
+}

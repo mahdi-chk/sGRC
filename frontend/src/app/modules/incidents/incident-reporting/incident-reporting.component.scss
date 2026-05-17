@@ -64,6 +64,17 @@
     font-size: 1.8rem;
 }
 
+.metric-pill small {
+    display: block;
+    margin-top: 3px;
+    color: rgba(255, 255, 255, 0.72);
+    font-weight: 700;
+}
+
+.metric-pill.accent {
+    background: rgba(15, 23, 42, 0.24);
+}
+
 .metric-label {
     color: rgba(255, 255, 255, 0.76);
     font-size: 0.82rem;
@@ -72,7 +83,7 @@
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px;
 }
 
@@ -127,6 +138,17 @@
     &.yellow { border-color: #eab308; .kpi-icon { background: #fefce8; color: #eab308; } }
     &.green { border-color: #10b981; .kpi-icon { background: #ecfdf5; color: #10b981; } }
     &.red { border-color: #ef4444; .kpi-icon { background: #fef2f2; color: #ef4444; } }
+    &.orange { border-color: #f97316; .kpi-icon { background: #ffedd5; color: #ea580c; } }
+    &.purple { border-color: #8b5cf6; .kpi-icon { background: #ede9fe; color: #7c3aed; } }
+    &.dark { border-color: #0f172a; .kpi-icon { background: #e2e8f0; color: #0f172a; } }
+    &.teal { border-color: #14b8a6; .kpi-icon { background: #ccfbf1; color: #0f766e; } }
+}
+
+.analytics-grid,
+.trend-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 25px;
 }
 
 .charts-grid {
@@ -195,6 +217,328 @@
     min-width: 6%;
     background: linear-gradient(90deg, #1d4ed8 0%, #38bdf8 100%);
     border-radius: 999px;
+}
+
+.bar.teal {
+    background: linear-gradient(90deg, #0f766e 0%, #2dd4bf 100%);
+}
+
+.pressure-card {
+    background:
+        radial-gradient(circle at top right, rgba(239, 68, 68, 0.12), transparent 30%),
+        linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.pressure-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.pressure-header h3 {
+    margin-bottom: 0 !important;
+}
+
+.pressure-header strong {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.section-eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.pressure-meter {
+    height: 44px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #cbd5e1;
+}
+
+.pressure-fill {
+    height: 100%;
+    min-width: 4px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #10b981 0%, #f59e0b 48%, #ef4444 100%);
+}
+
+.pressure-meter span {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0f172a;
+    font-weight: 900;
+}
+
+.pressure-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.pressure-grid div {
+    padding: 14px;
+    border-radius: 14px;
+    background: white;
+    border: 1px solid #e2e8f0;
+}
+
+.pressure-grid span {
+    display: block;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.pressure-grid strong {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 1.3rem;
+}
+
+.level-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.level-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.level-meta {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.level-meta strong {
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.level-meta em {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-style: normal;
+    font-weight: 800;
+}
+
+.level-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.level-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #eef2f7;
+    overflow: hidden;
+}
+
+.level-track span {
+    display: block;
+    height: 100%;
+    min-width: 5%;
+    border-radius: inherit;
+}
+
+.level-critical { background: #b91c1c; color: #991b1b; }
+.level-high { background: #ef4444; color: #b91c1c; }
+.level-significant { background: #f97316; color: #c2410c; }
+.level-medium { background: #f59e0b; color: #b45309; }
+.level-limited { background: #14b8a6; color: #0f766e; }
+.level-low { background: #3b82f6; color: #1d4ed8; }
+.level-default { background: #94a3b8; color: #475569; }
+
+.trend-chart {
+    height: 210px;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.trend-month {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.trend-bars {
+    height: 150px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 6px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.trend-bars span {
+    width: 14px;
+    min-height: 4px;
+    border-radius: 999px 999px 4px 4px;
+}
+
+.trend-bars .created,
+.trend-legend .created {
+    background: #3b82f6;
+}
+
+.trend-bars .resolved,
+.trend-legend .resolved {
+    background: #10b981;
+}
+
+.trend-month strong {
+    color: #334155;
+    font-size: 0.82rem;
+    text-transform: capitalize;
+}
+
+.trend-month small {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.trend-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 14px;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.trend-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.trend-legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.aging-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.aging-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.8fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.aging-copy strong,
+.critical-domain strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.9rem;
+}
+
+.aging-copy span {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.aging-track,
+.mini-track {
+    height: 9px;
+    border-radius: 999px;
+    background: #eef2f7;
+    overflow: hidden;
+}
+
+.aging-track span,
+.mini-track span {
+    display: block;
+    height: 100%;
+    min-width: 4%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.aging-row em {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.critical-domain-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.critical-domain {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.critical-domain .rank {
+    width: 34px;
+    height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+.critical-domain em {
+    color: #991b1b;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.mini-track {
+    margin-top: 8px;
 }
 
 .status-list {
@@ -360,6 +704,10 @@
     text-align: center;
 }
 
+.empty-panel.compact {
+    min-height: 120px;
+}
+
 .empty-panel i,
 .loading-panel i {
     font-size: 2rem;
@@ -372,6 +720,8 @@
 
     .charts-grid,
     .bottom-grid,
+    .analytics-grid,
+    .trend-grid,
     .insight-hero,
     .timing-grid {
         grid-template-columns: 1fr;
@@ -386,5 +736,18 @@
     .incident-feed-item {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .pressure-grid,
+    .aging-row {
+        grid-template-columns: 1fr;
+    }
+
+    .trend-chart {
+        gap: 8px;
+    }
+
+    .trend-bars span {
+        width: 10px;
     }
 }

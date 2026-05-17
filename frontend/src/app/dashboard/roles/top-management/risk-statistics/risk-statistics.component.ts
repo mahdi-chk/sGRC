@@ -13,6 +13,12 @@ import {
     RiskStatus,
 } from '../../../../core/services/risk.service';
 
+interface StatRankingEntry {
+    label: string;
+    value: number;
+    share: number;
+}
+
 @Component({
     selector: 'app-risk-statistics',
     templateUrl: './risk-statistics.component.html',
@@ -30,6 +36,23 @@ export class RiskStatisticsComponent implements OnInit {
     criticalRate = 0;
     treatmentRate = 0;
     avgMaturity = 0;
+    openRate = 0;
+    inProgressRate = 0;
+    highPriorityCount = 0;
+    highPriorityRate = 0;
+    untreatedCount = 0;
+    overdueCount = 0;
+    dueSoonCount = 0;
+    assignedCount = 0;
+    assignedRate = 0;
+    avgGrossScore = 0;
+    avgNetScore = 0;
+    avgAiScore = 0;
+    riskPressureIndex = 0;
+    topDomainLabel = '-';
+    topDepartmentLabel = '-';
+    domainRankings: StatRankingEntry[] = [];
+    deptRankings: StatRankingEntry[] = [];
     showExportMenu = false;
     matrixRowTotals: number[] = [0, 0, 0, 0];
     matrixColTotals: number[] = [0, 0, 0, 0];
@@ -194,15 +217,48 @@ export class RiskStatisticsComponent implements OnInit {
         this.topZoneLabel = '-';
         this.topZoneCount = 0;
         this.topZoneShare = 0;
+        this.openRate = 0;
+        this.inProgressRate = 0;
+        this.highPriorityCount = 0;
+        this.highPriorityRate = 0;
+        this.untreatedCount = 0;
+        this.overdueCount = 0;
+        this.dueSoonCount = 0;
+        this.assignedCount = 0;
+        this.assignedRate = 0;
+        this.avgGrossScore = 0;
+        this.avgNetScore = 0;
+        this.avgAiScore = 0;
+        this.riskPressureIndex = 0;
+        this.topDomainLabel = '-';
+        this.topDepartmentLabel = '-';
+        this.domainRankings = [];
+        this.deptRankings = [];
+
+        let grossScoreTotal = 0;
+        let grossScoreCount = 0;
+        let netScoreTotal = 0;
+        let netScoreCount = 0;
+        let aiScoreTotal = 0;
+        let aiScoreCount = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const thirtyDaysFromNow = new Date(today);
+        thirtyDaysFromNow.setDate(today.getDate() + 30);
 
         this.risks.forEach((risk) => {
             const level = this.resolveRiskLevel(risk.niveauRisqueCode || risk.niveauRisque);
             const status = this.resolveRiskStatus(risk.statutCode || risk.statut);
             const row = this.getMatrixRowIndex(risk);
             const col = this.getMatrixColIndex(risk);
+            const isClosed = status === RiskStatus.TREATED || status === RiskStatus.CLOSED;
 
             if (level) {
                 this.levelStats[level] = (this.levelStats[level] || 0) + 1;
+
+                if (level === RiskLevel.HIGH || level === RiskLevel.CRITICAL) {
+                    this.highPriorityCount++;
+                }
             }
 
             if (status) {
@@ -214,6 +270,37 @@ export class RiskStatisticsComponent implements OnInit {
 
             const dept = risk.departement?.nom?.trim() || 'Non spécifié';
             this.deptStats[dept] = (this.deptStats[dept] || 0) + 1;
+
+            if (risk.riskAgentId || risk.responsableTraitementId) {
+                this.assignedCount++;
+            }
+
+            const dueDate = risk.prochaineEcheance || risk.dateEcheance;
+            if (!isClosed && dueDate) {
+                const normalizedDueDate = new Date(dueDate);
+                normalizedDueDate.setHours(0, 0, 0, 0);
+
+                if (normalizedDueDate < today) {
+                    this.overdueCount++;
+                } else if (normalizedDueDate <= thirtyDaysFromNow) {
+                    this.dueSoonCount++;
+                }
+            }
+
+            if (typeof risk.niveauCotationRisqueBrut === 'number') {
+                grossScoreTotal += risk.niveauCotationRisqueBrut;
+                grossScoreCount++;
+            }
+
+            if (typeof risk.niveauCotationRisqueNet === 'number') {
+                netScoreTotal += risk.niveauCotationRisqueNet;
+                netScoreCount++;
+            }
+
+            if (typeof risk.aiAnalysisScore === 'number') {
+                aiScoreTotal += risk.aiAnalysisScore;
+                aiScoreCount++;
+            }
 
             if (row !== -1 && col !== -1) {
                 this.riskMatrix[row][col]++;
@@ -227,12 +314,28 @@ export class RiskStatisticsComponent implements OnInit {
         });
 
         this.computeMatrixHighlights();
+        this.domainRankings = this.getRankingEntries(this.domainStats, 5);
+        this.deptRankings = this.getRankingEntries(this.deptStats, 5);
+        this.topDomainLabel = this.domainRankings[0]?.label || '-';
+        this.topDepartmentLabel = this.deptRankings[0]?.label || '-';
 
         const criticalCount = this.levelStats[RiskLevel.CRITICAL] || 0;
-        this.criticalRate = this.totalRisks > 0 ? Math.round((criticalCount / this.totalRisks) * 100) : 0;
+        this.criticalRate = this.getPercent(criticalCount);
 
         const treatedCount = (this.statusStats[RiskStatus.TREATED] || 0) + (this.statusStats[RiskStatus.CLOSED] || 0);
-        this.treatmentRate = this.totalRisks > 0 ? Math.round((treatedCount / this.totalRisks) * 100) : 0;
+        this.treatmentRate = this.getPercent(treatedCount);
+        this.untreatedCount = Math.max(this.totalRisks - treatedCount, 0);
+        this.openRate = this.getPercent(this.statusStats[RiskStatus.OPEN] || 0);
+        this.inProgressRate = this.getPercent(this.statusStats[RiskStatus.IN_PROGRESS] || 0);
+        this.highPriorityRate = this.getPercent(this.highPriorityCount);
+        this.assignedRate = this.getPercent(this.assignedCount);
+        this.avgGrossScore = grossScoreCount ? Number((grossScoreTotal / grossScoreCount).toFixed(1)) : 0;
+        this.avgNetScore = netScoreCount ? Number((netScoreTotal / netScoreCount).toFixed(1)) : 0;
+        this.avgAiScore = aiScoreCount ? Number((aiScoreTotal / aiScoreCount).toFixed(1)) : 0;
+        this.riskPressureIndex = Math.min(
+            100,
+            Math.round((this.criticalRate * 0.35) + (this.highPriorityRate * 0.25) + (this.openRate * 0.2) + (this.getPercent(this.overdueCount) * 0.2)),
+        );
 
         this.avgMaturity = RiskService.calculateMaturityIndex(this.risks);
     }
@@ -280,6 +383,53 @@ export class RiskStatisticsComponent implements OnInit {
 
     getMatrixShare(count: number): number {
         return this.totalRisks > 0 ? Math.round((count / this.totalRisks) * 100) : 0;
+    }
+
+    getPercent(value: number, total = this.totalRisks): number {
+        return total > 0 ? Math.round((value / total) * 100) : 0;
+    }
+
+    getRankingEntries(stats: Record<string, number>, limit = 5): StatRankingEntry[] {
+        return Object.entries(stats)
+            .sort(([, firstValue], [, secondValue]) => secondValue - firstValue)
+            .slice(0, limit)
+            .map(([label, value]) => ({
+                label,
+                value,
+                share: this.getPercent(value),
+            }));
+    }
+
+    getRiskPressureLabel(): string {
+        if (this.riskPressureIndex >= 70) {
+            return 'Critique';
+        }
+
+        if (this.riskPressureIndex >= 45) {
+            return 'Sous surveillance';
+        }
+
+        return 'Maitrise';
+    }
+
+    getRiskPressureClass(): string {
+        if (this.riskPressureIndex >= 70) {
+            return 'critical';
+        }
+
+        if (this.riskPressureIndex >= 45) {
+            return 'warning';
+        }
+
+        return 'healthy';
+    }
+
+    getSeverityShare(level: RiskLevel): number {
+        return this.getPercent(this.getLevelCount(level));
+    }
+
+    getStatusShare(status: RiskStatus): number {
+        return this.getPercent(this.statusStats[status] || 0);
     }
 
     openMatrixCellDetails(row: number, col: number) {
@@ -372,6 +522,11 @@ export class RiskStatisticsComponent implements OnInit {
             ['Vue d’ensemble', 'Taux de traitement', `${this.treatmentRate}%`],
             ['Vue d’ensemble', 'Indice de maturité', `${this.avgMaturity}/5`],
             ['Vue d’ensemble', 'Taux de risques critiques', `${this.criticalRate}%`],
+            ['Vue d ensemble', 'Pression du portefeuille', `${this.riskPressureIndex}%`],
+            ['Vue d ensemble', 'Risques prioritaires', `${this.highPriorityCount} (${this.highPriorityRate}%)`],
+            ['Vue d ensemble', 'Taux d assignation', `${this.assignedRate}%`],
+            ['Vue d ensemble', 'Echeances depassees', this.overdueCount],
+            ['Vue d ensemble', 'Echeances a 30 jours', this.dueSoonCount],
             [''],
             ['Distribution par sévérité', '', ''],
             ...this.levelOrder.map((code) => ['Sévérité', this.levelLabels[code], this.levelStats[code] || 0]),
@@ -407,6 +562,10 @@ export class RiskStatisticsComponent implements OnInit {
             ['Taux de traitement', `${this.treatmentRate}%`],
             ['Indice de maturité', `${this.avgMaturity}/5`],
             ['Taux critiques', `${this.criticalRate}%`],
+            ['Pression portefeuille', `${this.riskPressureIndex}%`],
+            ['Risques prioritaires', `${this.highPriorityCount} (${this.highPriorityRate}%)`],
+            ['Taux assignation', `${this.assignedRate}%`],
+            ['Echeances depassees', this.overdueCount.toString()],
         ];
 
         autoTable(doc, {

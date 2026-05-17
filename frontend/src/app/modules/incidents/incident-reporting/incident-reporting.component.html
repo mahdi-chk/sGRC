@@ -38,6 +38,11 @@
                     <span class="metric-label">Age moyen des incidents ouverts</span>
                     <strong>{{ formatDays(averageOpenAgeDays) }}</strong>
                 </div>
+                <div class="metric-pill accent">
+                    <span class="metric-label">Pression operationnelle</span>
+                    <strong>{{ getRiskPressureScore() }}%</strong>
+                    <small>{{ getRiskPressureLabel() }}</small>
+                </div>
             </div>
         </section>
 
@@ -70,6 +75,89 @@
                 <div class="kpi-info">
                     <span class="kpi-label">Incidents Critiques</span>
                     <span class="kpi-value">{{ criticalIncidents }}</span>
+                    <small>{{ criticalOpenRate }}% des ouverts sont critiques</small>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm orange">
+                <div class="kpi-icon"><i class="fas fa-fire"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Priorite haute</span>
+                    <span class="kpi-value">{{ highPriorityIncidents }}</span>
+                    <small>Critiques + eleves</small>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm purple">
+                <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Taux d assignation</span>
+                    <span class="kpi-value">{{ assignmentRate }}%</span>
+                    <small>{{ unassignedIncidents }} sans responsable</small>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm dark">
+                <div class="kpi-icon"><i class="fas fa-calendar-times"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Echeances depassees</span>
+                    <span class="kpi-value">{{ overdueIncidents }}</span>
+                    <small>{{ dueSoonIncidents }} a 30 jours</small>
+                </div>
+            </div>
+            <div class="kpi-card shadow-sm teal">
+                <div class="kpi-icon"><i class="fas fa-link"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Lies a un risque</span>
+                    <span class="kpi-value">{{ riskLinkRate }}%</span>
+                    <small>{{ linkedRiskIncidents }} incidents rattaches</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="chart-card card shadow-sm pressure-card">
+                <div class="pressure-header">
+                    <div>
+                        <span class="section-eyebrow">Synthese executive</span>
+                        <h3><i class="fas fa-tachometer-alt"></i> Indice de pression incidents</h3>
+                    </div>
+                    <strong>{{ getRiskPressureLabel() }}</strong>
+                </div>
+                <div class="pressure-meter">
+                    <div class="pressure-fill" [style.width.%]="getRiskPressureScore()"></div>
+                    <span>{{ getRiskPressureScore() }}%</span>
+                </div>
+                <div class="pressure-grid">
+                    <div>
+                        <span>Backlog</span>
+                        <strong>{{ backlogRate }}%</strong>
+                    </div>
+                    <div>
+                        <span>Retards</span>
+                        <strong>{{ getPercent(overdueIncidents) }}%</strong>
+                    </div>
+                    <div>
+                        <span>Critiques ouverts</span>
+                        <strong>{{ criticalOpenRate }}%</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-layer-group"></i> Repartition par niveau</h3>
+                <div class="empty-panel compact" *ngIf="levelDistribution.length === 0">
+                    <i class="fas fa-inbox"></i>
+                    <p>Aucun niveau de risque renseigne.</p>
+                </div>
+                <div class="level-bars" *ngIf="levelDistribution.length > 0">
+                    <div class="level-row" *ngFor="let level of levelDistribution">
+                        <div class="level-meta">
+                            <span class="level-dot" [ngClass]="level.cssClass"></span>
+                            <strong>{{ level.label }}</strong>
+                            <em>{{ level.count }} / {{ level.share }}%</em>
+                        </div>
+                        <div class="level-track">
+                            <span [ngClass]="level.cssClass" [style.width.%]="level.share"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -108,6 +196,42 @@
             </div>
         </div>
 
+        <div class="trend-grid">
+            <div class="chart-card card shadow-sm trend-card">
+                <h3><i class="fas fa-chart-bar"></i> Tendance sur 6 mois</h3>
+                <div class="trend-chart">
+                    <div class="trend-month" *ngFor="let item of monthlyTrend">
+                        <div class="trend-bars">
+                            <span class="created" [style.height.%]="getBarWidth(item.created, getMonthlyMax())" title="Crees"></span>
+                            <span class="resolved" [style.height.%]="getBarWidth(item.resolved, getMonthlyMax())" title="Resolus"></span>
+                        </div>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.created }}/{{ item.resolved }}</small>
+                    </div>
+                </div>
+                <div class="trend-legend">
+                    <span><i class="created"></i> Crees</span>
+                    <span><i class="resolved"></i> Resolus</span>
+                </div>
+            </div>
+
+            <div class="chart-card card shadow-sm aging-card">
+                <h3><i class="fas fa-hourglass"></i> Vieillissement des ouverts</h3>
+                <div class="aging-list">
+                    <div class="aging-row" *ngFor="let bucket of agingBuckets">
+                        <div class="aging-copy">
+                            <strong>{{ bucket.label }}</strong>
+                            <span>{{ bucket.count }} incident(s)</span>
+                        </div>
+                        <div class="aging-track">
+                            <span [style.width.%]="getBarWidth(bucket.count, getAgingMax())"></span>
+                        </div>
+                        <em>{{ bucket.share }}%</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="bottom-grid">
             <div class="chart-card card shadow-sm">
                 <h3><i class="fas fa-history"></i> Delais de Traitement</h3>
@@ -140,6 +264,45 @@
                         <span class="status-chip" [ngClass]="getStatusClass(incident.statut)">
                             {{ incident.statutLabel || getStatusLabel(incident.statut) }}
                         </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-diagram-project"></i> Top processus impactes</h3>
+                <div class="empty-panel compact" *ngIf="processDistribution.length === 0">
+                    <i class="fas fa-inbox"></i>
+                    <p>Aucun processus renseigne.</p>
+                </div>
+                <div class="bar-chart" *ngIf="processDistribution.length > 0">
+                    <div class="bar-row" *ngFor="let item of processDistribution">
+                        <div class="bar-meta">
+                            <span class="label">{{ item.label }}</span>
+                            <strong>{{ item.count }}</strong>
+                        </div>
+                        <div class="bar-container">
+                            <div class="bar teal" [style.width.%]="item.share"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card card shadow-sm">
+                <h3><i class="fas fa-exclamation-triangle"></i> Domaines critiques / eleves</h3>
+                <div class="empty-panel compact" *ngIf="criticalDomainDistribution.length === 0">
+                    <i class="fas fa-shield-alt"></i>
+                    <p>Aucun domaine critique ou eleve.</p>
+                </div>
+                <div class="critical-domain-list" *ngIf="criticalDomainDistribution.length > 0">
+                    <div class="critical-domain" *ngFor="let item of criticalDomainDistribution; let index = index">
+                        <span class="rank">#{{ index + 1 }}</span>
+                        <div>
+                            <strong>{{ item.label }}</strong>
+                            <div class="mini-track"><span [style.width.%]="item.share"></span></div>
+                        </div>
+                        <em>{{ item.count }}</em>
                     </div>
                 </div>
             </div>

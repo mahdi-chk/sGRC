@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-chart-pie"></i> Statistiques d'Audit</h1>
-                <p>Analyse de la performance, suivi des missions / plans d'action et taux de complétion.</p>
+                <p>Analyse de la performance, suivi des missions / plans d'action et taux de completion.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -59,6 +59,33 @@
         </div>
     </div>
 
+    <div class="kpi-row audit-kpi-row">
+        <div class="kpi-card kpi-total">
+            <span class="kpi-value">{{ auditMissionCount }}</span>
+            <span class="kpi-label">Missions d'audit</span>
+        </div>
+        <div class="kpi-card kpi-progress">
+            <span class="kpi-value">{{ actionPlanCount }}</span>
+            <span class="kpi-label">Plans d'action</span>
+        </div>
+        <div class="kpi-card kpi-closed">
+            <span class="kpi-value">{{ averageProgress }}%</span>
+            <span class="kpi-label">Progression moyenne</span>
+        </div>
+        <div class="kpi-card kpi-danger">
+            <span class="kpi-value">{{ overdueCount }}</span>
+            <span class="kpi-label">Echeances depassees</span>
+        </div>
+        <div class="kpi-card kpi-warning">
+            <span class="kpi-value">{{ dueSoonCount }}</span>
+            <span class="kpi-label">A 30 jours</span>
+        </div>
+        <div class="kpi-card kpi-open">
+            <span class="kpi-value">{{ assignedRate }}%</span>
+            <span class="kpi-label">Taux d'assignation</span>
+        </div>
+    </div>
+
     <div class="dashboard-grid">
         <div class="module-card premium chart-card large-chart">
             <h3><i class="fas fa-chart-pie"></i> Statuts Audit</h3>
@@ -89,16 +116,15 @@
             </div>
         </div>
 
-        <!-- Consolidated Status Distribution (Bar Chart Style) -->
         <div class="module-card premium chart-card large-chart">
-            <h3><i class="fas fa-tasks"></i> État d'Avancement Global</h3>
-            <div class="chart-container bar-wrapper" style="height: 100%;">
-                <div class="bar-chart" style="height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 20px;">
+            <h3><i class="fas fa-tasks"></i> Etat d'Avancement Global</h3>
+            <div class="chart-container bar-wrapper">
+                <div class="bar-chart audit-bars">
                     <div class="bar-group" *ngFor="let entry of statusStats | keyvalue">
                         <div class="bar-label">{{ entry.key }}</div>
                         <div class="bar-track">
                             <div class="bar-fill" [style.width.%]="(entry.value/totalMissions*100) || 0"
-                                [ngClass]="entry.key.toLowerCase().replace('à', 'a').replace(' ', '-').replace('é', 'e')">
+                                [ngClass]="entry.key.toLowerCase().replace(' ', '-')">
                                 <span class="bar-value">{{ entry.value }}</span>
                             </div>
                         </div>
@@ -107,50 +133,133 @@
             </div>
         </div>
 
-        <!-- Progress Indicators -->
         <div class="module-card premium chart-card">
-            <h3><i class="fas fa-tachometer-alt"></i> Performance Opérationnelle</h3>
+            <h3><i class="fas fa-tachometer-alt"></i> Performance Operationnelle</h3>
             <div class="progress-circles">
                 <div class="circle-item">
                     <div class="premium-circle treatment" [style.--p]="completionRate">
                         <span class="percent">{{ completionRate }}%</span>
                     </div>
-                    <span class="circle-label">Taux de Complétion</span>
+                    <span class="circle-label">Taux de Completion</span>
                 </div>
                 <div class="circle-item">
                     <div class="premium-circle maturity" [style.--p]="onTimeRate">
                         <span class="percent">{{ onTimeRate }}%</span>
                     </div>
-                    <span class="circle-label">Taux de Ponctualité</span>
+                    <span class="circle-label">Taux de Ponctualite</span>
                 </div>
             </div>
         </div>
 
-        <!-- Risks Summary (If applicable or placeholder for more stats) -->
         <div class="module-card premium chart-card">
-            <h3><i class="fas fa-info-circle"></i> Synthèse d'Audit</h3>
+            <h3><i class="fas fa-info-circle"></i> Synthese d'Audit</h3>
             <div class="domain-list">
                 <div class="domain-item">
                     <div class="domain-info">
-                        <span class="name">Éléments Critiques (Retard)</span>
-                        <span class="count">{{ statusStats['En retard'] || 0 }}</span>
+                        <span class="name">Elements critiques</span>
+                        <span class="count">{{ overdueCount }}</span>
                     </div>
                     <div class="progress-lite">
-                        <div class="fill" [style.width.%]="delayedRate" style="background: #ef4444;"></div>
+                        <div class="fill danger" [style.width.%]="delayedRate"></div>
                     </div>
                 </div>
                 <div class="domain-item">
                     <div class="domain-info">
-                        <span class="name">Éléments à venir</span>
-                        <span class="count">{{ statusStats['À venir'] || 0 }}</span>
+                        <span class="name">Non assignes</span>
+                        <span class="count">{{ unassignedCount }}</span>
                     </div>
                     <div class="progress-lite">
-                        <div class="fill" [style.width.%]="(statusStats['À venir']/totalMissions*100) || 0"
-                            style="background: #3b82f6;"></div>
+                        <div class="fill info" [style.width.%]="totalMissions ? (unassignedCount / totalMissions * 100) : 0"></div>
+                    </div>
+                </div>
+                <div class="domain-item">
+                    <div class="domain-info">
+                        <span class="name">Echeances proches</span>
+                        <span class="count">{{ dueSoonCount }}</span>
+                    </div>
+                    <div class="progress-lite">
+                        <div class="fill warning" [style.width.%]="totalMissions ? (dueSoonCount / totalMissions * 100) : 0"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-chart-area"></i> Repartition Missions / Plans d'action</h3>
+            <div class="split-diagram">
+                <div class="split-track">
+                    <div class="split-segment"
+                        *ngFor="let item of typeDistribution"
+                        [ngClass]="item.className"
+                        [style.width.%]="item.percent">
+                    </div>
+                </div>
+                <div class="diagram-list">
+                    <div class="diagram-row" *ngFor="let item of typeDistribution">
+                        <span class="diagram-name"><i class="dot" [ngClass]="item.className"></i>{{ item.label }}</span>
+                        <span class="diagram-value">{{ item.count }} ({{ item.percent }}%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-hourglass-half"></i> Repartition par horizon</h3>
+            <div class="mini-bars">
+                <div class="mini-bar-row" *ngFor="let item of horizonDistribution">
+                    <div class="mini-bar-head">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                    </div>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" [ngClass]="item.className" [style.width.%]="item.percent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-calendar-alt"></i> Calendrier des echeances</h3>
+            <div class="timeline-chart">
+                <div class="timeline-column" *ngFor="let item of timelineDistribution">
+                    <div class="timeline-stack">
+                        <div class="timeline-fill" [style.height.%]="item.percent"></div>
+                    </div>
+                    <span class="timeline-count">{{ item.count }}</span>
+                    <span class="timeline-label">{{ item.label }}</span>
+                    <small>{{ item.completionPercent }}% OK</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-users"></i> Charge par auditeur</h3>
+            <div class="mini-bars">
+                <div class="mini-bar-row" *ngFor="let item of auditorDistribution">
+                    <div class="mini-bar-head">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                    </div>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" [ngClass]="item.className" [style.width.%]="item.percent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-card premium chart-card">
+            <h3><i class="fas fa-layer-group"></i> Top categories auditees</h3>
+            <div class="domain-list enhanced">
+                <div class="domain-item" *ngFor="let item of categoryDistribution">
+                    <div class="domain-info">
+                        <span class="name">{{ item.label }}</span>
+                        <span class="count">{{ item.count }} - {{ item.percent }}%</span>
+                    </div>
+                    <div class="progress-lite">
+                        <div class="fill" [ngClass]="item.className" [style.width.%]="item.percent"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>

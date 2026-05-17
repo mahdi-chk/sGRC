@@ -3,6 +3,19 @@ import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from 
 import { Router } from '@angular/router';
 import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
 
+interface CountShare {
+  label: string;
+  count: number;
+  share: number;
+  cssClass?: string;
+}
+
+interface MonthlyTrend {
+  label: string;
+  created: number;
+  resolved: number;
+}
+
 @Component({
   selector: 'app-incident-reporting',
   templateUrl: './incident-reporting.component.html',
@@ -16,10 +29,27 @@ export class IncidentReportingComponent implements OnInit {
   openIncidents = 0;
   resolvedIncidents = 0;
   criticalIncidents = 0;
+  highPriorityIncidents = 0;
+  overdueIncidents = 0;
+  dueSoonIncidents = 0;
+  unassignedIncidents = 0;
+  linkedRiskIncidents = 0;
+  newThisMonth = 0;
+  closedThisMonth = 0;
+  backlogRate = 0;
+  assignmentRate = 0;
+  criticalOpenRate = 0;
+  riskLinkRate = 0;
+  averageCriticalAgeDays = 0;
   averageResolutionDays = 0;
   averageOpenAgeDays = 0;
-  statusDistribution: Array<{ label: string; count: number; cssClass: string }> = [];
-  domainDistribution: Array<{ label: string; count: number }> = [];
+  statusDistribution: CountShare[] = [];
+  domainDistribution: CountShare[] = [];
+  levelDistribution: CountShare[] = [];
+  processDistribution: CountShare[] = [];
+  criticalDomainDistribution: CountShare[] = [];
+  agingBuckets: CountShare[] = [];
+  monthlyTrend: MonthlyTrend[] = [];
   recentIncidents: Incident[] = [];
 
   private readonly statusMeta: Record<string, { label: string; cssClass: string }> = {
@@ -27,6 +57,39 @@ export class IncidentReportingComponent implements OnInit {
     [IncidentStatus.EN_COURS]: { label: 'En cours', cssClass: 'status-progress' },
     [IncidentStatus.TRAITE]: { label: 'Traites', cssClass: 'status-resolved' },
     [IncidentStatus.CLOS]: { label: 'Clos', cssClass: 'status-closed' }
+  };
+
+  private readonly levelOrder = [
+    IncidentNiveauRisque.CRITICAL,
+    IncidentNiveauRisque.HIGH,
+    IncidentNiveauRisque.SIGNIFICANT,
+    IncidentNiveauRisque.MEDIUM,
+    IncidentNiveauRisque.LIMITED,
+    IncidentNiveauRisque.LOW
+  ];
+
+  private readonly levelMeta: Record<string, { label: string; cssClass: string }> = {
+    [IncidentNiveauRisque.CRITICAL]: { label: 'Critique', cssClass: 'level-critical' },
+    [IncidentNiveauRisque.HIGH]: { label: 'Eleve', cssClass: 'level-high' },
+    [IncidentNiveauRisque.SIGNIFICANT]: { label: 'Significatif', cssClass: 'level-significant' },
+    [IncidentNiveauRisque.MEDIUM]: { label: 'Moyen', cssClass: 'level-medium' },
+    [IncidentNiveauRisque.LIMITED]: { label: 'Limite', cssClass: 'level-limited' },
+    [IncidentNiveauRisque.LOW]: { label: 'Faible', cssClass: 'level-low' }
+  };
+
+  private readonly levelAliases: Record<string, IncidentNiveauRisque> = {
+    low: IncidentNiveauRisque.LOW,
+    faible: IncidentNiveauRisque.LOW,
+    limited: IncidentNiveauRisque.LIMITED,
+    limite: IncidentNiveauRisque.LIMITED,
+    medium: IncidentNiveauRisque.MEDIUM,
+    moyen: IncidentNiveauRisque.MEDIUM,
+    significant: IncidentNiveauRisque.SIGNIFICANT,
+    significatif: IncidentNiveauRisque.SIGNIFICANT,
+    high: IncidentNiveauRisque.HIGH,
+    eleve: IncidentNiveauRisque.HIGH,
+    critical: IncidentNiveauRisque.CRITICAL,
+    critique: IncidentNiveauRisque.CRITICAL
   };
 
   constructor(
@@ -48,16 +111,38 @@ export class IncidentReportingComponent implements OnInit {
       next: (data) => {
         this.incidents = data.map(incident => this.mapIncidentCodes(incident));
         this.totalIncidents = this.incidents.length;
-        this.openIncidents = this.incidents.filter(i => this.getNormalizedStatus(i) !== IncidentStatus.CLOS).length;
+        const openItems = this.incidents.filter(i => this.getNormalizedStatus(i) !== IncidentStatus.CLOS);
+        const criticalOpenItems = openItems.filter(i => this.getNormalizedLevel(i) === IncidentNiveauRisque.CRITICAL);
+        this.openIncidents = openItems.length;
         this.resolvedIncidents = this.incidents.filter(i => {
           const status = this.getNormalizedStatus(i);
           return status === IncidentStatus.TRAITE || status === IncidentStatus.CLOS;
         }).length;
         this.criticalIncidents = this.incidents.filter(i => this.getNormalizedLevel(i) === IncidentNiveauRisque.CRITICAL).length;
+        this.highPriorityIncidents = this.incidents.filter(i => {
+          const level = this.getNormalizedLevel(i);
+          return level === IncidentNiveauRisque.CRITICAL || level === IncidentNiveauRisque.HIGH;
+        }).length;
+        this.overdueIncidents = this.countOverdueIncidents(this.incidents);
+        this.dueSoonIncidents = this.countDueSoonIncidents(this.incidents);
+        this.unassignedIncidents = this.incidents.filter(i => !i.assigneeId && !i.assignee).length;
+        this.linkedRiskIncidents = this.incidents.filter(i => !!i.riskId).length;
+        this.newThisMonth = this.countCreatedThisMonth(this.incidents);
+        this.closedThisMonth = this.countClosedThisMonth(this.incidents);
+        this.backlogRate = this.getPercent(this.openIncidents);
+        this.assignmentRate = this.getPercent(this.totalIncidents - this.unassignedIncidents);
+        this.criticalOpenRate = this.getPercent(criticalOpenItems.length, this.openIncidents);
+        this.riskLinkRate = this.getPercent(this.linkedRiskIncidents);
         this.averageResolutionDays = this.calculateAverageResolutionDays(this.incidents);
         this.averageOpenAgeDays = this.calculateAverageOpenAgeDays(this.incidents);
+        this.averageCriticalAgeDays = this.calculateAverageOpenAgeDays(criticalOpenItems);
         this.statusDistribution = this.buildStatusDistribution(this.incidents);
         this.domainDistribution = this.buildDomainDistribution(this.incidents);
+        this.levelDistribution = this.buildLevelDistribution(this.incidents);
+        this.processDistribution = this.buildProcessDistribution(this.incidents);
+        this.criticalDomainDistribution = this.buildCriticalDomainDistribution(this.incidents);
+        this.agingBuckets = this.buildAgingBuckets(openItems);
+        this.monthlyTrend = this.buildMonthlyTrend(this.incidents);
         this.recentIncidents = [...this.incidents]
           .sort((a, b) => this.toTimestamp(b.updatedAt || b.createdAt) - this.toTimestamp(a.updatedAt || a.createdAt))
           .slice(0, 5);
@@ -78,8 +163,8 @@ export class IncidentReportingComponent implements OnInit {
     }, 1500);
   }
 
-  getPercent(count: number): number {
-    return this.totalIncidents > 0 ? Math.round((count / this.totalIncidents) * 100) : 0;
+  getPercent(count: number, total = this.totalIncidents): number {
+    return total > 0 ? Math.round((count / total) * 100) : 0;
   }
 
   getBarWidth(count: number, maxCount: number): number {
@@ -103,6 +188,39 @@ export class IncidentReportingComponent implements OnInit {
     return this.statusMeta[normalized]?.label || status;
   }
 
+  getLevelLabel(level: IncidentNiveauRisque | string | undefined): string {
+    if (!level) return 'Non defini';
+    const normalized = this.normalizeLevel(level);
+    return this.levelMeta[normalized]?.label || level;
+  }
+
+  getLevelClass(level: IncidentNiveauRisque | string | undefined): string {
+    const normalized = this.normalizeLevel(level);
+    return this.levelMeta[normalized]?.cssClass || 'level-default';
+  }
+
+  getMonthlyMax(): number {
+    return Math.max(1, ...this.monthlyTrend.map(item => Math.max(item.created, item.resolved)));
+  }
+
+  getAgingMax(): number {
+    return Math.max(1, ...this.agingBuckets.map(item => item.count));
+  }
+
+  getRiskPressureScore(): number {
+    return Math.min(
+      100,
+      Math.round((this.getPercent(this.highPriorityIncidents) * 0.35) + (this.backlogRate * 0.25) + (this.getPercent(this.overdueIncidents) * 0.25) + (this.criticalOpenRate * 0.15))
+    );
+  }
+
+  getRiskPressureLabel(): string {
+    const score = this.getRiskPressureScore();
+    if (score >= 70) return 'Critique';
+    if (score >= 45) return 'Sous surveillance';
+    return 'Maitrise';
+  }
+
   formatDays(value: number): string {
     if (!value) return '0 j';
     return `${value.toFixed(1)} j`;
@@ -112,15 +230,16 @@ export class IncidentReportingComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
-  private buildStatusDistribution(data: Incident[]): Array<{ label: string; count: number; cssClass: string }> {
+  private buildStatusDistribution(data: Incident[]): CountShare[] {
     return Object.entries(this.statusMeta).map(([status, meta]) => ({
       label: meta.label,
       count: data.filter(incident => this.getNormalizedStatus(incident) === status).length,
+      share: this.getPercent(data.filter(incident => this.getNormalizedStatus(incident) === status).length),
       cssClass: meta.cssClass
     }));
   }
 
-  private buildDomainDistribution(data: Incident[]): Array<{ label: string; count: number }> {
+  private buildDomainDistribution(data: Incident[]): CountShare[] {
     const grouped = new Map<string, number>();
     data.forEach((incident) => {
       const key = (incident.domaine || 'Non renseigne').trim() || 'Non renseigne';
@@ -128,9 +247,91 @@ export class IncidentReportingComponent implements OnInit {
     });
 
     return [...grouped.entries()]
-      .map(([label, count]) => ({ label, count }))
+      .map(([label, count]) => ({ label, count, share: this.getPercent(count) }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
+  }
+
+  private buildLevelDistribution(data: Incident[]): CountShare[] {
+    return this.levelOrder.map((level) => {
+      const count = data.filter(incident => this.getNormalizedLevel(incident) === level).length;
+      return {
+        label: this.levelMeta[level].label,
+        count,
+        share: this.getPercent(count),
+        cssClass: this.levelMeta[level].cssClass
+      };
+    }).filter(item => item.count > 0);
+  }
+
+  private buildProcessDistribution(data: Incident[]): CountShare[] {
+    const grouped = new Map<string, number>();
+    data.forEach((incident) => {
+      const key = (incident.processus || incident.macroProcessus || 'Non renseigne').trim() || 'Non renseigne';
+      grouped.set(key, (grouped.get(key) || 0) + 1);
+    });
+
+    return [...grouped.entries()]
+      .map(([label, count]) => ({ label, count, share: this.getPercent(count) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }
+
+  private buildCriticalDomainDistribution(data: Incident[]): CountShare[] {
+    const criticalData = data.filter((incident) => {
+      const level = this.getNormalizedLevel(incident);
+      return level === IncidentNiveauRisque.CRITICAL || level === IncidentNiveauRisque.HIGH;
+    });
+    const grouped = new Map<string, number>();
+    criticalData.forEach((incident) => {
+      const key = (incident.domaine || 'Non renseigne').trim() || 'Non renseigne';
+      grouped.set(key, (grouped.get(key) || 0) + 1);
+    });
+
+    return [...grouped.entries()]
+      .map(([label, count]) => ({ label, count, share: this.getPercent(count, criticalData.length) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }
+
+  private buildAgingBuckets(openItems: Incident[]): CountShare[] {
+    const buckets = [
+      { label: '0-7 j', min: 0, max: 7 },
+      { label: '8-30 j', min: 8, max: 30 },
+      { label: '31-90 j', min: 31, max: 90 },
+      { label: '+90 j', min: 91, max: Number.POSITIVE_INFINITY }
+    ];
+    const now = Date.now();
+
+    return buckets.map((bucket) => {
+      const count = openItems.filter((incident) => {
+        const age = Math.floor(Math.max(now - this.toTimestamp(incident.createdAt), 0) / (1000 * 60 * 60 * 24));
+        return age >= bucket.min && age <= bucket.max;
+      }).length;
+      return { label: bucket.label, count, share: this.getPercent(count, openItems.length) };
+    });
+  }
+
+  private buildMonthlyTrend(data: Incident[]): MonthlyTrend[] {
+    const months: MonthlyTrend[] = [];
+    const now = new Date();
+
+    for (let index = 5; index >= 0; index--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      const month = date.getMonth();
+      const year = date.getFullYear();
+      const label = date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+      months.push({
+        label,
+        created: data.filter(incident => this.isSameMonth(incident.createdAt, month, year)).length,
+        resolved: data.filter(incident => {
+          const status = this.getNormalizedStatus(incident);
+          return (status === IncidentStatus.TRAITE || status === IncidentStatus.CLOS) && this.isSameMonth(incident.updatedAt, month, year);
+        }).length
+      });
+    }
+
+    return months;
   }
 
   private calculateAverageResolutionDays(data: Incident[]): number {
@@ -167,6 +368,50 @@ export class IncidentReportingComponent implements OnInit {
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
+  private countOverdueIncidents(data: Incident[]): number {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return data.filter(incident => {
+      if (this.getNormalizedStatus(incident) === IncidentStatus.CLOS || !incident.dateEcheance) return false;
+      const dueDate = new Date(incident.dateEcheance);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate < today;
+    }).length;
+  }
+
+  private countDueSoonIncidents(data: Incident[]): number {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const next30Days = new Date(today);
+    next30Days.setDate(today.getDate() + 30);
+    return data.filter(incident => {
+      if (this.getNormalizedStatus(incident) === IncidentStatus.CLOS || !incident.dateEcheance) return false;
+      const dueDate = new Date(incident.dateEcheance);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate >= today && dueDate <= next30Days;
+    }).length;
+  }
+
+  private countCreatedThisMonth(data: Incident[]): number {
+    const now = new Date();
+    return data.filter(incident => this.isSameMonth(incident.createdAt, now.getMonth(), now.getFullYear())).length;
+  }
+
+  private countClosedThisMonth(data: Incident[]): number {
+    const now = new Date();
+    return data.filter(incident => {
+      const status = this.getNormalizedStatus(incident);
+      return (status === IncidentStatus.TRAITE || status === IncidentStatus.CLOS) && this.isSameMonth(incident.updatedAt, now.getMonth(), now.getFullYear());
+    }).length;
+  }
+
+  private isSameMonth(value: Date | string | undefined | null, month: number, year: number): boolean {
+    const timestamp = this.toTimestamp(value);
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    return date.getMonth() === month && date.getFullYear() === year;
+  }
+
   private mapIncidentCodes(incident: Incident): Incident {
     return {
       ...incident,
@@ -194,12 +439,13 @@ export class IncidentReportingComponent implements OnInit {
   }
 
   private normalizeLevel(value?: string | null): string {
-    return (value || '')
+    const normalized = (value || '')
       .toString()
       .trim()
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[\s-]+/g, '_');
+    return this.levelAliases[normalized] || normalized;
   }
 }

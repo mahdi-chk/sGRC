@@ -13,6 +13,8 @@ dotenv.config();
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
+const isDevServerRun = process.env.npm_lifecycle_event === 'dev';
+const allowLocalOrigins = !isProduction || isDevServerRun;
 
 const parseCsv = (value?: string): string[] =>
     (value || '')
@@ -32,10 +34,25 @@ const exactAllowedOrigins = Array.from(
     ])
 );
 
-const allowedOriginPatterns = parseCsv(process.env.CORS_ALLOWED_ORIGIN_PATTERNS).map(wildcardToRegExp);
+const allowedOriginPatternValues = parseCsv(process.env.CORS_ALLOWED_ORIGIN_PATTERNS);
+const allowedOriginPatterns = allowedOriginPatternValues.map(wildcardToRegExp);
 
-const isLocalOrigin = (origin: string): boolean =>
-    /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin);
+const isPrivateNetworkHost = (hostname: string): boolean =>
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    /^10(?:\.\d{1,3}){3}$/.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}$/.test(hostname) ||
+    /^192\.168(?:\.\d{1,3}){2}$/.test(hostname);
+
+const isLocalOrigin = (origin: string): boolean => {
+    try {
+        const { protocol, hostname } = new URL(origin);
+        return /^https?:$/.test(protocol) && isPrivateNetworkHost(hostname);
+    } catch (_error) {
+        return false;
+    }
+};
 
 const isOriginAllowed = (origin: string): boolean => {
     if (exactAllowedOrigins.includes(origin)) {
@@ -46,11 +63,11 @@ const isOriginAllowed = (origin: string): boolean => {
         return true;
     }
 
-    if (!isProduction && isLocalOrigin(origin)) {
+    if (allowLocalOrigins && isLocalOrigin(origin)) {
         return true;
     }
 
-    return exactAllowedOrigins.length === 0 && allowedOriginPatterns.length === 0 && isLocalOrigin(origin);
+    return false;
 };
 
 app.use(helmet({
@@ -75,6 +92,12 @@ app.use(cors({
             return;
         }
 
+        appLogger.warn('Boot', 'Rejected CORS origin', {
+            origin,
+            allowedOrigins: exactAllowedOrigins,
+            allowedOriginPatterns: allowedOriginPatternValues,
+            allowLocalOrigins,
+        });
         callback(new Error('Not allowed by CORS'));
     },
     optionsSuccessStatus: 200

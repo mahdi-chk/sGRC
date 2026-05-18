@@ -48,21 +48,13 @@
     </div>
 
     <div class="header-right">
-      <div class="search-box">
-        <select>
-          <option>Organisations</option>
-          <option>Ressources</option>
-          <option>Risques</option>
-          <option>Incidents</option>
-          <option>Contrôles</option>
-          <option>Actions</option>
-        </select>
-        <input type="text" placeholder="Saisir un texte">
-        <i class="fas fa-search"></i>
-      </div>
       <div class="user-info">
         <i class="fas fa-user-circle"></i>
         <span>{{ currentUserName }}</span>
+      </div>
+      <div class="datetime-info" title="Date et heure">
+        <i class="fas fa-clock"></i>
+        <span>{{ currentDateTime | date:'dd/MM/yyyy HH:mm:ss' }}</span>
       </div>
       <button class="logout-btn" (click)="logout()" title="Déconnexion">
         <i class="fas fa-power-off"></i>

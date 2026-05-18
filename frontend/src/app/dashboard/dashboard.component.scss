@@ -304,6 +304,21 @@
       }
     }
 
+    .datetime-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+
+      i {
+        font-size: 16px;
+        color: #004a99;
+      }
+    }
+
     .logout-btn {
       background: none;
       border: none;

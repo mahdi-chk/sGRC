@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../core/services/auth.service';
 import { DashboardService } from '../core/services/dashboard.service';
@@ -34,7 +34,7 @@ interface NavItem {
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnDestroy {
   @ViewChild('notifContainer') notifContainer?: ElementRef<HTMLElement>;
 
   expanded = new Set<string>();
@@ -49,6 +49,7 @@ export class DashboardComponent {
   currentSubmoduleTitle = '';
   currentUserRole: UserRole | null = null;
   currentUserName: string = '';
+  currentDateTime: Date = new Date();
   dashboardTitle: string = '';
   dashboardDesc: string = '';
   UserRole = UserRole; // Make enum available to template
@@ -97,6 +98,7 @@ export class DashboardComponent {
   notifications: Notification[] = [];
   unreadCount = 0;
   showNotifDropdown = false;
+  private clockIntervalId?: number;
 
   constructor(
     private http: HttpClient,
@@ -129,6 +131,16 @@ export class DashboardComponent {
       this.notifications = this.getVisibleNotifications(notifs);
       this.unreadCount = this.notifications.filter(n => !n.isRead).length;
     });
+
+    this.clockIntervalId = window.setInterval(() => {
+      this.currentDateTime = new Date();
+    }, 1000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.clockIntervalId !== undefined) {
+      window.clearInterval(this.clockIntervalId);
+    }
   }
 
   toggleNotifDropdown() {

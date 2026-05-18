@@ -262,7 +262,7 @@
                 </div>
                 <div class="form-group">
                     <label>Date d'échéance <span class="req">*</span></label>
-                    <input type="date" [(ngModel)]="newRisk.dateEcheance" [min]="today" class="finput">
+                    <input type="date" [(ngModel)]="newRisk.dateEcheance" [attr.min]="isEditing ? null : today" class="finput">
                 </div>
                 <div class="form-group">
                     <label>Fréquence de traitement</label>
@@ -284,10 +284,14 @@
                     </div>
                 </div>
             </div>
+            <div class="save-error" *ngIf="saveError">
+                <i class="fas fa-exclamation-circle"></i> {{ saveError }}
+            </div>
             <div class="form-footer">
-                <button class="btn-cancel" (click)="showCreateModal = false">Annuler</button>
-                <button class="btn-save" (click)="saveRisk()" [disabled]="!isFormValid()">
-                    <i class="fas fa-save"></i> {{ isEditing ? 'Enregistrer' : 'Créer le risque' }}
+                <button class="btn-cancel" (click)="showCreateModal = false" [disabled]="isSaving">Annuler</button>
+                <button class="btn-save" (click)="saveRisk()" [disabled]="!isFormValid() || isSaving">
+                    <i class="fas fa-spinner fa-spin" *ngIf="isSaving"></i>
+                    <i class="fas fa-save" *ngIf="!isSaving"></i> {{ isSaving ? 'Enregistrement...' : (isEditing ? 'Enregistrer' : 'Créer le risque') }}
                 </button>
             </div>
         </div>
@@ -1552,6 +1556,20 @@
         margin-top: 24px;
         padding-top: 18px;
         border-top: 1px solid #f1f5f9;
+    }
+
+    .save-error {
+        margin-top: 16px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        font-size: 0.86rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .btn-cancel {

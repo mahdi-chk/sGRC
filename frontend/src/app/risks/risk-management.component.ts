@@ -58,6 +58,8 @@ export class RiskManagementComponent implements OnInit {
     showAssignModal = false;
     showDetailsModal = false;
     isEditing = false;
+    isSaving = false;
+    saveError = '';
     selectedRisk: Risk | null = null;
     editRiskId: number | null = null;
     showExportMenu = false;
@@ -221,7 +223,7 @@ export class RiskManagementComponent implements OnInit {
     }
 
     isFormValid(): boolean {
-        const isDateValid = this.newRisk.dateEcheance >= this.today;
+        const isDateValid = this.isEditing || this.newRisk.dateEcheance >= this.today;
         return !!(
             this.newRisk.titre &&
             this.newRisk.explication &&
@@ -237,6 +239,7 @@ export class RiskManagementComponent implements OnInit {
         if (!this.isRiskManager) return;
 
         this.isEditing = false;
+        this.saveError = '';
         this.resetForm();
         this.showCreateModal = true;
     }
@@ -299,14 +302,15 @@ export class RiskManagementComponent implements OnInit {
         if (!this.isRiskManager) return;
 
         this.isEditing = true;
+        this.saveError = '';
         this.editRiskId = risk.id;
         this.newRisk = {
             ...risk,
-            departementId: risk.departementId.toString(),
-            dateEcheance: new Date(risk.dateEcheance).toISOString().split('T')[0],
-            responsableTraitementId: risk.responsableTraitementId.toString(),
+            departementId: risk.departementId ? risk.departementId.toString() : '',
+            dateEcheance: this.toDateInputValue(risk.dateEcheance),
+            responsableTraitementId: risk.responsableTraitementId ? risk.responsableTraitementId.toString() : '',
             frequenceTraitement: risk.frequenceTraitement || PeriodicFrequency.NONE,
-            prochaineEcheance: risk.prochaineEcheance ? new Date(risk.prochaineEcheance).toISOString().split('T')[0] : ''
+            prochaineEcheance: risk.prochaineEcheance ? this.toDateInputValue(risk.prochaineEcheance) : ''
         };
         this.calculateScores();
         this.updateFilteredAgents();
@@ -328,26 +332,37 @@ export class RiskManagementComponent implements OnInit {
     }
 
     saveRisk() {
-        if (!this.isRiskManager || !this.isFormValid()) return;
+        if (!this.isRiskManager || !this.isFormValid() || this.isSaving) return;
 
-        const formData = new FormData();
-        Object.keys(this.newRisk).forEach((key) => {
-            formData.append(key, (this.newRisk as any)[key]);
-        });
-
+        this.isSaving = true;
+        this.saveError = '';
+        const formData = this.buildRiskFormData();
         if (this.selectedFile) {
             formData.append('pieceJustificative', this.selectedFile);
         }
 
+        const onError = (error: any) => {
+            this.isSaving = false;
+            this.saveError = error.error?.message || error.error?.error || 'Erreur lors de l enregistrement du risque.';
+        };
+
         if (this.isEditing && this.editRiskId) {
-            this.riskService.updateRisk(this.editRiskId, formData).subscribe(() => this.finalizeSave());
+            this.riskService.updateRisk(this.editRiskId, formData).subscribe({
+                next: () => this.finalizeSave(),
+                error: onError
+            });
             return;
         }
 
-        this.riskService.createRisk(formData).subscribe(() => this.finalizeSave());
+        this.riskService.createRisk(formData).subscribe({
+            next: () => this.finalizeSave(),
+            error: onError
+        });
     }
 
     finalizeSave() {
+        this.isSaving = false;
+        this.saveError = '';
         this.showCreateModal = false;
         this.loadRisks();
         this.resetForm();
@@ -587,6 +602,8 @@ export class RiskManagementComponent implements OnInit {
 
     resetForm() {
         this.isEditing = false;
+        this.isSaving = false;
+        this.saveError = '';
         this.editRiskId = null;
         this.newRisk = this.buildDefaultRisk();
         this.selectedFile = null;
@@ -601,6 +618,60 @@ export class RiskManagementComponent implements OnInit {
         if (value === null || value === undefined) return '';
         if (typeof value === 'object') return (value.code || value.id || '').toString().toLowerCase().trim();
         return value.toString().toLowerCase().trim();
+    }
+
+    private toDateInputValue(value: Date | string | null | undefined): string {
+        if (!value) return '';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+    }
+
+    private appendFormValue(formData: FormData, key: string, value: any) {
+        if (value === undefined || value === null || value === '') {
+            formData.append(key, '');
+            return;
+        }
+        formData.append(key, String(value));
+    }
+
+    private buildRiskFormData(): FormData {
+        const formData = new FormData();
+        const lookupFallbacks: Record<string, string> = {
+            niveauRisque: 'niveauRisqueCode',
+            probabilite: 'probabiliteCode',
+            impact: 'impactCode',
+            niveauMaitrise: 'niveauMaitriseCode',
+            cotationRisqueBrut: 'cotationRisqueBrutCode',
+            cotationRisqueNet: 'cotationRisqueNetCode',
+            frequenceTraitement: 'frequenceTraitementCode'
+        };
+        [
+            'titre',
+            'explication',
+            'domaine',
+            'macroProcessus',
+            'processus',
+            'departementId',
+            'dateEcheance',
+            'niveauRisque',
+            'probabilite',
+            'impact',
+            'niveauMaitrise',
+            'dmrExistant',
+            'planActionTraitement',
+            'cotationRisqueBrut',
+            'niveauCotationRisqueBrut',
+            'cotationRisqueNet',
+            'niveauCotationRisqueNet',
+            'responsableTraitementId',
+            'frequenceTraitement',
+            'prochaineEcheance'
+        ].forEach((key) => {
+            const fallbackKey = lookupFallbacks[key];
+            this.appendFormValue(formData, key, fallbackKey ? (this.newRisk[fallbackKey] || this.newRisk[key]) : this.newRisk[key]);
+        });
+
+        return formData;
     }
 
     getStatusCount(status: string): number {

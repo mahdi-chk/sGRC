@@ -222,6 +222,12 @@ router.put('/:id', uploadSecurePiece, async (req: AuthRequest, res) => {
         const risk = await Risk.findByPk(parseInt(id as string));
         if (!risk) return res.status(404).json({ message: 'Risque non trouvé' });
 
+        for (const key in updateData) {
+            if (updateData[key] === '' || updateData[key] === 'null' || updateData[key] === 'undefined') {
+                updateData[key] = null;
+            }
+        }
+
         if (req.file) {
             updateData.pieceJustificative = saveToStorage(req.file, 'risks');
         }

@@ -6,12 +6,12 @@
             </button>
             <div>
                 <h1><i class="fas fa-tasks"></i> Plans de traitement</h1>
-                <p>Planifier les réponses, suivre l'exécution et mesurer l'efficacité</p>
+                <p>Planifier les reponses, suivre l'execution et mesurer l'efficacite</p>
             </div>
         </div>
         <div class="header-right">
             <button class="btn-action secondary" (click)="loadPlans()">
-                <i class="fas fa-sync-alt"></i> Rafraîchir
+                <i class="fas fa-sync-alt"></i> Rafraichir
             </button>
         </div>
     </div>
@@ -37,7 +37,7 @@
         <div class="kpi-card kpi-closed">
             <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
             <span class="kpi-value">{{ metrics.termines }}</span>
-            <span class="kpi-label">Terminés</span>
+            <span class="kpi-label">Termines</span>
         </div>
     </div>
 
@@ -47,7 +47,7 @@
         </div>
         <div class="progress-row">
             <div class="progress-item">
-                <span class="progress-title">Taux d'achèvement</span>
+                <span class="progress-title">Taux d'achevement</span>
                 <div class="progress-track">
                     <div class="progress-fill success" [style.width.%]="completionRate"></div>
                 </div>
@@ -63,37 +63,79 @@
         </div>
     </div>
 
+    <div class="plans-toolbar">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" [(ngModel)]="searchText" (ngModelChange)="onFilterChange()" placeholder="Rechercher plan, risque ou domaine...">
+        </div>
+        <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()" class="filter-select">
+            <option value="">Tous les statuts</option>
+            <option value="A planifier">A planifier</option>
+            <option value="En cours">En cours</option>
+            <option value="En retard">En retard</option>
+            <option value="Termine">Termine</option>
+        </select>
+        <input class="filter-select owner-filter" type="text" [(ngModel)]="ownerFilter" (ngModelChange)="onFilterChange()" placeholder="Responsable">
+        <select [(ngModel)]="sortMode" (ngModelChange)="onFilterChange()" class="filter-select">
+            <option value="priority">Priorite</option>
+            <option value="deadline">Echeance</option>
+            <option value="progress">Progression</option>
+        </select>
+        <button class="btn-clear" (click)="clearFilters()">
+            <i class="fas fa-times"></i> Reinitialiser
+        </button>
+    </div>
+
     <div class="module-card premium full-width-card">
         <div class="card-header-bar">
-            <h3><i class="fas fa-list-check"></i> Suivi des exécutions</h3>
+            <h3><i class="fas fa-list-check"></i> Suivi des executions</h3>
+            <span class="result-count">{{ filteredPlans.length }} plan(s)</span>
         </div>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
                         <th>Plan d'action</th>
+                        <th>Risque</th>
                         <th>Responsable</th>
+                        <th>Echeance</th>
                         <th>Progression</th>
                         <th>Statut</th>
                         <th class="text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let plan of paginatedPlans; let i = index" [class.row-selected]="selectedPlan?.id === plan.id">
+                    <tr *ngFor="let plan of paginatedPlans" [class.row-selected]="selectedPlan?.id === plan.id">
                         <td>
                             <div class="plan-name">{{ plan.name }}</div>
+                            <div class="plan-meta" *ngIf="getFrequencyLabel(plan.frequency) !== 'Aucun'">
+                                <i class="fas fa-redo-alt"></i> {{ getFrequencyLabel(plan.frequency) }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="risk-title">{{ plan.riskTitle }}</div>
+                            <span class="domain-chip">{{ plan.domaine || 'Non specifie' }}</span>
                         </td>
                         <td>
                             <div class="owner-cell">
                                 <span class="owner-avatar">{{ plan.owner.charAt(0) }}</span>
                                 <span>{{ plan.owner }}</span>
                             </div>
+                            <small class="assignee-line">Agent: {{ plan.assignee }}</small>
+                        </td>
+                        <td>
+                            <div class="deadline-cell" [class.overdue]="plan.status === 'En retard'" [class.soon]="plan.daysRemaining >= 0 && plan.daysRemaining <= 7">
+                                {{ plan.dateEcheance | date:'dd/MM/yyyy' }}
+                                <small *ngIf="plan.status !== 'Termine'">
+                                    {{ plan.daysRemaining < 0 ? (-plan.daysRemaining) + ' j de retard' : plan.daysRemaining + ' j restants' }}
+                                </small>
+                            </div>
                         </td>
                         <td>
                             <div class="progress-cell">
                                 <div class="mini-progress-track">
                                     <div class="mini-progress-fill"
-                                         [ngClass]="{'success': plan.status === 'Terminé', 'primary': plan.status === 'En cours', 'danger': plan.status === 'En retard'}"
+                                         [ngClass]="{'success': plan.status === 'Termine', 'primary': plan.status === 'En cours' || plan.status === 'A planifier', 'danger': plan.status === 'En retard'}"
                                          [style.width.%]="plan.progress"></div>
                                 </div>
                                 <span class="progress-text">{{ plan.progress }}%</span>
@@ -101,31 +143,33 @@
                         </td>
                         <td>
                             <span class="status-badge"
-                                  [ngClass]="{'badge-success': plan.status === 'Terminé', 'badge-primary': plan.status === 'En cours', 'badge-danger': plan.status === 'En retard'}">
+                                  [ngClass]="{'badge-success': plan.status === 'Termine', 'badge-primary': plan.status === 'En cours' || plan.status === 'A planifier', 'badge-danger': plan.status === 'En retard'}">
                                 {{ plan.status }}
                             </span>
                         </td>
                         <td class="text-right">
                             <div class="table-actions">
-                                <button class="action-btn primary" title="Voir détails" (click)="viewDetails(plan)"><i class="fas fa-eye"></i></button>
-                                <button class="action-btn secondary" title="Éditer" (click)="editPlan(plan)"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn primary" title="Voir details" (click)="viewDetails(plan)"><i class="fas fa-eye"></i></button>
+                                <button class="action-btn secondary" title="Editer" (click)="editPlan(plan)" *ngIf="isRiskManager"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn success" title="Marquer termine" (click)="markAsCompleted(plan)" *ngIf="plan.status !== 'Termine' && canTreatPlan(plan)"><i class="fas fa-check"></i></button>
+                                <button class="action-btn warning" title="Exporter fiche incident" (click)="exportIncident(plan)"><i class="fas fa-file-export"></i></button>
                             </div>
                         </td>
                     </tr>
-                    <tr *ngIf="plans.length === 0">
-                        <td colspan="5">
+                    <tr *ngIf="filteredPlans.length === 0">
+                        <td colspan="7">
                             <div class="empty-state">
                                 <i class="fas fa-clipboard-check"></i>
-                                <p>Aucun plan de traitement trouvé.</p>
+                                <p>Aucun plan de traitement trouve.</p>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
-            <app-pagination 
-                [totalItems]="plans.length" 
-                [currentPage]="currentPage" 
-                [pageSize]="itemsPerPage" 
+            <app-pagination
+                [totalItems]="filteredPlans.length"
+                [currentPage]="currentPage"
+                [pageSize]="itemsPerPage"
                 (pageChanged)="onPageChanged($event)">
             </app-pagination>
         </div>
@@ -136,7 +180,7 @@
             <div class="panel-header">
                 <h3>
                     <i class="fas" [ngClass]="isEditing ? 'fa-edit' : 'fa-info-circle'"></i>
-                    {{ isEditing ? 'Modifier le plan' : 'Détails du plan' }}
+                    {{ isEditing ? 'Modifier le plan' : 'Details du plan' }}
                 </h3>
                 <button class="close-btn" (click)="closePanel()">
                     <i class="fas fa-times"></i>
@@ -144,13 +188,21 @@
             </div>
 
             <div class="panel-body" *ngIf="selectedPlan">
-                <div class="detail-section">
+                <div class="inline-alert success" *ngIf="actionSuccess">{{ actionSuccess }}</div>
+                <div class="inline-alert error" *ngIf="actionError">{{ actionError }}</div>
+
+                <div class="detail-section" *ngIf="!isEditing">
                     <label>Plan d'action</label>
                     <p class="detail-value">{{ selectedPlan.name }}</p>
                 </div>
 
+                <div class="detail-section" *ngIf="isEditing">
+                    <label>Plan d'action</label>
+                    <textarea class="panel-input" rows="5" [(ngModel)]="editDraft.planActionTraitement" placeholder="Actions de traitement..."></textarea>
+                </div>
+
                 <div class="detail-section">
-                    <label>Risque associé</label>
+                    <label>Risque associe</label>
                     <p class="detail-value">{{ selectedPlan.riskTitle }}</p>
                 </div>
 
@@ -164,21 +216,50 @@
                     </div>
                     <div class="detail-section">
                         <label>Domaine</label>
-                        <p class="detail-value">{{ selectedPlan.domaine || 'Non spécifié' }}</p>
+                        <p class="detail-value">{{ selectedPlan.domaine || 'Non specifie' }}</p>
                     </div>
+                </div>
+
+                <div class="detail-row" *ngIf="!isEditing">
+                    <div class="detail-section">
+                        <label>Echeance</label>
+                        <p class="detail-value">{{ selectedPlan.dateEcheance | date:'dd/MM/yyyy' }}</p>
+                    </div>
+                    <div class="detail-section">
+                        <label>Frequence</label>
+                        <p class="detail-value">{{ getFrequencyLabel(selectedPlan.frequency) }}</p>
+                    </div>
+                </div>
+
+                <div class="detail-row" *ngIf="isEditing">
+                    <div class="detail-section">
+                        <label>Echeance</label>
+                        <input class="panel-input" type="date" [(ngModel)]="editDraft.dateEcheance">
+                    </div>
+                    <div class="detail-section">
+                        <label>Frequence</label>
+                        <select class="panel-input" [(ngModel)]="editDraft.frequenceTraitement">
+                            <option *ngFor="let freq of periodicFrequencies" [value]="freq">{{ getFrequencyLabel(freq) }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="detail-section" *ngIf="isEditing && editDraft.frequenceTraitement !== 'none'">
+                    <label>Prochaine echeance periodique</label>
+                    <input class="panel-input" type="date" [(ngModel)]="editDraft.prochaineEcheance">
                 </div>
 
                 <div class="detail-row">
                     <div class="detail-section">
-                        <label>Échéance</label>
-                        <p class="detail-value">{{ selectedPlan.dateEcheance | date:'dd/MM/yyyy' }}</p>
-                    </div>
-                    <div class="detail-section">
                         <label>Statut actuel</label>
                         <span class="status-badge"
-                              [ngClass]="{'badge-success': selectedPlan.status === 'Terminé', 'badge-primary': selectedPlan.status === 'En cours', 'badge-danger': selectedPlan.status === 'En retard'}">
+                              [ngClass]="{'badge-success': selectedPlan.status === 'Termine', 'badge-primary': selectedPlan.status === 'En cours' || selectedPlan.status === 'A planifier', 'badge-danger': selectedPlan.status === 'En retard'}">
                             {{ selectedPlan.status }}
                         </span>
+                    </div>
+                    <div class="detail-section">
+                        <label>Agent de traitement</label>
+                        <p class="detail-value">{{ selectedPlan.assignee }}</p>
                     </div>
                 </div>
 
@@ -187,7 +268,7 @@
                     <div class="detail-progress">
                         <div class="detail-progress-track">
                             <div class="detail-progress-fill"
-                                 [ngClass]="{'success': selectedPlan.status === 'Terminé', 'primary': selectedPlan.status === 'En cours', 'danger': selectedPlan.status === 'En retard'}"
+                                 [ngClass]="{'success': selectedPlan.status === 'Termine', 'primary': selectedPlan.status === 'En cours' || selectedPlan.status === 'A planifier', 'danger': selectedPlan.status === 'En retard'}"
                                  [style.width.%]="selectedPlan.progress"></div>
                         </div>
                         <span class="detail-progress-text">{{ selectedPlan.progress }}%</span>
@@ -195,13 +276,20 @@
                 </div>
 
                 <div class="detail-section" *ngIf="selectedPlan.description">
-                    <label>Description</label>
+                    <label>Description du risque</label>
                     <p class="detail-value desc">{{ selectedPlan.description }}</p>
                 </div>
 
                 <div class="panel-actions">
-                    <button class="btn-action primary full" (click)="markAsCompleted(selectedPlan)" *ngIf="selectedPlan.status !== 'Terminé'">
-                        <i class="fas fa-check"></i> Marquer comme terminé
+                    <button class="btn-action primary full" (click)="savePlanEdits()" *ngIf="isEditing" [disabled]="isSaving || !editDraft.dateEcheance">
+                        <i class="fas fa-spinner fa-spin" *ngIf="isSaving"></i>
+                        <i class="fas fa-save" *ngIf="!isSaving"></i> Enregistrer
+                    </button>
+                    <button class="btn-action primary full" (click)="markAsCompleted(selectedPlan)" *ngIf="!isEditing && selectedPlan.status !== 'Termine' && canTreatPlan(selectedPlan)" [disabled]="isSaving">
+                        <i class="fas fa-check"></i> Marquer comme termine
+                    </button>
+                    <button class="btn-action secondary full" (click)="exportIncident(selectedPlan)">
+                        <i class="fas fa-file-export"></i> Exporter en fiche incident
                     </button>
                     <button class="btn-action secondary full" (click)="closePanel()">
                         Fermer

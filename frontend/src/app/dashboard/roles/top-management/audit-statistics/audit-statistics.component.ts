@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuditManagementNavItems, getStoredAuditRole } from '../../../../modules/auditing/audit-navigation';
+import { RadarChartSeries } from '../../../../shared/components/radar-chart/radar-chart.component';
 
 interface AuditDistributionItem {
     label: string;
@@ -54,6 +55,16 @@ export class AuditStatisticsComponent implements OnInit {
     auditorDistribution: AuditDistributionItem[] = [];
     timelineDistribution: AuditTimelineItem[] = [];
     showExportMenu = false;
+    auditRadarSeries: RadarChartSeries[] = [];
+
+    readonly auditRadarLabels = [
+        'Completion',
+        'Ponctualite',
+        'Assignation',
+        'Progression',
+        'Retards maitrises',
+        'Couverture actions'
+    ];
 
 
 
@@ -205,6 +216,7 @@ export class AuditStatisticsComponent implements OnInit {
                 percent: Math.round((item.count / timelinePeak) * 100),
                 completionPercent: item.count ? Math.round((item.completed / item.count) * 100) : 0
             }));
+        this.refreshAuditRadarSeries();
     }
 
     calculateStats() {
@@ -245,6 +257,38 @@ export class AuditStatisticsComponent implements OnInit {
             { label: 'En cours', count: this.statusSummary['En cours'], percent: summaryTotal ? Math.round((this.statusSummary['En cours'] / summaryTotal) * 100) : 0, class: 'progress' },
             { label: 'NOK', count: this.statusSummary.NOK, percent: summaryTotal ? Math.round((this.statusSummary.NOK / summaryTotal) * 100) : 0, class: 'nok' }
         ];
+        this.refreshAuditRadarSeries();
+    }
+
+    refreshAuditRadarSeries() {
+        const overdueControl = 100 - this.getAuditPercent(this.overdueCount);
+        const actionCoverage = this.totalMissions > 0 ? Math.round((this.actionPlanCount / this.totalMissions) * 100) : 0;
+
+        this.auditRadarSeries = [
+            {
+                label: 'Performance actuelle',
+                values: [
+                    this.completionRate,
+                    this.onTimeRate,
+                    this.assignedRate,
+                    this.averageProgress,
+                    overdueControl,
+                    actionCoverage
+                ],
+                color: '#2563eb',
+                fillColor: 'rgba(37, 99, 235, 0.18)'
+            },
+            {
+                label: 'Objectif cible',
+                values: [85, 90, 90, 80, 95, 60],
+                color: '#f59e0b',
+                fillColor: 'rgba(245, 158, 11, 0.12)'
+            }
+        ];
+    }
+
+    getAuditPercent(value: number): number {
+        return this.totalMissions > 0 ? Math.round((value / this.totalMissions) * 100) : 0;
     }
 
     // Helper for CSS Pie Charts

@@ -5,6 +5,7 @@ import { forkJoin } from 'rxjs';
 import { KPI, ReportingService, ReportingStats } from '../../../core/services/reporting.service';
 import { RiskLevel, RiskStatus } from '../../../core/services/risk.service';
 import { REPORTING_NAV_ITEMS } from '../reporting-navigation';
+import { RadarChartSeries } from '../../../shared/components/radar-chart/radar-chart.component';
 
 @Component({
     selector: 'app-dashboard-view',
@@ -16,6 +17,15 @@ export class DashboardViewComponent implements OnInit {
     kpis: KPI[] = [];
     isLoading = true;
     selectedPeriod = 'all';
+    globalRadarSeries: RadarChartSeries[] = [];
+    readonly globalRadarLabels = [
+        'Risques traites',
+        'Exposition faible',
+        'Incidents maitrises',
+        'SLA incidents',
+        'Avancement audit',
+        'Audits sans retard',
+    ];
     readonly navItems = REPORTING_NAV_ITEMS;
     readonly periodOptions = [
         { value: 'all', label: 'Tout' },
@@ -86,6 +96,7 @@ export class DashboardViewComponent implements OnInit {
             ({ stats, kpis }) => {
                 this.stats = stats;
                 this.kpis = kpis;
+                this.refreshGlobalRadarSeries();
                 this.isLoading = false;
             },
             (error) => {
@@ -153,8 +164,22 @@ export class DashboardViewComponent implements OnInit {
     }
 
     getKpiProgress(id: string): number {
-        const value = this.getKpiValue(id);
-        return this.getKpiUnit(id) === '%' ? Math.max(0, Math.min(100, value)) : 100;
+        const kpi = this.kpis.find((item) => item.id === id);
+        const value = Number(kpi?.value || 0);
+
+        if (kpi?.unit === '%') {
+            return Math.max(0, Math.min(100, value));
+        }
+
+        const target = Number(kpi?.target || 0);
+        if (target > 0) {
+            const ratio = kpi?.inverseTarget
+                ? Math.max(0, 100 - Math.round((value / target) * 100))
+                : Math.round((value / target) * 100);
+            return Math.max(4, Math.min(100, ratio));
+        }
+
+        return value > 0 ? 35 : 4;
     }
 
     getKpiStatus(id: string): string {
@@ -202,6 +227,39 @@ export class DashboardViewComponent implements OnInit {
         }
 
         return 'tone-neutral';
+    }
+
+    refreshGlobalRadarSeries(): void {
+        if (!this.stats) {
+            this.globalRadarSeries = [];
+            return;
+        }
+
+        const riskTreated = this.getStatusCount(RiskStatus.TREATED) + this.getStatusCount(RiskStatus.CLOSED);
+        const incidentsManaged = this.stats.incidents.total - this.stats.incidents.sla.open;
+        const auditWithoutOverdue = this.stats.audits.total - this.stats.audits.progress.overdue;
+
+        this.globalRadarSeries = [
+            {
+                label: 'Performance actuelle',
+                values: [
+                    this.getPercent(riskTreated, this.stats.risks.total),
+                    Math.max(0, 100 - Number(this.stats.risks.exposure.score || 0)),
+                    this.getPercent(incidentsManaged, this.stats.incidents.total),
+                    Math.max(0, 100 - this.getPercent(this.stats.incidents.sla.overdue, this.stats.incidents.total)),
+                    Number(this.stats.audits.progress.average || 0),
+                    this.getPercent(auditWithoutOverdue, this.stats.audits.total),
+                ],
+                color: '#2563eb',
+                fillColor: 'rgba(37, 99, 235, 0.18)',
+            },
+            {
+                label: 'Objectif cible',
+                values: [80, 75, 85, 95, 80, 95],
+                color: '#f59e0b',
+                fillColor: 'rgba(245, 158, 11, 0.12)',
+            },
+        ];
     }
 
     goBack(): void {

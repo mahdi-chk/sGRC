@@ -59,6 +59,59 @@ button {
   cursor: pointer;
 }
 
+/* --- HOMOGENEOUS STATS / CHART SURFACES --- */
+
+.stats-visual-card,
+.radar-stat-card {
+  border-radius: 18px !important;
+  border: 1px solid #dbe5ef !important;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06) !important;
+  overflow: hidden;
+}
+
+.stats-visual-card {
+  margin-bottom: 22px;
+}
+
+.stats-visual-card app-radar-chart,
+.radar-stat-card app-radar-chart {
+  display: block;
+  width: 100%;
+}
+
+.statistics-page .radar-stat-card {
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.stats-visual-card h3,
+.radar-stat-card h3 {
+  letter-spacing: 0 !important;
+}
+
+.stats-visual-card .radar-head h3,
+.radar-stat-card .radar-head h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.stats-visual-card .radar-head p,
+.radar-stat-card .radar-head p {
+  max-width: 760px;
+}
+
+.chart-card,
+.summary-card,
+.content-card,
+.module-card.premium {
+  overflow-wrap: anywhere;
+}
+
 /* Shared Export Dropdown styles */
 .export-dropdown {
   position: relative;

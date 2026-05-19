@@ -19,6 +19,7 @@ import { AuditPlanGenCardComponent } from '../dashboard/components/audit-plan-ge
 import { AuditorMissionCardComponent } from '../dashboard/components/auditor-mission-card/auditor-mission-card.component';
 import { OrganigrammeManagementCardComponent } from '../dashboard/components/organigramme-management-card/organigramme-management-card.component';
 import { PaginationComponent } from './components/pagination/pagination.component';
+import { RadarChartComponent } from './components/radar-chart/radar-chart.component';
 
 @NgModule({
   declarations: [
@@ -33,7 +34,8 @@ import { PaginationComponent } from './components/pagination/pagination.componen
     AuditPlanGenCardComponent,
     AuditorMissionCardComponent,
     OrganigrammeManagementCardComponent,
-    PaginationComponent
+    PaginationComponent,
+    RadarChartComponent
   ],
   imports: [
     CommonModule,
@@ -53,6 +55,7 @@ import { PaginationComponent } from './components/pagination/pagination.componen
     AuditorMissionCardComponent,
     OrganigrammeManagementCardComponent,
     PaginationComponent,
+    RadarChartComponent,
     CommonModule,
     FormsModule,
     RouterModule

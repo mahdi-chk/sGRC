@@ -166,6 +166,15 @@
         </div>
     </div>
 
+    <div class="module-card premium chart-card radar-stat-card stats-visual-card mb-4">
+        <app-radar-chart
+            title="Radar de pilotage des risques"
+            subtitle="Lecture synthetique du traitement, de la maturite, de l assignation et de la pression operationnelle."
+            [labels]="riskRadarLabels"
+            [series]="riskRadarSeries">
+        </app-radar-chart>
+    </div>
+
     <div class="module-card premium risk-matrix-card mb-4">
         <div class="matrix-header">
             <div>

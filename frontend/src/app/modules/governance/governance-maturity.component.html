@@ -46,6 +46,15 @@
         </div>
     </div>
 
+    <div class="content-card stats-visual-card">
+        <app-radar-chart
+            title="Radar de maturite gouvernance"
+            subtitle="Vue transverse des KPI risques et audit utilises pour le pilotage de maturite."
+            [labels]="governanceRadarLabels"
+            [series]="governanceRadarSeries">
+        </app-radar-chart>
+    </div>
+
     <div class="section-grid">
         <div class="content-card">
             <div class="card-head">

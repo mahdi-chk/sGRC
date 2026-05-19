@@ -5,11 +5,14 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-project-diagram"></i> Vision Multi-Entités</h1>
-                <p>Analyse comparative de la performance et des risques par département.</p>
+                <h1><i class="fas fa-project-diagram"></i> Vision Multi-Entites</h1>
+                <p>Analyse comparative de la performance et des risques par departement.</p>
             </div>
         </div>
         <div class="header-right">
+            <button class="btn-refresh" (click)="exportComparison()" [disabled]="isLoading || filteredEntities.length === 0">
+                <i class="fas fa-file-excel"></i> Exporter comparatif
+            </button>
             <button class="btn-refresh" (click)="loadEntities()" [disabled]="isLoading">
                 <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> Actualiser
             </button>
@@ -33,37 +36,116 @@
     </div>
 
     <div *ngIf="!isLoading" class="entity-grid">
-        <div class="module-card premium table-card">
-            <h3><i class="fas fa-table"></i> Comparatif des Départements</h3>
-            <table class="premium-table">
-                <thead>
-                    <tr>
-                        <th>Département</th>
-                        <th>Nombre de Risques</th>
-                        <th>Risques Critiques</th>
-                        <th>Taux de Traitement</th>
-                        <th>Score Global</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let entity of entities">
-                        <td class="entity-name">{{ entity.name }}</td>
-                        <td><span class="badge count">{{ entity.riskCount }}</span></td>
-                        <td><span class="badge critical" [class.zero]="entity.criticalRiskCount === 0">{{ entity.criticalRiskCount }}</span></td>
-                        <td>
-                            <div class="mini-progress">
-                                <div class="bar" [style.width.%]="entity.treatmentRate"></div>
-                                <span>{{ entity.treatmentRate | number:'1.0-0' }}%</span>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="score-indicator" [ngClass]="entity.treatmentRate > 70 ? 'high' : (entity.treatmentRate > 40 ? 'medium' : 'low')">
-                                <i class="fas fa-star"></i> {{ (entity.treatmentRate / 20) | number:'1.1-1' }}/5
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span class="eyebrow">Entites suivies</span>
+                <strong>{{ entities.length }}</strong>
+                <small>{{ filteredEntities.length }} affichee(s)</small>
+            </div>
+            <div class="summary-card">
+                <span class="eyebrow">Risques totaux</span>
+                <strong>{{ totalRisks }}</strong>
+                <small>{{ totalCriticalRisks }} critique(s)</small>
+            </div>
+            <div class="summary-card">
+                <span class="eyebrow">Traitement moyen</span>
+                <strong>{{ averageTreatmentRate }}%</strong>
+                <small>{{ bestEntity?.name || '-' }} en tete</small>
+            </div>
+            <div class="summary-card" [ngClass]="getTreatmentTone(portfolioScore)">
+                <span class="eyebrow">Score portefeuille</span>
+                <strong>{{ portfolioScore }}%</strong>
+                <small>{{ riskiestEntity?.name || '-' }} a surveiller</small>
+            </div>
+        </div>
+
+        <div class="module-card premium entity-toolbar">
+            <div class="toolbar-field">
+                <label>Recherche</label>
+                <div class="input-shell">
+                    <i class="fas fa-search"></i>
+                    <input type="search" [(ngModel)]="searchTerm" placeholder="Filtrer par departement ou entite">
+                </div>
+            </div>
+            <div class="toolbar-field">
+                <label>Trier par</label>
+                <select [(ngModel)]="sortBy">
+                    <option *ngFor="let option of sortOptions" [ngValue]="option.value">{{ option.label }}</option>
+                </select>
+            </div>
+            <div class="toolbar-status" *ngIf="statusMessage">
+                <i class="fas fa-circle-check"></i>
+                {{ statusMessage }}
+            </div>
+        </div>
+
+        <div class="entity-layout">
+            <div class="module-card premium table-card">
+                <h3><i class="fas fa-table"></i> Comparatif des Departements</h3>
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Departement</th>
+                            <th>Nombre de Risques</th>
+                            <th>Risques Critiques</th>
+                            <th>Taux de Traitement</th>
+                            <th>Score Global</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let entity of filteredEntities" (click)="selectEntity(entity)" [class.selected]="selectedEntityId === entity.id">
+                            <td class="entity-name">{{ entity.name }}</td>
+                            <td><span class="badge count">{{ entity.riskCount }}</span></td>
+                            <td><span class="badge critical" [class.zero]="entity.criticalRiskCount === 0">{{ entity.criticalRiskCount }}</span></td>
+                            <td>
+                                <div class="mini-progress">
+                                    <div class="bar" [style.width.%]="entity.treatmentRate"></div>
+                                    <span>{{ entity.treatmentRate | number:'1.0-0' }}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="score-indicator" [ngClass]="getTreatmentTone(getEntityScore(entity))">
+                                    <i class="fas fa-star"></i> {{ getEntityScore(entity) }}%
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <aside class="module-card premium entity-detail" *ngIf="selectedEntity as entity">
+                <div class="detail-head">
+                    <span class="eyebrow">Entite selectionnee</span>
+                    <h3>{{ entity.name }}</h3>
+                </div>
+                <div class="detail-score" [ngClass]="getTreatmentTone(getEntityScore(entity))">
+                    <strong>{{ getEntityScore(entity) }}%</strong>
+                    <span>Score global</span>
+                </div>
+                <div class="detail-metrics">
+                    <div>
+                        <span>Risques</span>
+                        <strong>{{ entity.riskCount }}</strong>
+                    </div>
+                    <div>
+                        <span>Critiques</span>
+                        <strong>{{ entity.criticalRiskCount }}</strong>
+                    </div>
+                    <div>
+                        <span>Part critique</span>
+                        <strong>{{ getCriticalShare(entity) }}%</strong>
+                    </div>
+                    <div>
+                        <span>Traitement</span>
+                        <strong>{{ entity.treatmentRate }}%</strong>
+                    </div>
+                </div>
+                <div class="recommendation">
+                    <i class="fas fa-lightbulb"></i>
+                    <p *ngIf="entity.criticalRiskCount > 0">Prioriser les risques critiques avant la prochaine revue de pilotage.</p>
+                    <p *ngIf="entity.criticalRiskCount === 0">Maintenir le niveau de traitement et documenter les controles efficaces.</p>
+                </div>
+            </aside>
         </div>
     </div>
 </div>

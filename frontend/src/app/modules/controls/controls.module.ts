@@ -7,6 +7,7 @@ import { ControlsPlanningComponent } from './controls-planning.component';
 import { ControlsEvidenceComponent } from './controls-evidence.component';
 import { ControlsEffectivenessComponent } from './controls-effectiveness.component';
 import { ControlsNonConformitiesComponent } from './controls-non-conformities.component';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
   declarations: [
@@ -17,7 +18,7 @@ import { ControlsNonConformitiesComponent } from './controls-non-conformities.co
     ControlsEffectivenessComponent,
     ControlsNonConformitiesComponent
   ],
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, SharedModule],
   exports: [
     ControlsComponent,
     ControlsReferentialComponent,

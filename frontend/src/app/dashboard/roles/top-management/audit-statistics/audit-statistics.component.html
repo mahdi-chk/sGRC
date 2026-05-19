@@ -86,6 +86,15 @@
         </div>
     </div>
 
+    <div class="module-card premium chart-card radar-stat-card stats-visual-card mb-4">
+        <app-radar-chart
+            title="Radar de performance audit"
+            subtitle="Comparaison entre l etat actuel du portefeuille audit et les seuils de pilotage."
+            [labels]="auditRadarLabels"
+            [series]="auditRadarSeries">
+        </app-radar-chart>
+    </div>
+
     <div class="dashboard-grid">
         <div class="module-card premium chart-card large-chart">
             <h3><i class="fas fa-chart-pie"></i> Statuts Audit</h3>

@@ -7,6 +7,7 @@ import { ActionsCentralizedComponent } from './actions-centralized.component';
 import { ActionsDeadlinesComponent } from './actions-deadlines.component';
 import { ActionsNotificationsComponent } from './actions-notifications.component';
 import { ActionsIndicatorsComponent } from './actions-indicators.component';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,7 @@ import { ActionsIndicatorsComponent } from './actions-indicators.component';
     ActionsNotificationsComponent,
     ActionsIndicatorsComponent
   ],
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SharedModule],
   exports: [
     ActionsComponent,
     ActionsCentralizedComponent,

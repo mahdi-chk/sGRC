@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { AuditingService, AuditMission, AuditMissionStatus } from '../../core/services/auditing.service';
 import { Risk, RiskLevel, RiskService, RiskStatus } from '../../core/services/risk.service';
 import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
+import { RadarChartSeries } from '../../shared/components/radar-chart/radar-chart.component';
 
 @Component({
   selector: 'app-governance-maturity',
@@ -15,6 +16,16 @@ export class GovernanceMaturityComponent implements OnInit {
   risks: Risk[] = [];
   missions: AuditMission[] = [];
   isLoading = false;
+  governanceRadarSeries: RadarChartSeries[] = [];
+
+  readonly governanceRadarLabels = [
+    'Traitement risques',
+    'Critiques maitrises',
+    'Maturite risque',
+    'Completion audit',
+    'Missions a temps',
+    'Retards maitrises'
+  ];
 
   constructor(
     private router: Router,
@@ -36,11 +47,13 @@ export class GovernanceMaturityComponent implements OnInit {
       next: ({ risks, missions }) => {
         this.risks = risks;
         this.missions = missions;
+        this.refreshGovernanceRadarSeries();
         this.isLoading = false;
       },
       error: () => {
         this.risks = [];
         this.missions = [];
+        this.governanceRadarSeries = [];
         this.isLoading = false;
       }
     });
@@ -107,6 +120,30 @@ export class GovernanceMaturityComponent implements OnInit {
     const cancelled = this.missions.filter(mission => mission.statut === AuditMissionStatus.ANNULE).length;
     const onTime = this.missions.length - delayed - cancelled;
     return Math.round((onTime / this.missions.length) * 100);
+  }
+
+  refreshGovernanceRadarSeries(): void {
+    this.governanceRadarSeries = [
+      {
+        label: 'Situation actuelle',
+        values: [
+          this.treatmentRate,
+          100 - this.criticalRate,
+          Math.round((this.maturityLevel / 5) * 100),
+          this.completionRate,
+          this.onTimeRate,
+          100 - this.delayedRate
+        ],
+        color: '#2563eb',
+        fillColor: 'rgba(37, 99, 235, 0.18)'
+      },
+      {
+        label: 'Objectif cible',
+        values: [80, 90, 80, 85, 90, 95],
+        color: '#f59e0b',
+        fillColor: 'rgba(245, 158, 11, 0.12)'
+      }
+    ];
   }
 
   private isCompletedRiskStatus(status?: string | null): boolean {

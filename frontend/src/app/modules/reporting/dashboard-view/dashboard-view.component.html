@@ -121,6 +121,15 @@
                 </div>
             </div>
 
+            <div class="module-card premium chart-card stats-visual-card">
+                <app-radar-chart
+                    title="Radar de performance consolidee"
+                    subtitle="Synthese transverse des risques, incidents et audits sur le perimetre selectionne."
+                    [labels]="globalRadarLabels"
+                    [series]="globalRadarSeries">
+                </app-radar-chart>
+            </div>
+
             <div class="module-card premium posture-card">
                 <h3><i class="fas fa-shield-halved"></i> Posture de risque</h3>
                 <div class="posture-list">

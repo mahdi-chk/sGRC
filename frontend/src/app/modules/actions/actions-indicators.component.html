@@ -46,6 +46,15 @@
         </div>
     </div>
 
+    <div class="content-card stats-visual-card" *ngIf="overview">
+        <app-radar-chart
+            title="Radar des plans d action"
+            subtitle="Synthese du taux de cloture, de l efficacite, des cibles et de la maitrise des alertes."
+            [labels]="actionsRadarLabels"
+            [series]="actionsRadarSeries">
+        </app-radar-chart>
+    </div>
+
     <div class="indicator-grid" *ngIf="indicators.length > 0; else emptyState">
         <article class="indicator-card" *ngFor="let item of indicators">
             <div class="indicator-head">

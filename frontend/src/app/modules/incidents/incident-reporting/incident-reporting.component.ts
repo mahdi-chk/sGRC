@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from '../../../core/services/incident.service';
 import { Router } from '@angular/router';
 import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
+import { RadarChartSeries } from '../../../shared/components/radar-chart/radar-chart.component';
 
 interface CountShare {
   label: string;
@@ -51,6 +52,16 @@ export class IncidentReportingComponent implements OnInit {
   agingBuckets: CountShare[] = [];
   monthlyTrend: MonthlyTrend[] = [];
   recentIncidents: Incident[] = [];
+  incidentRadarSeries: RadarChartSeries[] = [];
+
+  readonly incidentRadarLabels = [
+    'Resolution',
+    'Assignation',
+    'Lien risque',
+    'Backlog maitrise',
+    'Critiques maitrises',
+    'Delais maitrises'
+  ];
 
   private readonly statusMeta: Record<string, { label: string; cssClass: string }> = {
     [IncidentStatus.NOUVEAU]: { label: 'Nouveaux', cssClass: 'status-new' },
@@ -146,6 +157,7 @@ export class IncidentReportingComponent implements OnInit {
         this.recentIncidents = [...this.incidents]
           .sort((a, b) => this.toTimestamp(b.updatedAt || b.createdAt) - this.toTimestamp(a.updatedAt || a.createdAt))
           .slice(0, 5);
+        this.refreshIncidentRadarSeries();
         this.isLoading = false;
       },
       error: (err) => {
@@ -224,6 +236,30 @@ export class IncidentReportingComponent implements OnInit {
   formatDays(value: number): string {
     if (!value) return '0 j';
     return `${value.toFixed(1)} j`;
+  }
+
+  refreshIncidentRadarSeries(): void {
+    this.incidentRadarSeries = [
+      {
+        label: 'Situation actuelle',
+        values: [
+          this.getPercent(this.resolvedIncidents),
+          this.assignmentRate,
+          this.riskLinkRate,
+          100 - this.backlogRate,
+          100 - this.criticalOpenRate,
+          100 - this.getPercent(this.overdueIncidents)
+        ],
+        color: '#2563eb',
+        fillColor: 'rgba(37, 99, 235, 0.18)'
+      },
+      {
+        label: 'Objectif cible',
+        values: [85, 90, 70, 80, 90, 95],
+        color: '#f97316',
+        fillColor: 'rgba(249, 115, 22, 0.13)'
+      }
+    ];
   }
 
   goBack() {

@@ -8,6 +8,7 @@ import { GovernanceHistoryComponent } from './governance-history.component';
 import { GovernanceWorkflowsComponent } from './governance-workflows.component';
 import { GovernanceMaturityComponent } from './governance-maturity.component';
 import { GovernanceAdoptionComponent } from './governance-adoption.component';
+import { SharedModule } from '../../shared/shared.module';
 
 @NgModule({
   declarations: [
@@ -18,7 +19,7 @@ import { GovernanceAdoptionComponent } from './governance-adoption.component';
     GovernanceMaturityComponent,
     GovernanceAdoptionComponent
   ],
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SharedModule],
   exports: [
     GovernanceComponent,
     GovernanceDocumentsComponent,

@@ -12,6 +12,7 @@ import {
     RiskService,
     RiskStatus,
 } from '../../../../core/services/risk.service';
+import { RadarChartSeries } from '../../../../shared/components/radar-chart/radar-chart.component';
 
 interface StatRankingEntry {
     label: string;
@@ -66,6 +67,16 @@ export class RiskStatisticsComponent implements OnInit {
     selectedMatrixRow = -1;
     selectedMatrixCol = -1;
     selectedMatrixRisks: Risk[] = [];
+    riskRadarSeries: RadarChartSeries[] = [];
+
+    readonly riskRadarLabels = [
+        'Traitement',
+        'Maturite',
+        'Assignation',
+        'Priorite maitrisee',
+        'Delais maitrises',
+        'Score IA',
+    ];
 
     readonly probabilityOrder = [
         RiskProbability.PERMANENT,
@@ -338,6 +349,36 @@ export class RiskStatisticsComponent implements OnInit {
         );
 
         this.avgMaturity = RiskService.calculateMaturityIndex(this.risks);
+        this.refreshRiskRadarSeries();
+    }
+
+    refreshRiskRadarSeries() {
+        const maturityPercent = Math.round((this.avgMaturity / 5) * 100);
+        const overdueControl = 100 - this.getPercent(this.overdueCount);
+        const priorityControl = 100 - this.highPriorityRate;
+        const aiScore = this.avgAiScore > 0 ? Math.min(100, Math.round(this.avgAiScore)) : Math.max(maturityPercent, this.treatmentRate);
+
+        this.riskRadarSeries = [
+            {
+                label: 'Situation actuelle',
+                values: [
+                    this.treatmentRate,
+                    maturityPercent,
+                    this.assignedRate,
+                    priorityControl,
+                    overdueControl,
+                    aiScore,
+                ],
+                color: '#2c6fd6',
+                fillColor: 'rgba(44, 111, 214, 0.18)',
+            },
+            {
+                label: 'Objectif cible',
+                values: [80, 80, 85, 75, 90, 70],
+                color: '#f08a24',
+                fillColor: 'rgba(240, 138, 36, 0.13)',
+            },
+        ];
     }
 
     computeMatrixHighlights() {

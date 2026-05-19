@@ -1,0 +1,54 @@
+<div class="radar-card">
+  <div class="radar-head" *ngIf="title || subtitle">
+    <h3 *ngIf="title">{{ title }}</h3>
+    <p *ngIf="subtitle">{{ subtitle }}</p>
+  </div>
+
+  <div class="radar-legend" *ngIf="series.length > 0">
+    <span class="legend-item" *ngFor="let item of series">
+      <i [style.background]="item.color"></i>
+      {{ item.label }}
+    </span>
+  </div>
+
+  <div class="radar-empty" *ngIf="!hasData">
+    <i class="fas fa-chart-line"></i>
+    <span>{{ emptyText }}</span>
+  </div>
+
+  <svg *ngIf="hasData" class="radar-chart" viewBox="0 0 560 440" preserveAspectRatio="xMidYMid meet" role="img" [attr.aria-label]="title || 'Diagramme radar'">
+    <g class="radar-grid">
+      <polygon *ngFor="let polygon of gridPolygons" [attr.points]="polygon"></polygon>
+      <line *ngFor="let axis of axes" [attr.x1]="centerX" [attr.y1]="centerY" [attr.x2]="axis.x" [attr.y2]="axis.y"></line>
+    </g>
+
+    <g class="radar-level-labels">
+      <text *ngFor="let level of levelLabels" [attr.x]="level.x" [attr.y]="level.y">{{ level.value }}</text>
+    </g>
+
+    <g class="radar-series">
+      <ng-container *ngFor="let item of normalizedSeries">
+        <polygon
+          class="radar-area"
+          [attr.points]="item.polygon"
+          [attr.fill]="item.fillColor || item.color"
+          [attr.stroke]="item.color">
+        </polygon>
+        <circle
+          *ngFor="let point of item.points"
+          class="radar-point"
+          [attr.cx]="point.x"
+          [attr.cy]="point.y"
+          [attr.fill]="item.color"
+          r="4">
+        </circle>
+      </ng-container>
+    </g>
+
+    <g class="radar-labels">
+      <text *ngFor="let axis of axes; let i = index" [attr.x]="axis.labelX" [attr.y]="axis.labelY" text-anchor="middle">
+        <tspan *ngFor="let line of labelLines[i]; let lineIndex = index" [attr.x]="axis.labelX" [attr.dy]="lineIndex === 0 ? 0 : 14">{{ line }}</tspan>
+      </text>
+    </g>
+  </svg>
+</div>

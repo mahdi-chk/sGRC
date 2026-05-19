@@ -46,6 +46,15 @@
         </div>
     </div>
 
+    <div class="content-card stats-visual-card" *ngIf="overview">
+        <app-radar-chart
+            title="Radar d efficacite des controles"
+            subtitle="Lecture combinee du score moyen, de la robustesse des controles, des actions et des preuves disponibles."
+            [labels]="controlsRadarLabels"
+            [series]="controlsRadarSeries">
+        </app-radar-chart>
+    </div>
+
     <div class="effectiveness-grid" *ngIf="effectiveness.length > 0; else emptyEffectiveness">
         <article class="effectiveness-card" *ngFor="let item of paginatedEffectiveness" [ngClass]="getToneClass(item.score)">
             <div class="effectiveness-head">

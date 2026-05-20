@@ -1,8 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { AuditingService, AuditMission, AuditMissionStatus } from '../../core/services/auditing.service';
-import { Risk, RiskLevel, RiskService, RiskStatus } from '../../core/services/risk.service';
+import { GovernanceApprovalWorkflow, GovernanceService } from './governance.service';
 import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
 
 @Component({
@@ -12,14 +10,26 @@ import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
 })
 export class GovernanceWorkflowsComponent implements OnInit {
   readonly navItems = GOVERNANCE_NAV_ITEMS;
-  risks: Risk[] = [];
-  missions: AuditMission[] = [];
+  readonly statusOptions = [
+    { value: 'all', label: 'Tous' },
+    { value: 'en_cours', label: 'En cours' },
+    { value: 'en_retard', label: 'En retard' },
+    { value: 'a_initialiser', label: 'A initialiser' },
+    { value: 'approuve', label: 'Approuves' },
+    { value: 'rejete', label: 'Rejetes / corrections' }
+  ];
+
+  workflows: GovernanceApprovalWorkflow[] = [];
+  selectedWorkflow: GovernanceApprovalWorkflow | null = null;
+  searchTerm = '';
+  statusFilter = 'all';
+  decisionComment = '';
+  processingWorkflowId: string | null = null;
   isLoading = false;
 
   constructor(
     private router: Router,
-    private riskService: RiskService,
-    private auditingService: AuditingService
+    private governanceService: GovernanceService
   ) {}
 
   ngOnInit(): void {
@@ -29,18 +39,15 @@ export class GovernanceWorkflowsComponent implements OnInit {
   loadData(): void {
     this.isLoading = true;
 
-    forkJoin({
-      risks: this.riskService.getRisks(),
-      missions: this.auditingService.getMissions()
-    }).subscribe({
-      next: ({ risks, missions }) => {
-        this.risks = risks;
-        this.missions = missions;
+    this.governanceService.getApprovalWorkflows().subscribe({
+      next: workflows => {
+        this.workflows = workflows;
+        this.selectedWorkflow = this.resolveSelectedWorkflow(workflows);
         this.isLoading = false;
       },
       error: () => {
-        this.risks = [];
-        this.missions = [];
+        this.workflows = [];
+        this.selectedWorkflow = null;
         this.isLoading = false;
       }
     });
@@ -50,64 +57,183 @@ export class GovernanceWorkflowsComponent implements OnInit {
     this.router.navigate(['/dashboard/governance']);
   }
 
-  get priorityRisks(): Risk[] {
-    return this.risks
-      .filter(risk =>
-        this.normalizeRiskLevel(risk.niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL ||
-        this.normalizeRiskStatus(risk.statutCode || risk.statut) === RiskStatus.OPEN ||
-        !risk.riskAgentId
-      )
-      .slice()
-      .sort((left, right) => new Date(left.dateEcheance).getTime() - new Date(right.dateEcheance).getTime());
+  get totalDocuments(): number {
+    return this.workflows.reduce((sum, workflow) => sum + workflow.totalDocuments, 0);
   }
 
-  get priorityMissions(): AuditMission[] {
-    return this.missions
-      .filter(mission =>
-        mission.statut === AuditMissionStatus.EN_RETARD ||
-        mission.statut === AuditMissionStatus.EN_COURS ||
-        !mission.auditeurId
-      )
-      .slice()
-      .sort((left, right) => new Date(left.delai).getTime() - new Date(right.delai).getTime());
+  get recentDocuments(): number {
+    return this.workflows.reduce((sum, workflow) => sum + workflow.recentDocuments, 0);
   }
 
-  getRiskBadgeClass(risk: Risk): string {
-    if (this.normalizeRiskLevel(risk.niveauRisqueCode || risk.niveauRisque) === RiskLevel.CRITICAL) {
-      return 'danger';
-    }
-
-    if (this.isCompletedRiskStatus(risk.statutCode || risk.statut)) {
-      return 'success';
-    }
-
-    return 'warning';
+  get totalPending(): number {
+    return this.workflows.reduce((sum, workflow) => sum + workflow.pending, 0);
   }
 
-  getMissionBadgeClass(status: string): string {
-    switch (status) {
-      case AuditMissionStatus.TERMINE:
-        return 'success';
-      case AuditMissionStatus.EN_RETARD:
-        return 'danger';
-      case AuditMissionStatus.EN_COURS:
-        return 'info';
+  get filteredWorkflows(): GovernanceApprovalWorkflow[] {
+    const search = this.normalize(this.searchTerm);
+
+    return this.workflows
+      .filter(workflow => this.statusFilter === 'all' || workflow.status === this.statusFilter)
+      .filter(workflow => {
+        if (!search) {
+          return true;
+        }
+
+        return [
+          workflow.name,
+          workflow.scope,
+          workflow.channel,
+          workflow.priority,
+          workflow.status,
+          workflow.nextAction
+        ].some(value => this.normalize(value).includes(search));
+      })
+      .sort((left, right) => {
+        const priorityScore = (workflow: GovernanceApprovalWorkflow) =>
+          workflow.status === 'en_retard' ? 0 : workflow.status === 'en_cours' ? 1 : workflow.status === 'a_initialiser' ? 2 : 3;
+        return priorityScore(left) - priorityScore(right);
+      });
+  }
+
+  get approvalRate(): number {
+    const required = this.workflows.reduce((sum, workflow) => sum + (workflow.requiredApprovals || 0), 0);
+    const completed = this.workflows.reduce((sum, workflow) => sum + (workflow.completedApprovals || 0), 0);
+    return required > 0 ? Math.round((completed / required) * 100) : 0;
+  }
+
+  get lateWorkflows(): number {
+    return this.workflows.filter(workflow => workflow.status === 'en_retard').length;
+  }
+
+  selectWorkflow(workflow: GovernanceApprovalWorkflow): void {
+    this.selectedWorkflow = workflow;
+    this.decisionComment = '';
+  }
+
+  getWorkflowBadgeClass(workflow: GovernanceApprovalWorkflow): string {
+    return workflow.alertClass || 'success';
+  }
+
+  getStatusLabel(workflow: GovernanceApprovalWorkflow): string {
+    switch (workflow.status) {
+      case 'en_retard':
+        return 'En retard';
+      case 'a_initialiser':
+        return 'A initialiser';
+      case 'approuve':
+        return 'Approuve';
+      case 'en_cours':
+        return 'En cours';
+      case 'rejete':
+        return 'Rejete / correction';
       default:
-        return 'warning';
+        return workflow.alert;
     }
   }
 
-  private isCompletedRiskStatus(status?: string | null): boolean {
-    const normalizedStatus = this.normalizeRiskStatus(status);
-    return normalizedStatus === RiskStatus.TREATED || normalizedStatus === RiskStatus.CLOSED;
+  getStatusClass(workflow: GovernanceApprovalWorkflow): string {
+    switch (workflow.status) {
+      case 'en_retard':
+        return 'warning';
+      case 'a_initialiser':
+        return 'info';
+      case 'approuve':
+        return 'success';
+      case 'rejete':
+        return 'danger';
+      default:
+        return this.getWorkflowBadgeClass(workflow);
+    }
   }
 
-  private normalizeRiskStatus(status?: string | null): string {
-    return this.normalize(status);
+  getStageClass(status?: string): string {
+    return status || 'todo';
   }
 
-  private normalizeRiskLevel(level?: string | null): string {
-    return this.normalize(level);
+  getProgress(workflow: GovernanceApprovalWorkflow | null): number {
+    if (!workflow) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(100, workflow.progress || 0));
+  }
+
+  isSelected(workflow: GovernanceApprovalWorkflow): boolean {
+    return this.selectedWorkflow?.id === workflow.id || this.selectedWorkflow?.name === workflow.name;
+  }
+
+  canAct(workflow: GovernanceApprovalWorkflow | null): boolean {
+    return !!workflow && workflow.status !== 'approuve' && workflow.status !== 'rejete' && this.processingWorkflowId !== workflow.id;
+  }
+
+  approveSelectedWorkflow(): void {
+    this.submitWorkflowAction('approve');
+  }
+
+  requestChangesForSelectedWorkflow(): void {
+    this.submitWorkflowAction('request_changes');
+  }
+
+  rejectSelectedWorkflow(): void {
+    this.submitWorkflowAction('reject');
+  }
+
+  restartSelectedWorkflow(): void {
+    this.submitWorkflowAction('restart');
+  }
+
+  exportWorkflows(): void {
+    const rows = [
+      ['Workflow', 'Statut', 'Priorite', 'Progression', 'Documents', 'En attente', 'Echeance', 'Prochaine action'],
+      ...this.filteredWorkflows.map(workflow => [
+        workflow.name,
+        this.getStatusLabel(workflow),
+        workflow.priority || '',
+        `${this.getProgress(workflow)}%`,
+        `${workflow.totalDocuments}`,
+        `${workflow.pending}`,
+        workflow.dueDate || '',
+        workflow.nextAction || ''
+      ])
+    ];
+    const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `workflows_approbation_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  private resolveSelectedWorkflow(workflows: GovernanceApprovalWorkflow[]): GovernanceApprovalWorkflow | null {
+    if (!workflows.length) {
+      return null;
+    }
+
+    const currentId = this.selectedWorkflow?.id;
+    return workflows.find(workflow => workflow.id === currentId) || workflows[0];
+  }
+
+  private submitWorkflowAction(action: 'approve' | 'reject' | 'request_changes' | 'restart'): void {
+    if (!this.selectedWorkflow?.id) {
+      return;
+    }
+
+    const workflowId = this.selectedWorkflow.id;
+    this.processingWorkflowId = workflowId;
+    this.governanceService.actOnApprovalWorkflow(workflowId, action, this.decisionComment).subscribe({
+      next: updatedWorkflow => {
+        this.workflows = this.workflows.map(workflow =>
+          workflow.id === updatedWorkflow.id ? updatedWorkflow : workflow
+        );
+        this.selectedWorkflow = updatedWorkflow;
+        this.decisionComment = '';
+        this.processingWorkflowId = null;
+      },
+      error: () => {
+        this.processingWorkflowId = null;
+      }
+    });
   }
 
   private normalize(value?: string | null): string {
@@ -116,7 +242,6 @@ export class GovernanceWorkflowsComponent implements OnInit {
       .trim()
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[\s-]+/g, '_');
+      .replace(/[\u0300-\u036f]/g, '');
   }
 }

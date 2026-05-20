@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-diagram-project"></i> Workflows d Approbation</h1>
-                <p>Vision des flux de traitement reels a partir des risques et des missions qui demandent une decision ou une action.</p>
+                <p>Circuits d approbation configurables, traces et alignes sur les dossiers documentaires de gouvernance.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -25,76 +25,184 @@
 
     <div class="summary-grid">
         <div class="summary-card">
-            <span class="eyebrow">Risques prioritaires</span>
-            <h3>{{ priorityRisks.length }}</h3>
-            <p>Risques critiques, ouverts ou non assignes.</p>
+            <span class="eyebrow">Workflows</span>
+            <h3>{{ workflows.length }}</h3>
+            <p>Circuits actifs par perimetre documentaire et role.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Missions prioritaires</span>
-            <h3>{{ priorityMissions.length }}</h3>
-            <p>Missions en retard, en cours ou sans auditeur.</p>
+            <span class="eyebrow">En attente</span>
+            <h3>{{ totalPending }}</h3>
+            <p>Elements depassant le cycle de revue et a revalider.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Taux d approbation</span>
+            <h3>{{ approvalRate }}%</h3>
+            <p>Etapes validees sur tous les workflows visibles.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Alertes SLA</span>
+            <h3>{{ lateWorkflows }}</h3>
+            <p>Workflows avec revue ou validation a accelerer.</p>
         </div>
     </div>
 
-    <div class="section-grid">
-        <div class="table-card">
-            <div class="card-head">
-                <h3>File risques</h3>
-                <p>Elements a arbitrer ou reassigner rapidement.</p>
-            </div>
-            <table class="governance-table" *ngIf="priorityRisks.length > 0; else emptyRisks">
-                <thead>
-                    <tr>
-                        <th>Risque</th>
-                        <th>Niveau</th>
-                        <th>Statut</th>
-                        <th>Echeance</th>
-                        <th>Agent</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let risk of priorityRisks | slice:0:10">
-                        <td><strong>{{ risk.titre }}</strong></td>
-                        <td><span class="badge" [ngClass]="getRiskBadgeClass(risk)">{{ risk.niveauRisque }}</span></td>
-                        <td>{{ risk.statut }}</td>
-                        <td>{{ risk.dateEcheance | date:'shortDate' }}</td>
-                        <td>{{ risk.riskAgent ? (risk.riskAgent.prenom + ' ' + risk.riskAgent.nom) : 'Non assigne' }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <ng-template #emptyRisks>
-                <div class="empty-state">Aucun risque prioritaire detecte.</div>
-            </ng-template>
-        </div>
-
-        <div class="table-card">
-            <div class="card-head">
-                <h3>File missions</h3>
-                <p>Suivi des missions d audit en attente de traitement gouvernance.</p>
-            </div>
-            <table class="governance-table" *ngIf="priorityMissions.length > 0; else emptyMissions">
-                <thead>
-                    <tr>
-                        <th>Mission</th>
-                        <th>Statut</th>
-                        <th>Echeance</th>
-                        <th>Auditeur</th>
-                        <th>Risque</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let mission of priorityMissions | slice:0:10">
-                        <td><strong>{{ mission.titre }}</strong></td>
-                        <td><span class="badge" [ngClass]="getMissionBadgeClass(mission.statut)">{{ mission.statut }}</span></td>
-                        <td>{{ mission.delai | date:'shortDate' }}</td>
-                        <td>{{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Non assignee' }}</td>
-                        <td>{{ mission.risk?.titre || '-' }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <ng-template #emptyMissions>
-                <div class="empty-state">Aucune mission prioritaire detectee.</div>
-            </ng-template>
-        </div>
+    <div class="workflow-toolbar">
+        <label class="workflow-search">
+            <i class="fas fa-search"></i>
+            <input type="search" [(ngModel)]="searchTerm" placeholder="Rechercher un workflow, role, action...">
+        </label>
+        <select [(ngModel)]="statusFilter">
+            <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+        <button class="btn-secondary" (click)="exportWorkflows()" [disabled]="filteredWorkflows.length === 0">
+            <i class="fas fa-file-export"></i>
+            Exporter
+        </button>
     </div>
+
+    <div class="approval-layout" *ngIf="workflows.length > 0; else emptyWorkflows">
+        <aside class="approval-queue">
+            <button
+                type="button"
+                class="workflow-row"
+                *ngFor="let workflow of filteredWorkflows"
+                [class.active]="isSelected(workflow)"
+                (click)="selectWorkflow(workflow)">
+                <div class="workflow-row-head">
+                    <strong>{{ workflow.name }}</strong>
+                    <span class="badge" [ngClass]="getStatusClass(workflow)">{{ getStatusLabel(workflow) }}</span>
+                </div>
+                <p>{{ workflow.nextAction }}</p>
+                <div class="workflow-row-meta">
+                    <span>{{ workflow.priority || 'Normale' }}</span>
+                    <span>{{ workflow.completedApprovals || 0 }}/{{ workflow.requiredApprovals || workflow.stages.length }}</span>
+                    <span>{{ workflow.dueDate | date:'shortDate' }}</span>
+                </div>
+                <div class="mini-progress">
+                    <span [style.width.%]="getProgress(workflow)"></span>
+                </div>
+            </button>
+
+            <div class="empty-state" *ngIf="filteredWorkflows.length === 0">Aucun workflow ne correspond aux filtres.</div>
+        </aside>
+
+        <section class="approval-detail" *ngIf="selectedWorkflow as workflow; else selectWorkflowPrompt">
+            <div class="detail-header">
+                <div>
+                    <span class="eyebrow">{{ workflow.channel }}</span>
+                    <h2>{{ workflow.name }}</h2>
+                    <p>{{ workflow.scope }}</p>
+                </div>
+                <span class="badge" [ngClass]="getStatusClass(workflow)">{{ getStatusLabel(workflow) }}</span>
+            </div>
+
+            <div class="detail-kpis">
+                <div>
+                    <span>Priorite</span>
+                    <strong>{{ workflow.priority || 'Normale' }}</strong>
+                </div>
+                <div>
+                    <span>Echeance</span>
+                    <strong>{{ workflow.dueDate | date:'shortDate' }}</strong>
+                </div>
+                <div>
+                    <span>Documents</span>
+                    <strong>{{ workflow.totalDocuments }}</strong>
+                </div>
+                <div>
+                    <span>Recents</span>
+                    <strong>{{ workflow.recentDocuments }}</strong>
+                </div>
+            </div>
+
+            <div class="progress-block">
+                <div class="progress-head">
+                    <strong>{{ workflow.completedApprovals || 0 }}/{{ workflow.requiredApprovals || workflow.stages.length }} validations</strong>
+                    <span>{{ getProgress(workflow) }}%</span>
+                </div>
+                <div class="progress-track">
+                    <span [style.width.%]="getProgress(workflow)"></span>
+                </div>
+            </div>
+
+            <div class="workflow-info">
+                <strong>{{ workflow.type || 'Approbation sequentielle standard' }}</strong>
+                <p>{{ workflow.escalation }}</p>
+            </div>
+
+            <div class="decision-panel">
+                <label>
+                    <span>Commentaire de decision</span>
+                    <textarea [(ngModel)]="decisionComment" rows="3" placeholder="Ajouter le motif de validation, rejet ou demande de correction"></textarea>
+                </label>
+                <div class="decision-actions">
+                    <button class="btn-primary" type="button" (click)="approveSelectedWorkflow()" [disabled]="!canAct(workflow)">
+                        <i class="fas fa-check"></i>
+                        Approuver
+                    </button>
+                    <button class="btn-secondary" type="button" (click)="requestChangesForSelectedWorkflow()" [disabled]="!canAct(workflow)">
+                        <i class="fas fa-rotate-left"></i>
+                        Correction
+                    </button>
+                    <button class="btn-secondary danger-action" type="button" (click)="rejectSelectedWorkflow()" [disabled]="!canAct(workflow)">
+                        <i class="fas fa-xmark"></i>
+                        Rejeter
+                    </button>
+                    <button class="btn-secondary" type="button" (click)="restartSelectedWorkflow()" [disabled]="processingWorkflowId === workflow.id">
+                        <i class="fas fa-arrows-rotate"></i>
+                        Relancer
+                    </button>
+                </div>
+            </div>
+
+            <div class="approval-steps">
+                <div class="approval-step" *ngFor="let stage of workflow.stages; let index = index" [ngClass]="getStageClass(stage.status)">
+                    <span class="step-index">{{ index + 1 }}</span>
+                    <div>
+                        <strong>{{ stage.role }}</strong>
+                        <small>{{ stage.owner }}</small>
+                        <p>{{ stage.rule }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-columns">
+                <div class="decision-rules" *ngIf="workflow.actionsRequired?.length">
+                    <strong>Actions requises</strong>
+                    <button class="action-line" type="button" *ngFor="let action of workflow.actionsRequired">
+                        <i class="fas fa-check-circle"></i>
+                        <span>{{ action }}</span>
+                    </button>
+                </div>
+
+                <div class="decision-rules" *ngIf="workflow.decisionRules?.length">
+                    <strong>Regles de decision</strong>
+                    <ul>
+                        <li *ngFor="let rule of workflow.decisionRules">{{ rule }}</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="approver-table" *ngIf="workflow.approvers?.length">
+                <div class="approver-row head">
+                    <span>Role</span>
+                    <span>Approbateur</span>
+                    <span>Decision</span>
+                </div>
+                <div class="approver-row" *ngFor="let approver of workflow.approvers">
+                    <span>{{ approver.role }}</span>
+                    <span>{{ approver.name }}</span>
+                    <strong>{{ approver.decision }}</strong>
+                </div>
+            </div>
+        </section>
+
+        <ng-template #selectWorkflowPrompt>
+            <section class="approval-detail empty-state">Selectionner un workflow pour afficher son detail.</section>
+        </ng-template>
+    </div>
+
+    <ng-template #emptyWorkflows>
+        <div class="empty-state">Aucun workflow d approbation disponible pour votre perimetre.</div>
+    </ng-template>
 </div>

@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-clock-rotate-left"></i> Tracabilite et Historique</h1>
-                <p>Historique de gestion des risques et des missions d audit, sans passer par la couche documentaire.</p>
+                <p>Toutes les operations executees sont journalisees avec acteur, role, module, cible, statut et horodatage.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -25,85 +25,83 @@
 
     <div class="summary-grid">
         <div class="summary-card">
-            <span class="eyebrow">Risques ouverts</span>
-            <h3>{{ openRisks }}</h3>
-            <p>Risques encore dans le cycle de traitement.</p>
+            <span class="eyebrow">Operations tracees</span>
+            <h3>{{ auditEntries.length }}</h3>
+            <p>Actions visibles selon votre role et votre perimetre.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Risques critiques</span>
-            <h3>{{ criticalRisks }}</h3>
-            <p>Elements a forte exposition visibles dans le registre.</p>
+            <span class="eyebrow">Executees</span>
+            <h3>{{ successfulOperations }}</h3>
+            <p>Operations terminees avec un statut HTTP de succes.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Missions actives</span>
-            <h3>{{ activeMissions }}</h3>
-            <p>Missions actuellement en execution.</p>
+            <span class="eyebrow">A verifier</span>
+            <h3>{{ operationsToReview }}</h3>
+            <p>Operations refusees ou en erreur a analyser.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Missions en retard</span>
-            <h3>{{ lateMissions }}</h3>
-            <p>Dossiers audit a escalader.</p>
+            <span class="eyebrow">Acteurs</span>
+            <h3>{{ uniqueActors }}</h3>
+            <p>Utilisateurs representes dans la piste d audit.</p>
         </div>
     </div>
 
     <div class="section-grid">
         <div class="table-card">
             <div class="card-head">
-                <h3>Historique risques</h3>
-                <p>Trie par derniere mise a jour du registre des risques.</p>
+                <h3>Journal des operations</h3>
+                <p>Chaque creation, modification, changement de statut ou suppression authentifiee est tracee ici.</p>
             </div>
-            <table class="governance-table" *ngIf="risks.length > 0; else emptyRisks">
+            <table class="governance-table" *ngIf="auditEntries.length > 0; else emptyAuditTrail">
                 <thead>
                     <tr>
-                        <th>Risque</th>
-                        <th>Domaine</th>
-                        <th>Niveau</th>
+                        <th>Action</th>
+                        <th>Module</th>
+                        <th>Acteur</th>
                         <th>Statut</th>
-                        <th>Mise a jour</th>
+                        <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let risk of risks | slice:0:8">
-                        <td><strong>{{ risk.titre }}</strong></td>
-                        <td>{{ risk.domaine }}</td>
-                        <td>{{ risk.niveauRisque }}</td>
-                        <td><span class="badge" [ngClass]="getRiskBadgeClass(risk.statut)">{{ risk.statut }}</span></td>
-                        <td>{{ risk.updatedAt | date:'short' }}</td>
+                    <tr *ngFor="let entry of auditEntries | slice:0:14">
+                        <td>
+                            <strong>{{ entry.action }}</strong>
+                            <span class="muted-line">{{ entry.document }}</span>
+                        </td>
+                        <td>{{ entry.module || '-' }}</td>
+                        <td>
+                            {{ entry.actor }}
+                            <span class="muted-line">{{ entry.actorRole || '-' }}</span>
+                        </td>
+                        <td><span class="badge" [ngClass]="getStatusClass(entry)">{{ entry.status }}</span></td>
+                        <td>{{ entry.date | date:'short' }}</td>
                     </tr>
                 </tbody>
             </table>
-            <ng-template #emptyRisks>
-                <div class="empty-state">Aucun risque disponible.</div>
+            <ng-template #emptyAuditTrail>
+                <div class="empty-state">Aucune operation tracee pour le moment.</div>
             </ng-template>
         </div>
 
         <div class="table-card">
             <div class="card-head">
-                <h3>Historique missions</h3>
-                <p>Trie par derniere mise a jour des missions d audit.</p>
+                <h3>Vue par module</h3>
+                <p>Lecture rapide des derniers mouvements par domaine fonctionnel.</p>
             </div>
-            <table class="governance-table" *ngIf="missions.length > 0; else emptyMissions">
-                <thead>
-                    <tr>
-                        <th>Mission</th>
-                        <th>Auditeur</th>
-                        <th>Statut</th>
-                        <th>Echeance</th>
-                        <th>Mise a jour</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let mission of missions | slice:0:8">
-                        <td><strong>{{ mission.titre }}</strong></td>
-                        <td>{{ mission.auditeur ? (mission.auditeur.prenom + ' ' + mission.auditeur.nom) : 'Non assignee' }}</td>
-                        <td><span class="badge" [ngClass]="getMissionBadgeClass(mission.statut)">{{ mission.statut }}</span></td>
-                        <td>{{ mission.delai | date:'shortDate' }}</td>
-                        <td>{{ mission.updatedAt | date:'short' }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <ng-template #emptyMissions>
-                <div class="empty-state">Aucune mission disponible.</div>
+            <div class="module-audit-list" *ngIf="recentModules.length > 0; else emptyModules">
+                <div class="module-audit" *ngFor="let module of recentModules">
+                    <div class="module-audit-head">
+                        <strong>{{ module }}</strong>
+                        <span>{{ getModuleEntries(module).length }} action(s)</span>
+                    </div>
+                    <div class="module-audit-row" *ngFor="let entry of getModuleEntries(module)">
+                        <span>{{ entry.action }}</span>
+                        <small>{{ entry.date | date:'short' }}</small>
+                    </div>
+                </div>
+            </div>
+            <ng-template #emptyModules>
+                <div class="empty-state">Aucun module trace pour le moment.</div>
             </ng-template>
         </div>
     </div>

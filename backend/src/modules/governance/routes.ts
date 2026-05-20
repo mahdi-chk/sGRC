@@ -4,6 +4,9 @@ import { Router } from 'express';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { secureUpload } from '../../middleware/file.middleware';
 import { UserRole } from '../users/user.roles';
+import { GovernanceAuditEvent, getGovernanceAuditEventsForActor } from './audit-trail.service';
+import { GovernanceApprovalWorkflowModel } from './governance-approval-workflow.model';
+import { GovernanceApprovalStageModel } from './governance-approval-stage.model';
 
 const router = Router();
 
@@ -315,22 +318,265 @@ const computeGovernanceHistory = (folders: RoleFolderConfig[]) => {
   return { entries, snapshots };
 };
 
+const buildGovernanceHistoryFromEvents = (events: GovernanceAuditEvent[], folders: RoleFolderConfig[]) => {
+  const fallbackHistory = computeGovernanceHistory(folders);
+
+  const entries = events.slice(0, 80).map(event => ({
+    document: event.target,
+    action: event.action,
+    actor: event.actorEmail,
+    actorRole: event.actorRole,
+    module: event.module,
+    date: event.date,
+    details: event.details,
+    status: event.status,
+    statusClass: event.statusClass,
+    method: event.method,
+    path: event.path
+  }));
+
+  return {
+    entries: entries.length > 0 ? entries : fallbackHistory.entries,
+    snapshots: fallbackHistory.snapshots,
+    totalEvents: events.length
+  };
+};
+
 const buildWorkflowStages = (folder: RoleFolderConfig) => {
   const owner = getFolderOwnerLabel(folder);
 
   return [
-    { role: owner, rule: 'Preparation et depot dans le dossier documentaire.' },
-    { role: 'Super Admin', rule: 'Controle de diffusion, cohherence et archivage.' },
-    { role: 'Top Management', rule: 'Validation executive pour les documents sensibles.' }
+    { role: owner, rule: 'Soumission ou mise a jour du livrable avec motif et piece rattachee.', owner },
+    { role: 'Responsable metier', rule: 'Revue de coherence, commentaire, retour correction ou avis favorable.', owner: 'Responsable du perimetre' },
+    { role: 'Gouvernance / Super Admin', rule: 'Controle de tracabilite, conformite documentaire et diffusion ciblee.', owner: 'Super Admin' },
+    { role: 'Top Management', rule: 'Approbation finale des politiques, chartes et decisions sensibles.', owner: 'Top Management' },
+    { role: 'Archivage', rule: 'Publication, notification des parties prenantes et conservation de la piste d audit.', owner: 'Gouvernance' }
   ];
 };
 
-const computeGovernanceWorkflows = (folders: RoleFolderConfig[]) => {
+const addDays = (date: Date, days: number): Date => {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+};
+
+const buildWorkflowActions = (analytics: GovernanceFolderAnalytics) => {
+  if (analytics.documentCount === 0) {
+    return [
+      'Creer ou importer les documents de gouvernance du perimetre.',
+      'Identifier le responsable metier et les validateurs.',
+      'Lancer le premier cycle d approbation.'
+    ];
+  }
+
+  if (analytics.staleDocuments > 0) {
+    return [
+      `Revalider ${analytics.staleDocuments} document(s) depassant le cycle de revue.`,
+      'Demander un avis metier avant validation gouvernance.',
+      'Notifier les parties prenantes apres approbation.'
+    ];
+  }
+
+  return [
+    'Maintenir le circuit de revue periodique.',
+    'Conserver les commentaires et decisions dans la piste d audit.',
+    'Verifier les delegations avant la prochaine echeance.'
+  ];
+};
+
+const buildApprovers = (stages: GovernanceApprovalStageModel[]) =>
+  stages
+    .slice()
+    .sort((left, right) => left.stageIndex - right.stageIndex)
+    .map(stage => ({
+      role: stage.role,
+      name: stage.owner || stage.role,
+      decision: stage.decision || (stage.status === 'done' ? 'Valide' : stage.status === 'current' ? 'En attente' : 'A venir')
+    }));
+
+const getWorkflowUiStatus = (workflow: GovernanceApprovalWorkflowModel): 'a_initialiser' | 'en_retard' | 'approuve' | 'en_cours' | 'rejete' => {
+  if (workflow.status === 'approved') {
+    return 'approuve';
+  }
+
+  if (workflow.status === 'rejected' || workflow.status === 'changes_requested') {
+    return 'rejete';
+  }
+
+  if (workflow.dueDate && new Date(workflow.dueDate).getTime() < Date.now()) {
+    return 'en_retard';
+  }
+
+  if (workflow.status === 'draft') {
+    return 'a_initialiser';
+  }
+
+  return 'en_cours';
+};
+
+const getWorkflowAlert = (status: string) => {
+  switch (status) {
+    case 'approuve':
+      return { alert: 'Approuve', alertClass: 'success' as const };
+    case 'en_retard':
+      return { alert: 'Revue requise', alertClass: 'warning' as const };
+    case 'rejete':
+      return { alert: 'Retour correction', alertClass: 'warning' as const };
+    case 'a_initialiser':
+      return { alert: 'A initialiser', alertClass: 'warning' as const };
+    default:
+      return { alert: 'En cours', alertClass: 'success' as const };
+  }
+};
+
+const getStageSeed = (folder: RoleFolderConfig) => buildWorkflowStages(folder).map((stage, index) => ({
+  stageIndex: index,
+  role: stage.role,
+  owner: stage.owner,
+  rule: stage.rule,
+  status: index === 0 ? 'current' : 'todo',
+  decision: null,
+  actorUserId: null,
+  comment: null,
+  decidedAt: null
+}));
+
+const ensureWorkflowForDocument = async (
+  folder: RoleFolderConfig,
+  document: GovernanceDocumentPayload,
+  actor?: AuthRequest['user']
+) => {
+  const dueDate = addDays(new Date(document.lastModified), REVIEW_WINDOW_DAYS);
+  const priority = getDocumentAgeInDays(document.lastModified) > REVIEW_WINDOW_DAYS ? 'Haute' : 'Normale';
+  const documentPath = `${folder.relativePath}/${document.name}`;
+
+  const [workflow] = await GovernanceApprovalWorkflowModel.findOrCreate({
+    where: {
+      folderKey: folder.key,
+      documentName: document.name
+    },
+    defaults: {
+      title: `Approbation - ${document.name}`,
+      scope: folder.relativePath,
+      folderKey: folder.key,
+      folderLabel: folder.label,
+      documentName: document.name,
+      documentPath,
+      targetType: 'document',
+      targetId: document.name,
+      status: 'submitted',
+      priority,
+      requestedById: actor?.id || null,
+      departmentId: actor?.departementId || null,
+      dueDate,
+      submittedAt: new Date(),
+      currentStageIndex: 0,
+      description: `Cycle d approbation documentaire pour ${folder.label}.`
+    }
+  });
+
+  const stagesCount = await GovernanceApprovalStageModel.count({ where: { workflowId: workflow.id } });
+  if (stagesCount === 0) {
+    await GovernanceApprovalStageModel.bulkCreate(
+      getStageSeed(folder).map(stage => ({
+        ...stage,
+        workflowId: workflow.id
+      }))
+    );
+  }
+
+  if (workflow.priority !== priority || !workflow.dueDate) {
+    await workflow.update({ priority, dueDate });
+  }
+
+  return workflow;
+};
+
+const synchronizeDocumentWorkflows = async (folders: RoleFolderConfig[]) => {
+  const details = listFolderDetails(folders);
+
+  for (const item of details) {
+    for (const document of item.documents) {
+      await ensureWorkflowForDocument(item.folder, document);
+    }
+  }
+
+  return details;
+};
+
+const buildWorkflowPayload = (workflow: GovernanceApprovalWorkflowModel & { stages?: GovernanceApprovalStageModel[] }, folderAnalytics?: GovernanceFolderAnalytics) => {
+  const stages = (workflow.stages || [])
+    .slice()
+    .sort((left, right) => left.stageIndex - right.stageIndex);
+  const completedApprovals = stages.filter(stage => stage.status === 'done').length;
+  const requiredApprovals = Math.max(stages.length, 1);
+  const progress = Math.round((completedApprovals / requiredApprovals) * 100);
+  const uiStatus = getWorkflowUiStatus(workflow);
+  const alert = getWorkflowAlert(uiStatus);
+  const pending = uiStatus === 'approuve' ? 0 : 1;
+
+  return {
+    id: `${workflow.id}`,
+    name: workflow.title,
+    scope: workflow.scope,
+    pending,
+    recentDocuments: folderAnalytics?.recentDocuments || 0,
+    totalDocuments: folderAnalytics?.documentCount || (workflow.documentName ? 1 : 0),
+    sla: workflow.dueDate ? `Echeance ${new Date(workflow.dueDate).toLocaleDateString('fr-FR')}` : `Cycle ${REVIEW_WINDOW_DAYS} jours`,
+    channel: workflow.folderLabel,
+    alert: alert.alert,
+    alertClass: alert.alertClass,
+    lastUpdate: workflow.updatedAt?.toISOString() || null,
+    dueDate: workflow.dueDate?.toISOString() || null,
+    status: uiStatus,
+    priority: workflow.priority,
+    progress,
+    completedApprovals,
+    requiredApprovals,
+    nextAction: stages.find(stage => stage.status === 'current')?.rule || 'Workflow termine.',
+    actionsRequired: [
+      stages.find(stage => stage.status === 'current')?.rule || 'Conserver la decision et archiver la preuve.',
+      workflow.documentName ? `Verifier le document: ${workflow.documentName}` : 'Verifier le livrable rattache.',
+      'Ajouter un commentaire de decision avant validation ou rejet.'
+    ],
+    approvers: buildApprovers(stages),
+    type: workflow.status === 'changes_requested' ? 'Correction puis nouvelle approbation' : 'Approbation sequentielle dynamique',
+    escalation: uiStatus === 'en_retard'
+      ? 'Escalade vers Super Admin puis Top Management car l echeance est depassee.'
+      : 'Rappel automatique avant echeance, escalade seulement en cas de blocage.',
+    decisionRules: [
+      'Chaque decision est persistée en base avec acteur, date, commentaire et statut.',
+      'Une approbation fait avancer l etape courante vers le prochain approbateur.',
+      'Un rejet ou une demande de correction bloque le workflow jusqu a relance.'
+    ],
+    stages: stages.map(stage => ({
+      role: stage.role,
+      owner: stage.owner || stage.role,
+      rule: stage.rule,
+      status: stage.status
+    }))
+  };
+};
+
+const computeFolderGovernanceWorkflows = (folders: RoleFolderConfig[]) => {
   return listFolderDetails(folders).map(item => {
     const latestUpdate = item.analytics.latestUpdate;
     const hasReviewDebt = item.analytics.staleDocuments > 0;
+    const hasDocuments = item.analytics.documentCount > 0;
+    const completedApprovals = hasReviewDebt ? 2 : hasDocuments ? 5 : 0;
+    const requiredApprovals = 5;
+    const progress = Math.round((completedApprovals / requiredApprovals) * 100);
+    const referenceDate = latestUpdate ? new Date(latestUpdate) : new Date();
+    const dueDate = addDays(referenceDate, REVIEW_WINDOW_DAYS).toISOString();
+    const status = !hasDocuments ? 'a_initialiser' : hasReviewDebt ? 'en_retard' : 'approuve';
+    const priority = hasReviewDebt ? 'Haute' : !hasDocuments ? 'Moyenne' : 'Normale';
+    const stages = buildWorkflowStages(item.folder).map((stage, index) => ({
+      ...stage,
+      status: index < completedApprovals ? 'done' : index === completedApprovals ? 'current' : 'todo'
+    }));
 
     return {
+      id: item.folder.key,
       name: `Workflow ${getFolderOwnerLabel(item.folder)}`,
       scope: item.folder.relativePath,
       pending: item.analytics.staleDocuments,
@@ -341,9 +587,48 @@ const computeGovernanceWorkflows = (folders: RoleFolderConfig[]) => {
       alert: hasReviewDebt ? 'Revue requise' : 'Sous controle',
       alertClass: hasReviewDebt ? 'warning' : 'success',
       lastUpdate: latestUpdate,
-      stages: buildWorkflowStages(item.folder)
+      dueDate,
+      status,
+      priority,
+      progress,
+      completedApprovals,
+      requiredApprovals,
+      nextAction: buildWorkflowActions(item.analytics)[0],
+      actionsRequired: buildWorkflowActions(item.analytics),
+      approvers: stages.map((stage, index) => ({
+        role: stage.role,
+        name: stage.owner || stage.role,
+        decision: index < completedApprovals ? 'Valide' : index === completedApprovals ? 'En attente' : 'A venir'
+      })),
+      type: hasReviewDebt ? 'Correction puis approbation sequentielle' : 'Approbation sequentielle standard',
+      escalation: hasReviewDebt
+        ? 'Escalade vers Super Admin puis Top Management si le retard persiste.'
+        : 'Rappel automatique avant echeance, escalade seulement en cas de blocage.',
+      decisionRules: [
+        'Toute action est tracee avec acteur, role, date, module et statut.',
+        'Une validation sensible requiert une revue metier puis une decision gouvernance.',
+        'Les retours correction relancent le cycle sans effacer les traces precedentes.'
+      ],
+      stages
     };
   });
+};
+
+const computeGovernanceWorkflows = async (folders: RoleFolderConfig[]) => {
+  try {
+    const folderDetails = await synchronizeDocumentWorkflows(folders);
+    const analyticsByFolderKey = new Map(folderDetails.map(item => [item.folder.key, item.analytics]));
+    const folderKeys = folders.map(folder => folder.key);
+    const workflows = await GovernanceApprovalWorkflowModel.findAll({
+      where: { folderKey: folderKeys },
+      include: [{ model: GovernanceApprovalStageModel, as: 'stages' }],
+      order: [['updatedAt', 'DESC']]
+    }) as Array<GovernanceApprovalWorkflowModel & { stages?: GovernanceApprovalStageModel[] }>;
+
+    return workflows.map(workflow => buildWorkflowPayload(workflow, analyticsByFolderKey.get(workflow.folderKey)));
+  } catch (_error) {
+    return computeFolderGovernanceWorkflows(folders);
+  }
 };
 
 const clampScore = (score: number): number => {
@@ -486,14 +771,136 @@ router.get('/overview', (req: AuthRequest, res) => {
   });
 });
 
-router.get('/history', (req: AuthRequest, res) => {
+router.get('/history', async (req: AuthRequest, res) => {
   const folders = getAccessibleFolders(req.user!.role);
-  res.json(computeGovernanceHistory(folders));
+  const events = await getGovernanceAuditEventsForActor(req.user!);
+  res.json(buildGovernanceHistoryFromEvents(events, folders));
 });
 
-router.get('/approval-workflows', (req: AuthRequest, res) => {
+router.get('/approval-workflows', async (req: AuthRequest, res) => {
   const folders = getAccessibleFolders(req.user!.role);
-  res.json({ workflows: computeGovernanceWorkflows(folders) });
+  res.json({ workflows: await computeGovernanceWorkflows(folders) });
+});
+
+router.post('/approval-workflows', async (req: AuthRequest, res) => {
+  const folderKey = getSingleValue(req.body?.folderKey);
+  const title = getSingleValue(req.body?.title);
+  const description = getSingleValue(req.body?.description);
+
+  if (!folderKey || !title) {
+    return res.status(400).json({ message: 'Workflow et dossier obligatoires' });
+  }
+
+  const folder = getFolderByKey(folderKey);
+  if (!folder || !canAccessFolder(req.user!.role, folder.key)) {
+    return res.status(403).json({ message: 'Acces refuse a ce dossier' });
+  }
+
+  const workflow = await GovernanceApprovalWorkflowModel.create({
+    title,
+    scope: folder.relativePath,
+    folderKey: folder.key,
+    folderLabel: folder.label,
+    documentName: getSingleValue(req.body?.documentName),
+    documentPath: null,
+    targetType: getSingleValue(req.body?.targetType) || 'manuel',
+    targetId: getSingleValue(req.body?.targetId),
+    status: 'submitted',
+    priority: getSingleValue(req.body?.priority) || 'Normale',
+    requestedById: req.user!.id,
+    departmentId: req.user!.departementId || null,
+    dueDate: addDays(new Date(), REVIEW_WINDOW_DAYS),
+    submittedAt: new Date(),
+    currentStageIndex: 0,
+    description
+  });
+
+  await GovernanceApprovalStageModel.bulkCreate(
+    getStageSeed(folder).map(stage => ({
+      ...stage,
+      workflowId: workflow.id
+    }))
+  );
+
+  const createdWorkflow = await GovernanceApprovalWorkflowModel.findByPk(workflow.id, {
+    include: [{ model: GovernanceApprovalStageModel, as: 'stages' }]
+  }) as GovernanceApprovalWorkflowModel & { stages?: GovernanceApprovalStageModel[] };
+
+  return res.status(201).json({ workflow: buildWorkflowPayload(createdWorkflow) });
+});
+
+router.post('/approval-workflows/:id/actions', async (req: AuthRequest, res) => {
+  const workflowId = Number(req.params.id);
+  const action = getSingleValue(req.body?.action);
+  const comment = getSingleValue(req.body?.comment);
+
+  if (!workflowId || !action) {
+    return res.status(400).json({ message: 'Action workflow invalide' });
+  }
+
+  const workflow = await GovernanceApprovalWorkflowModel.findByPk(workflowId, {
+    include: [{ model: GovernanceApprovalStageModel, as: 'stages' }]
+  }) as GovernanceApprovalWorkflowModel & { stages?: GovernanceApprovalStageModel[] };
+
+  if (!workflow) {
+    return res.status(404).json({ message: 'Workflow introuvable' });
+  }
+
+  if (!canAccessFolder(req.user!.role, workflow.folderKey)) {
+    return res.status(403).json({ message: 'Acces refuse a ce workflow' });
+  }
+
+  const stages = (workflow.stages || []).slice().sort((left, right) => left.stageIndex - right.stageIndex);
+  const currentStage = stages.find(stage => stage.status === 'current') || stages.find(stage => stage.status === 'todo');
+
+  if (!currentStage && action !== 'restart') {
+    return res.status(400).json({ message: 'Aucune etape active' });
+  }
+
+  if (action === 'approve' && currentStage) {
+    await currentStage.update({
+      status: 'done',
+      decision: 'Valide',
+      actorUserId: req.user!.id,
+      comment,
+      decidedAt: new Date()
+    });
+
+    const nextStage = stages.find(stage => stage.stageIndex === currentStage.stageIndex + 1);
+    if (nextStage) {
+      await nextStage.update({ status: 'current' });
+      await workflow.update({ status: 'in_review', currentStageIndex: nextStage.stageIndex });
+    } else {
+      await workflow.update({ status: 'approved', completedAt: new Date(), currentStageIndex: currentStage.stageIndex });
+    }
+  } else if ((action === 'reject' || action === 'request_changes') && currentStage) {
+    await currentStage.update({
+      status: action === 'reject' ? 'rejected' : 'changes_requested',
+      decision: action === 'reject' ? 'Rejete' : 'Correction demandee',
+      actorUserId: req.user!.id,
+      comment,
+      decidedAt: new Date()
+    });
+    await workflow.update({ status: action === 'reject' ? 'rejected' : 'changes_requested', currentStageIndex: currentStage.stageIndex });
+  } else if (action === 'restart') {
+    await GovernanceApprovalStageModel.update(
+      { status: 'todo', decision: null, actorUserId: null, comment: null, decidedAt: null },
+      { where: { workflowId: workflow.id } }
+    );
+    const firstStage = stages[0];
+    if (firstStage) {
+      await firstStage.update({ status: 'current' });
+    }
+    await workflow.update({ status: 'submitted', completedAt: null, currentStageIndex: 0 });
+  } else {
+    return res.status(400).json({ message: 'Action non supportee' });
+  }
+
+  const updatedWorkflow = await GovernanceApprovalWorkflowModel.findByPk(workflow.id, {
+    include: [{ model: GovernanceApprovalStageModel, as: 'stages' }]
+  }) as GovernanceApprovalWorkflowModel & { stages?: GovernanceApprovalStageModel[] };
+
+  return res.json({ workflow: buildWorkflowPayload(updatedWorkflow) });
 });
 
 router.get('/maturity', (req: AuthRequest, res) => {
@@ -544,7 +951,7 @@ router.post(
   '/documents',
   authorizeRoles(UserRole.SUPER_ADMIN),
   uploadSecureDocument,
-  (req: AuthRequest, res) => {
+  async (req: AuthRequest, res) => {
     const roleKey = getSingleValue(req.body?.roleKey);
 
     if (!roleKey) {
@@ -567,10 +974,15 @@ router.post(
     const absoluteFilePath = path.join(absoluteFolderPath, storedFileName);
 
     fs.writeFileSync(absoluteFilePath, req.file.buffer);
+    const document = buildDocumentPayload(folder, storedFileName);
+
+    try {
+      await ensureWorkflowForDocument(folder, document, req.user);
+    } catch (_error) {}
 
     return res.status(201).json({
       message: 'Document ajoute avec succes',
-      document: buildDocumentPayload(folder, storedFileName)
+      document
     });
   }
 );

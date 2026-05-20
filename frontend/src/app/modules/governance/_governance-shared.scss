@@ -214,6 +214,432 @@
   color: #94a3b8;
 }
 
+.muted-line {
+  display: block;
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.module-audit-list {
+  display: grid;
+  gap: 14px;
+}
+
+.module-audit {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.module-audit-head,
+.module-audit-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+}
+
+.module-audit-head {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.module-audit-head span,
+.module-audit-row small {
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.module-audit-row {
+  border-top: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 0.86rem;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.workflow-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.workflow-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.workflow-body,
+.approval-steps,
+.decision-rules ul {
+  display: grid;
+  gap: 12px;
+}
+
+.workflow-info {
+  padding: 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.decision-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.decision-panel label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.decision-panel textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #334155;
+  font: inherit;
+}
+
+.decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.danger-action {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.workflow-info strong,
+.decision-rules strong {
+  color: #1e293b;
+}
+
+.workflow-info p,
+.approval-step p,
+.decision-rules li {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.approval-step {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.step-index {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.decision-rules {
+  padding-top: 4px;
+}
+
+.decision-rules ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.workflow-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.workflow-search {
+  min-width: min(420px, 100%);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.workflow-search input,
+.workflow-toolbar select {
+  border: none;
+  outline: none;
+  color: #334155;
+  font: inherit;
+  background: transparent;
+}
+
+.workflow-search input {
+  width: 100%;
+}
+
+.workflow-toolbar select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.approval-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.approval-queue,
+.approval-detail {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+.approval-queue {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.workflow-row {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.workflow-row:hover,
+.workflow-row.active {
+  border-color: #2563eb;
+  background: #f8fbff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+}
+
+.workflow-row-head,
+.workflow-row-meta,
+.detail-header,
+.progress-head,
+.approver-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.workflow-row-head strong,
+.detail-header h2 {
+  color: #1e293b;
+}
+
+.workflow-row p {
+  margin: 8px 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.workflow-row-meta {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.mini-progress,
+.progress-track {
+  height: 7px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.mini-progress span,
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #16a34a);
+}
+
+.approval-detail {
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.detail-header h2 {
+  margin: 3px 0 4px;
+  font-size: 1.35rem;
+}
+
+.detail-header p {
+  margin: 0;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.detail-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-kpis div {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.detail-kpis span {
+  display: block;
+  color: #64748b;
+  font-size: 0.75rem;
+  margin-bottom: 5px;
+}
+
+.detail-kpis strong,
+.progress-head strong {
+  color: #0f172a;
+}
+
+.approval-step.done .step-index {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.approval-step.current {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.approval-step.current .step-index {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.approval-step.todo {
+  opacity: 0.78;
+}
+
+.approval-step.rejected,
+.approval-step.changes_requested {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.approval-step.rejected .step-index,
+.approval-step.changes_requested .step-index {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.approval-step small {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+}
+
+.detail-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.action-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  font: inherit;
+}
+
+.action-line i {
+  margin-top: 2px;
+  color: #2563eb;
+}
+
+.approver-table {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.approver-row {
+  padding: 12px 14px;
+  border-top: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 0.86rem;
+}
+
+.approver-row.head {
+  border-top: 0;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.approver-row > * {
+  flex: 1;
+}
+
 @media (max-width: 960px) {
   .page-header,
   .header-left {
@@ -223,5 +649,15 @@
 
   .section-grid {
     grid-template-columns: 1fr;
+  }
+
+  .approval-layout,
+  .detail-columns,
+  .detail-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .approval-queue {
+    max-height: none;
   }
 }

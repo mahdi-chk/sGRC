@@ -61,10 +61,14 @@ export interface GovernanceAuditEntry {
   document: string;
   action: string;
   actor: string;
+  actorRole?: string;
+  module?: string;
   date: string;
   details: string;
   status: string;
-  statusClass: 'success' | 'warning' | 'info';
+  statusClass: 'success' | 'warning' | 'info' | 'danger';
+  method?: string;
+  path?: string;
 }
 
 export interface GovernanceVersionSnapshot {
@@ -81,9 +85,18 @@ export interface GovernanceVersionSnapshot {
 export interface GovernanceApprovalStage {
   role: string;
   rule: string;
+  owner?: string;
+  status?: 'done' | 'current' | 'todo' | 'rejected' | 'changes_requested';
+}
+
+export interface GovernanceWorkflowApprover {
+  role: string;
+  name: string;
+  decision: string;
 }
 
 export interface GovernanceApprovalWorkflow {
+  id?: string;
   name: string;
   scope: string;
   pending: number;
@@ -94,6 +107,18 @@ export interface GovernanceApprovalWorkflow {
   alert: string;
   alertClass: 'success' | 'warning';
   lastUpdate: string | null;
+  dueDate?: string;
+  status?: 'a_initialiser' | 'en_retard' | 'approuve' | 'en_cours' | 'rejete';
+  priority?: string;
+  progress?: number;
+  completedApprovals?: number;
+  requiredApprovals?: number;
+  nextAction?: string;
+  actionsRequired?: string[];
+  approvers?: GovernanceWorkflowApprover[];
+  type?: string;
+  escalation?: string;
+  decisionRules?: string[];
   stages: GovernanceApprovalStage[];
 }
 
@@ -172,6 +197,15 @@ export class GovernanceService {
   getApprovalWorkflows(): Observable<GovernanceApprovalWorkflow[]> {
     return this.http.get<{ workflows: GovernanceApprovalWorkflow[] }>(`${this.apiUrl}/approval-workflows`).pipe(
       map(response => response.workflows)
+    );
+  }
+
+  actOnApprovalWorkflow(id: string, action: 'approve' | 'reject' | 'request_changes' | 'restart', comment: string = ''): Observable<GovernanceApprovalWorkflow> {
+    return this.http.post<{ workflow: GovernanceApprovalWorkflow }>(`${this.apiUrl}/approval-workflows/${encodeURIComponent(id)}/actions`, {
+      action,
+      comment
+    }).pipe(
+      map(response => response.workflow)
     );
   }
 

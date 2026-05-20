@@ -7,6 +7,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../modules/users/user.roles';
+import { isAuditableMethod, recordGovernanceAuditEvent } from '../modules/governance/audit-trail.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me_to_a_secure_value';
 
@@ -20,7 +21,21 @@ export interface AuthRequest extends Request {
         role: UserRole;
         departementId?: number;
     };
+    auditTrailAttached?: boolean;
 }
+
+const attachAuditTrail = (req: AuthRequest, res: Response): void => {
+    if (req.auditTrailAttached || !req.user || !isAuditableMethod(req.method)) {
+        return;
+    }
+
+    req.auditTrailAttached = true;
+    const actor = { ...req.user };
+
+    res.on('finish', () => {
+        recordGovernanceAuditEvent(actor, req.method, req.originalUrl, res.statusCode).catch(() => {});
+    });
+};
 
 /**
  * Middleware pour authentifier le jeton JWT fourni dans les headers.
@@ -39,6 +54,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
         if (err) return res.sendStatus(403); // Forbidden si le token est invalide
         req.user = user;
+        attachAuditTrail(req, res);
         next();
     });
 };

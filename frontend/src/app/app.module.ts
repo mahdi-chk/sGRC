@@ -162,8 +162,8 @@ const routes: Routes = [
           ]
         }
       },
-      { path: 'governance-history', component: GovernanceHistoryComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
-      { path: 'governance-workflows', component: GovernanceWorkflowsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
+      { path: 'governance-history', component: GovernanceHistoryComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER] } },
+      { path: 'governance-workflows', component: GovernanceWorkflowsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER] } },
       { path: 'governance-maturity', component: GovernanceMaturityComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'governance-adoption', component: GovernanceAdoptionComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
       { path: 'resources', redirectTo: 'governance-documents', pathMatch: 'full' },

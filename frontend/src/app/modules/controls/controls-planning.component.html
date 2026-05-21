@@ -52,6 +52,18 @@
             <p>Chaque ligne precise la nature, la cadence, le proprietaire et le rattachement metier.</p>
         </div>
 
+        <div class="segmented-filter" aria-label="Filtrer par cadence">
+            <button type="button" [class.active]="cadenceFilter === 'all'" (click)="setCadenceFilter('all')">
+                Tous
+            </button>
+            <button type="button" [class.active]="cadenceFilter === 'periodique'" (click)="setCadenceFilter('periodique')">
+                Periodiques <strong>{{ periodicCount }}</strong>
+            </button>
+            <button type="button" [class.active]="cadenceFilter === 'ponctuel'" (click)="setCadenceFilter('ponctuel')">
+                Une fois <strong>{{ ponctualCount }}</strong>
+            </button>
+        </div>
+
         <div class="agenda-list">
             <article class="agenda-item" *ngFor="let item of paginatedPlanning">
                 <div class="agenda-date">{{ formatDate(item.dueDate) }}</div>
@@ -60,7 +72,9 @@
                     <p>{{ item.department }} | {{ item.owner || 'Non assigne' }}</p>
                     <div class="agenda-meta">
                         <span class="tag">{{ item.scheduleType }}</span>
-                        <span class="tag subtle">{{ item.cadence }}</span>
+                        <span class="tag subtle">{{ item.occurrenceLabel }}</span>
+                        <span *ngIf="item.controlCode" class="tag secondary">{{ item.controlCode }}</span>
+                        <span>{{ item.frequencyLabel }}</span>
                         <span [ngClass]="getStatusClass(item.status)">{{ item.linkLabel }}</span>
                     </div>
                 </div>

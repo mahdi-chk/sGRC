@@ -77,6 +77,17 @@ const inferControlType = (risk: any): string => {
     return 'preventif';
 };
 
+const getControlReferenceDate = (risk: any, mission?: any): Date | string | null => (
+    mission?.updatedAt ||
+    risk?.dernierTraitement ||
+    risk?.updatedAt ||
+    risk?.createdAt ||
+    null
+);
+
+const getOccurrenceLabel = (value: unknown): string =>
+    isPeriodicFrequency(value) ? 'Periodique' : 'Une fois';
+
 const getSeverityWeight = (value: unknown): number => {
     const normalized = normalizeLookupValue(value);
     if (normalized === 'critical' || normalized === 'critique') {
@@ -256,6 +267,8 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 title: risk.dmrExistant || risk.titre,
                 controlType: inferControlType(risk),
                 executionType: isPeriodicFrequency(risk.frequenceTraitement) ? 'periodique' : 'ponctuel',
+                occurrenceLabel: getOccurrenceLabel(risk.frequenceTraitement),
+                frequencyLabel: risk.frequenceTraitement || 'Non renseignee',
                 department: risk.departement?.nom || 'Non rattache',
                 linkedRisk: risk.titre,
                 owner: owner || 'Non assigne',
@@ -271,10 +284,13 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 title: control.title,
                 scheduleType: 'controle',
                 cadence: control.executionType,
+                occurrenceLabel: control.occurrenceLabel,
+                frequencyLabel: control.frequencyLabel,
                 dueDate: control.nextReview,
                 department: control.department,
                 owner: control.owner,
                 status: control.status,
+                controlCode: control.code,
                 linkLabel: control.linkedRisk,
             })),
             ...missions.map((mission) => ({
@@ -282,10 +298,13 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 title: mission.titre,
                 scheduleType: 'audit',
                 cadence: isPeriodicFrequency(mission.risk?.frequenceTraitement) ? 'periodique' : 'ponctuel',
+                occurrenceLabel: getOccurrenceLabel(mission.risk?.frequenceTraitement),
+                frequencyLabel: mission.risk?.frequenceTraitement || 'Selon plan audit',
                 dueDate: mission.delai || null,
                 department: mission.risk?.departement?.nom || 'Non rattache',
                 owner: buildDisplayName(mission.auditeur) || buildDisplayName(mission.auditSenior),
                 status: normalizeLookupValue(mission.statut) === 'en_retard' ? 'en_retard' : mission.statut,
+                controlCode: mission.riskId ? `CTRL-${String(mission.riskId).padStart(4, '0')}` : null,
                 linkLabel: mission.risk?.titre || 'Mission transverse',
             })),
         ].sort((first, second) => {
@@ -300,8 +319,12 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 title: evidence.mission?.titre || evidence.filename,
                 sourceType: 'audit',
                 author: buildDisplayName(evidence.uploader),
+                depositedBy: buildDisplayName(evidence.uploader) || 'Auteur non renseigne',
                 department: evidence.mission?.risk?.departement?.nom || 'Non rattache',
+                controlCode: evidence.mission?.riskId ? `CTRL-${String(evidence.mission.riskId).padStart(4, '0')}` : null,
+                controlTitle: evidence.mission?.risk?.dmrExistant || evidence.mission?.risk?.titre || null,
                 linkedAudit: evidence.mission?.titre || null,
+                auditLabel: evidence.mission?.titre || 'Audit non rattache',
                 uploadedAt: evidence.createdAt,
                 filename: evidence.filename,
             })),
@@ -312,8 +335,12 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     title: risk.titre,
                     sourceType: 'risque',
                     author: buildDisplayName(risk.riskManager),
+                    depositedBy: buildDisplayName(risk.riskManager) || 'Auteur non renseigne',
                     department: risk.departement?.nom || 'Non rattache',
+                    controlCode: `CTRL-${String(risk.id).padStart(4, '0')}`,
+                    controlTitle: risk.dmrExistant || risk.titre,
                     linkedAudit: null,
+                    auditLabel: 'Hors audit',
                     uploadedAt: risk.updatedAt,
                     filename: String(risk.pieceJustificative).split(/[\\/]/).pop() || 'justificatif',
                 })),
@@ -324,8 +351,12 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     title: incident.titre,
                     sourceType: 'incident',
                     author: buildDisplayName(incident.declareur),
+                    depositedBy: buildDisplayName(incident.declareur) || 'Auteur non renseigne',
                     department: risks.find((risk) => risk.departementId === incident.departementId)?.departement?.nom || 'Non rattache',
+                    controlCode: incident.riskId ? `CTRL-${String(incident.riskId).padStart(4, '0')}` : null,
+                    controlTitle: risks.find((risk) => risk.id === incident.riskId)?.dmrExistant || risks.find((risk) => risk.id === incident.riskId)?.titre || null,
                     linkedAudit: null,
+                    auditLabel: 'Incident hors audit',
                     uploadedAt: incident.updatedAt,
                     filename: String(incident.pieceJointe).split(/[\\/]/).pop() || 'piece-jointe',
                 })),
@@ -337,7 +368,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 .filter((mission) => mission.riskId === control.id && isCompletedMissionStatus(mission.statut))
                 .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime())[0];
 
-            const referenceDate = linkedMission?.updatedAt || linkedRisk?.dernierTraitement || linkedRisk?.updatedAt;
+            const referenceDate = getControlReferenceDate(linkedRisk, linkedMission);
             const relatedIncidents = incidents.filter((incident) => incident.riskId === control.id || incident.departementId === linkedRisk?.departementId);
             const beforeCount = referenceDate
                 ? relatedIncidents.filter((incident) => new Date(incident.dateSurvenance).getTime() < new Date(referenceDate).getTime()).length
@@ -345,6 +376,11 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
             const afterCount = referenceDate
                 ? relatedIncidents.filter((incident) => new Date(incident.dateSurvenance).getTime() >= new Date(referenceDate).getTime()).length
                 : relatedIncidents.length;
+            const incidentsAfterControl = referenceDate
+                ? relatedIncidents.filter((incident) => new Date(incident.dateSurvenance).getTime() >= new Date(referenceDate).getTime())
+                : relatedIncidents;
+            const lastIncidentAfterControl = incidentsAfterControl
+                .sort((first, second) => new Date(second.dateSurvenance).getTime() - new Date(first.dateSurvenance).getTime())[0];
 
             let score = 68;
             if (afterCount === 0) {
@@ -371,9 +407,16 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 controlCode: control.code,
                 title: control.title,
                 implementationDate: referenceDate || null,
+                department: control.department,
                 incidentsBefore: beforeCount,
                 incidentsAfter: afterCount,
+                incidentsReproduced: afterCount > 0,
+                lastIncidentDate: lastIncidentAfterControl?.dateSurvenance || null,
                 recurrenceTrend: afterCount < beforeCount ? 'en_baisse' : afterCount > beforeCount ? 'en_hausse' : 'stable',
+                evaluationResult: afterCount === 0 ? 'efficace' : afterCount > beforeCount ? 'inefficace' : 'a_confirmer',
+                recurrenceNote: afterCount === 0
+                    ? 'Aucun incident reproduit apres le controle'
+                    : `${afterCount} incident(s) reproduit(s) apres le controle`,
                 score,
             };
         }).sort((first, second) => second.score - first.score);
@@ -383,6 +426,13 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
             .map((incident) => {
                 const linkedRisk = risks.find((risk) => risk.id === incident.riskId);
                 const severity = linkedRisk?.niveauRisque || incident.niveauRisque || 'medium';
+                const linkedMission = missions
+                    .filter((mission) => mission.riskId === linkedRisk?.id && isCompletedMissionStatus(mission.statut))
+                    .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime())[0];
+                const referenceDate = getControlReferenceDate(linkedRisk, linkedMission);
+                const occurredAfterControl = referenceDate
+                    ? new Date(incident.dateSurvenance).getTime() >= new Date(referenceDate).getTime()
+                    : false;
 
                 return {
                     id: incident.id,
@@ -392,6 +442,12 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     severity,
                     dueDate: incident.dateEcheance || linkedRisk?.dateEcheance || null,
                     owner: buildDisplayName(incident.declareur),
+                    controlCode: linkedRisk ? `CTRL-${String(linkedRisk.id).padStart(4, '0')}` : 'CTRL-N/A',
+                    controlTitle: linkedRisk?.dmrExistant || linkedRisk?.titre || 'Controle a qualifier',
+                    detectionDate: incident.dateSurvenance || incident.createdAt,
+                    followUpStatus: occurredAfterControl ? 'Suivi post-controle' : 'Suivi ouvert',
+                    correctiveAction: incident.planActionTraitement || linkedRisk?.planActionTraitement || 'Action corrective a definir',
+                    occurredAfterControl,
                     source: linkedRisk ? linkedRisk.titre : 'Surveillance continue',
                 };
             })

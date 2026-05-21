@@ -72,7 +72,10 @@
                         <small>{{ control.linkedRisk }}</small>
                     </td>
                     <td><span class="tag">{{ control.controlType }}</span></td>
-                    <td><span class="tag subtle">{{ control.executionType }}</span></td>
+                    <td>
+                        <span class="tag subtle">{{ control.occurrenceLabel }}</span>
+                        <small>{{ control.frequencyLabel }}</small>
+                    </td>
                     <td>{{ control.department }}</td>
                     <td>{{ control.owner }}</td>
                     <td><span [ngClass]="getStatusClass(control.status)">{{ formatDate(control.nextReview) }}</span></td>

@@ -18,8 +18,8 @@ export class ControlsEffectivenessComponent implements OnInit {
   readonly controlsRadarLabels = [
     'Score moyen',
     'Controles solides',
-    'Surveillance maitrisee',
-    'Fragiles maitrises',
+    'Sans recurrence',
+    'NC limitees',
     'Actions planifiees',
     'Preuves disponibles'
   ];
@@ -83,6 +83,10 @@ export class ControlsEffectivenessComponent implements OnInit {
     return this.effectiveness.filter(item => item.score < 60).length;
   }
 
+  get reproducedIncidentCount(): number {
+    return this.effectiveness.filter(item => item.incidentsReproduced).length;
+  }
+
   formatDate(value: string | null | undefined): string {
     if (!value) {
       return 'Non planifie';
@@ -119,6 +123,18 @@ export class ControlsEffectivenessComponent implements OnInit {
     return `trend-${String(value || '').replace(/_/g, '-')}`;
   }
 
+  getEvaluationLabel(value: string): string {
+    if (value === 'efficace') {
+      return 'Efficace';
+    }
+
+    if (value === 'inefficace') {
+      return 'Inefficace';
+    }
+
+    return 'A confirmer';
+  }
+
   refreshControlsRadarSeries(): void {
     if (!this.overview) {
       this.controlsRadarSeries = [];
@@ -135,7 +151,7 @@ export class ControlsEffectivenessComponent implements OnInit {
         values: [
           summary.effectivenessScore,
           Math.round((this.strongCount / effectivenessTotal) * 100),
-          Math.max(0, 100 - Math.round((this.watchCount / effectivenessTotal) * 100)),
+          Math.max(0, 100 - Math.round((this.reproducedIncidentCount / effectivenessTotal) * 100)),
           Math.max(0, 100 - Math.round((this.alertCount / effectivenessTotal) * 100)),
           Math.min(100, Math.round((summary.upcomingActions / totalControls) * 100)),
           Math.min(100, Math.round((summary.evidenceCount / totalControls) * 100))

@@ -30,49 +30,59 @@
             <p>Volume global des elements centralises.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Audit</span>
-            <h3>{{ auditEvidenceCount }}</h3>
-            <p>Preuves rattachees aux missions et dossiers d audit.</p>
+            <span class="eyebrow">Groupes audit</span>
+            <h3>{{ auditGroupCount }}</h3>
+            <p>Regroupement par mission d audit et contexte hors audit.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Risques</span>
-            <h3>{{ riskEvidenceCount }}</h3>
-            <p>Justificatifs provenant de la gestion des risques.</p>
+            <span class="eyebrow">Deposants</span>
+            <h3>{{ depositorCount }}</h3>
+            <p>Personnes ayant depose au moins une preuve.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Incidents</span>
-            <h3>{{ incidentEvidenceCount }}</h3>
-            <p>Pieces issues des incidents et de leur traitement.</p>
+            <span class="eyebrow">Audit / Risque / Incident</span>
+            <h3>{{ auditEvidenceCount }} / {{ riskEvidenceCount }} / {{ incidentEvidenceCount }}</h3>
+            <p>Origine des preuves centralisees.</p>
         </div>
     </div>
 
     <div class="content-card" *ngIf="evidence.length > 0; else emptyEvidence">
         <div class="card-head">
-            <h2>Registre des preuves</h2>
-            <p>Chaque piece conserve sa source, son auteur et son contexte metier de rattachement.</p>
+            <h2>Preuves regroupees</h2>
+            <p>Chaque groupe indique le deposant, le departement, l audit concerne et le controle rattache.</p>
         </div>
 
-        <div class="evidence-list">
-            <article class="evidence-item" *ngFor="let item of paginatedEvidence">
-                <div class="evidence-icon">
-                    <i class="fas fa-file-shield"></i>
-                </div>
-                <div class="evidence-copy">
-                    <h3>{{ item.filename }}</h3>
-                    <p>{{ item.title }}</p>
-                    <div class="evidence-meta">
-                        <span>{{ item.author || 'Auteur non renseigne' }}</span>
-                        <span>{{ item.department }}</span>
-                        <span>{{ formatDate(item.uploadedAt) }}</span>
+        <div class="evidence-group-list">
+            <section class="evidence-group" *ngFor="let group of paginatedGroupedEvidence">
+                <div class="group-head">
+                    <div>
+                        <span class="eyebrow">{{ group.department }}</span>
+                        <h3>{{ group.auditLabel }}</h3>
                     </div>
-                    <small *ngIf="item.linkedAudit">Audit lie : {{ item.linkedAudit }}</small>
+                    <span class="tag secondary">{{ group.items.length }} preuve(s)</span>
                 </div>
-                <span class="tag">{{ item.sourceType }}</span>
-            </article>
+
+                <article class="evidence-item" *ngFor="let item of group.items">
+                    <div class="evidence-icon">
+                        <i class="fas fa-file-shield"></i>
+                    </div>
+                    <div class="evidence-copy">
+                        <h4>{{ item.filename }}</h4>
+                        <p>{{ item.title }}</p>
+                        <div class="evidence-meta">
+                            <span><i class="fas fa-user"></i> {{ item.depositedBy || item.author || 'Auteur non renseigne' }}</span>
+                            <span><i class="fas fa-calendar"></i> {{ formatDate(item.uploadedAt) }}</span>
+                            <span *ngIf="item.controlCode"><i class="fas fa-shield-halved"></i> {{ item.controlCode }}</span>
+                        </div>
+                        <small *ngIf="item.controlTitle">{{ item.controlTitle }}</small>
+                    </div>
+                    <span class="tag">{{ item.sourceType }}</span>
+                </article>
+            </section>
         </div>
         
         <app-pagination 
-            [totalItems]="evidence.length" 
+            [totalItems]="groupedEvidence.length" 
             [currentPage]="currentPage" 
             [pageSize]="itemsPerPage" 
             (pageChanged)="onPageChanged($event)">

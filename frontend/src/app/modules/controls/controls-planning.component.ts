@@ -12,6 +12,7 @@ export class ControlsPlanningComponent implements OnInit {
   readonly navItems = getControlsNavItems(getStoredControlsRole());
   overview: ControlsOverview | null = null;
   isLoading = false;
+  cadenceFilter: 'all' | 'periodique' | 'ponctuel' = 'all';
 
   currentPage = 1;
   itemsPerPage = 10;
@@ -46,7 +47,13 @@ export class ControlsPlanningComponent implements OnInit {
   }
 
   get planning(): ControlPlanningItem[] {
-    return this.overview?.planning || [];
+    const items = this.overview?.planning || [];
+
+    if (this.cadenceFilter === 'all') {
+      return items;
+    }
+
+    return items.filter(item => item.cadence === this.cadenceFilter);
   }
 
   get paginatedPlanning(): ControlPlanningItem[] {
@@ -59,12 +66,25 @@ export class ControlsPlanningComponent implements OnInit {
     this.itemsPerPage = event.pageSize;
   }
 
+  setCadenceFilter(value: 'all' | 'periodique' | 'ponctuel'): void {
+    this.cadenceFilter = value;
+    this.currentPage = 1;
+  }
+
   get auditCount(): number {
-    return this.planning.filter(item => item.scheduleType === 'audit').length;
+    return (this.overview?.planning || []).filter(item => item.scheduleType === 'audit').length;
   }
 
   get controlCount(): number {
-    return this.planning.filter(item => item.scheduleType === 'controle').length;
+    return (this.overview?.planning || []).filter(item => item.scheduleType === 'controle').length;
+  }
+
+  get periodicCount(): number {
+    return (this.overview?.planning || []).filter(item => item.cadence === 'periodique').length;
+  }
+
+  get ponctualCount(): number {
+    return (this.overview?.planning || []).filter(item => item.cadence === 'ponctuel').length;
   }
 
   formatDate(value: string | null | undefined): string {

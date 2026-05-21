@@ -3,6 +3,13 @@ import { Router } from '@angular/router';
 import { getControlsNavItems, getStoredControlsRole } from './controls-navigation';
 import { ControlEvidenceItem, ControlsOverview, ControlsService } from './controls.service';
 
+interface EvidenceGroup {
+  key: string;
+  auditLabel: string;
+  department: string;
+  items: ControlEvidenceItem[];
+}
+
 @Component({
   selector: 'app-controls-evidence',
   templateUrl: './controls-evidence.component.html',
@@ -48,9 +55,28 @@ export class ControlsEvidenceComponent implements OnInit {
     return this.overview?.evidence || [];
   }
 
-  get paginatedEvidence(): ControlEvidenceItem[] {
+  get groupedEvidence(): EvidenceGroup[] {
+    const groups = new Map<string, EvidenceGroup>();
+
+    this.evidence.forEach(item => {
+      const auditLabel = item.auditLabel || item.linkedAudit || 'Hors audit';
+      const department = item.department || 'Non rattache';
+      const key = `${auditLabel}__${department}`;
+      const group = groups.get(key);
+
+      if (group) {
+        group.items.push(item);
+      } else {
+        groups.set(key, { key, auditLabel, department, items: [item] });
+      }
+    });
+
+    return Array.from(groups.values());
+  }
+
+  get paginatedGroupedEvidence(): EvidenceGroup[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-    return this.evidence.slice(startIndex, startIndex + this.itemsPerPage);
+    return this.groupedEvidence.slice(startIndex, startIndex + this.itemsPerPage);
   }
 
   onPageChanged(event: {page: number, pageSize: number}) {
@@ -68,6 +94,14 @@ export class ControlsEvidenceComponent implements OnInit {
 
   get incidentEvidenceCount(): number {
     return this.evidence.filter(item => item.sourceType === 'incident').length;
+  }
+
+  get depositorCount(): number {
+    return new Set(this.evidence.map(item => item.depositedBy || item.author).filter(Boolean)).size;
+  }
+
+  get auditGroupCount(): number {
+    return new Set(this.evidence.map(item => item.auditLabel || item.linkedAudit || 'Hors audit')).size;
   }
 
   formatDate(value: string | null | undefined): string {

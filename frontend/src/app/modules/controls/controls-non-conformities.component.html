@@ -40,9 +40,9 @@
             <p>Dossiers dont l echeance est depassee.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Total suivi</span>
-            <h3>{{ items.length }}</h3>
-            <p>Vue dediee au traitement des deviations constatees.</p>
+            <span class="eyebrow">Post-controle</span>
+            <h3>{{ postControlCount }}</h3>
+            <p>Incidents reproduits apres execution ou revue du controle.</p>
         </div>
     </div>
 
@@ -55,14 +55,20 @@
         <div class="nonconformity-list">
             <article class="nonconformity-item" *ngFor="let item of paginatedItems">
                 <div class="nonconformity-head">
-                    <h3>{{ item.title }}</h3>
+                    <div>
+                        <span class="eyebrow">{{ item.controlCode }} | {{ item.followUpStatus }}</span>
+                        <h3>{{ item.title }}</h3>
+                    </div>
                     <span class="tag" [ngClass]="getStatusClass(item.severity)">{{ item.severity }}</span>
                 </div>
-                <p>{{ item.department }} | Source : {{ item.source }}</p>
+                <p>{{ item.department }} | Controle : {{ item.controlTitle }}</p>
+                <p class="followup-action">{{ item.correctiveAction }}</p>
                 <div class="nonconformity-meta">
                     <span>{{ item.owner || 'Sans proprietaire' }}</span>
+                    <span>Detecte : {{ formatDate(item.detectionDate) }}</span>
                     <span>{{ formatDate(item.dueDate) }}</span>
                     <span [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+                    <span *ngIf="item.occurredAfterControl" class="state-en-retard">Incident reproduit apres controle</span>
                 </div>
             </article>
         </div>

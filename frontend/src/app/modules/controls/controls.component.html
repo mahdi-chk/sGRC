@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-user-check"></i> Controles Internes</h1>
-                <p>Point d entree du module. Chaque sous-module dispose maintenant de sa propre interface, a la maniere de Gouvernance.</p>
+                <p>Point d entree du module pour piloter referentiel, planification, preuves, efficacite et non-conformites avec la meme logique metier.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -77,7 +77,11 @@
                     <p>{{ data.summary.upcomingActions }} actions a venir et {{ data.summary.overdueActions }} actions en retard.</p>
                 </div>
                 <div class="module-link">
-                    <strong>Suivi continu</strong>
+                    <strong>Preuves</strong>
+                    <p>{{ data.summary.evidenceCount }} pieces consolidees par audit, deposant et departement.</p>
+                </div>
+                <div class="module-link">
+                    <strong>Suivi post-controle</strong>
                     <p>{{ data.summary.openNonConformities }} non-conformites ouvertes a traiter en continu.</p>
                 </div>
             </div>

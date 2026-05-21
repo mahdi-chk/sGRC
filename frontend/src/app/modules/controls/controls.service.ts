@@ -20,6 +20,8 @@ export interface ControlRegistryItem {
     title: string;
     controlType: string;
     executionType: string;
+    occurrenceLabel: string;
+    frequencyLabel: string;
     department: string;
     linkedRisk: string;
     owner: string;
@@ -33,10 +35,13 @@ export interface ControlPlanningItem {
     title: string;
     scheduleType: string;
     cadence: string;
+    occurrenceLabel: string;
+    frequencyLabel: string;
     dueDate: string | null;
     department: string;
     owner: string;
     status: string;
+    controlCode: string | null;
     linkLabel: string;
 }
 
@@ -45,8 +50,12 @@ export interface ControlEvidenceItem {
     title: string;
     sourceType: string;
     author: string;
+    depositedBy: string;
     department: string;
+    controlCode: string | null;
+    controlTitle: string | null;
     linkedAudit: string | null;
+    auditLabel: string;
     uploadedAt: string;
     filename: string;
 }
@@ -55,9 +64,14 @@ export interface ControlEffectivenessItem {
     controlCode: string;
     title: string;
     implementationDate: string | null;
+    department: string;
     incidentsBefore: number;
     incidentsAfter: number;
+    incidentsReproduced: boolean;
+    lastIncidentDate: string | null;
     recurrenceTrend: string;
+    evaluationResult: string;
+    recurrenceNote: string;
     score: number;
 }
 
@@ -69,6 +83,12 @@ export interface ControlNonConformityItem {
     severity: string;
     dueDate: string | null;
     owner: string;
+    controlCode: string;
+    controlTitle: string;
+    detectionDate: string | null;
+    followUpStatus: string;
+    correctiveAction: string;
+    occurredAfterControl: boolean;
     source: string;
 }
 

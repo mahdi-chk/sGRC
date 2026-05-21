@@ -40,9 +40,9 @@
             <p>Controles a confirmer ou a renforcer.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Fragiles</span>
-            <h3>{{ alertCount }}</h3>
-            <p>Controles ou la recurrence reste trop elevee.</p>
+            <span class="eyebrow">Incidents reproduits</span>
+            <h3>{{ reproducedIncidentCount }}</h3>
+            <p>Controles avec au moins un incident apres mise en place.</p>
         </div>
     </div>
 
@@ -65,6 +65,9 @@
                 <strong>{{ item.score }}%</strong>
             </div>
             <p>Mise en oeuvre : {{ formatDate(item.implementationDate) }}</p>
+            <p class="effectiveness-note" [ngClass]="item.incidentsReproduced ? 'state-en-retard' : 'state-maitrise'">
+                {{ item.recurrenceNote }} | {{ getEvaluationLabel(item.evaluationResult) }}
+            </p>
             <div class="effectiveness-metrics">
                 <div>
                     <span>Avant</span>
@@ -75,9 +78,13 @@
                     <strong>{{ item.incidentsAfter }}</strong>
                 </div>
                 <div>
-                    <span>Tendance</span>
-                    <strong [ngClass]="getTrendClass(item.recurrenceTrend)">{{ getTrendLabel(item.recurrenceTrend) }}</strong>
+                    <span>Dernier apres controle</span>
+                    <strong [ngClass]="getTrendClass(item.recurrenceTrend)">{{ formatDate(item.lastIncidentDate) }}</strong>
                 </div>
+            </div>
+            <div class="agenda-meta">
+                <span>{{ item.department }}</span>
+                <span>Tendance : <strong [ngClass]="getTrendClass(item.recurrenceTrend)">{{ getTrendLabel(item.recurrenceTrend) }}</strong></span>
             </div>
         </article>
         

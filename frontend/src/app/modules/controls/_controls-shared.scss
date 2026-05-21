@@ -12,12 +12,9 @@
   --controls-alert: #9e3a31;
   padding: 30px;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top right, rgba(182, 125, 26, 0.12), transparent 26%),
-    radial-gradient(circle at left center, rgba(15, 76, 129, 0.1), transparent 30%),
-    var(--controls-surface);
+  background: var(--controls-surface);
   color: var(--controls-ink);
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-family: 'Open Sans', "Segoe UI", sans-serif;
 }
 
 .page-header,
@@ -256,6 +253,44 @@
   color: #7a5514;
 }
 
+.tag.secondary {
+  background: rgba(33, 79, 143, 0.09);
+  color: #214f8f;
+}
+
+.segmented-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 16px;
+  border: 1px solid var(--controls-line);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.segmented-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 13px;
+  background: transparent;
+  color: var(--controls-muted);
+  font-weight: 700;
+}
+
+.segmented-filter button.active {
+  background: #ffffff;
+  color: var(--controls-ink);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.segmented-filter strong {
+  color: var(--controls-accent);
+}
+
 .agenda-item {
   display: grid;
   grid-template-columns: 110px 1fr;
@@ -293,6 +328,31 @@
   gap: 14px;
   align-items: flex-start;
   padding: 16px;
+}
+
+.evidence-group-list {
+  display: grid;
+  gap: 16px;
+}
+
+.evidence-group {
+  border: 1px solid rgba(217, 226, 234, 0.9);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(248, 250, 252, 0.78);
+}
+
+.group-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.group-head h3,
+.evidence-copy h4 {
+  margin: 0;
 }
 
 .evidence-icon {
@@ -356,6 +416,22 @@
   margin-bottom: 6px;
 }
 
+.effectiveness-note,
+.followup-action {
+  margin: 10px 0 0;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.followup-action {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+}
+
 .feedback-state,
 .empty-state,
 .status-line {
@@ -416,6 +492,10 @@
   .agenda-item,
   .evidence-item {
     grid-template-columns: 1fr;
+  }
+
+  .group-head {
+    flex-direction: column;
   }
 
   .effectiveness-metrics {

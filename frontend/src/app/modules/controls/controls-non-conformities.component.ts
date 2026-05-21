@@ -68,6 +68,10 @@ export class ControlsNonConformitiesComponent implements OnInit {
     return this.items.filter(item => item.dueDate && new Date(item.dueDate).getTime() < now).length;
   }
 
+  get postControlCount(): number {
+    return this.items.filter(item => item.occurredAfterControl).length;
+  }
+
   formatDate(value: string | null | undefined): string {
     if (!value) {
       return 'Non planifie';

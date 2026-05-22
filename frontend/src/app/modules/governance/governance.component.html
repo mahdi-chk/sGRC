@@ -44,6 +44,11 @@
             <h3>{{ missions.length }}</h3>
             <p>{{ completionRate }}% de completion des missions d audit.</p>
         </div>
+        <div class="summary-card">
+            <span class="eyebrow">Profils suivis</span>
+            <h3>{{ supervisedUsersCount }}</h3>
+            <p>{{ supervisedOpenItems }} element(s) ouverts sous responsabilite manager.</p>
+        </div>
     </div>
 
     <div class="section-grid">
@@ -59,6 +64,54 @@
                     <p>{{ module.description }}</p>
                 </a>
             </div>
+        </div>
+
+        <div class="content-card traceability-card">
+            <div class="card-head">
+                <h2>Tracabilite par role</h2>
+                <p>Vue manager/responsable sur les utilisateurs rattaches et leurs objets ouverts.</p>
+            </div>
+
+            <div class="traceability-list" *ngIf="traceabilityProfiles.length > 0; else noTraceabilityProfiles">
+                <article class="traceability-profile" *ngFor="let profile of traceabilityProfiles">
+                    <div class="profile-head">
+                        <div>
+                            <span class="eyebrow">{{ profile.module }}</span>
+                            <strong>{{ profile.supervisor.name }}</strong>
+                            <p>{{ profile.supervisorLabel }} - {{ profile.supervisor.departement || 'Departement non renseigne' }}</p>
+                        </div>
+                        <span class="badge" [ngClass]="profile.stats.lateItems > 0 ? 'warning' : 'success'">
+                            {{ profile.stats.openItems }} ouvert(s)
+                        </span>
+                    </div>
+
+                    <div class="profile-kpis">
+                        <div>
+                            <span>Equipe</span>
+                            <strong>{{ profile.stats.members }}</strong>
+                        </div>
+                        <div>
+                            <span>Affectations</span>
+                            <strong>{{ profile.stats.assignments }}</strong>
+                        </div>
+                        <div>
+                            <span>Retards</span>
+                            <strong>{{ profile.stats.lateItems }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="member-list">
+                        <span class="member-chip" *ngFor="let member of profile.members">
+                            {{ member.name }} <small>{{ member.roleLabel }}</small>
+                        </span>
+                        <span class="muted-line" *ngIf="profile.members.length === 0">Aucun utilisateur de niveau inferieur rattache.</span>
+                    </div>
+                </article>
+            </div>
+
+            <ng-template #noTraceabilityProfiles>
+                <div class="empty-state">Aucun profil manager/responsable a superviser dans votre perimetre.</div>
+            </ng-template>
         </div>
 
         <div class="content-card">

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { GovernanceDocument, GovernanceFolder, GovernanceService } from './governance.service';
-import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
+import { getGovernanceNavItems, getStoredGovernanceRole } from './governance-navigation';
 
 @Component({
   selector: 'app-governance-documents',
@@ -9,7 +9,7 @@ import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
   styleUrls: ['./governance-documents.component.scss']
 })
 export class GovernanceDocumentsComponent implements OnInit {
-  readonly navItems = GOVERNANCE_NAV_ITEMS;
+  readonly navItems = getGovernanceNavItems(getStoredGovernanceRole());
   folders: GovernanceFolder[] = [];
   currentRole = '';
   canEdit = false;
@@ -31,7 +31,7 @@ export class GovernanceDocumentsComponent implements OnInit {
   }
 
   get visibleNavItems() {
-    return this.canEdit ? this.navItems : this.navItems.slice(0, 1);
+    return this.navItems;
   }
 
   get totalDocuments(): number {

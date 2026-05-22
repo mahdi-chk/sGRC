@@ -15,6 +15,7 @@ import { AuditingService } from './auditing.service';
 import { Notification, NotificationType } from '../notifications/notification.model';
 import { User } from '../users/user.model';
 import { UserRole } from '../users/user.roles';
+import { Risk } from '../risk/risk.model';
 import {
     AUDIT_LOOKUP_KEYS,
     AuditMissionResourceRoleCode,
@@ -434,6 +435,10 @@ export class AuditPlanService {
 
     private static isMissionScopedRole(role: string) {
         return [UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER].includes(role as UserRole);
+    }
+
+    private static isRiskMissionReaderRole(role: string) {
+        return [UserRole.RISK_MANAGER, UserRole.RISK_AGENT].includes(role as UserRole);
     }
 
     private static buildMissionScopeWhere(role: string, userId: number) {
@@ -1134,7 +1139,10 @@ export class AuditPlanService {
     }
 
     static async listMissions(role: string, userId: number, filter: { type?: string | null } = {}) {
-        this.ensurePlanReadable(role);
+        if (!isRoleAllowed(role, PLAN_READ_ROLES) && !this.isRiskMissionReaderRole(role)) {
+            throw new Error('Acces non autorise');
+        }
+
         const requestedType = filter.type || AuditRecordType.MISSION_AUDIT;
 
         const where: Record<string, unknown> = {
@@ -1146,6 +1154,16 @@ export class AuditPlanService {
             where.chefMissionId = userId;
         } else if (role === UserRole.AUDITEUR) {
             where.auditeurId = userId;
+        } else if (this.isRiskMissionReaderRole(role)) {
+            const riskWhere = role === UserRole.RISK_MANAGER
+                ? { riskManagerId: userId }
+                : { riskAgentId: userId };
+            const risks = await Risk.findAll({
+                where: riskWhere,
+                attributes: ['id'],
+            });
+            const riskIds = risks.map((risk) => risk.id);
+            where.riskId = riskIds.length > 0 ? { [Op.in]: riskIds } : -1;
         } else if (role === UserRole.CONTROLLER) {
             const planMissions = await AuditMission.findAll({
                 where: {

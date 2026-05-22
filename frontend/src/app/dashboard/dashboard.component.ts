@@ -9,6 +9,7 @@ import { Risk, RiskService, RiskStatus } from '../core/services/risk.service';
 import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { ALL_GOVERNANCE_ROLES } from '../modules/governance/governance-navigation';
 
 interface Submodule {
   title: string;
@@ -58,6 +59,11 @@ export class DashboardComponent implements OnDestroy {
       label: 'Organisation',
       route: '/dashboard/organigramme',
       roles: [UserRole.ADMIN_SI, UserRole.SUPER_ADMIN]
+    },
+    {
+      label: 'Gouvernance',
+      route: '/dashboard/governance-workflows',
+      roles: ALL_GOVERNANCE_ROLES
     },
     { label: 'Ressource', route: '/dashboard/resources' },
     {

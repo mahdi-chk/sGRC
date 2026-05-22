@@ -119,7 +119,46 @@ export interface GovernanceApprovalWorkflow {
   type?: string;
   escalation?: string;
   decisionRules?: string[];
+  module?: string;
+  process?: string | null;
+  macroProcess?: string | null;
+  sourceType?: 'document' | 'risk' | 'audit' | 'incident';
+  sourceId?: number | string | null;
+  owner?: string;
+  assignedTo?: string;
+  actionable?: boolean;
   stages: GovernanceApprovalStage[];
+}
+
+export interface GovernanceRoleTraceabilityMember {
+  id: number;
+  name: string;
+  mail: string;
+  role: string;
+  roleLabel: string;
+  poste: string;
+  departement?: string | null;
+}
+
+export interface GovernanceRoleTraceabilityProfile {
+  module: string;
+  supervisorRole: string;
+  supervisorLabel: string;
+  supervisor: {
+    id: number;
+    name: string;
+    mail: string;
+    poste: string;
+    departement?: string | null;
+  };
+  subordinateLabel: string;
+  members: GovernanceRoleTraceabilityMember[];
+  stats: {
+    members: number;
+    assignments: number;
+    openItems: number;
+    lateItems: number;
+  };
 }
 
 export interface GovernanceMaturityArea {
@@ -197,6 +236,12 @@ export class GovernanceService {
   getApprovalWorkflows(): Observable<GovernanceApprovalWorkflow[]> {
     return this.http.get<{ workflows: GovernanceApprovalWorkflow[] }>(`${this.apiUrl}/approval-workflows`).pipe(
       map(response => response.workflows)
+    );
+  }
+
+  getRoleTraceabilityProfiles(): Observable<GovernanceRoleTraceabilityProfile[]> {
+    return this.http.get<{ profiles: GovernanceRoleTraceabilityProfile[] }>(`${this.apiUrl}/role-traceability`).pipe(
+      map(response => response.profiles)
     );
   }
 

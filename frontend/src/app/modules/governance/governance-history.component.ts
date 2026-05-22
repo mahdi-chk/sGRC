@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { GovernanceAuditEntry, GovernanceService } from './governance.service';
-import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
+import { getGovernanceNavItems, getStoredGovernanceRole } from './governance-navigation';
 
 @Component({
   selector: 'app-governance-history',
@@ -9,7 +9,7 @@ import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
   styleUrls: ['./governance-history.component.scss']
 })
 export class GovernanceHistoryComponent implements OnInit {
-  readonly navItems = GOVERNANCE_NAV_ITEMS;
+  readonly navItems = getGovernanceNavItems(getStoredGovernanceRole());
   auditEntries: GovernanceAuditEntry[] = [];
   isLoading = false;
 

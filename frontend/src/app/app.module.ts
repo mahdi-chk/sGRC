@@ -70,6 +70,7 @@ import { ControlsEffectivenessComponent } from './modules/controls/controls-effe
 import { ControlsNonConformitiesComponent } from './modules/controls/controls-non-conformities.component';
 import { getControlsRolesByRoute } from './modules/controls/controls-navigation';
 import { getComplianceRolesByRoute } from './modules/compliance/compliance-navigation';
+import { getGovernanceRolesByRoute } from './modules/governance/governance-navigation';
 import { ActionsModule } from './modules/actions/actions.module';
 import { ActionsComponent } from './modules/actions/actions.component';
 import { ActionsCentralizedComponent } from './modules/actions/actions-centralized.component';
@@ -141,7 +142,7 @@ const routes: Routes = [
       { path: 'incident-reporting', component: IncidentReportingComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_SENIOR, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT] } },
       {
         path: 'governance',
-        redirectTo: 'governance-documents',
+        redirectTo: 'governance-workflows',
         pathMatch: 'full'
       },
       {
@@ -149,23 +150,14 @@ const routes: Routes = [
         component: GovernanceDocumentsComponent,
         data: {
           expectedRoles: [
-            UserRole.SUPER_ADMIN,
-            UserRole.ADMIN_SI,
-            UserRole.TOP_MANAGEMENT,
-            UserRole.RISK_MANAGER,
-            UserRole.RISK_AGENT,
-            UserRole.AUDIT_DIRECTEUR,
-            UserRole.AUDIT_RESPONSABLE,
-            UserRole.CHEF_MISSION,
-            UserRole.AUDITEUR,
-            UserRole.CONTROLLER
+            ...getGovernanceRolesByRoute('/dashboard/governance-documents')
           ]
         }
       },
-      { path: 'governance-history', component: GovernanceHistoryComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER] } },
-      { path: 'governance-workflows', component: GovernanceWorkflowsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI, UserRole.TOP_MANAGEMENT, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER] } },
-      { path: 'governance-maturity', component: GovernanceMaturityComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
-      { path: 'governance-adoption', component: GovernanceAdoptionComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN] } },
+      { path: 'governance-history', component: GovernanceHistoryComponent, data: { expectedRoles: getGovernanceRolesByRoute('/dashboard/governance-history') } },
+      { path: 'governance-workflows', component: GovernanceWorkflowsComponent, data: { expectedRoles: getGovernanceRolesByRoute('/dashboard/governance-workflows') } },
+      { path: 'governance-maturity', component: GovernanceMaturityComponent, data: { expectedRoles: getGovernanceRolesByRoute('/dashboard/governance-maturity') } },
+      { path: 'governance-adoption', component: GovernanceAdoptionComponent, data: { expectedRoles: getGovernanceRolesByRoute('/dashboard/governance-adoption') } },
       { path: 'resources', redirectTo: 'governance-documents', pathMatch: 'full' },
       // Routes Plan d Audit
       { path: 'audit-plans', component: AuditPlansComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },

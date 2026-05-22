@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-diagram-project"></i> Workflows d Approbation</h1>
-                <p>Circuits d approbation configurables, traces et alignes sur les dossiers documentaires de gouvernance.</p>
+                <p>Circuits de validation et avancement operationnel des risques, audits, incidents et dossiers documentaires.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -27,15 +27,15 @@
         <div class="summary-card">
             <span class="eyebrow">Workflows</span>
             <h3>{{ workflows.length }}</h3>
-            <p>Circuits actifs par perimetre documentaire et role.</p>
+            <p>Circuits actifs par module, processus et role.</p>
         </div>
         <div class="summary-card">
             <span class="eyebrow">En attente</span>
             <h3>{{ totalPending }}</h3>
-            <p>Elements depassant le cycle de revue et a revalider.</p>
+            <p>Etapes ou objets metiers qui attendent une action.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Taux d approbation</span>
+            <span class="eyebrow">Avancement global</span>
             <h3>{{ approvalRate }}%</h3>
             <p>Etapes validees sur tous les workflows visibles.</p>
         </div>
@@ -54,9 +54,31 @@
         <select [(ngModel)]="statusFilter">
             <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
         </select>
+        <select [(ngModel)]="moduleFilter">
+            <option value="all">Tous les modules</option>
+            <option *ngFor="let module of moduleOptions" [value]="module">{{ module }}</option>
+        </select>
         <button class="btn-secondary" (click)="exportWorkflows()" [disabled]="filteredWorkflows.length === 0">
             <i class="fas fa-file-export"></i>
             Exporter
+        </button>
+    </div>
+
+    <div class="module-summary-strip" *ngIf="moduleSummaries.length > 0">
+        <button
+            type="button"
+            class="module-summary-chip"
+            *ngFor="let summary of moduleSummaries"
+            [class.active]="moduleFilter === summary.module"
+            (click)="moduleFilter = summary.module">
+            <strong>{{ summary.module }}</strong>
+            <span>{{ summary.total }} workflow(s)</span>
+            <small>{{ summary.progress }}% avance - {{ summary.late }} retard(s)</small>
+        </button>
+        <button type="button" class="module-summary-chip reset" *ngIf="moduleFilter !== 'all'" (click)="moduleFilter = 'all'">
+            <strong>Tous</strong>
+            <span>Reinitialiser</span>
+            <small>Afficher tous les modules</small>
         </button>
     </div>
 
@@ -74,7 +96,8 @@
                 </div>
                 <p>{{ workflow.nextAction }}</p>
                 <div class="workflow-row-meta">
-                    <span>{{ workflow.priority || 'Normale' }}</span>
+                    <span>{{ workflow.module || workflow.channel }}</span>
+                    <span>{{ workflow.process || workflow.scope }}</span>
                     <span>{{ workflow.completedApprovals || 0 }}/{{ workflow.requiredApprovals || workflow.stages.length }}</span>
                     <span>{{ workflow.dueDate | date:'shortDate' }}</span>
                 </div>
@@ -89,7 +112,7 @@
         <section class="approval-detail" *ngIf="selectedWorkflow as workflow; else selectWorkflowPrompt">
             <div class="detail-header">
                 <div>
-                    <span class="eyebrow">{{ workflow.channel }}</span>
+                    <span class="eyebrow">{{ workflow.module || workflow.channel }}</span>
                     <h2>{{ workflow.name }}</h2>
                     <p>{{ workflow.scope }}</p>
                 </div>
@@ -106,12 +129,20 @@
                     <strong>{{ workflow.dueDate | date:'shortDate' }}</strong>
                 </div>
                 <div>
-                    <span>Documents</span>
-                    <strong>{{ workflow.totalDocuments }}</strong>
+                    <span>Processus</span>
+                    <strong>{{ workflow.process || workflow.scope || 'Non renseigne' }}</strong>
                 </div>
                 <div>
-                    <span>Recents</span>
-                    <strong>{{ workflow.recentDocuments }}</strong>
+                    <span>Responsable</span>
+                    <strong>{{ workflow.owner || 'Non renseigne' }}</strong>
+                </div>
+                <div>
+                    <span>Affecte a</span>
+                    <strong>{{ workflow.assignedTo || 'Non assigne' }}</strong>
+                </div>
+                <div>
+                    <span>Objet</span>
+                    <strong>{{ workflow.totalDocuments }}</strong>
                 </div>
             </div>
 
@@ -128,9 +159,12 @@
             <div class="workflow-info">
                 <strong>{{ workflow.type || 'Approbation sequentielle standard' }}</strong>
                 <p>{{ workflow.escalation }}</p>
+                <small *ngIf="workflow.sourceType && workflow.sourceType !== 'document'">
+                    Les actions de validation se font dans le module source: {{ workflow.module }} #{{ workflow.sourceId }}.
+                </small>
             </div>
 
-            <div class="decision-panel">
+            <div class="decision-panel" *ngIf="workflow.actionable !== false">
                 <label>
                     <span>Commentaire de decision</span>
                     <textarea [(ngModel)]="decisionComment" rows="3" placeholder="Ajouter le motif de validation, rejet ou demande de correction"></textarea>

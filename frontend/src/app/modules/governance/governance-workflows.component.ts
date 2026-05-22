@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { GovernanceApprovalWorkflow, GovernanceService } from './governance.service';
-import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
+import { getGovernanceNavItems, getStoredGovernanceRole } from './governance-navigation';
 
 @Component({
   selector: 'app-governance-workflows',
@@ -9,7 +9,7 @@ import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
   styleUrls: ['./governance-workflows.component.scss']
 })
 export class GovernanceWorkflowsComponent implements OnInit {
-  readonly navItems = GOVERNANCE_NAV_ITEMS;
+  readonly navItems = getGovernanceNavItems(getStoredGovernanceRole());
   readonly statusOptions = [
     { value: 'all', label: 'Tous' },
     { value: 'en_cours', label: 'En cours' },
@@ -23,6 +23,7 @@ export class GovernanceWorkflowsComponent implements OnInit {
   selectedWorkflow: GovernanceApprovalWorkflow | null = null;
   searchTerm = '';
   statusFilter = 'all';
+  moduleFilter = 'all';
   decisionComment = '';
   processingWorkflowId: string | null = null;
   isLoading = false;
@@ -61,6 +62,26 @@ export class GovernanceWorkflowsComponent implements OnInit {
     return this.workflows.reduce((sum, workflow) => sum + workflow.totalDocuments, 0);
   }
 
+  get moduleOptions(): string[] {
+    return Array.from(new Set(this.workflows.map(workflow => workflow.module || workflow.channel).filter(Boolean) as string[])).sort();
+  }
+
+  get moduleSummaries(): Array<{ module: string; total: number; late: number; progress: number }> {
+    return this.moduleOptions.map(module => {
+      const items = this.workflows.filter(workflow => (workflow.module || workflow.channel) === module);
+      const progress = items.length
+        ? Math.round(items.reduce((sum, workflow) => sum + this.getProgress(workflow), 0) / items.length)
+        : 0;
+
+      return {
+        module,
+        total: items.length,
+        late: items.filter(workflow => workflow.status === 'en_retard').length,
+        progress
+      };
+    });
+  }
+
   get recentDocuments(): number {
     return this.workflows.reduce((sum, workflow) => sum + workflow.recentDocuments, 0);
   }
@@ -74,6 +95,7 @@ export class GovernanceWorkflowsComponent implements OnInit {
 
     return this.workflows
       .filter(workflow => this.statusFilter === 'all' || workflow.status === this.statusFilter)
+      .filter(workflow => this.moduleFilter === 'all' || (workflow.module || workflow.channel) === this.moduleFilter)
       .filter(workflow => {
         if (!search) {
           return true;
@@ -83,6 +105,13 @@ export class GovernanceWorkflowsComponent implements OnInit {
           workflow.name,
           workflow.scope,
           workflow.channel,
+          workflow.module,
+          workflow.process,
+          workflow.macroProcess,
+          workflow.sourceType,
+          workflow.sourceId,
+          workflow.owner,
+          workflow.assignedTo,
           workflow.priority,
           workflow.status,
           workflow.nextAction
@@ -163,7 +192,7 @@ export class GovernanceWorkflowsComponent implements OnInit {
   }
 
   canAct(workflow: GovernanceApprovalWorkflow | null): boolean {
-    return !!workflow && workflow.status !== 'approuve' && workflow.status !== 'rejete' && this.processingWorkflowId !== workflow.id;
+    return !!workflow && workflow.actionable !== false && workflow.status !== 'approuve' && workflow.status !== 'rejete' && this.processingWorkflowId !== workflow.id;
   }
 
   approveSelectedWorkflow(): void {
@@ -184,9 +213,11 @@ export class GovernanceWorkflowsComponent implements OnInit {
 
   exportWorkflows(): void {
     const rows = [
-      ['Workflow', 'Statut', 'Priorite', 'Progression', 'Documents', 'En attente', 'Echeance', 'Prochaine action'],
+      ['Module', 'Workflow', 'Processus', 'Statut', 'Priorite', 'Progression', 'Objets', 'En attente', 'Echeance', 'Prochaine action'],
       ...this.filteredWorkflows.map(workflow => [
+        workflow.module || workflow.channel,
         workflow.name,
+        workflow.process || workflow.scope,
         this.getStatusLabel(workflow),
         workflow.priority || '',
         `${this.getProgress(workflow)}%`,
@@ -236,8 +267,8 @@ export class GovernanceWorkflowsComponent implements OnInit {
     });
   }
 
-  private normalize(value?: string | null): string {
-    return (value || '')
+  private normalize(value?: unknown): string {
+    return (value == null ? '' : String(value))
       .toString()
       .trim()
       .toLowerCase()

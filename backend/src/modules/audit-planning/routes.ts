@@ -16,6 +16,7 @@ const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'
 const auditDivisionManagerRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
 const auditPlanningOperationalRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
 const auditPlanReadRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN];
+const auditMissionListReadRoles = [...auditPlanReadRoles, UserRole.RISK_MANAGER, UserRole.RISK_AGENT];
 
 const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
@@ -272,7 +273,7 @@ router.get('/plans/:id/export', authorizeRoles(...auditPlanReadRoles), async (re
     }
 });
 
-router.get('/missions', authorizeRoles(...auditPlanReadRoles), async (req: AuthRequest, res) => {
+router.get('/missions', authorizeRoles(...auditMissionListReadRoles), async (req: AuthRequest, res) => {
     try {
         const requestedType = typeof req.query?.type === 'string' && req.query.type.trim()
             ? String(req.query.type)

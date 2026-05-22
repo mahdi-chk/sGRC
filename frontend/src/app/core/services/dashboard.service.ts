@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { getControlsDashboardSubmodules } from '../../modules/controls/controls-navigation';
 import { getActionsDashboardSubmodules } from '../../modules/actions/actions-navigation';
 import { getComplianceDashboardSubmodules } from '../../modules/compliance/compliance-navigation';
+import { ALL_GOVERNANCE_ROLES, getGovernanceDashboardSubmodules } from '../../modules/governance/governance-navigation';
 import { getSupervisionDashboardSubmodules } from '../../modules/supervision/supervision-navigation';
 
 export interface Submodule {
@@ -43,7 +44,7 @@ export class DashboardService {
                 { title: 'Indicateurs de Maturite', desc: 'Scoring base sur COBIT et ISO.' },
                 { title: 'Adhesion et Application', desc: 'Preuves d adhesion et suivi d application.' }
             ],
-            roles: [UserRole.SUPER_ADMIN]
+            roles: ALL_GOVERNANCE_ROLES
         },
         {
             key: 'risques',
@@ -185,8 +186,10 @@ export class DashboardService {
             m.roles && m.roles.some(r => r.toString() === roleStr)
         ).map(module => ({
             ...module,
-                submodules: module.key === 'controls'
-                ? getControlsDashboardSubmodules(roleStr)
+                submodules: module.key === 'gouvernance'
+                    ? getGovernanceDashboardSubmodules(roleStr)
+                : module.key === 'controls'
+                    ? getControlsDashboardSubmodules(roleStr)
                 : module.key === 'conformite'
                     ? getComplianceDashboardSubmodules(roleStr)
                 : module.key === 'plans-actions'

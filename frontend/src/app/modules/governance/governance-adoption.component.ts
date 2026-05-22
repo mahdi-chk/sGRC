@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AuditingService, AuditMission, AuditMissionStatus } from '../../core/services/auditing.service';
 import { Risk, RiskService, RiskStatus } from '../../core/services/risk.service';
-import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
+import { getGovernanceNavItems, getStoredGovernanceRole } from './governance-navigation';
 
 @Component({
   selector: 'app-governance-adoption',
@@ -11,7 +11,7 @@ import { GOVERNANCE_NAV_ITEMS } from './governance-navigation';
   styleUrls: ['./governance-adoption.component.scss']
 })
 export class GovernanceAdoptionComponent implements OnInit {
-  readonly navItems = GOVERNANCE_NAV_ITEMS;
+  readonly navItems = getGovernanceNavItems(getStoredGovernanceRole());
   risks: Risk[] = [];
   missions: AuditMission[] = [];
   isLoading = false;

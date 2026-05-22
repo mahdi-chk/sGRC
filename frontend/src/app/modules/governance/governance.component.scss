@@ -26,3 +26,79 @@
   margin: 6px 0 0;
   color: #64748b;
 }
+
+.traceability-card {
+  display: grid;
+  gap: 14px;
+}
+
+.traceability-list {
+  display: grid;
+  gap: 12px;
+}
+
+.traceability-profile {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.profile-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.profile-head strong {
+  display: block;
+  color: #1e293b;
+}
+
+.profile-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.profile-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-kpis div {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.profile-kpis span,
+.member-chip small {
+  display: block;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.profile-kpis strong {
+  color: #0f172a;
+}
+
+.member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-chip {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 0.8rem;
+}

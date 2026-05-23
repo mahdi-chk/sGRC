@@ -17,7 +17,9 @@ const ALL_CONTROLS_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT,
-  UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.TOP_MANAGEMENT,
   UserRole.CONTROLLER
 ];
@@ -26,16 +28,30 @@ const EVIDENCE_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT,
-  UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.CONTROLLER
 ];
 
 const EFFECTIVENESS_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
-  UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.TOP_MANAGEMENT,
   UserRole.CONTROLLER
+];
+
+const EVALUATION_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.CONTROLLER,
+  UserRole.TOP_MANAGEMENT,
+  UserRole.RISK_MANAGER,
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION
 ];
 
 export const CONTROLS_NAV_ITEMS: ControlsNavItem[] = [
@@ -58,7 +74,7 @@ export const CONTROLS_NAV_ITEMS: ControlsNavItem[] = [
     roles: EVIDENCE_ROLES
   },
   {
-    label: 'Evaluation d Efficacite',
+    label: 'Efficacite des Controles',
     route: '/dashboard/controls-effectiveness',
     description: 'Mesure de la recurrence des incidents apres mise en oeuvre.',
     roles: EFFECTIVENESS_ROLES
@@ -68,6 +84,12 @@ export const CONTROLS_NAV_ITEMS: ControlsNavItem[] = [
     route: '/dashboard/controls-non-conformities',
     description: 'Traitement continu des ecarts detectes apres execution.',
     roles: ALL_CONTROLS_ROLES
+  },
+  {
+    label: 'Campagnes d Evaluation',
+    route: '/dashboard/control-evaluations',
+    description: 'Campagnes d evaluation, criteres, deficiences et conclusion globale.',
+    roles: EVALUATION_ROLES
   }
 ];
 

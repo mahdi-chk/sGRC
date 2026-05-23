@@ -124,6 +124,11 @@ try {
 } catch (_error) {}
 
 try {
+    const controlEvaluations = require('./modules/control-evaluations').router;
+    app.use('/api/control-evaluations', controlEvaluations);
+} catch (_error) {}
+
+try {
     const compliance = require('./modules/compliance').router;
     app.use('/api/compliance', compliance);
 } catch (_error) {}

@@ -1,0 +1,220 @@
+<div class="controls-workspace">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <h1><i class="fas fa-clipboard-check"></i> Campagnes d evaluation</h1>
+                <p>Campagnes, criteres, deficiences et conclusion globale du dispositif de controle interne.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-refresh" (click)="loadInitialData()" [disabled]="isLoading">
+                <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+                Actualiser
+            </button>
+        </div>
+    </div>
+
+    <nav class="controls-tabs">
+        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="controls-tab">
+            {{ item.label }}
+        </a>
+    </nav>
+
+    <div class="empty-state" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <div class="section-grid">
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Campagnes</h2>
+                <p>Evaluation par perimetre, objectif et periode.</p>
+            </div>
+
+            <form class="evaluation-form" *ngIf="canWrite" (ngSubmit)="createCampaign()">
+                <input class="finput" name="title" [(ngModel)]="campaignForm.title" placeholder="Titre de la campagne" maxlength="255">
+                <div class="form-grid">
+                    <select class="finput" name="objectiveType" [(ngModel)]="campaignForm.objectiveType">
+                        <option *ngFor="let option of objectiveOptions" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <select class="finput" name="scopeType" [(ngModel)]="campaignForm.scopeType">
+                        <option *ngFor="let option of scopeOptions" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                </div>
+                <input class="finput" name="scopeLabel" [(ngModel)]="campaignForm.scopeLabel" placeholder="Perimetre evalue">
+                <textarea class="finput" name="riskTolerance" [(ngModel)]="campaignForm.riskTolerance" rows="3" placeholder="Tolerance au risque / criteres de jugement"></textarea>
+                <div class="form-grid">
+                    <input class="finput" name="dueDate" type="date" [(ngModel)]="campaignForm.dueDate">
+                    <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                        <i class="fas fa-plus"></i>
+                        Creer
+                    </button>
+                </div>
+            </form>
+
+            <div class="module-list campaign-list">
+                <button type="button" class="module-link campaign-button" *ngFor="let campaign of campaigns" (click)="selectCampaign(campaign)" [class.active]="selectedCampaign?.id === campaign.id">
+                    <strong>{{ campaign.title }}</strong>
+                    <p>{{ campaign.objectiveType }} | {{ campaign.scopeType }} | {{ campaign.scopeLabel || 'Perimetre global' }}</p>
+                    <span class="campaign-meta">
+                        {{ campaign.summary.assessedCount }}/{{ campaign.summary.assessmentCount }} criteres
+                        | {{ campaign.summary.deficiencyCount }} deficience(s)
+                        | {{ campaign.summary.averageScore }}%
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-card" *ngIf="selectedCampaign as campaign">
+            <div class="card-head">
+                <h2>{{ campaign.title }}</h2>
+                <p>{{ campaign.status }} | Echeance : {{ formatDate(campaign.dueDate) }}</p>
+            </div>
+
+            <div class="summary-grid compact-summary">
+                <div class="summary-card">
+                    <span class="eyebrow">Score</span>
+                    <h3 [ngClass]="getToneClass(campaign.summary.averageScore)">{{ campaign.summary.averageScore }}%</h3>
+                    <p>Moyenne des criteres evalues.</p>
+                </div>
+                <div class="summary-card">
+                    <span class="eyebrow">Criteres</span>
+                    <h3>{{ campaign.summary.assessedCount }}/{{ campaign.summary.assessmentCount }}</h3>
+                    <p>Avancement de l evaluation.</p>
+                </div>
+                <div class="summary-card">
+                    <span class="eyebrow">Deficiences</span>
+                    <h3>{{ campaign.summary.deficiencyCount }}</h3>
+                    <p>{{ campaign.summary.majorDeficiencyCount }} majeure(s).</p>
+                </div>
+            </div>
+
+            <div class="conclusion-bar" *ngIf="campaign.summary.lastConclusion">
+                <strong>Conclusion</strong>
+                <span>{{ campaign.summary.lastConclusion.result }} | {{ campaign.summary.lastConclusion.score }}%</span>
+            </div>
+
+            <button class="btn-refresh primary-action" type="button" *ngIf="canValidate" (click)="validateConclusion()" [disabled]="isSaving">
+                <i class="fas fa-check-double"></i>
+                Valider la conclusion
+            </button>
+        </div>
+    </div>
+
+    <div class="table-card" *ngIf="selectedCampaign">
+        <div class="card-head">
+            <h2>Criteres d evaluation</h2>
+            <p>Chaque critere conserve la conclusion de mise en place, de fonctionnement, le score et la justification.</p>
+        </div>
+
+        <table class="controls-table evaluation-table">
+            <thead>
+                <tr>
+                    <th>Critere</th>
+                    <th>Mise en place</th>
+                    <th>Fonctionne</th>
+                    <th>Resultat</th>
+                    <th>Score</th>
+                    <th>Justification</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let assessment of assessments">
+                    <td>
+                        <strong>{{ assessment.principle?.code }} - {{ assessment.principle?.title }}</strong>
+                        <small>{{ assessment.component?.title }}</small>
+                    </td>
+                    <td>
+                        <select class="finput compact-input" [(ngModel)]="assessment.implementationAnswerCode" [disabled]="!canWrite">
+                            <option *ngFor="let option of answerOptions" [value]="option.code">{{ option.label }}</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="finput compact-input" [(ngModel)]="assessment.operatingAnswerCode" [disabled]="!canWrite">
+                            <option *ngFor="let option of answerOptions" [value]="option.code">{{ option.label }}</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="finput compact-input" [(ngModel)]="assessment.resultCode" [disabled]="!canWrite">
+                            <option *ngFor="let option of resultOptions" [value]="option.code">{{ option.label }}</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input class="finput score-input" type="number" min="0" max="100" [(ngModel)]="assessment.score" [disabled]="!canWrite">
+                    </td>
+                    <td>
+                        <textarea class="finput justification-input" rows="2" [(ngModel)]="assessment.justification" [disabled]="!canWrite"></textarea>
+                    </td>
+                    <td>
+                        <button class="icon-action" type="button" *ngIf="canWrite" (click)="saveAssessment(assessment)" title="Sauvegarder">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button class="icon-action warn" type="button" *ngIf="canWrite" (click)="openDeficiencyForm(assessment)" title="Ajouter deficience">
+                            <i class="fas fa-triangle-exclamation"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section-grid" *ngIf="selectedCampaign">
+        <div class="content-card" *ngIf="canWrite">
+            <div class="card-head">
+                <h2>Nouvelle deficience</h2>
+                <p>Rattachement direct au critere selectionne.</p>
+            </div>
+
+            <form class="evaluation-form" (ngSubmit)="createDeficiency()">
+                <input class="finput" name="defTitle" [(ngModel)]="deficiencyForm.title" placeholder="Titre de la deficience">
+                <div class="form-grid">
+                    <select class="finput" name="defSeverity" [(ngModel)]="deficiencyForm.severity">
+                        <option *ngFor="let option of severityOptions" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <input class="finput" name="defDueDate" type="date" [(ngModel)]="deficiencyForm.dueDate">
+                </div>
+                <label class="check-line">
+                    <input type="checkbox" name="defMajor" [(ngModel)]="deficiencyForm.isMajor">
+                    Deficience majeure
+                </label>
+                <textarea class="finput" name="defImpact" [(ngModel)]="deficiencyForm.impact" rows="3" placeholder="Impact"></textarea>
+                <textarea class="finput" name="defAction" [(ngModel)]="deficiencyForm.correctiveAction" rows="3" placeholder="Action corrective"></textarea>
+                <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                    <i class="fas fa-plus"></i>
+                    Ajouter
+                </button>
+            </form>
+        </div>
+
+        <div class="content-card">
+            <div class="card-head">
+                <h2>Synthese des deficiences</h2>
+                <p>Registre consolide de la campagne.</p>
+            </div>
+
+            <div class="nonconformity-list" *ngIf="deficiencies.length > 0; else noDeficiencies">
+                <article class="nonconformity-item" *ngFor="let item of deficiencies">
+                    <div class="nonconformity-head">
+                        <div>
+                            <span class="eyebrow">{{ item.severity }} | {{ item.status }}</span>
+                            <h3>{{ item.title }}</h3>
+                        </div>
+                        <span class="tag" *ngIf="item.isMajor">Majeure</span>
+                    </div>
+                    <p>{{ item.component?.title || 'Composante non renseignee' }} | {{ item.principle?.code || 'Critere libre' }}</p>
+                    <p class="followup-action">{{ item.correctiveAction || 'Action corrective a definir' }}</p>
+                    <div class="nonconformity-meta">
+                        <span>{{ item.impact || 'Impact a qualifier' }}</span>
+                        <span>{{ formatDate(item.dueDate) }}</span>
+                    </div>
+                </article>
+            </div>
+
+            <ng-template #noDeficiencies>
+                <div class="empty-state">Aucune deficience declaree pour cette campagne.</div>
+            </ng-template>
+        </div>
+    </div>
+</div>

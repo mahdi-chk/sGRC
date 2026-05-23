@@ -1,0 +1,169 @@
+@import './controls-shared';
+
+.evaluation-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.controls-tabs {
+  width: 100%;
+  align-items: center;
+}
+
+.controls-tab {
+  white-space: nowrap;
+}
+
+.finput {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--controls-line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--controls-ink);
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.finput:focus {
+  border-color: rgba(15, 76, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(15, 76, 129, 0.1);
+}
+
+textarea.finput {
+  min-height: 84px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+select.finput {
+  cursor: pointer;
+}
+
+.content-card {
+  border-radius: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.primary-action {
+  justify-content: center;
+  min-height: 40px;
+}
+
+.campaign-list {
+  margin-top: 1rem;
+}
+
+.campaign-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.campaign-button.active {
+  border-color: var(--controls-accent);
+  background: var(--controls-accent-soft);
+}
+
+.campaign-meta {
+  color: var(--controls-muted);
+  font-size: 0.82rem;
+}
+
+.compact-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.conclusion-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--controls-line);
+  background: rgba(255, 255, 255, 0.72);
+  margin-bottom: 1rem;
+}
+
+.evaluation-table th,
+.evaluation-table td {
+  vertical-align: top;
+}
+
+.compact-input {
+  min-width: 132px;
+}
+
+.score-input {
+  width: 82px;
+}
+
+.justification-input {
+  min-width: 220px;
+  resize: vertical;
+}
+
+.icon-action {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--controls-line);
+  background: #fff;
+  color: var(--controls-accent);
+  margin-right: 0.35rem;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.icon-action.warn {
+  color: var(--controls-watch);
+}
+
+.check-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--controls-ink);
+  font-weight: 700;
+}
+
+.tone-strong {
+  color: var(--controls-good);
+}
+
+.tone-watch {
+  color: var(--controls-watch);
+}
+
+.tone-alert {
+  color: var(--controls-alert);
+}
+
+@media (max-width: 900px) {
+  .form-grid,
+  .compact-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluation-table {
+    min-width: 980px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .controls-tab {
+    padding: 9px 12px;
+    font-size: 0.9rem;
+  }
+}

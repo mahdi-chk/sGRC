@@ -68,6 +68,7 @@ import { ControlsPlanningComponent } from './modules/controls/controls-planning.
 import { ControlsEvidenceComponent } from './modules/controls/controls-evidence.component';
 import { ControlsEffectivenessComponent } from './modules/controls/controls-effectiveness.component';
 import { ControlsNonConformitiesComponent } from './modules/controls/controls-non-conformities.component';
+import { ControlEvaluationsComponent } from './modules/controls/control-evaluations.component';
 import { getControlsRolesByRoute } from './modules/controls/controls-navigation';
 import { getComplianceRolesByRoute } from './modules/compliance/compliance-navigation';
 import { getGovernanceRolesByRoute } from './modules/governance/governance-navigation';
@@ -123,6 +124,7 @@ const routes: Routes = [
       { path: 'controls-evidence', component: ControlsEvidenceComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-evidence') } },
       { path: 'controls-effectiveness', component: ControlsEffectivenessComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-effectiveness') } },
       { path: 'controls-non-conformities', component: ControlsNonConformitiesComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/controls-non-conformities') } },
+      { path: 'control-evaluations', component: ControlEvaluationsComponent, data: { expectedRoles: getControlsRolesByRoute('/dashboard/control-evaluations') } },
       { path: 'compliance', component: ComplianceComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance') } },
       { path: 'compliance-frameworks', component: ComplianceFrameworksComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-frameworks') } },
       { path: 'compliance-maturity', component: ComplianceMaturityComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-maturity') } },

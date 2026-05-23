@@ -691,6 +691,211 @@
         { "id": 4, "symbol": "RESTORE", "code": "restore", "label": "Restauration", "sortOrder": 4 },
         { "id": 5, "symbol": "SEED_UPSERT", "code": "seed_upsert", "label": "Initialisation", "sortOrder": 5 }
       ]
+    },
+    {
+      "key": "controlEvaluationCampaign.status",
+      "entityKey": "controlEvaluationCampaign",
+      "entityTable": "control_evaluation_campaigns",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "control_evaluation_campaign_statuses",
+      "lookupModelName": "ControlEvaluationCampaignStatusLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "DRAFT", "code": "draft", "label": "Brouillon", "sortOrder": 1 },
+        { "id": 2, "symbol": "IN_PROGRESS", "code": "in_progress", "label": "En cours", "sortOrder": 2 },
+        { "id": 3, "symbol": "SUBMITTED", "code": "submitted", "label": "Soumise", "sortOrder": 3 },
+        { "id": 4, "symbol": "VALIDATED", "code": "validated", "label": "Validee", "sortOrder": 4 },
+        { "id": 5, "symbol": "CLOSED", "code": "closed", "label": "Cloturee", "sortOrder": 5 },
+        { "id": 6, "symbol": "CANCELLED", "code": "cancelled", "label": "Annulee", "sortOrder": 6 }
+      ]
+    },
+    {
+      "key": "controlEvaluationCampaign.objectiveType",
+      "entityKey": "controlEvaluationCampaign",
+      "entityTable": "control_evaluation_campaigns",
+      "fieldName": "objectiveType",
+      "foreignKey": "objectiveTypeId",
+      "foreignKeyColumn": "objective_type_id",
+      "associationAlias": "objectiveTypeLookup",
+      "lookupTable": "control_evaluation_objective_types",
+      "lookupModelName": "ControlEvaluationObjectiveTypeLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "OPERATIONS", "code": "operations", "label": "Operations", "sortOrder": 1 },
+        { "id": 2, "symbol": "REPORTING", "code": "reporting", "label": "Reporting", "sortOrder": 2 },
+        { "id": 3, "symbol": "COMPLIANCE", "code": "compliance", "label": "Conformite", "sortOrder": 3 },
+        { "id": 4, "symbol": "COMBINED", "code": "combined", "label": "Combine", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "controlEvaluationCampaign.scopeType",
+      "entityKey": "controlEvaluationCampaign",
+      "entityTable": "control_evaluation_campaigns",
+      "fieldName": "scopeType",
+      "foreignKey": "scopeTypeId",
+      "foreignKeyColumn": "scope_type_id",
+      "associationAlias": "scopeTypeLookup",
+      "lookupTable": "control_evaluation_scope_types",
+      "lookupModelName": "ControlEvaluationScopeTypeLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "ENTITY", "code": "entity", "label": "Entite", "sortOrder": 1 },
+        { "id": 2, "symbol": "DEPARTMENT", "code": "department", "label": "Departement", "sortOrder": 2 },
+        { "id": 3, "symbol": "PROCESS", "code": "process", "label": "Processus", "sortOrder": 3 },
+        { "id": 4, "symbol": "FUNCTION", "code": "function", "label": "Fonction", "sortOrder": 4 },
+        { "id": 5, "symbol": "SITE", "code": "site", "label": "Site", "sortOrder": 5 }
+      ]
+    },
+    {
+      "key": "controlPrincipleAssessment.implementationAnswer",
+      "entityKey": "controlPrincipleAssessment",
+      "entityTable": "control_principle_assessments",
+      "fieldName": "implementationAnswer",
+      "foreignKey": "implementationAnswerId",
+      "foreignKeyColumn": "implementation_answer_id",
+      "associationAlias": "implementationAnswerLookup",
+      "lookupTable": "control_assessment_answers",
+      "lookupModelName": "ControlAssessmentAnswerLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "YES", "code": "yes", "label": "Oui", "sortOrder": 1 },
+        { "id": 2, "symbol": "PARTIAL", "code": "partial", "label": "Partiel", "sortOrder": 2 },
+        { "id": 3, "symbol": "NO", "code": "no", "label": "Non", "sortOrder": 3 },
+        { "id": 4, "symbol": "NOT_APPLICABLE", "code": "not_applicable", "label": "Non applicable", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "controlPrincipleAssessment.operatingAnswer",
+      "entityKey": "controlPrincipleAssessment",
+      "entityTable": "control_principle_assessments",
+      "fieldName": "operatingAnswer",
+      "foreignKey": "operatingAnswerId",
+      "foreignKeyColumn": "operating_answer_id",
+      "associationAlias": "operatingAnswerLookup",
+      "lookupTable": "control_assessment_answers",
+      "lookupModelName": "ControlOperatingAnswerLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "YES", "code": "yes", "label": "Oui", "sortOrder": 1 },
+        { "id": 2, "symbol": "PARTIAL", "code": "partial", "label": "Partiel", "sortOrder": 2 },
+        { "id": 3, "symbol": "NO", "code": "no", "label": "Non", "sortOrder": 3 },
+        { "id": 4, "symbol": "NOT_APPLICABLE", "code": "not_applicable", "label": "Non applicable", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "controlPrincipleAssessment.result",
+      "entityKey": "controlPrincipleAssessment",
+      "entityTable": "control_principle_assessments",
+      "fieldName": "result",
+      "foreignKey": "resultId",
+      "foreignKeyColumn": "result_id",
+      "associationAlias": "resultLookup",
+      "lookupTable": "control_assessment_results",
+      "lookupModelName": "ControlAssessmentResultLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "EFFECTIVE", "code": "effective", "label": "Efficace", "sortOrder": 1 },
+        { "id": 2, "symbol": "PARTIALLY_EFFECTIVE", "code": "partially_effective", "label": "Partiellement efficace", "sortOrder": 2 },
+        { "id": 3, "symbol": "INEFFECTIVE", "code": "ineffective", "label": "Inefficace", "sortOrder": 3 },
+        { "id": 4, "symbol": "NOT_ASSESSED", "code": "not_assessed", "label": "Non evalue", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "controlDeficiency.severity",
+      "entityKey": "controlDeficiency",
+      "entityTable": "control_deficiencies",
+      "fieldName": "severity",
+      "foreignKey": "severityId",
+      "foreignKeyColumn": "severity_id",
+      "associationAlias": "severityLookup",
+      "lookupTable": "control_deficiency_severities",
+      "lookupModelName": "ControlDeficiencySeverityLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "LOW", "code": "low", "label": "Faible", "sortOrder": 1 },
+        { "id": 2, "symbol": "MEDIUM", "code": "medium", "label": "Moyenne", "sortOrder": 2 },
+        { "id": 3, "symbol": "HIGH", "code": "high", "label": "Elevee", "sortOrder": 3 },
+        { "id": 4, "symbol": "CRITICAL", "code": "critical", "label": "Critique", "sortOrder": 4 },
+        { "id": 5, "symbol": "MAJOR", "code": "major", "label": "Majeure", "sortOrder": 5 }
+      ]
+    },
+    {
+      "key": "controlDeficiency.status",
+      "entityKey": "controlDeficiency",
+      "entityTable": "control_deficiencies",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "control_deficiency_statuses",
+      "lookupModelName": "ControlDeficiencyStatusLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "OPEN", "code": "open", "label": "Ouverte", "sortOrder": 1 },
+        { "id": 2, "symbol": "IN_PROGRESS", "code": "in_progress", "label": "En traitement", "sortOrder": 2 },
+        { "id": 3, "symbol": "REMEDIATED", "code": "remediated", "label": "Corrigee", "sortOrder": 3 },
+        { "id": 4, "symbol": "ACCEPTED", "code": "accepted", "label": "Acceptee", "sortOrder": 4 },
+        { "id": 5, "symbol": "CLOSED", "code": "closed", "label": "Cloturee", "sortOrder": 5 }
+      ]
+    },
+    {
+      "key": "controlCompensatingMeasure.status",
+      "entityKey": "controlCompensatingMeasure",
+      "entityTable": "control_compensating_measures",
+      "fieldName": "status",
+      "foreignKey": "statusId",
+      "foreignKeyColumn": "status_id",
+      "associationAlias": "statusLookup",
+      "lookupTable": "control_compensating_measure_statuses",
+      "lookupModelName": "ControlCompensatingMeasureStatusLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "PROPOSED", "code": "proposed", "label": "Proposee", "sortOrder": 1 },
+        { "id": 2, "symbol": "ACTIVE", "code": "active", "label": "Active", "sortOrder": 2 },
+        { "id": 3, "symbol": "VERIFIED", "code": "verified", "label": "Verifiee", "sortOrder": 3 },
+        { "id": 4, "symbol": "REJECTED", "code": "rejected", "label": "Rejetee", "sortOrder": 4 }
+      ]
+    },
+    {
+      "key": "controlEvaluationEvidence.sourceType",
+      "entityKey": "controlEvaluationEvidence",
+      "entityTable": "control_evaluation_evidence",
+      "fieldName": "sourceType",
+      "foreignKey": "sourceTypeId",
+      "foreignKeyColumn": "source_type_id",
+      "associationAlias": "sourceTypeLookup",
+      "lookupTable": "control_evidence_source_types",
+      "lookupModelName": "ControlEvidenceSourceTypeLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "DOCUMENT", "code": "document", "label": "Document", "sortOrder": 1 },
+        { "id": 2, "symbol": "AUDIT", "code": "audit", "label": "Audit", "sortOrder": 2 },
+        { "id": 3, "symbol": "INCIDENT", "code": "incident", "label": "Incident", "sortOrder": 3 },
+        { "id": 4, "symbol": "RISK", "code": "risk", "label": "Risque", "sortOrder": 4 },
+        { "id": 5, "symbol": "MANUAL", "code": "manual", "label": "Manuel", "sortOrder": 5 },
+        { "id": 6, "symbol": "SYSTEM_EXPORT", "code": "system_export", "label": "Export systeme", "sortOrder": 6 }
+      ]
+    },
+    {
+      "key": "controlEvaluationConclusion.result",
+      "entityKey": "controlEvaluationConclusion",
+      "entityTable": "control_evaluation_conclusions",
+      "fieldName": "result",
+      "foreignKey": "resultId",
+      "foreignKeyColumn": "result_id",
+      "associationAlias": "resultLookup",
+      "lookupTable": "control_conclusion_results",
+      "lookupModelName": "ControlConclusionResultLookup",
+      "allowNull": false,
+      "values": [
+        { "id": 1, "symbol": "EFFECTIVE", "code": "effective", "label": "Efficace", "sortOrder": 1 },
+        { "id": 2, "symbol": "EFFECTIVE_WITH_RESERVATIONS", "code": "effective_with_reservations", "label": "Efficace avec reserves", "sortOrder": 2 },
+        { "id": 3, "symbol": "PARTIALLY_EFFECTIVE", "code": "partially_effective", "label": "Partiellement efficace", "sortOrder": 3 },
+        { "id": 4, "symbol": "INEFFECTIVE", "code": "ineffective", "label": "Inefficace", "sortOrder": 4 }
+      ]
     }
   ]
 }

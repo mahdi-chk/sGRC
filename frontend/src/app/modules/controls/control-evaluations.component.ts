@@ -41,6 +41,16 @@ export class ControlEvaluationsComponent implements OnInit {
     riskTolerance: ''
   };
 
+  campaignEditForm = {
+    title: '',
+    objectiveType: 'combined',
+    scopeType: 'entity',
+    scopeLabel: '',
+    dueDate: '',
+    riskTolerance: '',
+    status: 'draft'
+  };
+
   deficiencyForm = {
     assessmentId: null as number | null,
     title: '',
@@ -114,7 +124,8 @@ export class ControlEvaluationsComponent implements OnInit {
     this.isLoading = true;
     this.evaluationsService.getCampaign(campaign.id).subscribe({
       next: detail => {
-        this.selectedCampaign = detail;
+        this.selectedCampaign = this.normalizeCampaign(detail);
+        this.fillCampaignEditForm(this.selectedCampaign);
         this.isLoading = false;
       },
       error: error => {
@@ -134,8 +145,10 @@ export class ControlEvaluationsComponent implements OnInit {
     this.errorMessage = '';
     this.evaluationsService.createCampaign(this.campaignForm).subscribe({
       next: campaign => {
-        this.campaigns = [campaign, ...this.campaigns.filter(item => item.id !== campaign.id)];
-        this.selectedCampaign = campaign;
+        const normalized = this.normalizeCampaign(campaign);
+        this.campaigns = [normalized, ...this.campaigns.filter(item => item.id !== campaign.id)];
+        this.selectedCampaign = normalized;
+        this.fillCampaignEditForm(normalized);
         this.campaignForm = {
           title: '',
           objectiveType: 'combined',
@@ -148,6 +161,50 @@ export class ControlEvaluationsComponent implements OnInit {
       },
       error: error => {
         this.errorMessage = error?.error?.message || 'Erreur lors de la creation.';
+        this.isSaving = false;
+      }
+    });
+  }
+
+  updateCampaign(): void {
+    if (!this.selectedCampaign || !this.campaignEditForm.title.trim()) {
+      this.errorMessage = 'Le titre de la campagne est obligatoire.';
+      return;
+    }
+
+    this.isSaving = true;
+    this.evaluationsService.updateCampaign(this.selectedCampaign.id, this.campaignEditForm).subscribe({
+      next: campaign => {
+        const normalized = this.normalizeCampaign(campaign);
+        this.selectedCampaign = normalized;
+        this.refreshCampaignInList(normalized);
+        this.fillCampaignEditForm(normalized);
+        this.isSaving = false;
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de la modification de la campagne.';
+        this.isSaving = false;
+      }
+    });
+  }
+
+  deleteCampaign(campaign: ControlEvaluationCampaign): void {
+    if (!this.canWrite || !window.confirm(`Supprimer la campagne "${campaign.title}" ?`)) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.evaluationsService.deleteCampaign(campaign.id).subscribe({
+      next: () => {
+        this.campaigns = this.campaigns.filter(item => item.id !== campaign.id);
+        this.selectedCampaign = this.campaigns.length > 0 ? this.campaigns[0] : null;
+        if (this.selectedCampaign) {
+          this.selectCampaign(this.selectedCampaign);
+        }
+        this.isSaving = false;
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de la suppression de la campagne.';
         this.isSaving = false;
       }
     });
@@ -167,8 +224,9 @@ export class ControlEvaluationsComponent implements OnInit {
       justification: assessment.justification
     }).subscribe({
       next: campaign => {
-        this.selectedCampaign = campaign;
-        this.refreshCampaignInList(campaign);
+        const normalized = this.normalizeCampaign(campaign);
+        this.selectedCampaign = normalized;
+        this.refreshCampaignInList(normalized);
         this.isSaving = false;
       },
       error: error => {
@@ -195,8 +253,9 @@ export class ControlEvaluationsComponent implements OnInit {
       ...this.deficiencyForm
     }).subscribe({
       next: campaign => {
-        this.selectedCampaign = campaign;
-        this.refreshCampaignInList(campaign);
+        const normalized = this.normalizeCampaign(campaign);
+        this.selectedCampaign = normalized;
+        this.refreshCampaignInList(normalized);
         this.deficiencyForm = {
           assessmentId: null,
           title: '',
@@ -230,8 +289,9 @@ export class ControlEvaluationsComponent implements OnInit {
           justification: 'Conclusion validee depuis le module Evaluation d efficacite.'
         }).subscribe({
           next: campaign => {
-            this.selectedCampaign = campaign;
-            this.refreshCampaignInList(campaign);
+            const normalized = this.normalizeCampaign(campaign);
+            this.selectedCampaign = normalized;
+            this.refreshCampaignInList(normalized);
             this.isSaving = false;
           },
           error: error => {
@@ -273,5 +333,53 @@ export class ControlEvaluationsComponent implements OnInit {
 
   private refreshCampaignInList(campaign: ControlEvaluationCampaign): void {
     this.campaigns = this.campaigns.map(item => item.id === campaign.id ? campaign : item);
+  }
+
+  private fillCampaignEditForm(campaign: ControlEvaluationCampaign): void {
+    this.campaignEditForm = {
+      title: campaign.title || '',
+      objectiveType: campaign.objectiveTypeCode || 'combined',
+      scopeType: campaign.scopeTypeCode || 'entity',
+      scopeLabel: campaign.scopeLabel || '',
+      dueDate: campaign.dueDate ? campaign.dueDate.substring(0, 10) : '',
+      riskTolerance: campaign.riskTolerance || '',
+      status: campaign.statusCode || 'draft'
+    };
+  }
+
+  private normalizeCampaign(campaign: ControlEvaluationCampaign): ControlEvaluationCampaign {
+    const assessments = (campaign.assessments || []).map(assessment => ({
+      ...assessment,
+      implementationAnswerCode: this.resolveOptionCode(this.answerOptions, assessment.implementationAnswerCode, assessment.implementationAnswer, (assessment as any).implementationAnswerId, 'not_applicable'),
+      operatingAnswerCode: this.resolveOptionCode(this.answerOptions, assessment.operatingAnswerCode, assessment.operatingAnswer, (assessment as any).operatingAnswerId, 'not_applicable'),
+      resultCode: this.resolveOptionCode(this.resultOptions, assessment.resultCode, assessment.result, (assessment as any).resultId, 'not_assessed'),
+      justification: assessment.justification || ''
+    }));
+
+    return {
+      ...campaign,
+      statusCode: this.resolveOptionCode(this.statusOptions, campaign.statusCode, campaign.status, (campaign as any).statusId, 'draft'),
+      objectiveTypeCode: this.resolveOptionCode(this.objectiveOptions, campaign.objectiveTypeCode, campaign.objectiveType, (campaign as any).objectiveTypeId, 'combined'),
+      scopeTypeCode: this.resolveOptionCode(this.scopeOptions, campaign.scopeTypeCode, campaign.scopeType, (campaign as any).scopeTypeId, 'entity'),
+      assessments
+    };
+  }
+
+  private resolveOptionCode(options: ControlEvaluationLookupOption[], code: string | null | undefined, label: string | null | undefined, id: number | null | undefined, fallback: string): string {
+    if (code && options.some(option => option.code === code)) {
+      return code;
+    }
+
+    const byId = options.find(option => option.id === id);
+    if (byId) {
+      return byId.code;
+    }
+
+    const normalizedLabel = String(label || '').trim().toLowerCase();
+    const byLabel = options.find(option =>
+      option.label.toLowerCase() === normalizedLabel || option.code.toLowerCase() === normalizedLabel
+    );
+
+    return byLabel?.code || fallback;
   }
 }

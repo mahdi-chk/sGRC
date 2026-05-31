@@ -132,6 +132,14 @@ export class ControlEvaluationsService {
     return this.http.post<ControlEvaluationCampaign>(`${this.apiUrl}/campaigns`, payload);
   }
 
+  updateCampaign(id: number, payload: any): Observable<ControlEvaluationCampaign> {
+    return this.http.put<ControlEvaluationCampaign>(`${this.apiUrl}/campaigns/${id}`, payload);
+  }
+
+  deleteCampaign(id: number): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`${this.apiUrl}/campaigns/${id}`);
+  }
+
   updateAssessment(id: number, payload: any): Observable<ControlEvaluationCampaign> {
     return this.http.put<ControlEvaluationCampaign>(`${this.apiUrl}/assessments/${id}`, payload);
   }

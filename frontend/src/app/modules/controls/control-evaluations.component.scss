@@ -59,24 +59,97 @@ select.finput {
   min-height: 40px;
 }
 
+.full-action {
+  width: 100%;
+}
+
+.validate-action {
+  width: fit-content;
+  margin-top: 0.75rem;
+}
+
 .campaign-list {
   margin-top: 1rem;
 }
 
 .campaign-button {
   width: 100%;
-  text-align: left;
-  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 12px 14px;
+  border-radius: 14px;
 }
 
 .campaign-button.active {
   border-color: var(--controls-accent);
-  background: var(--controls-accent-soft);
+  background: linear-gradient(180deg, #eaf6ff, #dceefa);
+}
+
+.campaign-select {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  gap: 0.25rem;
+  font: inherit;
+  appearance: none;
+}
+
+.campaign-select:focus {
+  outline: none;
+}
+
+.campaign-select:focus-visible {
+  outline: 3px solid rgba(15, 76, 129, 0.16);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.campaign-title {
+  color: var(--controls-ink);
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaign-context {
+  color: var(--controls-muted);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .campaign-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
   color: var(--controls-muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.compact-empty {
+  padding: 14px;
+  margin-top: 1rem;
+}
+
+.edit-campaign-form {
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--controls-line);
+}
+
+.compact-head {
+  margin-bottom: 0;
 }
 
 .compact-summary {
@@ -113,8 +186,8 @@ select.finput {
 }
 
 .icon-action {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -124,10 +197,15 @@ select.finput {
   margin-right: 0.35rem;
   cursor: pointer;
   border-radius: 10px;
+  flex: 0 0 auto;
 }
 
 .icon-action.warn {
   color: var(--controls-watch);
+}
+
+.icon-action.danger {
+  color: var(--controls-alert);
 }
 
 .check-line {
@@ -158,6 +236,14 @@ select.finput {
 
   .evaluation-table {
     min-width: 980px;
+  }
+
+  .campaign-button {
+    grid-template-columns: 1fr;
+  }
+
+  .campaign-button .icon-action {
+    justify-self: end;
   }
 }
 

@@ -53,17 +53,26 @@
                 </div>
             </form>
 
-            <div class="module-list campaign-list">
-                <button type="button" class="module-link campaign-button" *ngFor="let campaign of campaigns" (click)="selectCampaign(campaign)" [class.active]="selectedCampaign?.id === campaign.id">
-                    <strong>{{ campaign.title }}</strong>
-                    <p>{{ campaign.objectiveType }} | {{ campaign.scopeType }} | {{ campaign.scopeLabel || 'Perimetre global' }}</p>
-                    <span class="campaign-meta">
-                        {{ campaign.summary.assessedCount }}/{{ campaign.summary.assessmentCount }} criteres
-                        | {{ campaign.summary.deficiencyCount }} deficience(s)
-                        | {{ campaign.summary.averageScore }}%
-                    </span>
-                </button>
+            <div class="module-list campaign-list" *ngIf="campaigns.length > 0; else emptyCampaigns">
+                <article class="module-link campaign-button" *ngFor="let campaign of campaigns" [class.active]="selectedCampaign?.id === campaign.id">
+                    <button type="button" class="campaign-select" (click)="selectCampaign(campaign)">
+                        <span class="campaign-title">{{ campaign.title }}</span>
+                        <span class="campaign-context">{{ campaign.objectiveType }} | {{ campaign.scopeType }} | {{ campaign.scopeLabel || 'Perimetre global' }}</span>
+                        <span class="campaign-meta">
+                            <span>{{ campaign.summary.assessedCount }}/{{ campaign.summary.assessmentCount }} criteres</span>
+                            <span>{{ campaign.summary.deficiencyCount }} deficience(s)</span>
+                            <span>{{ campaign.summary.averageScore }}%</span>
+                        </span>
+                    </button>
+                    <button class="icon-action danger" type="button" *ngIf="canWrite" (click)="deleteCampaign(campaign)" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </article>
             </div>
+
+            <ng-template #emptyCampaigns>
+                <div class="empty-state compact-empty">Aucune campagne creee.</div>
+            </ng-template>
         </div>
 
         <div class="content-card" *ngIf="selectedCampaign as campaign">
@@ -95,7 +104,35 @@
                 <span>{{ campaign.summary.lastConclusion.result }} | {{ campaign.summary.lastConclusion.score }}%</span>
             </div>
 
-            <button class="btn-refresh primary-action" type="button" *ngIf="canValidate" (click)="validateConclusion()" [disabled]="isSaving">
+            <form class="evaluation-form edit-campaign-form" *ngIf="canWrite" (ngSubmit)="updateCampaign()">
+                <div class="card-head compact-head">
+                    <h3>Gestion de la campagne</h3>
+                    <p>Modifier le perimetre, l objectif, le statut ou supprimer depuis la liste.</p>
+                </div>
+                <input class="finput" name="editTitle" [(ngModel)]="campaignEditForm.title" placeholder="Titre">
+                <div class="form-grid">
+                    <select class="finput" name="editObjectiveType" [(ngModel)]="campaignEditForm.objectiveType">
+                        <option *ngFor="let option of objectiveOptions" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <select class="finput" name="editScopeType" [(ngModel)]="campaignEditForm.scopeType">
+                        <option *ngFor="let option of scopeOptions" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                </div>
+                <div class="form-grid">
+                    <select class="finput" name="editStatus" [(ngModel)]="campaignEditForm.status">
+                        <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <input class="finput" name="editDueDate" type="date" [(ngModel)]="campaignEditForm.dueDate">
+                </div>
+                <input class="finput" name="editScopeLabel" [(ngModel)]="campaignEditForm.scopeLabel" placeholder="Perimetre evalue">
+                <textarea class="finput" name="editRiskTolerance" [(ngModel)]="campaignEditForm.riskTolerance" rows="3" placeholder="Tolerance au risque / criteres de jugement"></textarea>
+                <button class="btn-refresh primary-action full-action" type="submit" [disabled]="isSaving">
+                    <i class="fas fa-save"></i>
+                    Enregistrer les modifications
+                </button>
+            </form>
+
+            <button class="btn-refresh primary-action validate-action" type="button" *ngIf="canValidate" (click)="validateConclusion()" [disabled]="isSaving">
                 <i class="fas fa-check-double"></i>
                 Valider la conclusion
             </button>

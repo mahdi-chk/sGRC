@@ -355,6 +355,33 @@ export class IncidentsComponent implements OnInit {
         });
     }
 
+    deleteIncident(incident: Incident) {
+        if (this.isReadOnlyRole) {
+            return;
+        }
+
+        if (!confirm('Etes-vous sur de vouloir supprimer definitivement cet incident ? Cette action est irreversible.')) {
+            return;
+        }
+
+        this.incidentService.deleteIncident(incident.id).subscribe({
+            next: () => {
+                this.incidents = this.incidents.filter(item => item.id !== incident.id);
+                this.applyFilters();
+
+                if (this.selectedIncident?.id === incident.id) {
+                    this.selectedIncident = null;
+                    this.showDetailsModal = false;
+                    this.showEditModal = false;
+                }
+            },
+            error: (err) => {
+                console.error('Erreur suppression incident', err);
+                alert('Erreur lors de la suppression de l incident.');
+            }
+        });
+    }
+
     getStatusClass(incident: any): string {
         const status = incident?.statutCode || incident?.statut;
         switch (status) {

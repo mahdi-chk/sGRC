@@ -99,11 +99,14 @@
                             <button class="action-btn btn-edit" *ngIf="!isReadOnlyRole" (click)="openEditModal(incident)" title="Editer l'incident">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            <button class="action-btn btn-delete" *ngIf="!isReadOnlyRole" (click)="deleteIncident(incident)" title="Supprimer l'incident">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                         </td>
                     </tr>
                     <tr *ngIf="filteredIncidents.length === 0">
 
-                        <td colspan="5" class="empty-state">
+                        <td colspan="7" class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <p>Aucun incident n'est enregistre pour le moment.</p>
                         </td>

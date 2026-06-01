@@ -188,6 +188,16 @@
     box-shadow: 0 0 8px rgba(162, 28, 175, 0.2);
 }
 
+.btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-delete:hover {
+    background: #fecaca;
+    color: #b91c1c;
+}
+
 /* Badges */
 .badge {
     padding: 5px 12px;

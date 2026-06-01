@@ -11,6 +11,7 @@ import { User } from '../users/user.model';
 import { UserRole, USER_ROLE_CODES } from '../users/user.roles';
 import { Department } from '../departments/department.model';
 import { appLogger } from '../../utils/app-logger';
+import { softDeleteInstance } from '../../utils/soft-delete';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
 
 const router = Router();
@@ -710,6 +711,29 @@ router.put('/:id', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, 
         appLogger.error('Incidents', 'Incident update failed', error);
         res.status(400).json({
             message: 'Erreur lors de la mise à jour de l\'incident',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * SUPPRIMER UN INCIDENT
+ */
+router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), async (req: AuthRequest, res: Response) => {
+    try {
+        const id = req.params.id as string;
+        const incident = await Incident.findByPk(parseInt(id, 10));
+
+        if (!incident) {
+            return res.status(404).json({ message: 'Incident non trouve' });
+        }
+
+        await softDeleteInstance(incident);
+        res.status(204).send();
+    } catch (error: any) {
+        appLogger.error('Incidents', 'Incident deletion failed', error);
+        res.status(500).json({
+            message: 'Erreur lors de la suppression de l incident',
             error: error.message
         });
     }

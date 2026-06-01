@@ -101,6 +101,10 @@ export class IncidentService {
         return this.http.put<Incident>(`${this.apiUrl}/${id}`, data);
     }
 
+    deleteIncident(id: number): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    }
+
     generateRisksFromIncident(incidentId: number): Observable<any[]> {
         return this.trackLongRunningRequest(() => this.http.post<any[]>(`${this.apiUrl}/${incidentId}/generate-risks`, {}));
     }

@@ -61,6 +61,16 @@ export class IncidentWorkflowComponent implements OnInit {
     return getIncidentNavItems(this.currentUserRole);
   }
 
+  get canDeleteIncidents(): boolean {
+    return [
+      UserRole.SUPER_ADMIN,
+      UserRole.RISK_MANAGER,
+      UserRole.AUDIT_DIRECTEUR,
+      UserRole.AUDIT_RESPONSABLE,
+      UserRole.CHEF_MISSION
+    ].includes(this.currentUserRole_enum as UserRole);
+  }
+
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     this.currentUserId = currentUser?.id || null;
@@ -196,6 +206,31 @@ export class IncidentWorkflowComponent implements OnInit {
   closeDetailsModal() {
     this.showDetailsModal = false;
     this.selectedIncident = null;
+  }
+
+  deleteIncident(incident: Incident) {
+    if (!this.canDeleteIncidents) {
+      return;
+    }
+
+    if (!confirm('Etes-vous sur de vouloir supprimer definitivement cet incident ? Cette action est irreversible.')) {
+      return;
+    }
+
+    this.incidentService.deleteIncident(incident.id).subscribe({
+      next: () => {
+        this.incidents = this.incidents.filter(item => item.id !== incident.id);
+        this.applyFilters();
+
+        if (this.selectedIncident?.id === incident.id) {
+          this.closeDetailsModal();
+        }
+      },
+      error: (err) => {
+        console.error('Erreur suppression incident:', err);
+        alert('Erreur lors de la suppression de l incident.');
+      }
+    });
   }
 
   getStatusClass(incident: Incident): string {

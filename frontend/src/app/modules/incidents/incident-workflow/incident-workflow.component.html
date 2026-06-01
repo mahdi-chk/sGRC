@@ -114,6 +114,9 @@
                                 <button class="btn-sm-action view" (click)="openDetailsModal(incident)" title="Voir détails">
                                     <i class="fas fa-eye"></i>
                                 </button>
+                                <button *ngIf="canDeleteIncidents" class="btn-sm-action delete" (click)="deleteIncident(incident)" title="Supprimer l'incident">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>

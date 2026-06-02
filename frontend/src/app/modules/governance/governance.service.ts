@@ -87,6 +87,9 @@ export interface GovernanceApprovalStage {
   rule: string;
   owner?: string;
   status?: 'done' | 'current' | 'todo' | 'rejected' | 'changes_requested';
+  slaDays?: number | null;
+  escalationTo?: string | null;
+  escalationRule?: string | null;
 }
 
 export interface GovernanceWorkflowApprover {
@@ -127,7 +130,44 @@ export interface GovernanceApprovalWorkflow {
   owner?: string;
   assignedTo?: string;
   actionable?: boolean;
+  configured?: boolean;
+  overridden?: boolean;
+  canEditWorkflow?: boolean;
+  canApproveWorkflow?: boolean;
+  canAdminWorkflow?: boolean;
   stages: GovernanceApprovalStage[];
+}
+
+export type GovernanceWorkflowModule = 'Risques' | 'Audit' | 'Incidents';
+
+export interface GovernanceWorkflowTemplate {
+  id?: number;
+  module: GovernanceWorkflowModule;
+  process?: string | null;
+  title: string;
+  description?: string | null;
+  isActive: boolean;
+  version?: number;
+  stages: GovernanceApprovalStage[];
+}
+
+export interface GovernanceWorkflowAccessRule {
+  id?: number;
+  module: GovernanceWorkflowModule;
+  process?: string | null;
+  principalType: 'role' | 'user';
+  principalRole?: string | null;
+  principalUserId?: number | null;
+  canView: boolean;
+  canEdit: boolean;
+  canApprove: boolean;
+  canAdmin: boolean;
+  principalUser?: {
+    id: number;
+    nom: string;
+    prenom: string;
+    mail: string;
+  };
 }
 
 export interface GovernanceRoleTraceabilityMember {
@@ -236,6 +276,51 @@ export class GovernanceService {
   getApprovalWorkflows(): Observable<GovernanceApprovalWorkflow[]> {
     return this.http.get<{ workflows: GovernanceApprovalWorkflow[] }>(`${this.apiUrl}/approval-workflows`).pipe(
       map(response => response.workflows)
+    );
+  }
+
+  getWorkflowConfigOptions(): Observable<{ modules: GovernanceWorkflowModule[]; rights: string[] }> {
+    return this.http.get<{ modules: GovernanceWorkflowModule[]; rights: string[] }>(`${this.apiUrl}/workflow-config/options`);
+  }
+
+  getWorkflowTemplates(): Observable<GovernanceWorkflowTemplate[]> {
+    return this.http.get<{ templates: GovernanceWorkflowTemplate[] }>(`${this.apiUrl}/workflow-templates`).pipe(
+      map(response => response.templates)
+    );
+  }
+
+  saveWorkflowTemplate(template: GovernanceWorkflowTemplate): Observable<GovernanceWorkflowTemplate> {
+    const request = template.id
+      ? this.http.put<{ template: GovernanceWorkflowTemplate }>(`${this.apiUrl}/workflow-templates/${template.id}`, template)
+      : this.http.post<{ template: GovernanceWorkflowTemplate }>(`${this.apiUrl}/workflow-templates`, template);
+
+    return request.pipe(map(response => response.template));
+  }
+
+  saveWorkflowInstanceConfig(workflow: GovernanceApprovalWorkflow, stages: GovernanceApprovalStage[], description: string = ''): Observable<any> {
+    return this.http.put(`${this.apiUrl}/approval-workflows/${encodeURIComponent(workflow.id || '')}/config`, {
+      sourceType: workflow.sourceType,
+      sourceId: workflow.sourceId,
+      process: workflow.process,
+      title: workflow.name,
+      description,
+      stages
+    });
+  }
+
+  resetWorkflowInstanceConfig(workflowId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/approval-workflows/${encodeURIComponent(workflowId)}/config`);
+  }
+
+  getWorkflowAccessRules(): Observable<GovernanceWorkflowAccessRule[]> {
+    return this.http.get<{ rules: GovernanceWorkflowAccessRule[] }>(`${this.apiUrl}/workflow-access-rules`).pipe(
+      map(response => response.rules)
+    );
+  }
+
+  saveWorkflowAccessRules(rules: GovernanceWorkflowAccessRule[]): Observable<GovernanceWorkflowAccessRule[]> {
+    return this.http.put<{ rules: GovernanceWorkflowAccessRule[] }>(`${this.apiUrl}/workflow-access-rules`, { rules }).pipe(
+      map(response => response.rules)
     );
   }
 

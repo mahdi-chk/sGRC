@@ -56,7 +56,7 @@ If no runtime value is provided, the frontend defaults to `/api`, which works wi
 For local development, you can override the proxy target with:
 
 ```bash
-API_PROXY_TARGET=http://127.0.0.1:3000 npm start
+API_PROXY_TARGET=http://localhost:3000 npm start
 ```
 
 ## 📁 Key Directories

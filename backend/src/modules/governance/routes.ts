@@ -15,6 +15,10 @@ import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { GovernanceAuditEvent, getGovernanceAuditEventsForActor } from './audit-trail.service';
 import { GovernanceApprovalWorkflowModel } from './governance-approval-workflow.model';
 import { GovernanceApprovalStageModel } from './governance-approval-stage.model';
+import { GovernanceWorkflowTemplateModel, GovernanceWorkflowModule } from './governance-workflow-template.model';
+import { GovernanceWorkflowTemplateStageModel } from './governance-workflow-template-stage.model';
+import { GovernanceWorkflowInstanceOverrideModel } from './governance-workflow-instance-override.model';
+import { GovernanceWorkflowAccessRuleModel } from './governance-workflow-access-rule.model';
 
 const router = Router();
 
@@ -80,6 +84,9 @@ type GovernanceStagePayload = {
   rule: string;
   owner?: string;
   status?: 'done' | 'current' | 'todo' | 'rejected' | 'changes_requested';
+  slaDays?: number | null;
+  escalationTo?: string;
+  escalationRule?: string;
 };
 
 type GovernanceWorkflowSourceType = 'document' | 'risk' | 'audit' | 'incident';
@@ -117,9 +124,34 @@ type GovernanceWorkflowPayload = {
   owner?: string;
   assignedTo?: string;
   actionable?: boolean;
+  configured?: boolean;
+  overridden?: boolean;
+  canEditWorkflow?: boolean;
+  canApproveWorkflow?: boolean;
+  canAdminWorkflow?: boolean;
 };
 
 type AuthenticatedUser = NonNullable<AuthRequest['user']>;
+type WorkflowRight = 'canView' | 'canEdit' | 'canApprove' | 'canAdmin';
+type ConfigurableWorkflowSourceType = Exclude<GovernanceWorkflowSourceType, 'document'>;
+
+type WorkflowStageInput = {
+  role?: unknown;
+  owner?: unknown;
+  rule?: unknown;
+  slaDays?: unknown;
+  escalationTo?: unknown;
+  escalationRule?: unknown;
+};
+
+type NormalizedWorkflowStage = {
+  role: string;
+  owner?: string;
+  rule: string;
+  slaDays: number | null;
+  escalationTo?: string;
+  escalationRule?: string;
+};
 
 const ROLE_DOCUMENT_FOLDERS: RoleFolderMap = {
   [UserRole.SUPER_ADMIN]: {
@@ -179,6 +211,8 @@ const uploadSecureDocument = secureUpload(DOCUMENT_EXTENSIONS, 'document', 20 * 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const RECENT_WINDOW_DAYS = 30;
 const REVIEW_WINDOW_DAYS = 90;
+const CONFIGURABLE_WORKFLOW_MODULES: GovernanceWorkflowModule[] = ['Risques', 'Audit', 'Incidents'];
+const WORKFLOW_CONFIG_ADMIN_ROLES = [UserRole.SUPER_ADMIN, UserRole.ADMIN_SI];
 
 const sanitizeFileName = (fileName: string): string => {
   const normalizedName = path.basename(fileName).replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').trim();
@@ -195,6 +229,86 @@ const getSingleValue = (value: unknown): string | null => {
   }
 
   return null;
+};
+
+const cleanConfigText = (value: unknown, maxLength = 500): string => {
+  const text = getSingleValue(value) || '';
+  return text.trim().slice(0, maxLength);
+};
+
+const normalizeWorkflowModule = (value: unknown): GovernanceWorkflowModule | null => {
+  const module = cleanConfigText(value, 40);
+  return CONFIGURABLE_WORKFLOW_MODULES.includes(module as GovernanceWorkflowModule)
+    ? module as GovernanceWorkflowModule
+    : null;
+};
+
+const normalizeWorkflowProcess = (value: unknown): string | null => {
+  const process = cleanConfigText(value, 180);
+  return process || null;
+};
+
+const normalizeWorkflowSourceId = (value: unknown): string => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value).slice(0, 120);
+  }
+
+  return cleanConfigText(value, 120);
+};
+
+const sourceTypeToWorkflowModule = (sourceType?: GovernanceWorkflowSourceType): GovernanceWorkflowModule | null => {
+  switch (sourceType) {
+    case 'risk':
+      return 'Risques';
+    case 'audit':
+      return 'Audit';
+    case 'incident':
+      return 'Incidents';
+    default:
+      return null;
+  }
+};
+
+const isWorkflowConfigAdmin = (actor: AuthenticatedUser): boolean =>
+  WORKFLOW_CONFIG_ADMIN_ROLES.includes(actor.role);
+
+const toBoolean = (value: unknown, fallback = false): boolean => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    return value === 'true' || value === '1';
+  }
+
+  return fallback;
+};
+
+const normalizeWorkflowStages = (stages: unknown): NormalizedWorkflowStage[] => {
+  if (!Array.isArray(stages)) {
+    return [];
+  }
+
+  return stages
+    .map(stage => {
+      const item = stage as WorkflowStageInput;
+      const role = cleanConfigText(item.role, 160);
+      const rule = cleanConfigText(item.rule, 1000);
+      const owner = cleanConfigText(item.owner, 180);
+      const escalationTo = cleanConfigText(item.escalationTo, 180);
+      const escalationRule = cleanConfigText(item.escalationRule, 1000);
+      const slaDaysNumber = Number(item.slaDays);
+
+      return {
+        role,
+        rule,
+        owner: owner || undefined,
+        slaDays: Number.isInteger(slaDaysNumber) && slaDaysNumber >= 0 ? slaDaysNumber : null,
+        escalationTo: escalationTo || undefined,
+        escalationRule: escalationRule || undefined
+      };
+    })
+    .filter(stage => stage.role && stage.rule);
 };
 
 const getAbsoluteFolderPath = (folder: RoleFolderConfig): string => {
@@ -456,6 +570,13 @@ const buildApprovers = (stages: GovernanceApprovalStageModel[]) =>
       decision: stage.decision || (stage.status === 'done' ? 'Valide' : stage.status === 'current' ? 'En attente' : 'A venir')
     }));
 
+const buildApproversFromStages = (stages: GovernanceStagePayload[]) =>
+  stages.map(stage => ({
+    role: stage.role,
+    name: stage.owner || stage.role,
+    decision: stage.status === 'done' ? 'Valide' : stage.status === 'current' ? 'En attente' : stage.status === 'rejected' ? 'Rejete' : 'A venir'
+  }));
+
 const getWorkflowUiStatus = (workflow: GovernanceApprovalWorkflowModel): 'a_initialiser' | 'en_retard' | 'approuve' | 'en_cours' | 'rejete' => {
   if (workflow.status === 'approved') {
     return 'approuve';
@@ -489,6 +610,70 @@ const getWorkflowAlert = (status: string) => {
     default:
       return { alert: 'En cours', alertClass: 'success' as const };
   }
+};
+
+const hasWorkflowRight = async (
+  actor: AuthenticatedUser,
+  module: string | undefined,
+  process: string | null | undefined,
+  right: WorkflowRight
+): Promise<boolean> => {
+  if (isWorkflowConfigAdmin(actor)) {
+    return true;
+  }
+
+  const normalizedModule = normalizeWorkflowModule(module);
+  if (!normalizedModule) {
+    return right === 'canView';
+  }
+
+  const rules = await GovernanceWorkflowAccessRuleModel.findAll({
+    where: {
+      module: normalizedModule,
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { process: process || null },
+            { process: null }
+          ]
+        },
+        {
+          [Op.or]: [
+            { principalType: 'role', principalRole: actor.role },
+            { principalType: 'user', principalUserId: actor.id }
+          ]
+        }
+      ]
+    } as any
+  });
+
+  if (!rules.length) {
+    return right === 'canView';
+  }
+
+  return rules.some(rule => Boolean((rule as any)[right]));
+};
+
+const attachWorkflowRights = async (workflow: GovernanceWorkflowPayload, actor: AuthenticatedUser): Promise<GovernanceWorkflowPayload | null> => {
+  const module = workflow.module;
+  const process = workflow.process || null;
+  const canView = await hasWorkflowRight(actor, module, process, 'canView');
+
+  if (!canView) {
+    return null;
+  }
+
+  const canEditWorkflow = await hasWorkflowRight(actor, module, process, 'canEdit');
+  const canApproveWorkflow = await hasWorkflowRight(actor, module, process, 'canApprove');
+  const canAdminWorkflow = await hasWorkflowRight(actor, module, process, 'canAdmin');
+
+  return {
+    ...workflow,
+    actionable: workflow.actionable !== false && canApproveWorkflow,
+    canEditWorkflow,
+    canApproveWorkflow,
+    canAdminWorkflow
+  };
 };
 
 const getStageSeed = (folder: RoleFolderConfig) => buildWorkflowStages(folder).map((stage, index) => ({
@@ -1034,6 +1219,131 @@ const getProgressFromStatus = (status: 'a_initialiser' | 'en_retard' | 'approuve
   }
 };
 
+const deriveConfiguredStageStatuses = (
+  stages: Array<{ role: string; rule: string; owner?: string; slaDays?: number | null; escalationTo?: string; escalationRule?: string }>,
+  status: GovernanceWorkflowPayload['status'],
+  progress = 0
+): GovernanceStagePayload[] => {
+  if (status === 'approuve') {
+    return stages.map(stage => ({ ...stage, status: 'done' }));
+  }
+
+  if (status === 'rejete') {
+    return stages.map((stage, index) => ({ ...stage, status: index === 0 ? 'rejected' : 'todo' }));
+  }
+
+  const stageCount = Math.max(stages.length, 1);
+  const completedCount = Math.min(Math.floor((Math.max(0, progress) / 100) * stageCount), stageCount - 1);
+
+  return stages.map((stage, index) => ({
+    ...stage,
+    status: index < completedCount ? 'done' : index === completedCount ? 'current' : 'todo'
+  }));
+};
+
+const parseOverrideStages = (override: GovernanceWorkflowInstanceOverrideModel): GovernanceStagePayload[] => {
+  try {
+    const stages = JSON.parse(override.stagesJson);
+    return normalizeWorkflowStages(stages).map(stage => ({
+      role: stage.role,
+      owner: stage.owner,
+      rule: stage.rule,
+      slaDays: stage.slaDays,
+      escalationTo: stage.escalationTo,
+      escalationRule: stage.escalationRule
+    }));
+  } catch (_error) {
+    return [];
+  }
+};
+
+const getTemplateStages = (template: GovernanceWorkflowTemplateModel & { stages?: GovernanceWorkflowTemplateStageModel[] }) =>
+  (template.stages || [])
+    .slice()
+    .sort((left, right) => left.stageIndex - right.stageIndex)
+    .map(stage => ({
+      role: stage.role,
+      owner: stage.owner || undefined,
+      rule: stage.rule,
+      slaDays: stage.slaDays,
+      escalationTo: stage.escalationTo || undefined,
+      escalationRule: stage.escalationRule || undefined
+    }));
+
+const findWorkflowTemplate = async (module: GovernanceWorkflowModule, process?: string | null) => {
+  const templates = await GovernanceWorkflowTemplateModel.findAll({
+    where: {
+      module,
+      isActive: true,
+      [Op.or]: [
+        { process: process || null },
+        { process: null }
+      ]
+    } as any,
+    include: [{ model: GovernanceWorkflowTemplateStageModel, as: 'stages' }],
+    order: [
+      ['process', 'DESC'],
+      ['version', 'DESC'],
+      ['updatedAt', 'DESC']
+    ]
+  }) as Array<GovernanceWorkflowTemplateModel & { stages?: GovernanceWorkflowTemplateStageModel[] }>;
+
+  return templates.find(template => (template.process || null) === (process || null)) || templates[0] || null;
+};
+
+const applyWorkflowConfiguration = async (workflow: GovernanceWorkflowPayload): Promise<GovernanceWorkflowPayload> => {
+  const module = sourceTypeToWorkflowModule(workflow.sourceType);
+  if (!module || !workflow.sourceId) {
+    return workflow;
+  }
+
+  const override = await GovernanceWorkflowInstanceOverrideModel.findOne({
+    where: { workflowKey: workflow.id }
+  });
+
+  if (override) {
+    const overrideStages = deriveConfiguredStageStatuses(parseOverrideStages(override), workflow.status, workflow.progress);
+    if (overrideStages.length > 0) {
+      return {
+        ...workflow,
+        name: override.title || workflow.name,
+        scope: override.description || workflow.scope,
+        process: override.process || workflow.process,
+        stages: overrideStages,
+        approvers: buildApproversFromStages(overrideStages),
+        completedApprovals: overrideStages.filter(stage => stage.status === 'done').length,
+        requiredApprovals: overrideStages.length,
+        nextAction: overrideStages.find(stage => stage.status === 'current')?.rule || workflow.nextAction,
+        configured: true,
+        overridden: true
+      };
+    }
+  }
+
+  const template = await findWorkflowTemplate(module, workflow.process || null);
+  if (!template) {
+    return workflow;
+  }
+
+  const templateStages = deriveConfiguredStageStatuses(getTemplateStages(template), workflow.status, workflow.progress);
+  if (!templateStages.length) {
+    return workflow;
+  }
+
+  return {
+    ...workflow,
+    type: `Modele configure v${template.version}`,
+    escalation: template.description || workflow.escalation,
+    stages: templateStages,
+    approvers: buildApproversFromStages(templateStages),
+    completedApprovals: templateStages.filter(stage => stage.status === 'done').length,
+    requiredApprovals: templateStages.length,
+    nextAction: templateStages.find(stage => stage.status === 'current')?.rule || workflow.nextAction,
+    configured: true,
+    overridden: false
+  };
+};
+
 const buildOperationalWorkflow = (payload: {
   id: string;
   name: string;
@@ -1377,11 +1687,17 @@ const computeOperationalWorkflows = async (actor: AuthenticatedUser): Promise<Go
     }) as Promise<Array<Incident>>
   ]);
 
-  return [
+  const configuredWorkflows = await Promise.all([
     ...risks.map(buildRiskWorkflow),
     ...missions.map(buildAuditWorkflow),
     ...incidents.map(buildIncidentWorkflow)
-  ].sort((left, right) => {
+  ].map(workflow => applyWorkflowConfiguration(workflow)));
+
+  const visibleWorkflows = (await Promise.all(
+    configuredWorkflows.map(workflow => attachWorkflowRights(workflow, actor))
+  )).filter((workflow): workflow is GovernanceWorkflowPayload => Boolean(workflow));
+
+  return visibleWorkflows.sort((left, right) => {
     const priorityScore = (workflow: GovernanceWorkflowPayload) =>
       workflow.status === 'en_retard' ? 0 : workflow.status === 'en_cours' ? 1 : workflow.status === 'a_initialiser' ? 2 : 3;
     const statusDelta = priorityScore(left) - priorityScore(right);
@@ -1486,6 +1802,47 @@ const resolveFilePath = (folder: RoleFolderConfig, requestedFileName: string): s
   return absoluteFilePath;
 };
 
+const serializeTemplate = (template: GovernanceWorkflowTemplateModel & { stages?: GovernanceWorkflowTemplateStageModel[] }) => ({
+  id: template.id,
+  module: template.module,
+  process: template.process,
+  title: template.title,
+  description: template.description,
+  isActive: template.isActive,
+  version: template.version,
+  stages: (template.stages || [])
+    .slice()
+    .sort((left, right) => left.stageIndex - right.stageIndex)
+    .map(stage => ({
+      id: stage.id,
+      stageIndex: stage.stageIndex,
+      role: stage.role,
+      owner: stage.owner,
+      rule: stage.rule,
+      slaDays: stage.slaDays,
+      escalationTo: stage.escalationTo,
+      escalationRule: stage.escalationRule
+    }))
+});
+
+const loadTemplate = async (id: number) => GovernanceWorkflowTemplateModel.findByPk(id, {
+  include: [{ model: GovernanceWorkflowTemplateStageModel, as: 'stages' }]
+}) as Promise<(GovernanceWorkflowTemplateModel & { stages?: GovernanceWorkflowTemplateStageModel[] }) | null>;
+
+const replaceTemplateStages = async (templateId: number, stages: NormalizedWorkflowStage[]) => {
+  await GovernanceWorkflowTemplateStageModel.destroy({ where: { templateId } });
+  await GovernanceWorkflowTemplateStageModel.bulkCreate(stages.map((stage, index) => ({
+    templateId,
+    stageIndex: index,
+    role: stage.role,
+    owner: stage.owner || null,
+    rule: stage.rule,
+    slaDays: stage.slaDays,
+    escalationTo: stage.escalationTo || null,
+    escalationRule: stage.escalationRule || null
+  })));
+};
+
 router.use(authenticateToken);
 
 router.get('/', (req: AuthRequest, res) => {
@@ -1544,6 +1901,182 @@ router.get('/role-traceability', async (req: AuthRequest, res) => {
     role: req.user!.role,
     profiles: await buildRoleTraceability(req.user!)
   });
+});
+
+router.get('/workflow-config/options', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), (_req: AuthRequest, res) => {
+  res.json({
+    modules: CONFIGURABLE_WORKFLOW_MODULES,
+    rights: ['canView', 'canEdit', 'canApprove', 'canAdmin']
+  });
+});
+
+router.get('/workflow-templates', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (_req: AuthRequest, res) => {
+  try {
+    const templates = await GovernanceWorkflowTemplateModel.findAll({
+      include: [{ model: GovernanceWorkflowTemplateStageModel, as: 'stages' }],
+      order: [['module', 'ASC'], ['process', 'ASC'], ['updatedAt', 'DESC']]
+    }) as Array<GovernanceWorkflowTemplateModel & { stages?: GovernanceWorkflowTemplateStageModel[] }>;
+
+    res.json({ templates: templates.map(serializeTemplate) });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Erreur lors du chargement des modeles workflow.', detail: error.message });
+  }
+});
+
+router.post('/workflow-templates', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (req: AuthRequest, res) => {
+  const module = normalizeWorkflowModule(req.body?.module);
+  const title = cleanConfigText(req.body?.title, 255);
+  const process = normalizeWorkflowProcess(req.body?.process);
+  const stages = normalizeWorkflowStages(req.body?.stages);
+
+  if (!module || !title || stages.length === 0) {
+    return res.status(400).json({ message: 'Module, titre et au moins une etape sont obligatoires.' });
+  }
+
+  const template = await GovernanceWorkflowTemplateModel.create({
+    module,
+    process,
+    title,
+    description: cleanConfigText(req.body?.description, 2000) || null,
+    isActive: toBoolean(req.body?.isActive, true),
+    version: 1
+  });
+
+  await replaceTemplateStages(template.id, stages);
+
+  const created = await loadTemplate(template.id);
+  return res.status(201).json({ template: created ? serializeTemplate(created) : null });
+});
+
+router.put('/workflow-templates/:id', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (req: AuthRequest, res) => {
+  const templateId = Number(req.params.id);
+  const template = await GovernanceWorkflowTemplateModel.findByPk(templateId);
+  if (!template) {
+    return res.status(404).json({ message: 'Modele workflow introuvable.' });
+  }
+
+  const module = normalizeWorkflowModule(req.body?.module);
+  const title = cleanConfigText(req.body?.title, 255);
+  const process = normalizeWorkflowProcess(req.body?.process);
+  const stages = normalizeWorkflowStages(req.body?.stages);
+
+  if (!module || !title || stages.length === 0) {
+    return res.status(400).json({ message: 'Module, titre et au moins une etape sont obligatoires.' });
+  }
+
+  await template.update({
+    module,
+    process,
+    title,
+    description: cleanConfigText(req.body?.description, 2000) || null,
+    isActive: toBoolean(req.body?.isActive, true),
+    version: template.version + 1
+  });
+
+  await replaceTemplateStages(template.id, stages);
+
+  const updated = await loadTemplate(template.id);
+  return res.json({ template: updated ? serializeTemplate(updated) : null });
+});
+
+router.get('/workflow-access-rules', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (_req: AuthRequest, res) => {
+  try {
+    const rules = await GovernanceWorkflowAccessRuleModel.findAll({
+      include: [{ model: User, as: 'principalUser', required: false, attributes: ['id', 'nom', 'prenom', 'mail'] }],
+      order: [['module', 'ASC'], ['process', 'ASC'], ['principalType', 'ASC']]
+    });
+
+    res.json({ rules });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Erreur lors du chargement des regles d acces.', detail: error.message });
+  }
+});
+
+router.put('/workflow-access-rules', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (req: AuthRequest, res) => {
+  const rules = Array.isArray(req.body?.rules) ? req.body.rules : [];
+  const validRules = rules
+    .map((rule: any) => {
+      const module = normalizeWorkflowModule(rule.module);
+      const process = normalizeWorkflowProcess(rule.process);
+      const principalType = rule.principalType === 'user' ? 'user' : 'role';
+      const principalRole = principalType === 'role' ? cleanConfigText(rule.principalRole, 80) : null;
+      const rawPrincipalUserId = Number(rule.principalUserId);
+      const principalUserIdValue = Number.isInteger(rawPrincipalUserId) && rawPrincipalUserId > 0 ? rawPrincipalUserId : null;
+
+      if (!module || (principalType === 'role' && !principalRole) || (principalType === 'user' && !principalUserIdValue)) {
+        return null;
+      }
+
+      return {
+        module,
+        process,
+        principalType,
+        principalRole,
+        principalUserId: principalType === 'user' ? principalUserIdValue : null,
+        canView: toBoolean(rule.canView, true),
+        canEdit: toBoolean(rule.canEdit),
+        canApprove: toBoolean(rule.canApprove),
+        canAdmin: toBoolean(rule.canAdmin)
+      };
+    })
+    .filter(Boolean);
+
+  await GovernanceWorkflowAccessRuleModel.destroy({ where: {} });
+  if (validRules.length > 0) {
+    await GovernanceWorkflowAccessRuleModel.bulkCreate(validRules as any[]);
+  }
+
+  const savedRules = await GovernanceWorkflowAccessRuleModel.findAll({
+    include: [{ model: User, as: 'principalUser', required: false, attributes: ['id', 'nom', 'prenom', 'mail'] }],
+    order: [['module', 'ASC'], ['process', 'ASC'], ['principalType', 'ASC']]
+  });
+  return res.json({ rules: savedRules });
+});
+
+router.put('/approval-workflows/:workflowKey/config', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (req: AuthRequest, res) => {
+  const workflowKey = cleanConfigText(req.params.workflowKey, 120);
+  const sourceType = getSingleValue(req.body?.sourceType) as ConfigurableWorkflowSourceType | null;
+  const module = sourceTypeToWorkflowModule(sourceType || undefined);
+  const sourceId = normalizeWorkflowSourceId(req.body?.sourceId);
+  const stages = normalizeWorkflowStages(req.body?.stages);
+
+  if (!workflowKey || !module || !sourceId || stages.length === 0) {
+    return res.status(400).json({ message: 'Workflow, module operationnel et etapes sont obligatoires.' });
+  }
+
+  const [override] = await GovernanceWorkflowInstanceOverrideModel.findOrCreate({
+    where: { workflowKey },
+    defaults: {
+      workflowKey,
+      sourceType: sourceType as ConfigurableWorkflowSourceType,
+      sourceId,
+      module,
+      process: normalizeWorkflowProcess(req.body?.process),
+      title: cleanConfigText(req.body?.title, 255) || null,
+      description: cleanConfigText(req.body?.description, 2000) || null,
+      stagesJson: JSON.stringify(stages),
+      updatedById: req.user!.id
+    }
+  });
+
+  await override.update({
+    sourceType: sourceType as ConfigurableWorkflowSourceType,
+    sourceId,
+    module,
+    process: normalizeWorkflowProcess(req.body?.process),
+    title: cleanConfigText(req.body?.title, 255) || null,
+    description: cleanConfigText(req.body?.description, 2000) || null,
+    stagesJson: JSON.stringify(stages),
+    updatedById: req.user!.id
+  });
+
+  return res.json({ override });
+});
+
+router.delete('/approval-workflows/:workflowKey/config', authorizeRoles(...WORKFLOW_CONFIG_ADMIN_ROLES), async (req: AuthRequest, res) => {
+  const workflowKey = cleanConfigText(req.params.workflowKey, 120);
+  await GovernanceWorkflowInstanceOverrideModel.destroy({ where: { workflowKey } });
+  return res.json({ message: 'Surcharge workflow supprimee.' });
 });
 
 router.get('/approval-workflows', async (req: AuthRequest, res) => {

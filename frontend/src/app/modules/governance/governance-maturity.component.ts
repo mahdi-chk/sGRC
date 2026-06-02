@@ -98,7 +98,7 @@ export class GovernanceMaturityComponent implements OnInit {
       return 0;
     }
 
-    const completed = this.missions.filter(mission => mission.statut === AuditMissionStatus.TERMINE).length;
+    const completed = this.missions.filter(mission => this.getStatusBucket(mission) === 'OK').length;
     return Math.round((completed / this.missions.length) * 100);
   }
 
@@ -107,7 +107,7 @@ export class GovernanceMaturityComponent implements OnInit {
       return 0;
     }
 
-    const delayed = this.missions.filter(mission => mission.statut === AuditMissionStatus.EN_RETARD).length;
+    const delayed = this.missions.filter(mission => this.getStatusBucket(mission) === 'NOK').length;
     return Math.round((delayed / this.missions.length) * 100);
   }
 
@@ -116,9 +116,7 @@ export class GovernanceMaturityComponent implements OnInit {
       return 0;
     }
 
-    const delayed = this.missions.filter(mission => mission.statut === AuditMissionStatus.EN_RETARD).length;
-    const cancelled = this.missions.filter(mission => mission.statut === AuditMissionStatus.ANNULE).length;
-    const onTime = this.missions.length - delayed - cancelled;
+    const onTime = this.missions.filter(mission => this.isMissionCompletedOnTime(mission)).length;
     return Math.round((onTime / this.missions.length) * 100);
   }
 
@@ -153,6 +151,50 @@ export class GovernanceMaturityComponent implements OnInit {
 
   private normalizeRiskLevel(level?: string | null): string {
     return this.normalize(level);
+  }
+
+  private getStatusBucket(mission: AuditMission): 'OK' | 'En cours' | 'NOK' {
+    const rawStatus = this.normalize((mission as any).statutCode || mission.statut);
+    if (rawStatus === 'ok' || rawStatus === 'termine') {
+      return 'OK';
+    }
+    if (rawStatus === 'nok' || rawStatus === 'en_retard' || rawStatus.includes('retard') || rawStatus === 'annule') {
+      return 'NOK';
+    }
+    return rawStatus === AuditMissionStatus.EN_COURS || rawStatus === 'in_progress' || rawStatus.includes('cours') ? 'En cours' : 'NOK';
+  }
+
+  private isMissionCompletedOnTime(mission: AuditMission): boolean {
+    if (this.getStatusBucket(mission) !== 'OK') {
+      return false;
+    }
+
+    const dueDate = this.getDueDate(mission);
+    const realEndDate = this.parseDate(mission.dateReelleFin);
+    if (!dueDate || !realEndDate) {
+      return true;
+    }
+
+    return this.startOfDay(realEndDate) <= this.startOfDay(dueDate);
+  }
+
+  private getDueDate(mission: AuditMission): Date | null {
+    const candidate = mission.datePrevueFin || (mission as any).echeance || mission.delai;
+    return this.parseDate(candidate);
+  }
+
+  private parseDate(value: string | Date | null | undefined): Date | null {
+    if (!value) {
+      return null;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private startOfDay(date: Date): Date {
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
   }
 
   private normalize(value?: string | null): string {

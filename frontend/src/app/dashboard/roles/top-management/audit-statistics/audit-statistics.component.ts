@@ -185,7 +185,7 @@ export class AuditStatisticsComponent implements OnInit {
         const delayedCount = this.statusStats['NOK'] || 0;
         this.delayedRate = this.totalMissions > 0 ? Math.round((delayedCount / this.totalMissions) * 100) : 0;
 
-        const onTimeCount = this.statusStats['OK'] + this.statusStats['En cours'];
+        const onTimeCount = this.missions.filter(mission => this.isMissionCompletedOnTime(mission)).length;
         this.onTimeRate = this.totalMissions > 0 ? Math.round((onTimeCount / this.totalMissions) * 100) : 0;
 
         const summaryTotal = this.totalMissions;
@@ -247,8 +247,7 @@ export class AuditStatisticsComponent implements OnInit {
         const delayedCount = this.statusStats['NOK'] || 0;
         this.delayedRate = this.totalMissions > 0 ? Math.round((delayedCount / this.totalMissions) * 100) : 0;
 
-        // On time rate = (OK + En cours) / Total
-        const onTimeCount = this.statusStats['OK'] + this.statusStats['En cours'];
+        const onTimeCount = this.missions.filter(mission => this.isMissionCompletedOnTime(mission)).length;
         this.onTimeRate = this.totalMissions > 0 ? Math.round((onTimeCount / this.totalMissions) * 100) : 0;
 
         const summaryTotal = this.totalMissions;
@@ -463,6 +462,20 @@ export class AuditStatisticsComponent implements OnInit {
         }
         const date = new Date(candidate);
         return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    private isMissionCompletedOnTime(mission: AuditMission): boolean {
+        if (this.getStatusBucket(mission) !== 'OK') {
+            return false;
+        }
+
+        const dueDate = this.getDueDate(mission);
+        const realEndDate = this.parseDate(mission.dateReelleFin);
+        if (!dueDate || !realEndDate) {
+            return true;
+        }
+
+        return this.startOfDay(realEndDate) <= this.startOfDay(dueDate);
     }
 
     private getTimelinePeriod(mission: AuditMission): { label: string; sortKey: string } {

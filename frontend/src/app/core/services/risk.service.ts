@@ -306,34 +306,18 @@ export class RiskService {
     static calculateMaturityIndex(risks: Risk[]): number {
         if (!risks || risks.length === 0) return 0;
 
-        const total = risks.length;
-        const identifiedCount = risks.filter((risk) => risk.domaine && risk.departementId).length;
-        const identificationScore = (identifiedCount / total) * 1.0;
-
-        const treatedCount = risks.filter((risk) =>
-            RiskService.getRiskStatusCode(risk) === RiskStatus.TREATED || RiskService.getRiskStatusCode(risk) === RiskStatus.CLOSED
-        ).length;
-        const treatmentScore = (treatedCount / total) * 2.0;
-
-        const highSeverityUntreated = risks.filter((risk) =>
-            (RiskService.getRiskLevelCode(risk) === RiskLevel.CRITICAL || RiskService.getRiskLevelCode(risk) === RiskLevel.HIGH) &&
-            RiskService.getRiskStatusCode(risk) !== RiskStatus.TREATED &&
-            RiskService.getRiskStatusCode(risk) !== RiskStatus.CLOSED
-        ).length;
-        const severityScore = Math.max(0, 1.0 - (highSeverityUntreated / total));
-
-        const today = new Date();
-        const onTimeCount = risks.filter((risk) => {
-            if (RiskService.getRiskStatusCode(risk) === RiskStatus.TREATED || RiskService.getRiskStatusCode(risk) === RiskStatus.CLOSED) {
-                return true;
+        const totalScore = risks.reduce((sum, risk) => {
+            const status = RiskService.getRiskStatusCode(risk);
+            if (status === RiskStatus.TREATED || status === RiskStatus.CLOSED) {
+                return sum + 5;
             }
+            if (status === RiskStatus.IN_PROGRESS) {
+                return sum + 2.5;
+            }
+            return sum;
+        }, 0);
 
-            return new Date(risk.dateEcheance) >= today;
-        }).length;
-        const timelinessScore = (onTimeCount / total) * 1.0;
-
-        const totalMaturity = identificationScore + treatmentScore + severityScore + timelinessScore;
-        return Number(Math.min(5.0, totalMaturity).toFixed(1));
+        return Number((totalScore / risks.length).toFixed(1));
     }
 
     static getRiskStatusCode(risk: Pick<Risk, 'statut' | 'statutCode'>): string {

@@ -29,6 +29,7 @@ export class ComplianceFrameworksComponent implements OnInit {
   selectedFrameworkId: number | null = null;
   frameworkEditingId: number | null = null;
   requirementEditingId: number | null = null;
+  requirementDetailsId: number | null = null;
   importFileName = '';
   importResult: ComplianceRequirementImportResult | null = null;
   feedback = '';
@@ -47,6 +48,10 @@ export class ComplianceFrameworksComponent implements OnInit {
 
   get selectedFramework(): ComplianceFrameworkRecord | null {
     return this.frameworks.find(item => item.id === this.selectedFrameworkId) || null;
+  }
+
+  get requirementDetails(): ComplianceRequirementRecord | null {
+    return this.requirements.find(item => item.id === this.requirementDetailsId) || null;
   }
 
   loadFrameworks(): void {
@@ -87,6 +92,9 @@ export class ComplianceFrameworksComponent implements OnInit {
     this.complianceService.getRequirements(this.selectedFrameworkId).subscribe({
       next: items => {
         this.requirements = items;
+        if (this.requirementDetailsId && !items.some(item => item.id === this.requirementDetailsId)) {
+          this.requirementDetailsId = null;
+        }
         this.reqCurrentPage = 1;
       },
       error: err => {
@@ -114,6 +122,7 @@ export class ComplianceFrameworksComponent implements OnInit {
     this.selectedFrameworkId = frameworkId;
     this.importResult = null;
     this.importFileName = '';
+    this.requirementDetailsId = null;
     this.resetFrameworkForm();
     this.resetRequirementForm();
     this.loadRequirements();
@@ -192,6 +201,7 @@ export class ComplianceFrameworksComponent implements OnInit {
 
   editRequirement(item: ComplianceRequirementRecord): void {
     this.requirementEditingId = item.id;
+    this.requirementDetailsId = null;
     this.requirementForm = {
       frameworkId: item.frameworkId,
       code: item.code,
@@ -205,6 +215,17 @@ export class ComplianceFrameworksComponent implements OnInit {
     };
     this.feedback = `Edition de l exigence ${item.code}.`;
     this.error = '';
+  }
+
+  viewRequirementDetails(item: ComplianceRequirementRecord): void {
+    this.requirementDetailsId = item.id;
+    this.requirementEditingId = null;
+    this.feedback = '';
+    this.error = '';
+  }
+
+  closeRequirementDetails(): void {
+    this.requirementDetailsId = null;
   }
 
   saveRequirement(): void {
@@ -248,6 +269,10 @@ export class ComplianceFrameworksComponent implements OnInit {
   deleteRequirement(item: ComplianceRequirementRecord): void {
     if (!window.confirm(`Supprimer l exigence ${item.code} ?`)) {
       return;
+    }
+
+    if (this.requirementDetailsId === item.id) {
+      this.requirementDetailsId = null;
     }
 
     this.complianceService.deleteRequirement(item.id).subscribe({

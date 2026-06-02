@@ -271,6 +271,55 @@
                 <p>Importez un document pour alimenter automatiquement ce referentiel.</p>
             </div>
 
+            <section class="requirement-detail-card" *ngIf="requirementDetails as requirement">
+                <div class="detail-header">
+                    <div>
+                        <span class="eyebrow">Detail de l exigence</span>
+                        <h3>{{ requirement.code }} - {{ requirement.title }}</h3>
+                        <p>{{ requirement.description || 'Aucune description detaillee renseignee pour cette exigence.' }}</p>
+                    </div>
+                    <button class="back-btn" type="button" (click)="closeRequirementDetails()">
+                        <i class="fas fa-times"></i>
+                        Fermer
+                    </button>
+                </div>
+
+                <div class="requirement-detail-grid">
+                    <div class="detail-block">
+                        <span>Referentiel</span>
+                        <strong>{{ selectedFramework?.code || requirement.framework?.code || 'Non renseigne' }}</strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Chapitre</span>
+                        <strong>{{ requirement.chapter || 'Sans chapitre' }}</strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Ordre</span>
+                        <strong>{{ requirement.orderIndex }}</strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Poids</span>
+                        <strong>{{ requirement.weight }}</strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Applicabilite</span>
+                        <strong><span class="badge" [ngClass]="getStatusClass(requirement.applicabilityCode || requirement.applicability)">{{ requirement.applicabilityLabel || requirement.applicability }}</span></strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Statut</span>
+                        <strong><span class="badge" [ngClass]="getStatusClass(requirement.statusCode || requirement.status)">{{ requirement.statusLabel || requirement.status }}</span></strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Cree le</span>
+                        <strong>{{ formatDate(requirement.createdAt) }}</strong>
+                    </div>
+                    <div class="detail-block">
+                        <span>Mis a jour le</span>
+                        <strong>{{ formatDate(requirement.updatedAt) }}</strong>
+                    </div>
+                </div>
+            </section>
+
             <table class="compliance-table" *ngIf="requirements.length > 0">
                 <thead>
                     <tr>
@@ -294,6 +343,7 @@
                         <td><span class="badge" [ngClass]="getStatusClass(requirement.applicabilityCode || requirement.applicability)">{{ requirement.applicabilityLabel || requirement.applicability }}</span></td>
                         <td><span class="badge" [ngClass]="getStatusClass(requirement.statusCode || requirement.status)">{{ requirement.statusLabel || requirement.status }}</span></td>
                         <td class="action-cell">
+                            <button class="table-action" type="button" (click)="viewRequirementDetails(requirement)">Voir detail</button>
                             <button class="table-action" type="button" (click)="editRequirement(requirement)">Modifier</button>
                             <button class="table-action danger" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>
                         </td>

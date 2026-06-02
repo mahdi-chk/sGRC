@@ -61,9 +61,19 @@
 
 .back-btn,
 .btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-width: max-content;
+  height: auto;
+  min-height: 42px;
   border-radius: 12px;
   padding: 10px 14px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid var(--compliance-line);
@@ -365,6 +375,8 @@
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   margin-top: 18px;
 }
@@ -387,14 +399,22 @@
 }
 
 .table-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: max-content;
   border: 1px solid var(--compliance-line);
   border-radius: 10px;
   background: #fff;
   color: var(--compliance-ink);
   padding: 8px 10px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   margin-right: 8px;
+  margin-bottom: 8px;
 }
 
 .table-action.danger {

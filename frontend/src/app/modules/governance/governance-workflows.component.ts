@@ -6,8 +6,7 @@ import {
   GovernanceApprovalWorkflow,
   GovernanceService,
   GovernanceWorkflowAccessRule,
-  GovernanceWorkflowModule,
-  GovernanceWorkflowTemplate
+  GovernanceWorkflowModule
 } from './governance.service';
 import { getGovernanceNavItems, getStoredGovernanceRole } from './governance-navigation';
 import { environment } from '../../../environments/environment';
@@ -22,10 +21,9 @@ export class GovernanceWorkflowsComponent implements OnInit {
   readonly navItems = getGovernanceNavItems(this.currentRole);
   readonly canManageWorkflowConfig = this.currentRole === 'super_admin' || this.currentRole === 'admin_si';
   readonly configurableModules: GovernanceWorkflowModule[] = ['Risques', 'Audit', 'Incidents'];
-  readonly workflowViews: Array<{ value: 'tracking' | 'configuration' | 'access'; label: string }> = this.canManageWorkflowConfig
+  readonly workflowViews: Array<{ value: 'tracking' | 'access'; label: string }> = this.canManageWorkflowConfig
     ? [
       { value: 'tracking', label: 'Suivi' },
-      { value: 'configuration', label: 'Configuration' },
       { value: 'access', label: 'Acces' }
     ]
     : [{ value: 'tracking', label: 'Suivi' }];
@@ -46,13 +44,10 @@ export class GovernanceWorkflowsComponent implements OnInit {
   decisionComment = '';
   processingWorkflowId: string | null = null;
   isLoading = false;
-  activeView: 'tracking' | 'configuration' | 'access' = 'tracking';
-  templates: GovernanceWorkflowTemplate[] = [];
-  selectedTemplate: GovernanceWorkflowTemplate = this.emptyTemplate();
+  activeView: 'tracking' | 'access' = 'tracking';
   accessRules: GovernanceWorkflowAccessRule[] = [];
   users: Array<{ id: number; nom: string; prenom: string; mail: string }> = [];
   roles: Array<{ code: string; label: string }> = [];
-  templateStatus: string | null = null;
   accessStatus: string | null = null;
   instanceStatus: string | null = null;
   instanceEditStages: GovernanceApprovalStage[] = [];
@@ -91,16 +86,6 @@ export class GovernanceWorkflowsComponent implements OnInit {
     if (!this.canManageWorkflowConfig) {
       return;
     }
-
-    this.governanceService.getWorkflowTemplates().subscribe({
-      next: templates => {
-        this.templates = templates;
-        if (!this.selectedTemplate.id && templates.length > 0) {
-          this.selectedTemplate = this.cloneTemplate(templates[0]);
-        }
-      },
-      error: () => this.templates = []
-    });
 
     this.governanceService.getWorkflowAccessRules().subscribe({
       next: rules => this.accessRules = rules,
@@ -275,51 +260,8 @@ export class GovernanceWorkflowsComponent implements OnInit {
     this.submitWorkflowAction('restart');
   }
 
-  switchView(view: 'tracking' | 'configuration' | 'access'): void {
+  switchView(view: 'tracking' | 'access'): void {
     this.activeView = view;
-  }
-
-  createTemplate(): void {
-    this.selectedTemplate = this.emptyTemplate();
-    this.templateStatus = null;
-  }
-
-  editTemplate(template: GovernanceWorkflowTemplate): void {
-    this.selectedTemplate = this.cloneTemplate(template);
-    this.templateStatus = null;
-  }
-
-  addTemplateStage(): void {
-    this.selectedTemplate.stages.push({ role: '', owner: '', rule: '' });
-  }
-
-  removeTemplateStage(index: number): void {
-    if (this.selectedTemplate.stages.length <= 1) {
-      return;
-    }
-    this.selectedTemplate.stages.splice(index, 1);
-  }
-
-  saveTemplate(): void {
-    if (!this.selectedTemplate.title.trim() || this.selectedTemplate.stages.some(stage => !stage.role.trim() || !stage.rule.trim())) {
-      this.templateStatus = 'Le titre, les roles et les regles des etapes sont obligatoires.';
-      return;
-    }
-
-    this.governanceService.saveWorkflowTemplate(this.selectedTemplate).subscribe({
-      next: template => {
-        this.templateStatus = 'Modele workflow enregistre.';
-        const index = this.templates.findIndex(item => item.id === template.id);
-        if (index >= 0) {
-          this.templates[index] = template;
-        } else {
-          this.templates = [template, ...this.templates];
-        }
-        this.selectedTemplate = this.cloneTemplate(template);
-        this.loadData();
-      },
-      error: err => this.templateStatus = err?.error?.message || 'Erreur lors de la sauvegarde du modele.'
-    });
   }
 
   startInstanceEdit(workflow: GovernanceApprovalWorkflow): void {
@@ -450,35 +392,6 @@ export class GovernanceWorkflowsComponent implements OnInit {
   getUserLabel(userId?: number | null): string {
     const user = this.users.find(item => item.id === Number(userId));
     return user ? `${user.prenom} ${user.nom}` : 'Utilisateur';
-  }
-
-  private emptyTemplate(): GovernanceWorkflowTemplate {
-    return {
-      module: 'Risques',
-      process: null,
-      title: '',
-      description: '',
-      isActive: true,
-      stages: [
-        {
-          role: 'Responsable metier',
-          owner: '',
-          rule: 'Verifier et qualifier le dossier.'
-        },
-        {
-          role: 'Validation gouvernance',
-          owner: '',
-          rule: 'Valider la coherence et tracer la decision.'
-        }
-      ]
-    };
-  }
-
-  private cloneTemplate(template: GovernanceWorkflowTemplate): GovernanceWorkflowTemplate {
-    return {
-      ...template,
-      stages: template.stages.map(stage => ({ ...stage }))
-    };
   }
 
   private resolveSelectedWorkflow(workflows: GovernanceApprovalWorkflow[]): GovernanceApprovalWorkflow | null {

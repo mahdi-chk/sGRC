@@ -87,9 +87,6 @@ export interface GovernanceApprovalStage {
   rule: string;
   owner?: string;
   status?: 'done' | 'current' | 'todo' | 'rejected' | 'changes_requested';
-  slaDays?: number | null;
-  escalationTo?: string | null;
-  escalationRule?: string | null;
 }
 
 export interface GovernanceWorkflowApprover {
@@ -105,7 +102,6 @@ export interface GovernanceApprovalWorkflow {
   pending: number;
   recentDocuments: number;
   totalDocuments: number;
-  sla: string;
   channel: string;
   alert: string;
   alertClass: 'success' | 'warning';
@@ -120,7 +116,6 @@ export interface GovernanceApprovalWorkflow {
   actionsRequired?: string[];
   approvers?: GovernanceWorkflowApprover[];
   type?: string;
-  escalation?: string;
   decisionRules?: string[];
   module?: string;
   process?: string | null;

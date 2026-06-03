@@ -182,7 +182,7 @@
 
 .stage-editor-row {
   display: grid;
-  grid-template-columns: 34px minmax(120px, 1fr) minmax(120px, 1fr) 90px minmax(130px, 1fr) minmax(180px, 1.5fr) minmax(180px, 1.5fr) 40px;
+  grid-template-columns: 34px minmax(140px, 1fr) minmax(140px, 1fr) minmax(220px, 2fr) 40px;
   gap: 8px;
   align-items: start;
   margin-bottom: 10px;
@@ -233,13 +233,6 @@
   margin-top: 12px;
   color: #1d4ed8;
   font-weight: 700;
-}
-
-.escalation-line {
-  display: block;
-  margin-top: 6px;
-  color: #475569;
-  line-height: 1.4;
 }
 
 @media (max-width: 980px) {

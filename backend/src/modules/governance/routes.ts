@@ -84,9 +84,6 @@ type GovernanceStagePayload = {
   rule: string;
   owner?: string;
   status?: 'done' | 'current' | 'todo' | 'rejected' | 'changes_requested';
-  slaDays?: number | null;
-  escalationTo?: string;
-  escalationRule?: string;
 };
 
 type GovernanceWorkflowSourceType = 'document' | 'risk' | 'audit' | 'incident';
@@ -98,7 +95,6 @@ type GovernanceWorkflowPayload = {
   pending: number;
   recentDocuments: number;
   totalDocuments: number;
-  sla: string;
   channel: string;
   alert: string;
   alertClass: 'success' | 'warning';
@@ -113,7 +109,6 @@ type GovernanceWorkflowPayload = {
   actionsRequired?: string[];
   approvers?: Array<{ role: string; name: string; decision: string }>;
   type?: string;
-  escalation?: string;
   decisionRules?: string[];
   stages: GovernanceStagePayload[];
   module?: string;
@@ -139,18 +134,12 @@ type WorkflowStageInput = {
   role?: unknown;
   owner?: unknown;
   rule?: unknown;
-  slaDays?: unknown;
-  escalationTo?: unknown;
-  escalationRule?: unknown;
 };
 
 type NormalizedWorkflowStage = {
   role: string;
   owner?: string;
   rule: string;
-  slaDays: number | null;
-  escalationTo?: string;
-  escalationRule?: string;
 };
 
 const ROLE_DOCUMENT_FOLDERS: RoleFolderMap = {
@@ -295,17 +284,11 @@ const normalizeWorkflowStages = (stages: unknown): NormalizedWorkflowStage[] => 
       const role = cleanConfigText(item.role, 160);
       const rule = cleanConfigText(item.rule, 1000);
       const owner = cleanConfigText(item.owner, 180);
-      const escalationTo = cleanConfigText(item.escalationTo, 180);
-      const escalationRule = cleanConfigText(item.escalationRule, 1000);
-      const slaDaysNumber = Number(item.slaDays);
 
       return {
         role,
         rule,
-        owner: owner || undefined,
-        slaDays: Number.isInteger(slaDaysNumber) && slaDaysNumber >= 0 ? slaDaysNumber : null,
-        escalationTo: escalationTo || undefined,
-        escalationRule: escalationRule || undefined
+        owner: owner || undefined
       };
     })
     .filter(stage => stage.role && stage.rule);
@@ -769,7 +752,6 @@ const buildWorkflowPayload = (workflow: GovernanceApprovalWorkflowModel & { stag
     pending,
     recentDocuments: folderAnalytics?.recentDocuments || 0,
     totalDocuments: folderAnalytics?.documentCount || (workflow.documentName ? 1 : 0),
-    sla: workflow.dueDate ? `Echeance ${new Date(workflow.dueDate).toLocaleDateString('fr-FR')}` : `Cycle ${REVIEW_WINDOW_DAYS} jours`,
     channel: workflow.folderLabel,
     alert: alert.alert,
     alertClass: alert.alertClass,
@@ -788,9 +770,6 @@ const buildWorkflowPayload = (workflow: GovernanceApprovalWorkflowModel & { stag
     ],
     approvers: buildApprovers(stages),
     type: workflow.status === 'changes_requested' ? 'Correction puis nouvelle approbation' : 'Approbation sequentielle dynamique',
-    escalation: uiStatus === 'en_retard'
-      ? 'Escalade vers Super Admin puis Top Management car l echeance est depassee.'
-      : 'Rappel automatique avant echeance, escalade seulement en cas de blocage.',
     decisionRules: [
       'Chaque decision est persistée en base avec acteur, date, commentaire et statut.',
       'Une approbation fait avancer l etape courante vers le prochain approbateur.',
@@ -837,7 +816,6 @@ const computeFolderGovernanceWorkflows = (folders: RoleFolderConfig[]) => {
       pending: item.analytics.staleDocuments,
       recentDocuments: item.analytics.recentDocuments,
       totalDocuments: item.analytics.documentCount,
-      sla: hasReviewDebt ? `${REVIEW_WINDOW_DAYS} jours depasses` : `Cycle ${REVIEW_WINDOW_DAYS} jours`,
       channel: item.folder.label,
       alert: hasReviewDebt ? 'Revue requise' : 'Sous controle',
       alertClass: hasReviewDebt ? 'warning' : 'success',
@@ -856,9 +834,6 @@ const computeFolderGovernanceWorkflows = (folders: RoleFolderConfig[]) => {
         decision: index < completedApprovals ? 'Valide' : index === completedApprovals ? 'En attente' : 'A venir'
       })),
       type: hasReviewDebt ? 'Correction puis approbation sequentielle' : 'Approbation sequentielle standard',
-      escalation: hasReviewDebt
-        ? 'Escalade vers Super Admin puis Top Management si le retard persiste.'
-        : 'Rappel automatique avant echeance, escalade seulement en cas de blocage.',
       decisionRules: [
         'Toute action est tracee avec acteur, role, date, module et statut.',
         'Une validation sensible requiert une revue metier puis une decision gouvernance.',
@@ -1220,7 +1195,7 @@ const getProgressFromStatus = (status: 'a_initialiser' | 'en_retard' | 'approuve
 };
 
 const deriveConfiguredStageStatuses = (
-  stages: Array<{ role: string; rule: string; owner?: string; slaDays?: number | null; escalationTo?: string; escalationRule?: string }>,
+  stages: Array<{ role: string; rule: string; owner?: string }>,
   status: GovernanceWorkflowPayload['status'],
   progress = 0
 ): GovernanceStagePayload[] => {
@@ -1247,10 +1222,7 @@ const parseOverrideStages = (override: GovernanceWorkflowInstanceOverrideModel):
     return normalizeWorkflowStages(stages).map(stage => ({
       role: stage.role,
       owner: stage.owner,
-      rule: stage.rule,
-      slaDays: stage.slaDays,
-      escalationTo: stage.escalationTo,
-      escalationRule: stage.escalationRule
+      rule: stage.rule
     }));
   } catch (_error) {
     return [];
@@ -1264,10 +1236,7 @@ const getTemplateStages = (template: GovernanceWorkflowTemplateModel & { stages?
     .map(stage => ({
       role: stage.role,
       owner: stage.owner || undefined,
-      rule: stage.rule,
-      slaDays: stage.slaDays,
-      escalationTo: stage.escalationTo || undefined,
-      escalationRule: stage.escalationRule || undefined
+      rule: stage.rule
     }));
 
 const findWorkflowTemplate = async (module: GovernanceWorkflowModule, process?: string | null) => {
@@ -1333,7 +1302,6 @@ const applyWorkflowConfiguration = async (workflow: GovernanceWorkflowPayload): 
   return {
     ...workflow,
     type: `Modele configure v${template.version}`,
-    escalation: template.description || workflow.escalation,
     stages: templateStages,
     approvers: buildApproversFromStages(templateStages),
     completedApprovals: templateStages.filter(stage => stage.status === 'done').length,
@@ -1374,7 +1342,6 @@ const buildOperationalWorkflow = (payload: {
     pending,
     recentDocuments: 0,
     totalDocuments: 1,
-    sla: payload.dueDate ? `Echeance ${new Date(payload.dueDate).toLocaleDateString('fr-FR')}` : 'Echeance non definie',
     channel: payload.module,
     alert: payload.status === 'en_retard' ? 'En retard' : payload.status === 'approuve' ? 'Termine' : 'En cours',
     alertClass: payload.status === 'en_retard' ? 'warning' : 'success',
@@ -1397,9 +1364,6 @@ const buildOperationalWorkflow = (payload: {
       decision: stage.status === 'done' ? 'Realise' : stage.status === 'current' ? 'En attente' : 'A venir'
     })),
     type: `Workflow operationnel ${payload.module}`,
-    escalation: payload.status === 'en_retard'
-      ? 'Escalade vers le responsable du perimetre car l echeance est depassee.'
-      : 'Suivi par le responsable hierarchique avec tracabilite des changements.',
     decisionRules: [
       'Le processus et l avancement sont calcules depuis l objet metier rattache.',
       'Les profils responsables voient les objets de leur perimetre et les utilisateurs rattaches.',
@@ -1818,10 +1782,7 @@ const serializeTemplate = (template: GovernanceWorkflowTemplateModel & { stages?
       stageIndex: stage.stageIndex,
       role: stage.role,
       owner: stage.owner,
-      rule: stage.rule,
-      slaDays: stage.slaDays,
-      escalationTo: stage.escalationTo,
-      escalationRule: stage.escalationRule
+      rule: stage.rule
     }))
 });
 
@@ -1836,10 +1797,7 @@ const replaceTemplateStages = async (templateId: number, stages: NormalizedWorkf
     stageIndex: index,
     role: stage.role,
     owner: stage.owner || null,
-    rule: stage.rule,
-    slaDays: stage.slaDays,
-    escalationTo: stage.escalationTo || null,
-    escalationRule: stage.escalationRule || null
+    rule: stage.rule
   })));
 };
 

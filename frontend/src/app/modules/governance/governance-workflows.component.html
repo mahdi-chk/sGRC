@@ -6,7 +6,7 @@
             </button>
             <div>
                 <h1><i class="fas fa-diagram-project"></i> Workflows d Approbation</h1>
-                <p>Circuits de validation et avancement operationnel des risques, audits, incidents et dossiers documentaires.</p>
+                <p>Circuits de validation et avancement operationnel des risques, audits, incidents.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -51,7 +51,7 @@
             <p>Etapes validees sur tous les workflows visibles.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Alertes SLA</span>
+            <span class="eyebrow">Retards</span>
             <h3>{{ lateWorkflows }}</h3>
             <p>Workflows avec revue ou validation a accelerer.</p>
         </div>
@@ -169,7 +169,6 @@
 
             <div class="workflow-info">
                 <strong>{{ workflow.type || 'Approbation sequentielle standard' }}</strong>
-                <p>{{ workflow.escalation }}</p>
                 <small *ngIf="workflow.sourceType && workflow.sourceType !== 'document'">
                     Les actions de validation se font dans le module source: {{ workflow.module }} #{{ workflow.sourceId }}.
                 </small>
@@ -196,15 +195,11 @@
                         Ajouter une etape
                     </button>
                 </div>
-                <p class="helper-text">Le SLA est le delai cible en jours. L escalade indique qui alerter si l etape depasse ce delai ou reste bloquee.</p>
                 <div class="stage-editor-row" *ngFor="let stage of instanceEditStages; let index = index">
                     <span class="step-index">{{ index + 1 }}</span>
                     <input type="text" [(ngModel)]="stage.role" placeholder="Role validateur">
                     <input type="text" [(ngModel)]="stage.owner" placeholder="Responsable optionnel">
-                    <input type="number" [(ngModel)]="stage.slaDays" min="0" placeholder="SLA jours">
-                    <input type="text" [(ngModel)]="stage.escalationTo" placeholder="Escalade vers">
                     <textarea rows="2" [(ngModel)]="stage.rule" placeholder="Regle ou action attendue"></textarea>
-                    <textarea rows="2" [(ngModel)]="stage.escalationRule" placeholder="Regle d escalade"></textarea>
                     <button type="button" class="icon-btn danger-action" (click)="removeInstanceStage(index)">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -253,11 +248,6 @@
                         <strong>{{ stage.role }}</strong>
                         <small>{{ stage.owner }}</small>
                         <p>{{ stage.rule }}</p>
-                        <small *ngIf="stage.slaDays != null || stage.escalationTo || stage.escalationRule" class="escalation-line">
-                            SLA: {{ stage.slaDays != null ? (stage.slaDays + ' jour(s)') : 'non defini' }}
-                            <span *ngIf="stage.escalationTo"> - Escalade: {{ stage.escalationTo }}</span>
-                            <span *ngIf="stage.escalationRule"> - {{ stage.escalationRule }}</span>
-                        </small>
                     </div>
                 </div>
             </div>
@@ -330,7 +320,6 @@
                 <div>
                     <span class="eyebrow">Configuration module/processus</span>
                     <h2>{{ selectedTemplate.id ? 'Modifier le modele' : 'Nouveau modele' }}</h2>
-                    <p>Les documents conservent leur circuit documentaire separe.</p>
                 </div>
                 <button type="button" class="btn-primary" (click)="saveTemplate()">
                     <i class="fas fa-save"></i>
@@ -361,7 +350,7 @@
 
             <label class="full-field">
                 <span>Description</span>
-                <textarea rows="3" [(ngModel)]="selectedTemplate.description" placeholder="Objectif, escalade ou consignes du workflow"></textarea>
+                <textarea rows="3" [(ngModel)]="selectedTemplate.description" placeholder="Objectif ou consignes du workflow"></textarea>
             </label>
 
             <div class="stage-editor-head">
@@ -371,16 +360,12 @@
                     Ajouter une etape
                 </button>
             </div>
-            <p class="helper-text">Le SLA est le delai cible en jours. L escalade indique qui alerter si l etape depasse ce delai ou reste bloquee.</p>
 
             <div class="stage-editor-row" *ngFor="let stage of selectedTemplate.stages; let index = index">
                 <span class="step-index">{{ index + 1 }}</span>
                 <input type="text" [(ngModel)]="stage.role" placeholder="Role validateur">
                 <input type="text" [(ngModel)]="stage.owner" placeholder="Responsable optionnel">
-                <input type="number" [(ngModel)]="stage.slaDays" min="0" placeholder="SLA jours">
-                <input type="text" [(ngModel)]="stage.escalationTo" placeholder="Escalade vers">
                 <textarea rows="2" [(ngModel)]="stage.rule" placeholder="Regle ou action attendue"></textarea>
-                <textarea rows="2" [(ngModel)]="stage.escalationRule" placeholder="Regle d escalade"></textarea>
                 <button type="button" class="icon-btn danger-action" (click)="removeTemplateStage(index)">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -396,7 +381,7 @@
                 <div>
                     <span class="eyebrow">Gestion des acces</span>
                     <h2>Matrice par module et processus</h2>
-                    <p>Ces droits concernent Risques, Audit et Incidents. Les documents restent geres par dossiers de role.</p>
+                    <p>Ces droits concernent Risques, Audit et Incidents.</p>
                 </div>
                 <div class="decision-actions">
                     <button type="button" class="btn-secondary" (click)="addAccessRule()">

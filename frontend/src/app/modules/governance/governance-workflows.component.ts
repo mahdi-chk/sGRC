@@ -290,7 +290,7 @@ export class GovernanceWorkflowsComponent implements OnInit {
   }
 
   addTemplateStage(): void {
-    this.selectedTemplate.stages.push({ role: '', owner: '', rule: '', slaDays: null, escalationTo: '', escalationRule: '' });
+    this.selectedTemplate.stages.push({ role: '', owner: '', rule: '' });
   }
 
   removeTemplateStage(index: number): void {
@@ -334,7 +334,7 @@ export class GovernanceWorkflowsComponent implements OnInit {
   }
 
   addInstanceStage(): void {
-    this.instanceEditStages.push({ role: '', owner: '', rule: '', slaDays: null, escalationTo: '', escalationRule: '' });
+    this.instanceEditStages.push({ role: '', owner: '', rule: '' });
   }
 
   removeInstanceStage(index: number): void {
@@ -463,18 +463,12 @@ export class GovernanceWorkflowsComponent implements OnInit {
         {
           role: 'Responsable metier',
           owner: '',
-          rule: 'Verifier et qualifier le dossier.',
-          slaDays: 5,
-          escalationTo: 'Manager',
-          escalationRule: 'Escalader si le SLA est depasse sans decision.'
+          rule: 'Verifier et qualifier le dossier.'
         },
         {
           role: 'Validation gouvernance',
           owner: '',
-          rule: 'Valider la coherence et tracer la decision.',
-          slaDays: 5,
-          escalationTo: 'Top Management',
-          escalationRule: 'Escalader les blocages critiques ou retards repetes.'
+          rule: 'Valider la coherence et tracer la decision.'
         }
       ]
     };

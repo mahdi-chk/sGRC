@@ -264,8 +264,26 @@ export class ComplianceMaturityComponent implements OnInit {
     const generateChart = (items: any[], labelFn: (item: any) => string, useDecimalScale: boolean = false) => {
       if (!items.length) return this.createEmptyRadarChart();
 
-      const axes = items.map((item: any, index: number) => {
-        const angle = this.toRadarAngle(index, items.length);
+      const targetLength = 6;
+      const paddedItems = [...items];
+      if (paddedItems.length > targetLength) {
+        paddedItems.splice(targetLength);
+      } else {
+        while (paddedItems.length < targetLength) {
+          paddedItems.push({
+            key: '',
+            label: '',
+            numericLabel: '',
+            order: 999,
+            totalWeight: 0,
+            partialWeight: 0,
+            coveredWeight: 0
+          });
+        }
+      }
+
+      const axes = paddedItems.map((item: any, index: number) => {
+        const angle = this.toRadarAngle(index, paddedItems.length);
         const point = this.projectPoint(centerX, centerY, radius, angle);
         const labelPoint = this.projectPoint(centerX, centerY, radius + 38, angle);
 
@@ -277,15 +295,15 @@ export class ComplianceMaturityComponent implements OnInit {
         };
       });
 
-      const pValues = items.map((item: any) => item.totalWeight > 0 ? Math.round((item.partialWeight / item.totalWeight) * 100) : 0);
-      const tValues = items.map((item: any) => item.totalWeight > 0 ? Math.round((item.coveredWeight / item.totalWeight) * 100) : 0);
+      const pValues = paddedItems.map((item: any) => item.totalWeight > 0 ? Math.round((item.partialWeight / item.totalWeight) * 100) : 0);
+      const tValues = paddedItems.map((item: any) => item.totalWeight > 0 ? Math.round((item.coveredWeight / item.totalWeight) * 100) : 0);
 
-      const pPoints = pValues.map((value: number, index: number) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, items.length)));
-      const tPoints = tValues.map((value: number, index: number) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, items.length)));
+      const pPoints = pValues.map((value: number, index: number) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, paddedItems.length)));
+      const tPoints = tValues.map((value: number, index: number) => this.projectPoint(centerX, centerY, radius * (Math.max(0, Math.min(100, value)) / 100), this.toRadarAngle(index, paddedItems.length)));
 
       return {
-        labels: items.map(labelFn),
-        labelLines: items.map((item: any) => this.wrapRadarLabel(labelFn(item))),
+        labels: paddedItems.map(labelFn),
+        labelLines: paddedItems.map((item: any) => this.wrapRadarLabel(labelFn(item))),
         partialValues: pValues,
         totalValues: tValues,
         partialPolygon: this.buildRadarPolygon(pValues, centerX, centerY, radius),
@@ -293,7 +311,7 @@ export class ComplianceMaturityComponent implements OnInit {
         partialPoints: pPoints,
         totalPoints: tPoints,
         axes,
-        gridPolygons: this.radarGridLevels.map(level => this.buildRadarPolygon(new Array(items.length).fill(level), centerX, centerY, radius)),
+        gridPolygons: this.radarGridLevels.map(level => this.buildRadarPolygon(new Array(paddedItems.length).fill(level), centerX, centerY, radius)),
         levelLabels: this.radarGridLevels.map(level => {
           let displayedValue: string | number = level;
           if (useDecimalScale) {
@@ -394,8 +412,16 @@ export class ComplianceMaturityComponent implements OnInit {
     };
   }
 
+  formatValue(value: number, useDecimal: boolean): string {
+    if (useDecimal) {
+      const dec = value / 100;
+      return String(dec).replace('.', ',');
+    }
+    return `${value}%`;
+  }
+
   private toRadarAngle(index: number, total: number): number {
-    return (-Math.PI / 2) + (Math.PI * 2 * index / total);
+    return (-Math.PI / 2) + (Math.PI * 2 * index / Math.max(total, 1));
   }
 
   private wrapRadarLabel(label: string): string[] {

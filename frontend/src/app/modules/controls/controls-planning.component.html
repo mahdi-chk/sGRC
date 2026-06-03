@@ -23,6 +23,8 @@
         </a>
     </nav>
 
+    <div class="empty-state" *ngIf="errorMessage">{{ errorMessage }}</div>
+
     <div class="summary-grid" *ngIf="overview as data">
         <div class="summary-card">
             <span class="eyebrow">Lignes planifiees</span>
@@ -92,4 +94,40 @@
     <ng-template #emptyPlanning>
         <div class="empty-state">Aucune ligne de planification disponible.</div>
     </ng-template>
+
+    <div class="content-card" *ngIf="canWrite">
+        <div class="card-head">
+            <h2>Planifier un test d'efficacité</h2>
+            <p>Créer un test rattaché à un contrôle du référentiel pour en évaluer l'efficacité opérationnelle.</p>
+        </div>
+
+        <form class="evaluation-form" (ngSubmit)="createTest()">
+            <select class="finput" name="controlId" [(ngModel)]="testForm.controlId">
+                <option [ngValue]="null" disabled>-- Sélectionner un contrôle --</option>
+                <option *ngFor="let ctrl of controls" [ngValue]="ctrl.id">{{ ctrl.code }} – {{ ctrl.title }}</option>
+            </select>
+            <input class="finput" name="title" [(ngModel)]="testForm.title" placeholder="Intitulé du test" maxlength="255">
+            <div class="form-grid">
+                <select class="finput" name="testMethod" [(ngModel)]="testForm.testMethod">
+                    <option *ngFor="let option of testMethods" [value]="option.code">{{ option.label }}</option>
+                </select>
+                <select class="finput" name="result" [(ngModel)]="testForm.result">
+                    <option *ngFor="let option of testResults" [value]="option.code">{{ option.label }}</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <input class="finput" name="plannedDate" type="date" [(ngModel)]="testForm.plannedDate">
+                <input class="finput" name="executedAt" type="date" [(ngModel)]="testForm.executedAt">
+            </div>
+            <div class="form-grid">
+                <input class="finput" name="score" type="number" min="0" max="100" [(ngModel)]="testForm.score" placeholder="Score (0-100)">
+            </div>
+            <textarea class="finput" name="notes" [(ngModel)]="testForm.notes" rows="3" placeholder="Notes et observations"></textarea>
+            <textarea class="finput" name="evidenceSummary" [(ngModel)]="testForm.evidenceSummary" rows="3" placeholder="Synthèse des preuves collectées"></textarea>
+            <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                <i class="fas fa-plus"></i>
+                Planifier le test
+            </button>
+        </form>
+    </div>
 </div>

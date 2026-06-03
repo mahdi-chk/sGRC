@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-book-bookmark"></i> Referentiel des Controles</h1>
-                <p>Catalogue operationnel des controles relies aux risques, aux responsables et aux revues planifiees.</p>
+                <h1><i class="fas fa-book-bookmark"></i> Référentiel des Contrôles</h1>
+                <p>Catalogue opérationnel des contrôles reliés aux risques, aux responsables et aux revues planifiées.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -23,45 +23,85 @@
         </a>
     </nav>
 
+    <div class="empty-state compact-empty" *ngIf="errorMessage">{{ errorMessage }}</div>
+
     <div class="summary-grid" *ngIf="overview as data">
         <div class="summary-card">
-            <span class="eyebrow">Controles</span>
+            <span class="eyebrow">Contrôles</span>
             <h3>{{ data.summary.totalControls }}</h3>
-            <p>Elements suivis dans le registre de controle.</p>
+            <p>Éléments suivis dans le registre de contrôle.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Periodiques</span>
+            <span class="eyebrow">Périodiques</span>
             <h3>{{ data.summary.periodicControls }}</h3>
-            <p>Controles relies a une frequence d execution.</p>
+            <p>Contrôles reliés à une fréquence d'exécution.</p>
         </div>
         <div class="summary-card">
             <span class="eyebrow">Ponctuels</span>
             <h3>{{ data.summary.ponctualControls }}</h3>
-            <p>Controles lies a un besoin ou un contexte donne.</p>
+            <p>Contrôles liés à un besoin ou un contexte donné.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Departements couverts</span>
+            <span class="eyebrow">Départements couverts</span>
             <h3>{{ departmentCount }}</h3>
-            <p>Perimetres actuellement rattaches au referentiel.</p>
+            <p>Périmètres actuellement rattachés au référentiel.</p>
         </div>
+    </div>
+
+    <div class="content-card" *ngIf="canWrite">
+        <div class="card-head">
+            <h2>{{ selectedControl ? 'Modifier un contrôle' : 'Nouveau contrôle' }}</h2>
+            <p>Création persistante du contrôle interne, avec type COSO, fréquence, maturité et prochaine revue.</p>
+        </div>
+
+        <form class="evaluation-form" (ngSubmit)="saveControl()">
+            <div class="form-grid">
+                <input class="finput" name="controlCode" [(ngModel)]="controlForm.code" placeholder="Code automatique si vide">
+                <input class="finput" name="controlTitle" [(ngModel)]="controlForm.title" placeholder="Titre du contrôle" required maxlength="255">
+            </div>
+            <textarea class="finput" name="controlDescription" [(ngModel)]="controlForm.description" rows="3" placeholder="Description, objectif et modalités de preuve"></textarea>
+            <div class="form-grid">
+                <select class="finput" name="controlType" [(ngModel)]="controlForm.controlType">
+                    <option *ngFor="let option of controlTypes" [value]="option.code">{{ option.label }}</option>
+                </select>
+                <select class="finput" name="frequency" [(ngModel)]="controlForm.frequency">
+                    <option *ngFor="let option of frequencies" [value]="option.code">{{ option.label }}</option>
+                </select>
+                <select class="finput" name="status" [(ngModel)]="controlForm.status">
+                    <option *ngFor="let option of statuses" [value]="option.code">{{ option.label }}</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <input class="finput" name="maturity" type="number" min="1" max="5" [(ngModel)]="controlForm.maturity">
+                <input class="finput" name="nextReview" type="date" [(ngModel)]="controlForm.nextReview">
+                <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                    <i class="fas fa-save"></i>
+                    {{ selectedControl ? 'Enregistrer' : 'Créer' }}
+                </button>
+            </div>
+            <button class="btn-refresh" type="button" *ngIf="selectedControl" (click)="resetForm()" [disabled]="isSaving">
+                Annuler la modification
+            </button>
+        </form>
     </div>
 
     <div class="table-card" *ngIf="registry.length > 0; else emptyRegistry">
         <div class="card-head">
-            <h2>Catalogue des controles</h2>
-            <p>Vision dediee au referentiel, separee des preuves, de la planification et des non-conformites.</p>
+            <h2>Catalogue des contrôles</h2>
+            <p>Vision dédiée au référentiel, séparée des preuves, de la planification et des non-conformités.</p>
         </div>
 
         <table class="controls-table">
             <thead>
                 <tr>
                     <th>Code</th>
-                    <th>Controle</th>
+                    <th>Contrôle</th>
                     <th>Type</th>
-                    <th>Execution</th>
-                    <th>Departement</th>
+                    <th>Exécution</th>
+                    <th>Département</th>
                     <th>Responsable</th>
                     <th>Revue</th>
+                    <th *ngIf="canWrite"></th>
                 </tr>
             </thead>
             <tbody>
@@ -71,7 +111,7 @@
                         <strong>{{ control.title }}</strong>
                         <small>{{ control.linkedRisk }}</small>
                     </td>
-                    <td><span class="tag">{{ control.controlType }}</span></td>
+                    <td><span class="tag">{{ control.controlTypeLabel || control.controlType }}</span></td>
                     <td>
                         <span class="tag subtle">{{ control.occurrenceLabel }}</span>
                         <small>{{ control.frequencyLabel }}</small>
@@ -79,6 +119,14 @@
                     <td>{{ control.department }}</td>
                     <td>{{ control.owner }}</td>
                     <td><span [ngClass]="getStatusClass(control.status)">{{ formatDate(control.nextReview) }}</span></td>
+                    <td *ngIf="canWrite" class="actions-cell">
+                        <button class="icon-action" type="button" (click)="editControl(control)" title="Modifier">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button class="icon-action danger" type="button" (click)="deleteControl(control)" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -92,6 +140,6 @@
     </div>
 
     <ng-template #emptyRegistry>
-        <div class="empty-state">Aucun controle disponible pour ce perimetre.</div>
+        <div class="empty-state">Aucun contrôle disponible pour ce périmètre.</div>
     </ng-template>
 </div>

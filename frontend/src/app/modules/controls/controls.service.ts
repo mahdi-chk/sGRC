@@ -18,16 +18,53 @@ export interface ControlRegistryItem {
     id: number;
     code: string;
     title: string;
+    description?: string | null;
     controlType: string;
+    controlTypeLabel?: string;
     executionType: string;
     occurrenceLabel: string;
+    frequency?: string;
     frequencyLabel: string;
+    departmentId?: number | null;
     department: string;
     linkedRisk: string;
+    riskIds?: number[];
+    risks?: { id: number; title: string }[];
+    ownerUserId?: number | null;
     owner: string;
     maturity: number;
     nextReview: string | null;
+    lastTestedAt?: string | null;
+    effectivenessScore?: number;
     status: string;
+    statusLabel?: string;
+    tests?: ControlTestExecutionItem[];
+}
+
+export interface ControlTestExecutionItem {
+    id: number;
+    title: string;
+    testMethod: string;
+    result: string;
+    plannedDate: string | null;
+    executedAt: string | null;
+    tester: string;
+    score: number;
+    notes: string | null;
+    evidenceSummary: string | null;
+}
+
+export interface ControlsLookupOption {
+    code: string;
+    label: string;
+}
+
+export interface ControlsLookups {
+    controlTypes: ControlsLookupOption[];
+    frequencies: ControlsLookupOption[];
+    statuses: ControlsLookupOption[];
+    testMethods: ControlsLookupOption[];
+    testResults: ControlsLookupOption[];
 }
 
 export interface ControlPlanningItem {
@@ -110,5 +147,29 @@ export class ControlsService {
 
     getOverview(): Observable<ControlsOverview> {
         return this.http.get<ControlsOverview>(`${this.apiUrl}/overview`);
+    }
+
+    getControls(): Observable<ControlRegistryItem[]> {
+        return this.http.get<ControlRegistryItem[]>(this.apiUrl);
+    }
+
+    getLookups(): Observable<ControlsLookups> {
+        return this.http.get<ControlsLookups>(`${this.apiUrl}/lookups`);
+    }
+
+    createControl(payload: Partial<ControlRegistryItem>): Observable<ControlRegistryItem> {
+        return this.http.post<ControlRegistryItem>(this.apiUrl, payload);
+    }
+
+    updateControl(id: number, payload: Partial<ControlRegistryItem>): Observable<ControlRegistryItem> {
+        return this.http.put<ControlRegistryItem>(`${this.apiUrl}/${id}`, payload);
+    }
+
+    deleteControl(id: number): Observable<{ success: boolean }> {
+        return this.http.delete<{ success: boolean }>(`${this.apiUrl}/${id}`);
+    }
+
+    createControlTest(controlId: number, payload: any): Observable<ControlRegistryItem> {
+        return this.http.post<ControlRegistryItem>(`${this.apiUrl}/${controlId}/tests`, payload);
     }
 }

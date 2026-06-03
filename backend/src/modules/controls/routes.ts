@@ -9,6 +9,8 @@ import { Incident } from '../incidents/incident.model';
 import { User } from '../users/user.model';
 import { AuditMission, AuditRecordType } from '../auditing/audit-mission.model';
 import { AuditEvidence } from '../auditing/audit-evidence.model';
+import { softDeleteInstance } from '../../utils/soft-delete';
+import { InternalControl, InternalControlRisk, InternalControlTestExecution } from './internal-control.model';
 
 const router = Router();
 
@@ -21,6 +23,63 @@ const allowedRoles = [
     ...AUDIT_COORDINATION_ROLES,
     UserRole.TOP_MANAGEMENT,
     UserRole.CONTROLLER
+];
+
+const writeRoles = [UserRole.SUPER_ADMIN, UserRole.CONTROLLER];
+
+const CONTROL_LOOKUPS = {
+    controlTypes: [
+        { code: 'preventive', label: 'Préventif' },
+        { code: 'detective', label: 'Détectif' },
+        { code: 'corrective', label: 'Correctif' },
+        { code: 'directive', label: 'Directif' },
+    ],
+    frequencies: [
+        { code: 'none', label: 'Non récurrent' },
+        { code: 'monthly', label: 'Mensuel' },
+        { code: 'quarterly', label: 'Trimestriel' },
+        { code: 'semi_annual', label: 'Semestriel' },
+        { code: 'annual', label: 'Annuel' },
+        { code: 'continuous', label: 'Continu' },
+    ],
+    statuses: [
+        { code: 'draft', label: 'Brouillon' },
+        { code: 'active', label: 'Actif' },
+        { code: 'review_required', label: 'Revue requise' },
+        { code: 'ineffective', label: 'Inefficace' },
+        { code: 'retired', label: 'Retiré' },
+    ],
+    testMethods: [
+        { code: 'manual_review', label: 'Revue manuelle' },
+        { code: 'walkthrough', label: 'Test de cheminement' },
+        { code: 'sampling', label: 'Échantillonnage' },
+        { code: 'automated_script', label: 'Script automatisé' },
+        { code: 'continuous_monitoring', label: 'Surveillance continue' },
+    ],
+    testResults: [
+        { code: 'planned', label: 'Planifié' },
+        { code: 'effective', label: 'Efficace' },
+        { code: 'partially_effective', label: 'Partiellement efficace' },
+        { code: 'ineffective', label: 'Inefficace' },
+        { code: 'not_applicable', label: 'Non applicable' },
+    ],
+};
+
+const controlIncludes = [
+    { model: Department, as: 'department', required: false },
+    { model: User, as: 'owner', required: false, attributes: ['id', 'prenom', 'nom'] },
+    {
+        model: InternalControlRisk,
+        as: 'riskLinks',
+        required: false,
+        include: [{ model: Risk, as: 'risk', required: false, include: [{ model: Department, as: 'departement', required: false }] }],
+    },
+    {
+        model: InternalControlTestExecution,
+        as: 'tests',
+        required: false,
+        include: [{ model: User, as: 'tester', required: false, attributes: ['id', 'prenom', 'nom'] }],
+    },
 ];
 
 const normalizeLookupValue = (value: unknown): string =>
@@ -41,6 +100,92 @@ const buildDisplayName = (person: any): string => {
     }
 
     return person.nom || '';
+};
+
+const nullableDate = (value: unknown): Date | null => {
+    if (!value) {
+        return null;
+    }
+
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const cleanText = (value: unknown, fallback = ''): string =>
+    String(value ?? fallback).trim();
+
+const clampScore = (value: unknown, fallback = 0): number =>
+    Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : fallback));
+
+const clampMaturity = (value: unknown): number =>
+    Math.max(1, Math.min(5, Number.isFinite(Number(value)) ? Math.round(Number(value)) : 3));
+
+const hasLookupCode = (items: { code: string }[], code: unknown): boolean =>
+    items.some((item) => item.code === code);
+
+const getFrequencyLabel = (code: string): string =>
+    CONTROL_LOOKUPS.frequencies.find((item) => item.code === code)?.label || code || 'Non renseignée';
+
+const getControlTypeLabel = (code: string): string =>
+    CONTROL_LOOKUPS.controlTypes.find((item) => item.code === code)?.label || code || 'Non renseigné';
+
+const getStatusLabel = (code: string): string =>
+    CONTROL_LOOKUPS.statuses.find((item) => item.code === code)?.label || code || 'Non renseigné';
+
+const serializeControl = (control: any) => {
+    const riskLinks = control.riskLinks || [];
+    const tests = control.tests || [];
+    const primaryRisk = riskLinks.find((link: any) => link.risk)?.risk || null;
+
+    return {
+        id: control.id,
+        code: control.code,
+        title: control.title,
+        description: control.description,
+        controlType: control.controlType,
+        controlTypeLabel: getControlTypeLabel(control.controlType),
+        executionType: control.executionType,
+        occurrenceLabel: control.executionType === 'periodic' ? 'Périodique' : 'Une fois',
+        frequency: control.frequency,
+        frequencyLabel: getFrequencyLabel(control.frequency),
+        departmentId: control.departmentId,
+        department: control.department?.nom || primaryRisk?.departement?.nom || 'Non rattaché',
+        linkedRisk: primaryRisk?.titre || (riskLinks.length ? `${riskLinks.length} risque(s) lié(s)` : 'Non lié'),
+        riskIds: riskLinks.map((link: any) => link.riskId),
+        risks: riskLinks
+            .filter((link: any) => link.risk)
+            .map((link: any) => ({ id: link.risk.id, title: link.risk.titre })),
+        ownerUserId: control.ownerUserId,
+        owner: buildDisplayName(control.owner) || 'Non assigné',
+        maturity: control.maturity,
+        nextReview: control.nextReview,
+        lastTestedAt: control.lastTestedAt,
+        effectivenessScore: control.effectivenessScore,
+        status: control.status,
+        statusLabel: getStatusLabel(control.status),
+        tests: tests.map((test: any) => ({
+            id: test.id,
+            title: test.title,
+            testMethod: test.testMethod,
+            result: test.result,
+            plannedDate: test.plannedDate,
+            executedAt: test.executedAt,
+            tester: buildDisplayName(test.tester),
+            score: test.score,
+            notes: test.notes,
+            evidenceSummary: test.evidenceSummary,
+        })),
+    };
+};
+
+const getPersistentControls = async () => InternalControl.findAll({
+    include: controlIncludes as any,
+    order: [['nextReview', 'ASC'], ['updatedAt', 'DESC']],
+});
+
+const generateControlCode = async (): Promise<string> => {
+    const count = await InternalControl.count();
+    return `CTRL-${String(count + 1).padStart(4, '0')}`;
 };
 
 const isPeriodicFrequency = (value: unknown): boolean => {
@@ -105,11 +250,183 @@ const getSeverityWeight = (value: unknown): number => {
     return 1;
 };
 
-router.get(
-    '/',
-    authorizeRoles(...allowedRoles),
-    (_req, res) => res.json({ message: 'Controls module ready', endpoints: ['/api/controls/overview'] })
-);
+router.get('/lookups', authorizeRoles(...allowedRoles), (_req, res) => {
+    res.json(CONTROL_LOOKUPS);
+});
+
+router.get('/', authorizeRoles(...allowedRoles), async (_req, res) => {
+    try {
+        const controls = await getPersistentControls();
+        res.json(controls.map(serializeControl));
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors du chargement des contrôles', error: error.message });
+    }
+});
+
+router.post('/', authorizeRoles(...writeRoles), async (req: AuthRequest, res) => {
+    try {
+        const body = req.body || {};
+        const code = cleanText(body.code) || await generateControlCode();
+        const controlType = hasLookupCode(CONTROL_LOOKUPS.controlTypes, body.controlType) ? body.controlType : 'preventive';
+        const frequency = hasLookupCode(CONTROL_LOOKUPS.frequencies, body.frequency) ? body.frequency : 'quarterly';
+        const status = hasLookupCode(CONTROL_LOOKUPS.statuses, body.status) ? body.status : 'active';
+        const executionType = frequency === 'none' ? 'one_time' : cleanText(body.executionType, 'periodic');
+
+        const control = await InternalControl.create({
+            code,
+            title: cleanText(body.title, 'Nouveau contrôle'),
+            description: cleanText(body.description) || null,
+            controlType,
+            executionType,
+            frequency,
+            status,
+            maturity: clampMaturity(body.maturity),
+            departmentId: body.departmentId || null,
+            ownerUserId: body.ownerUserId || req.user!.id,
+            nextReview: nullableDate(body.nextReview),
+            effectivenessScore: clampScore(body.effectivenessScore),
+        } as any);
+
+        if (Array.isArray(body.riskIds)) {
+            for (const riskId of body.riskIds.map((id: unknown) => Number(id)).filter(Boolean)) {
+                await InternalControlRisk.findOrCreate({ where: { controlId: control.id, riskId } });
+            }
+        }
+
+        const created = await InternalControl.findByPk(control.id, { include: controlIncludes as any });
+        res.status(201).json(serializeControl(created));
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la création du contrôle', error: error.message });
+    }
+});
+
+router.get('/:id(\\d+)', authorizeRoles(...allowedRoles), async (req, res) => {
+    try {
+        const control = await InternalControl.findByPk(Number(req.params.id), { include: controlIncludes as any });
+        if (!control) {
+            res.status(404).json({ message: 'Contrôle introuvable' });
+            return;
+        }
+
+        res.json(serializeControl(control));
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors du chargement du contrôle', error: error.message });
+    }
+});
+
+router.put('/:id(\\d+)', authorizeRoles(...writeRoles), async (req, res) => {
+    try {
+        const control = await InternalControl.findByPk(Number(req.params.id));
+        if (!control) {
+            res.status(404).json({ message: 'Contrôle introuvable' });
+            return;
+        }
+
+        const body = req.body || {};
+        await control.update({
+            ...(body.code !== undefined ? { code: cleanText(body.code, control.code) } : {}),
+            ...(body.title !== undefined ? { title: cleanText(body.title, control.title) } : {}),
+            ...(body.description !== undefined ? { description: cleanText(body.description) || null } : {}),
+            ...(body.controlType !== undefined && hasLookupCode(CONTROL_LOOKUPS.controlTypes, body.controlType) ? { controlType: body.controlType } : {}),
+            ...(body.frequency !== undefined && hasLookupCode(CONTROL_LOOKUPS.frequencies, body.frequency) ? { frequency: body.frequency, executionType: body.frequency === 'none' ? 'one_time' : 'periodic' } : {}),
+            ...(body.executionType !== undefined ? { executionType: cleanText(body.executionType, control.executionType) } : {}),
+            ...(body.status !== undefined && hasLookupCode(CONTROL_LOOKUPS.statuses, body.status) ? { status: body.status } : {}),
+            ...(body.maturity !== undefined ? { maturity: clampMaturity(body.maturity) } : {}),
+            ...(body.departmentId !== undefined ? { departmentId: body.departmentId || null } : {}),
+            ...(body.ownerUserId !== undefined ? { ownerUserId: body.ownerUserId || null } : {}),
+            ...(body.nextReview !== undefined ? { nextReview: nullableDate(body.nextReview) } : {}),
+            ...(body.effectivenessScore !== undefined ? { effectivenessScore: clampScore(body.effectivenessScore) } : {}),
+        });
+
+        if (Array.isArray(body.riskIds)) {
+            await InternalControlRisk.destroy({ where: { controlId: control.id } });
+            for (const riskId of body.riskIds.map((id: unknown) => Number(id)).filter(Boolean)) {
+                await InternalControlRisk.findOrCreate({ where: { controlId: control.id, riskId } });
+            }
+        }
+
+        const updated = await InternalControl.findByPk(control.id, { include: controlIncludes as any });
+        res.json(serializeControl(updated));
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la mise à jour du contrôle', error: error.message });
+    }
+});
+
+router.delete('/:id(\\d+)', authorizeRoles(...writeRoles), async (req, res) => {
+    try {
+        const control = await InternalControl.findByPk(Number(req.params.id));
+        if (!control) {
+            res.status(404).json({ message: 'Contrôle introuvable' });
+            return;
+        }
+
+        await softDeleteInstance(control);
+        res.json({ success: true });
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression du contrôle', error: error.message });
+    }
+});
+
+router.post('/:id(\\d+)/risks', authorizeRoles(...writeRoles), async (req, res) => {
+    try {
+        const control = await InternalControl.findByPk(Number(req.params.id));
+        if (!control) {
+            res.status(404).json({ message: 'Contrôle introuvable' });
+            return;
+        }
+
+        const riskIds = Array.isArray(req.body?.riskIds)
+            ? req.body.riskIds.map((id: unknown) => Number(id)).filter(Boolean)
+            : [Number(req.body?.riskId)].filter(Boolean);
+
+        for (const riskId of riskIds) {
+            await InternalControlRisk.findOrCreate({ where: { controlId: control.id, riskId } });
+        }
+
+        const updated = await InternalControl.findByPk(control.id, { include: controlIncludes as any });
+        res.status(201).json(serializeControl(updated));
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la liaison risque/contrôle', error: error.message });
+    }
+});
+
+router.post('/:id(\\d+)/tests', authorizeRoles(...writeRoles), async (req: AuthRequest, res) => {
+    try {
+        const control = await InternalControl.findByPk(Number(req.params.id));
+        if (!control) {
+            res.status(404).json({ message: 'Contrôle introuvable' });
+            return;
+        }
+
+        const body = req.body || {};
+        const result = hasLookupCode(CONTROL_LOOKUPS.testResults, body.result) ? body.result : 'planned';
+        const score = clampScore(body.score, result === 'effective' ? 90 : result === 'partially_effective' ? 65 : result === 'ineffective' ? 30 : 0);
+        const executedAt = nullableDate(body.executedAt);
+
+        await InternalControlTestExecution.create({
+            controlId: control.id,
+            title: cleanText(body.title, `Test ${control.code}`),
+            testMethod: hasLookupCode(CONTROL_LOOKUPS.testMethods, body.testMethod) ? body.testMethod : 'manual_review',
+            result,
+            plannedDate: nullableDate(body.plannedDate),
+            executedAt,
+            testerUserId: body.testerUserId || req.user!.id,
+            score,
+            notes: cleanText(body.notes) || null,
+            evidenceSummary: cleanText(body.evidenceSummary) || null,
+        } as any);
+
+        await control.update({
+            ...(executedAt ? { lastTestedAt: executedAt } : {}),
+            ...(result !== 'planned' ? { effectivenessScore: score, status: result === 'ineffective' ? 'ineffective' : 'active' } : {}),
+        });
+
+        const updated = await InternalControl.findByPk(control.id, { include: controlIncludes as any });
+        res.status(201).json(serializeControl(updated));
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la création du test de contrôle', error: error.message });
+    }
+});
 
 router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest, res) => {
     try {
@@ -255,7 +572,10 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
             })
             : [];
 
-        const registry = risks.map((risk) => {
+        const persistentControls = await getPersistentControls();
+        const persistentRegistry = persistentControls.map(serializeControl);
+
+        const fallbackRegistry = risks.map((risk) => {
             const owner =
                 buildDisplayName(risk.riskAgent) ||
                 buildDisplayName(risk.riskManager) ||
@@ -275,15 +595,20 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 maturity: Math.max(1, Math.min(5, Math.round((risk.niveauCotationRisqueNet || risk.niveauCotationRisqueBrut || 40) / 128))),
                 nextReview: risk.prochaineEcheance || risk.dateEcheance || null,
                 status: isCompletedRiskStatus(risk.statut) ? 'maitrise' : 'a_revoir',
+                riskIds: [risk.id],
+                risks: [{ id: risk.id, title: risk.titre }],
+                effectivenessScore: 0,
             };
         });
+
+        const registry = persistentRegistry.length ? persistentRegistry : fallbackRegistry;
 
         const planning = [
             ...registry.map((control) => ({
                 id: `control-${control.id}`,
                 title: control.title,
                 scheduleType: 'controle',
-                cadence: control.executionType,
+                cadence: control.executionType === 'periodic' || control.executionType === 'periodique' ? 'periodique' : 'ponctuel',
                 occurrenceLabel: control.occurrenceLabel,
                 frequencyLabel: control.frequencyLabel,
                 dueDate: control.nextReview,
@@ -363,13 +688,14 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
         ].sort((first, second) => new Date(second.uploadedAt).getTime() - new Date(first.uploadedAt).getTime());
 
         const effectiveness = registry.map((control) => {
-            const linkedRisk = risks.find((risk) => risk.id === control.id);
+            const controlRiskIds = Array.isArray(control.riskIds) && control.riskIds.length ? control.riskIds : [control.id];
+            const linkedRisk = risks.find((risk) => controlRiskIds.includes(risk.id));
             const linkedMission = missions
-                .filter((mission) => mission.riskId === control.id && isCompletedMissionStatus(mission.statut))
+                .filter((mission) => controlRiskIds.includes(mission.riskId) && isCompletedMissionStatus(mission.statut))
                 .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime())[0];
 
-            const referenceDate = getControlReferenceDate(linkedRisk, linkedMission);
-            const relatedIncidents = incidents.filter((incident) => incident.riskId === control.id || incident.departementId === linkedRisk?.departementId);
+            const referenceDate = control.lastTestedAt || getControlReferenceDate(linkedRisk, linkedMission);
+            const relatedIncidents = incidents.filter((incident) => controlRiskIds.includes(incident.riskId) || incident.departementId === linkedRisk?.departementId);
             const beforeCount = referenceDate
                 ? relatedIncidents.filter((incident) => new Date(incident.dateSurvenance).getTime() < new Date(referenceDate).getTime()).length
                 : relatedIncidents.length;
@@ -382,7 +708,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
             const lastIncidentAfterControl = incidentsAfterControl
                 .sort((first, second) => new Date(second.dateSurvenance).getTime() - new Date(first.dateSurvenance).getTime())[0];
 
-            let score = 68;
+            let score = Number(control.effectivenessScore || 0) || 68;
             if (afterCount === 0) {
                 score += 16;
             }
@@ -397,7 +723,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
             } else {
                 score -= 6;
             }
-            if (evidenceEntries.some((entry) => entry.id === `risk-${control.id}` || entry.linkedAudit === linkedMission?.titre)) {
+            if (evidenceEntries.some((entry) => controlRiskIds.some((riskId: number) => entry.id === `risk-${riskId}`) || entry.linkedAudit === linkedMission?.titre)) {
                 score += 6;
             }
 
@@ -467,8 +793,8 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
 
         const summary = {
             totalControls: registry.length,
-            periodicControls: registry.filter((control) => control.executionType === 'periodique').length,
-            ponctualControls: registry.filter((control) => control.executionType === 'ponctuel').length,
+            periodicControls: registry.filter((control) => control.executionType === 'periodique' || control.executionType === 'periodic').length,
+            ponctualControls: registry.filter((control) => control.executionType === 'ponctuel' || control.executionType === 'one_time').length,
             upcomingActions: planningWithDueDates.filter((item) => {
                 const dueTime = new Date(item.dueDate as string).getTime();
                 return dueTime >= now && dueTime <= now + 30 * 24 * 60 * 60 * 1000;

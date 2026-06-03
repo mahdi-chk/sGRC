@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { UserRole } from '../../core/models/user-role.enum';
 import { getControlsNavItems, getStoredControlsRole } from './controls-navigation';
-import { ControlPlanningItem, ControlsOverview, ControlsService } from './controls.service';
+import { ControlPlanningItem, ControlsLookupOption, ControlsOverview, ControlsService } from './controls.service';
 
 @Component({
   selector: 'app-controls-planning',
@@ -9,10 +11,27 @@ import { ControlPlanningItem, ControlsOverview, ControlsService } from './contro
   styleUrls: ['./controls-planning.component.scss']
 })
 export class ControlsPlanningComponent implements OnInit {
-  readonly navItems = getControlsNavItems(getStoredControlsRole());
+  readonly currentRole = getStoredControlsRole();
+  readonly navItems = getControlsNavItems(this.currentRole);
   overview: ControlsOverview | null = null;
   isLoading = false;
+  isSaving = false;
+  errorMessage = '';
   cadenceFilter: 'all' | 'periodique' | 'ponctuel' = 'all';
+  testMethods: ControlsLookupOption[] = [];
+  testResults: ControlsLookupOption[] = [];
+
+  testForm = {
+    controlId: null as number | null,
+    title: '',
+    testMethod: 'manual_review',
+    result: 'planned',
+    plannedDate: '',
+    executedAt: '',
+    score: 0,
+    notes: '',
+    evidenceSummary: ''
+  };
 
   currentPage = 1;
   itemsPerPage = 10;
@@ -26,14 +45,27 @@ export class ControlsPlanningComponent implements OnInit {
     this.loadOverview();
   }
 
+  get canWrite(): boolean {
+    return this.currentRole === UserRole.SUPER_ADMIN || this.currentRole === UserRole.CONTROLLER;
+  }
+
   loadOverview(): void {
     this.isLoading = true;
-    this.controlsService.getOverview().subscribe({
-      next: overview => {
-        this.overview = overview;
+    forkJoin({
+      overview: this.controlsService.getOverview(),
+      lookups: this.controlsService.getLookups()
+    }).subscribe({
+      next: data => {
+        this.overview = data.overview;
+        this.testMethods = data.lookups.testMethods;
+        this.testResults = data.lookups.testResults;
+        if (!this.testForm.controlId && this.overview.registry.length > 0) {
+          this.testForm.controlId = this.overview.registry[0].id;
+        }
         this.isLoading = false;
       },
-      error: () => {
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors du chargement de la planification.';
         this.overview = null;
         this.isLoading = false;
       }
@@ -56,6 +88,10 @@ export class ControlsPlanningComponent implements OnInit {
     return items.filter(item => item.cadence === this.cadenceFilter);
   }
 
+  get controls() {
+    return this.overview?.registry || [];
+  }
+
   get paginatedPlanning(): ControlPlanningItem[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     return this.planning.slice(startIndex, startIndex + this.itemsPerPage);
@@ -69,6 +105,42 @@ export class ControlsPlanningComponent implements OnInit {
   setCadenceFilter(value: 'all' | 'periodique' | 'ponctuel'): void {
     this.cadenceFilter = value;
     this.currentPage = 1;
+  }
+
+  createTest(): void {
+    if (!this.canWrite || !this.testForm.controlId) {
+      this.errorMessage = 'Sélectionnez un contrôle à tester.';
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = '';
+    this.controlsService.createControlTest(this.testForm.controlId, {
+      ...this.testForm,
+      title: this.testForm.title || 'Test d efficacité du contrôle',
+      plannedDate: this.testForm.plannedDate || null,
+      executedAt: this.testForm.executedAt || null
+    }).subscribe({
+      next: () => {
+        this.isSaving = false;
+        this.testForm = {
+          controlId: this.testForm.controlId,
+          title: '',
+          testMethod: 'manual_review',
+          result: 'planned',
+          plannedDate: '',
+          executedAt: '',
+          score: 0,
+          notes: '',
+          evidenceSummary: ''
+        };
+        this.loadOverview();
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de la création du test.';
+        this.isSaving = false;
+      }
+    });
   }
 
   get auditCount(): number {

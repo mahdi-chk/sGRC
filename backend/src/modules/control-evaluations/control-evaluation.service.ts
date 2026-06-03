@@ -294,6 +294,37 @@ export class ControlEvaluationService {
         return this.getCampaign(campaignId);
     }
 
+    static async createEvidence(data: Record<string, unknown>, actorUserId: number) {
+        const campaignId = Number(data.campaignId);
+        const payload = await LookupResolutionService.resolveEntityPayload('controlEvaluationEvidence', {
+            campaignId,
+            assessmentId: data.assessmentId || null,
+            deficiencyId: data.deficiencyId || null,
+            title: cleanText(data.title, 'Preuve de contrôle interne'),
+            sourceType: data.sourceType || 'manual',
+            sourceId: data.sourceId || null,
+            filename: nullableText(data.filename),
+            filePath: nullableText(data.filePath),
+            mimeType: nullableText(data.mimeType),
+            ownerUserId: data.ownerUserId || actorUserId || null,
+            capturedAt: nullableDate(data.capturedAt) || new Date(),
+        });
+
+        await ControlEvaluationEvidence.create(payload as any);
+        return this.getCampaign(campaignId);
+    }
+
+    static async deleteEvidence(id: number) {
+        const evidence = await ControlEvaluationEvidence.findByPk(id);
+        if (!evidence) {
+            return null;
+        }
+
+        const campaignId = evidence.campaignId;
+        await softDeleteInstance(evidence);
+        return this.getCampaign(campaignId);
+    }
+
     static async updateDeficiency(id: number, data: Record<string, unknown>) {
         const deficiency = await ControlDeficiency.findByPk(id);
         if (!deficiency) {
@@ -314,6 +345,47 @@ export class ControlEvaluationService {
 
         await deficiency.update(payload);
         return this.getCampaign(deficiency.campaignId);
+    }
+
+    static async createCompensatingMeasure(deficiencyId: number, data: Record<string, unknown>, actorUserId: number) {
+        const deficiency = await ControlDeficiency.findByPk(deficiencyId);
+        if (!deficiency) {
+            return null;
+        }
+
+        const payload = await LookupResolutionService.resolveEntityPayload('controlCompensatingMeasure', {
+            deficiencyId,
+            title: cleanText(data.title, 'Mesure compensatoire'),
+            description: nullableText(data.description),
+            status: data.status || 'proposed',
+            ownerUserId: data.ownerUserId || actorUserId || null,
+            dueDate: nullableDate(data.dueDate),
+            effectivenessNote: nullableText(data.effectivenessNote),
+        });
+
+        await ControlCompensatingMeasure.create(payload as any);
+        return this.getCampaign(deficiency.campaignId);
+    }
+
+    static async updateCompensatingMeasure(id: number, data: Record<string, unknown>) {
+        const measure = await ControlCompensatingMeasure.findByPk(id, {
+            include: [{ model: ControlDeficiency, as: 'deficiency', required: true }],
+        });
+        if (!measure) {
+            return null;
+        }
+
+        const payload = await LookupResolutionService.resolveEntityPayload('controlCompensatingMeasure', {
+            ...(data.title !== undefined ? { title: cleanText(data.title) } : {}),
+            ...(data.description !== undefined ? { description: nullableText(data.description) } : {}),
+            ...(data.status !== undefined ? { status: data.status } : {}),
+            ...(data.ownerUserId !== undefined ? { ownerUserId: data.ownerUserId || null } : {}),
+            ...(data.dueDate !== undefined ? { dueDate: nullableDate(data.dueDate) } : {}),
+            ...(data.effectivenessNote !== undefined ? { effectivenessNote: nullableText(data.effectivenessNote) } : {}),
+        });
+
+        await measure.update(payload);
+        return this.getCampaign((measure as any).deficiency.campaignId);
     }
 
     static async createConclusion(campaignId: number, data: Record<string, unknown>, actorUserId: number) {

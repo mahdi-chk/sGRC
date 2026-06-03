@@ -104,7 +104,7 @@ export class GovernanceWorkflowsComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/governance']);
+    this.router.navigate(['/dashboard']);
   }
 
   get totalDocuments(): number {

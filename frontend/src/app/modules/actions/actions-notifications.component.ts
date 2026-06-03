@@ -43,7 +43,7 @@ export class ActionsNotificationsComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/actions']);
+    this.router.navigate(['/dashboard']);
   }
 
   openDetail(item: ActionNotificationItem): void {

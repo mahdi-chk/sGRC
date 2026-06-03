@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IncidentService, Incident, IncidentImportDraft, IncidentStatus, IncidentNiveauRisque } from '../../core/services/incident.service';
 
@@ -77,7 +78,8 @@ export class IncidentsComponent implements OnInit {
         private departmentService: DepartmentService,
         private riskService: RiskService,
         private authService: AuthService,
-        private location: Location
+        private location: Location,
+        private router: Router
     ) {
         this.incidentForm = this.fb.group({
             titre: ['', Validators.required],
@@ -179,7 +181,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     goBack() {
-        this.location.back();
+        this.router.navigate(['/dashboard']);
     }
 
     openCreateModal() {

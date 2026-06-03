@@ -41,7 +41,7 @@ export class ComplianceAssessmentsComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/compliance']);
+    this.router.navigate(['/dashboard']);
   }
 
   get assessments(): ComplianceAssessmentItem[] {

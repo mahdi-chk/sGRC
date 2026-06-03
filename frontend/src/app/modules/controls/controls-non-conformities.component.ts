@@ -42,7 +42,7 @@ export class ControlsNonConformitiesComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/controls']);
+    this.router.navigate(['/dashboard']);
   }
 
   get items(): ControlNonConformityItem[] {

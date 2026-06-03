@@ -60,7 +60,7 @@ export class GovernanceMaturityComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/governance']);
+    this.router.navigate(['/dashboard']);
   }
 
   get totalRisks(): number {

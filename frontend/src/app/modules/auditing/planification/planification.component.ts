@@ -279,7 +279,7 @@ export class PlanificationComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/dashboard/audit-plans']);
+    this.router.navigate(['/dashboard']);
   }
 
   goToPlans() {

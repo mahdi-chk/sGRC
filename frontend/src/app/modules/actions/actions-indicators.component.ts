@@ -50,7 +50,7 @@ export class ActionsIndicatorsComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/actions']);
+    this.router.navigate(['/dashboard']);
   }
 
   get indicators(): ActionIndicatorItem[] {

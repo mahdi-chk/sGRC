@@ -47,7 +47,7 @@ export class GovernanceAdoptionComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/governance']);
+    this.router.navigate(['/dashboard']);
   }
 
   get assignedRisksRate(): number {

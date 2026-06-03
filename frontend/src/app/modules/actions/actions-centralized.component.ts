@@ -82,7 +82,7 @@ export class ActionsCentralizedComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/actions']);
+    this.router.navigate(['/dashboard']);
   }
 
   onFilterChange(key: FilterKey, value: string): void {

@@ -308,7 +308,7 @@ export class ControlEvaluationsComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/controls']);
+    this.router.navigate(['/dashboard']);
   }
 
   formatDate(value: string | null | undefined): string {

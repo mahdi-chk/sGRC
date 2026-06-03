@@ -41,7 +41,7 @@ export class GovernanceHistoryComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/governance']);
+    this.router.navigate(['/dashboard']);
   }
 
   get successfulOperations(): number {

@@ -41,7 +41,7 @@ export class ControlsReferentialComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard/controls']);
+    this.router.navigate(['/dashboard']);
   }
 
   get registry(): ControlRegistryItem[] {

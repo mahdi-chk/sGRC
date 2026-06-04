@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { getComplianceNavItems, getStoredComplianceRole } from './compliance-navigation';
 import {
+  CompliancePermissions,
   ComplianceFrameworkPayload,
   ComplianceFrameworkRecord,
   ComplianceRequirementImportResult,
@@ -22,6 +23,7 @@ export class ComplianceFrameworksComponent implements OnInit {
   requirements: ComplianceRequirementRecord[] = [];
   isLoading = false;
   isImporting = false;
+  permissions: CompliancePermissions | null = null;
 
   reqCurrentPage = 1;
   reqItemsPerPage = 10;
@@ -43,7 +45,28 @@ export class ComplianceFrameworksComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadPermissions();
     this.loadFrameworks();
+  }
+
+  get canImportFrameworks(): boolean {
+    return !!this.permissions?.canImportFrameworks;
+  }
+
+  get canEditFrameworks(): boolean {
+    return !!this.permissions?.canEditFrameworks;
+  }
+
+  get canDeleteFrameworks(): boolean {
+    return !!this.permissions?.canDeleteFrameworks;
+  }
+
+  get canEditRequirements(): boolean {
+    return !!this.permissions?.canEditRequirements;
+  }
+
+  get canDeleteRequirements(): boolean {
+    return !!this.permissions?.canDeleteRequirements;
   }
 
   get selectedFramework(): ComplianceFrameworkRecord | null {
@@ -52,6 +75,17 @@ export class ComplianceFrameworksComponent implements OnInit {
 
   get requirementDetails(): ComplianceRequirementRecord | null {
     return this.requirements.find(item => item.id === this.requirementDetailsId) || null;
+  }
+
+  loadPermissions(): void {
+    this.complianceService.getPermissions().subscribe({
+      next: permissions => {
+        this.permissions = permissions;
+      },
+      error: () => {
+        this.permissions = null;
+      }
+    });
   }
 
   loadFrameworks(): void {
@@ -129,6 +163,11 @@ export class ComplianceFrameworksComponent implements OnInit {
   }
 
   editFramework(item: ComplianceFrameworkRecord): void {
+    if (!this.canEditFrameworks) {
+      this.error = 'Votre profil ne permet pas de modifier les referentiels.';
+      return;
+    }
+
     this.frameworkEditingId = item.id;
     this.frameworkForm = {
       code: item.code,
@@ -184,6 +223,11 @@ export class ComplianceFrameworksComponent implements OnInit {
   }
 
   deleteFramework(item: ComplianceFrameworkRecord): void {
+    if (!this.canDeleteFrameworks) {
+      this.error = 'Votre profil ne permet pas de supprimer les referentiels.';
+      return;
+    }
+
     if (!window.confirm(`Supprimer le referentiel ${item.code} et ses exigences ?`)) {
       return;
     }
@@ -200,6 +244,11 @@ export class ComplianceFrameworksComponent implements OnInit {
   }
 
   editRequirement(item: ComplianceRequirementRecord): void {
+    if (!this.canEditRequirements) {
+      this.error = 'Votre profil ne permet pas de modifier les exigences.';
+      return;
+    }
+
     this.requirementEditingId = item.id;
     this.requirementDetailsId = null;
     this.requirementForm = {
@@ -267,6 +316,11 @@ export class ComplianceFrameworksComponent implements OnInit {
   }
 
   deleteRequirement(item: ComplianceRequirementRecord): void {
+    if (!this.canDeleteRequirements) {
+      this.error = 'Votre profil ne permet pas de supprimer les exigences.';
+      return;
+    }
+
     if (!window.confirm(`Supprimer l exigence ${item.code} ?`)) {
       return;
     }
@@ -306,6 +360,11 @@ export class ComplianceFrameworksComponent implements OnInit {
   }
 
   importRequirements(input: HTMLInputElement): void {
+    if (!this.canImportFrameworks) {
+      this.error = 'Votre profil ne permet pas d importer un referentiel.';
+      return;
+    }
+
     const file = input.files?.[0];
     if (!file) {
       this.error = 'Selectionnez un document a importer.';

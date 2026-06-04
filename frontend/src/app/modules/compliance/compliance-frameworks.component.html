@@ -28,7 +28,7 @@
         <p class="feedback-message error" *ngIf="error">{{ error }}</p>
     </div>
 
-    <div class="section-grid section-grid-wide">
+    <div class="section-grid section-grid-wide" *ngIf="canImportFrameworks">
         <section class="content-card import-card">
             <div class="card-head">
                 <h2>Import intelligent d un cadre</h2>
@@ -92,8 +92,8 @@
         </section>
     </div>
 
-    <div class="section-grid section-grid-wide" *ngIf="frameworkEditingId || requirementEditingId">
-        <section class="content-card" *ngIf="frameworkEditingId">
+    <div class="section-grid section-grid-wide" *ngIf="(frameworkEditingId && canEditFrameworks) || (requirementEditingId && canEditRequirements)">
+        <section class="content-card" *ngIf="frameworkEditingId && canEditFrameworks">
             <div class="card-head">
                 <h2>Modifier le cadre</h2>
                 <p>Mettez a jour les informations du cadre selectionne sans recreer un nouveau referentiel.</p>
@@ -149,7 +149,7 @@
             </div>
         </section>
 
-        <section class="content-card" *ngIf="requirementEditingId">
+        <section class="content-card" *ngIf="requirementEditingId && canEditRequirements">
             <div class="card-head">
                 <h2>Modifier l exigence</h2>
                 <p>Ajustez le code, le chapitre, la description ou le poids de l exigence selectionnee.</p>
@@ -219,7 +219,7 @@
                         <th>Portee</th>
                         <th>Dates</th>
                         <th>Statut</th>
-                        <th>Actions</th>
+                        <th *ngIf="canEditFrameworks || canDeleteFrameworks">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -237,10 +237,10 @@
                             <small>Revue: {{ formatDate(framework.reviewDate) }}</small>
                         </td>
                         <td><span class="badge" [ngClass]="getStatusClass(framework.statusCode || framework.status)">{{ framework.statusLabel || framework.status }}</span></td>
-                        <td class="action-cell">
+                        <td class="action-cell" *ngIf="canEditFrameworks || canDeleteFrameworks">
                             <div class="action-group">
-                                <button class="table-action" type="button" (click)="editFramework(framework)">Modifier</button>
-                                <button class="table-action danger" type="button" (click)="deleteFramework(framework)">Supprimer</button>
+                                <button class="table-action" *ngIf="canEditFrameworks" type="button" (click)="editFramework(framework)">Modifier</button>
+                                <button class="table-action danger" *ngIf="canDeleteFrameworks" type="button" (click)="deleteFramework(framework)">Supprimer</button>
                             </div>
                         </td>
                     </tr>
@@ -290,6 +290,10 @@
                     <div class="detail-block">
                         <span>Referentiel</span>
                         <strong>{{ selectedFramework?.code || requirement.framework?.code || 'Non renseigne' }}</strong>
+                    </div>
+                    <div class="detail-block detail-block-wide">
+                        <span>Description du referentiel</span>
+                        <strong>{{ selectedFramework?.description || requirement.framework?.description || 'Aucune description du referentiel.' }}</strong>
                     </div>
                     <div class="detail-block">
                         <span>Chapitre</span>
@@ -347,8 +351,8 @@
                         <td class="action-cell">
                             <div class="action-group">
                                 <button class="table-action" type="button" (click)="viewRequirementDetails(requirement)">Voir detail</button>
-                                <button class="table-action" type="button" (click)="editRequirement(requirement)">Modifier</button>
-                                <button class="table-action danger" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>
+                                <button class="table-action" *ngIf="canEditRequirements" type="button" (click)="editRequirement(requirement)">Modifier</button>
+                                <button class="table-action danger" *ngIf="canDeleteRequirements" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>
                             </div>
                         </td>
                     </tr>

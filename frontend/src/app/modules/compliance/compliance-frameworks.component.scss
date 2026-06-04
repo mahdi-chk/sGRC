@@ -6,6 +6,8 @@
   border: 1px solid rgba(215, 224, 232, 0.95);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.82);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .detail-header {
@@ -14,11 +16,19 @@
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 16px;
+  min-width: 0;
+}
+
+.detail-header > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .detail-header h3 {
   margin: 0;
   font-size: 1.08rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .detail-header p {
@@ -26,6 +36,8 @@
   color: var(--compliance-muted);
   line-height: 1.55;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .requirement-detail-grid {
@@ -40,6 +52,8 @@
   border: 1px solid rgba(215, 224, 232, 0.9);
   border-radius: 12px;
   background: #ffffff;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .detail-block > span {
@@ -55,6 +69,13 @@
   color: var(--compliance-ink);
   font-size: 0.92rem;
   line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detail-block-wide {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 640px) {

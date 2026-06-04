@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ForeignKeyConstraintError, UniqueConstraintError, ValidationError } from 'sequelize';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { getSoftDeleteValues, softDeleteInstance } from '../../utils/soft-delete';
+import { appLogger } from '../../utils/app-logger';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../../middleware/auth.middleware';
 import { secureUpload } from '../../middleware/file.middleware';
 import { AUDIT_COORDINATION_ROLES, UserRole } from '../users/user.roles';
@@ -44,6 +45,29 @@ const allowedRoles = [
 const adminRoles = [UserRole.SUPER_ADMIN, ...AUDIT_COORDINATION_ROLES];
 const mappingEditorRoles = [UserRole.SUPER_ADMIN, ...AUDIT_COORDINATION_ROLES, UserRole.RISK_MANAGER];
 const uploadRequirementImport = secureUpload(['pdf', 'docx', 'txt'], 'file', 15 * 1024 * 1024);
+
+const buildCompliancePermissions = (role?: string | null) => {
+    const normalizedRole = role || '';
+    const canAdmin = normalizedRole === UserRole.SUPER_ADMIN || adminRoles.includes(normalizedRole);
+    const canMap = canAdmin || mappingEditorRoles.includes(normalizedRole);
+
+    return {
+        role: normalizedRole,
+        canViewFrameworks: allowedRoles.includes(normalizedRole) || canAdmin,
+        canViewRequirements: allowedRoles.includes(normalizedRole) || canAdmin,
+        canCreateFrameworks: canAdmin,
+        canImportFrameworks: canAdmin,
+        canEditFrameworks: canAdmin,
+        canDeleteFrameworks: canAdmin,
+        canCreateRequirements: canAdmin,
+        canEditRequirements: canAdmin,
+        canDeleteRequirements: canAdmin,
+        canManageMappings: canMap,
+        readRoles: allowedRoles,
+        editRoles: adminRoles,
+        mappingEditorRoles,
+    };
+};
 
 const isComplianceSchemaMissing = (error: any): boolean => {
     const message = String(error?.message || '').toLowerCase();
@@ -164,6 +188,69 @@ const normalizeCoverageLevel = (value: unknown): string => {
     return 'partial';
 };
 
+const normalizeRequirementDrafts = (drafts: any[]): Array<{
+    code: string;
+    title: string;
+    description: string | null;
+    chapter: string | null;
+    orderIndex: number;
+    applicability: string;
+    status: string;
+    weight: number;
+}> =>
+    drafts
+        .map((item, index) => {
+            const code = String(item?.code || `REQ-${index + 1}`).trim();
+            const title = String(item?.title || code || `Exigence ${index + 1}`).trim();
+            const description = toOptionalString(item?.description);
+
+            return {
+                code,
+                title,
+                description,
+                chapter: toOptionalString(item?.chapter),
+                orderIndex: Number(item?.orderIndex || index + 1),
+                applicability: String(item?.applicability || 'applicable').trim(),
+                status: String(item?.status || 'active').trim(),
+                weight: Number(item?.weight || 1),
+            };
+        })
+        .filter((item) => item.code && item.title);
+
+const mergeAiAndLocalRequirementDrafts = (aiDrafts: any[] | undefined, localDrafts: any[]) => {
+    const localByCode = new Map(
+        normalizeRequirementDrafts(localDrafts).map((item) => [item.code.trim().toLowerCase(), item])
+    );
+    const normalizedAiDrafts = normalizeRequirementDrafts(aiDrafts || []);
+
+    if (!normalizedAiDrafts.length) {
+        return Array.from(localByCode.values());
+    }
+
+    const merged = normalizedAiDrafts.map((item) => {
+        const local = localByCode.get(item.code.trim().toLowerCase());
+        return {
+            ...item,
+            title: item.title || local?.title || item.code,
+            description: item.description || local?.description || null,
+            chapter: item.chapter || local?.chapter || null,
+            orderIndex: Number(item.orderIndex || local?.orderIndex || 0),
+            applicability: item.applicability || local?.applicability || 'applicable',
+            status: item.status || local?.status || 'active',
+            weight: Number(item.weight || local?.weight || 1),
+        };
+    });
+
+    const mergedCodes = new Set(merged.map((item) => item.code.trim().toLowerCase()));
+    for (const local of localByCode.values()) {
+        if (!mergedCodes.has(local.code.trim().toLowerCase())) {
+            merged.push(local);
+        }
+    }
+
+    return merged;
+};
+
 const buildEmptyOverview = (role: string) => ({
     generatedAt: new Date().toISOString(),
     role,
@@ -203,6 +290,10 @@ router.get(
         ],
     })
 );
+
+router.get('/permissions', authorizeRoles(...allowedRoles), (req: AuthRequest, res) => {
+    res.json(buildCompliancePermissions(req.user?.role));
+});
 
 router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest, res) => {
     try {
@@ -417,6 +508,7 @@ router.post('/frameworks', authorizeRoles(...adminRoles), async (req: AuthReques
 
 router.post('/mappings/auto-map', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
     try {
+        const startedAt = Date.now();
         const frameworkId = Number(req.body.frameworkId);
         if (!Number.isFinite(frameworkId) || frameworkId <= 0) {
             return res.status(400).json({ message: 'Referentiel invalide' });
@@ -435,6 +527,14 @@ router.post('/mappings/auto-map', authorizeRoles(...mappingEditorRoles), async (
         if (!requirements.length) {
             return res.status(400).json({ message: 'Aucune exigence disponible pour ce referentiel' });
         }
+
+        appLogger.info('Compliance', 'AI compliance mapping started', {
+            actorUserId: req.user?.id || null,
+            role: req.user?.role,
+            frameworkId,
+            frameworkCode: framework.code,
+            requirementCount: requirements.length,
+        });
 
         const [risks, audits, incidents, existingMappings] = await Promise.all([
             Risk.findAll({ attributes: ['id', 'titre'], order: [['updatedAt', 'DESC']], limit: 100 }),
@@ -455,6 +555,15 @@ router.post('/mappings/auto-map', authorizeRoles(...mappingEditorRoles), async (
             risks: risks.map((item: any) => ({ id: item.id, label: item.titre })),
             audits: audits.map((item: any) => ({ id: item.id, label: item.titre })),
             incidents: incidents.map((item: any) => ({ id: item.id, label: item.titre })),
+        });
+
+        appLogger.info('Compliance', 'AI compliance mapping suggestions received', {
+            actorUserId: req.user?.id || null,
+            frameworkId,
+            suggestionCount: suggestions.length,
+            riskCount: risks.length,
+            auditCount: audits.length,
+            incidentCount: incidents.length,
         });
 
         const requirementsByCode = new Map(requirements.map((item: any) => [String(item.code || '').trim().toLowerCase(), item]));
@@ -526,7 +635,20 @@ router.post('/mappings/auto-map', authorizeRoles(...mappingEditorRoles), async (
             created: serializeCompliance(created),
             skipped,
         });
+        appLogger.info('Compliance', 'AI compliance mapping completed', {
+            actorUserId: req.user?.id || null,
+            frameworkId,
+            createdCount: created.length,
+            skippedCount: skipped.length,
+            durationMs: Date.now() - startedAt,
+        });
     } catch (error: any) {
+        appLogger.error('Compliance', 'AI compliance mapping failed', {
+            actorUserId: req.user?.id || null,
+            role: req.user?.role,
+            frameworkId: req.body?.frameworkId,
+            message: error?.message || error,
+        });
         res.status(500).json({
             message: 'Erreur lors du mapping automatique du referentiel',
             error: error?.message || 'unknown_error',
@@ -540,31 +662,51 @@ router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequireme
             return res.status(400).json({ message: 'Aucun document fourni' });
         }
 
+        const startedAt = Date.now();
+        appLogger.info('Compliance', 'AI framework import started', {
+            actorUserId: req.user?.id || null,
+            role: req.user?.role,
+            fileName: req.file.originalname,
+            fileSize: req.file.size,
+        });
+
         const extractedText = await DocumentTextExtractor.extractTextFromFile(req.file, {
             useOcrForPdf: true,
             includeStructuredRegionsForImages: true,
             requireUsableText: true,
             limitChars: 30000,
         });
+        appLogger.info('Compliance', 'Framework import text extracted', {
+            actorUserId: req.user?.id || null,
+            fileName: req.file.originalname,
+            extractedCharacters: extractedText.length,
+        });
+
+        const localFrameworkDraft = ComplianceRequirementImportService.parseFrameworkFromText(extractedText, req.file.originalname);
+        const localRequirementDrafts = ComplianceRequirementImportService.parseRequirementsFromText(extractedText);
         const aiDraft = await AIService.generateComplianceFrameworkDraft({
             fileName: req.file.originalname,
             extractedText,
             role: req.user?.role,
         });
-        const drafts = aiDraft?.requirements?.length
-            ? aiDraft.requirements.map((item, index) => ({
-                code: String(item.code || `REQ-${index + 1}`).trim(),
-                title: String(item.title || item.code || `Exigence ${index + 1}`).trim(),
-                description: toOptionalString(item.description),
-                chapter: toOptionalString(item.chapter),
-                orderIndex: Number(item.orderIndex || index + 1),
-                applicability: String(item.applicability || 'applicable').trim(),
-                status: String(item.status || 'active').trim(),
-                weight: Number(item.weight || 1),
-            }))
-            : ComplianceRequirementImportService.parseRequirementsFromText(extractedText);
+        appLogger.info('Compliance', 'Framework import draft prepared', {
+            actorUserId: req.user?.id || null,
+            fileName: req.file.originalname,
+            aiUsed: !!aiDraft,
+            aiRequirementCount: aiDraft?.requirements?.length || 0,
+            localRequirementCount: localRequirementDrafts.length,
+            localFrameworkCode: localFrameworkDraft.code,
+        });
+
+        const drafts = mergeAiAndLocalRequirementDrafts(aiDraft?.requirements, localRequirementDrafts);
 
         if (!drafts.length) {
+            appLogger.warn('Compliance', 'Framework import found no requirements', {
+                actorUserId: req.user?.id || null,
+                fileName: req.file.originalname,
+                extractedCharacters: extractedText.length,
+                aiUsed: !!aiDraft,
+            });
             return res.status(422).json({
                 message: 'Aucune exigence n a ete detectee dans le document importe',
                 sourceFile: req.file.originalname,
@@ -578,23 +720,31 @@ router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequireme
             });
         }
 
-        const sourceLabel = req.file.originalname.replace(/\.[^.]+$/, '');
+        const sourceLabel = String(
+            aiDraft?.framework?.code
+            || localFrameworkDraft.code
+            || aiDraft?.framework?.name
+            || localFrameworkDraft.name
+            || req.file.originalname.replace(/\.[^.]+$/, '')
+        );
         const uniqueIdentity = await buildUniqueFrameworkIdentity(sourceLabel);
-        const aiCode = sanitizeFrameworkToken(String(aiDraft?.framework?.code || ''));
-        const aiVersion = String(aiDraft?.framework?.version || '').trim();
+        const aiCode = sanitizeFrameworkToken(String(aiDraft?.framework?.code || localFrameworkDraft.code || ''));
+        const aiVersion = String(aiDraft?.framework?.version || localFrameworkDraft.version || '').trim();
         const canUseAiIdentity = aiCode && aiVersion
             ? !(await ComplianceFramework.findOne({ where: { code: aiCode, version: aiVersion } }))
             : false;
         const frameworkPayload = await LookupResolutionService.resolveEntityPayload('complianceFramework', {
             code: canUseAiIdentity ? aiCode : uniqueIdentity.code,
-            name: String(aiDraft?.framework?.name || deriveFrameworkName(req.file.originalname, extractedText)).trim(),
+            name: String(aiDraft?.framework?.name || localFrameworkDraft.name || deriveFrameworkName(req.file.originalname, extractedText)).trim(),
             version: canUseAiIdentity ? aiVersion : uniqueIdentity.version,
-            jurisdiction: toOptionalString(aiDraft?.framework?.jurisdiction) || 'Maroc',
-            description: toOptionalString(aiDraft?.framework?.description) || `Cadre importe automatiquement depuis le document ${req.file.originalname}.`,
+            jurisdiction: toOptionalString(aiDraft?.framework?.jurisdiction) || localFrameworkDraft.jurisdiction || 'Maroc',
+            description: toOptionalString(aiDraft?.framework?.description)
+                || localFrameworkDraft.description
+                || `Cadre importe automatiquement depuis le document ${req.file.originalname}.`,
             ownerUserId: req.user?.id || null,
             departmentId: req.user?.departementId || null,
             entityKey: null,
-            status: String(aiDraft?.framework?.status || 'draft').trim(),
+            status: String(aiDraft?.framework?.status || localFrameworkDraft.status || 'draft').trim(),
             effectiveDate: null,
             reviewDate: null,
         }) as Record<string, unknown>;
@@ -655,10 +805,27 @@ router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequireme
                 payload: {
                     frameworkId: framework.id,
                     code: draft.code,
+                    title: draft.title,
+                    chapter: draft.chapter,
+                    hasDescription: !!draft.description,
                     sourceFile: req.file.originalname,
+                    source: aiDraft ? 'ai_with_local_fallback' : 'local_parser',
                 },
             });
         }
+
+        appLogger.info('Compliance', 'AI framework import completed', {
+            actorUserId: req.user?.id || null,
+            role: req.user?.role,
+            fileName: req.file.originalname,
+            frameworkId: framework.id,
+            frameworkCode: framework.code,
+            detectedRequirements: drafts.length,
+            createdRequirements: created.length,
+            skippedRequirements: skipped.length,
+            durationMs: Date.now() - startedAt,
+            aiUsed: !!aiDraft,
+        });
 
         res.status(201).json({
             message: `${created.length} exigence(s) importee(s) dans le nouveau cadre ${framework.code}`,
@@ -674,6 +841,13 @@ router.post('/frameworks/import', authorizeRoles(...adminRoles), uploadRequireme
             skipped,
         });
     } catch (error: any) {
+        appLogger.error('Compliance', 'AI framework import failed', {
+            actorUserId: req.user?.id || null,
+            role: req.user?.role,
+            fileName: req.file?.originalname,
+            message: error?.message || error,
+            statusCode: error?.statusCode,
+        });
         res.status(500).json({
             message: 'Erreur lors de l import du cadre',
             error: error?.message || 'unknown_error',

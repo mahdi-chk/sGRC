@@ -250,6 +250,23 @@ export interface ComplianceAutoMapResult {
   skipped: ComplianceAutoMapSkipped[];
 }
 
+export interface CompliancePermissions {
+  role: string;
+  canViewFrameworks: boolean;
+  canViewRequirements: boolean;
+  canCreateFrameworks: boolean;
+  canImportFrameworks: boolean;
+  canEditFrameworks: boolean;
+  canDeleteFrameworks: boolean;
+  canCreateRequirements: boolean;
+  canEditRequirements: boolean;
+  canDeleteRequirements: boolean;
+  canManageMappings: boolean;
+  readRoles: string[];
+  editRoles: string[];
+  mappingEditorRoles: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ComplianceService {
   private apiUrl = `${environment.apiUrl}/compliance`;
@@ -260,6 +277,10 @@ export class ComplianceService {
     return this.http.get<ComplianceOverview>(`${this.apiUrl}/overview`, {
       params: this.buildParams(filters)
     });
+  }
+
+  getPermissions(): Observable<CompliancePermissions> {
+    return this.http.get<CompliancePermissions>(`${this.apiUrl}/permissions`);
   }
 
   getFrameworks(filters: ComplianceQueryFilters = {}): Observable<ComplianceFrameworkRecord[]> {

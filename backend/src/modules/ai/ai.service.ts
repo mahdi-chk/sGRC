@@ -1008,6 +1008,12 @@ export class AIService {
         }
 
         try {
+            appLogger.info('AI', 'Compliance framework draft generation started', {
+                fileName: options.fileName,
+                role: options.role,
+                textLength: normalizedText.length,
+                model: MODEL_NAME,
+            });
             const prompt = await this.buildComplianceFrameworkImportPrompt({
                 fileName: options.fileName,
                 extractedText: normalizedText,
@@ -1026,17 +1032,33 @@ export class AIService {
             });
 
             const content = response.data.message.content;
+            appLogger.debug('AI', 'Compliance framework draft raw response received', {
+                fileName: options.fileName,
+                responseLength: content.length,
+            });
             const jsonMatch = content.match(/\{[\s\S]*\}/);
             const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
             if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.requirements)) {
+                appLogger.warn('AI', 'Compliance framework draft response has invalid shape', {
+                    fileName: options.fileName,
+                    hasFramework: !!parsed?.framework,
+                    hasRequirementsArray: Array.isArray(parsed?.requirements),
+                });
                 return null;
             }
 
+            appLogger.info('AI', 'Compliance framework draft generation completed', {
+                fileName: options.fileName,
+                requirementCount: parsed.requirements.length,
+                frameworkCode: parsed.framework?.code,
+            });
             return parsed as ComplianceFrameworkDraftResult;
         } catch (error: any) {
             appLogger.warn('AI', 'Compliance framework draft generation failed', {
                 error: error?.message || error,
                 fileName: options.fileName,
+                status: error?.response?.status,
+                ollamaDetail: error?.response?.data?.error || error?.response?.data,
             });
             return null;
         }

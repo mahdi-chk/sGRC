@@ -17,8 +17,8 @@ export class ControlsComponent implements OnInit {
   overview: ControlsOverview | null = null;
   isLoading = false;
   campaigns: ControlEvaluationCampaign[] = [];
-  cosoRadarSeries: RadarChartSeries[] = [];
-  cosoRadarLabels: string[] = [];
+  evaluationRadarSeries: RadarChartSeries[] = [];
+  evaluationRadarLabels: string[] = [];
 
   constructor(
     private router: Router,
@@ -34,7 +34,7 @@ export class ControlsComponent implements OnInit {
     return this.campaigns.length ? this.campaigns[0] : null;
   }
 
-  get cosoScore(): number {
+  get evaluationScore(): number {
     return this.latestCampaign?.summary?.averageScore || 0;
   }
 
@@ -54,21 +54,21 @@ export class ControlsComponent implements OnInit {
     this.evaluationsService.getCampaigns().subscribe({
       next: campaigns => {
         this.campaigns = campaigns || [];
-        this.computeCosoRadar();
+        this.computeEvaluationRadar();
       },
       error: () => {
         this.campaigns = [];
-        this.cosoRadarSeries = [];
-        this.cosoRadarLabels = [];
+        this.evaluationRadarSeries = [];
+        this.evaluationRadarLabels = [];
       }
     });
   }
 
-  computeCosoRadar(): void {
+  computeEvaluationRadar(): void {
     const campaign = this.latestCampaign;
     if (!campaign?.assessments?.length) {
-      this.cosoRadarSeries = [];
-      this.cosoRadarLabels = [];
+      this.evaluationRadarSeries = [];
+      this.evaluationRadarLabels = [];
       return;
     }
 
@@ -81,14 +81,14 @@ export class ControlsComponent implements OnInit {
       grouped.set(componentName, entry);
     }
 
-    this.cosoRadarLabels = Array.from(grouped.keys());
-    const values = this.cosoRadarLabels.map(label => {
+    this.evaluationRadarLabels = Array.from(grouped.keys());
+    const values = this.evaluationRadarLabels.map(label => {
       const entry = grouped.get(label)!;
       return Math.round(entry.total / entry.count);
     });
 
-    this.cosoRadarSeries = [{
-      label: campaign.title || 'Campagne COSO',
+    this.evaluationRadarSeries = [{
+      label: campaign.title || 'Campagne d évaluation',
       values,
       color: '#4f8cff',
       fillColor: 'rgba(79,140,255,0.18)'
@@ -99,4 +99,3 @@ export class ControlsComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 }
-

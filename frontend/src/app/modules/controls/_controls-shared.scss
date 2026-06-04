@@ -158,6 +158,180 @@
   color: var(--controls-ink);
 }
 
+.evaluation-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.form-guidance {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(15, 76, 129, 0.14);
+  border-radius: 12px;
+  background: rgba(217, 236, 251, 0.35);
+  color: var(--controls-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.form-guidance strong {
+  color: var(--controls-ink);
+  font-size: 0.92rem;
+}
+
+.form-section-title {
+  margin-top: 4px;
+  color: var(--controls-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.field-line {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field-line > span {
+  color: var(--controls-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.field-line > small {
+  color: var(--controls-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.required-mark {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(158, 58, 49, 0.08);
+  color: var(--controls-alert);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.finput {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--controls-line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--controls-ink);
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.finput:focus {
+  border-color: rgba(15, 76, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(15, 76, 129, 0.1);
+}
+
+.finput:disabled {
+  background: #f8fafc;
+  color: var(--controls-muted);
+  cursor: not-allowed;
+}
+
+textarea.finput {
+  min-height: 84px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+select.finput {
+  cursor: pointer;
+}
+
+.multi-select {
+  min-height: 112px;
+}
+
+input[type='file'].finput {
+  padding: 8px 10px;
+}
+
+.action-grid {
+  grid-template-columns: minmax(180px, 320px);
+}
+
+.submit-line {
+  align-self: end;
+}
+
+.primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border-color: rgba(15, 76, 129, 0.28);
+  background: #ffffff;
+  color: var(--controls-ink);
+}
+
+.full-action {
+  width: 100%;
+}
+
+.validate-action {
+  width: fit-content;
+  margin-top: 0.75rem;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.icon-action {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--controls-line);
+  background: #ffffff;
+  color: var(--controls-accent);
+  margin-right: 0.35rem;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.icon-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(17, 44, 72, 0.08);
+}
+
+.icon-action.warn {
+  color: var(--controls-watch);
+}
+
+.icon-action.danger {
+  color: var(--controls-alert);
+}
+
 .module-list,
 .agenda-list,
 .evidence-list,
@@ -296,6 +470,49 @@
   grid-template-columns: 110px 1fr;
   gap: 16px;
   padding: 16px;
+}
+
+.test-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.test-history-item {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(217, 226, 234, 0.8);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.test-history-score {
+  min-height: 76px;
+  border-radius: 16px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.test-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.test-history-head h3,
+.test-history-head p {
+  margin: 0;
+}
+
+.test-history-head p {
+  color: var(--controls-muted);
+  font-size: 0.88rem;
 }
 
 .agenda-date {
@@ -490,8 +707,13 @@
   }
 
   .agenda-item,
-  .evidence-item {
+  .evidence-item,
+  .test-history-item {
     grid-template-columns: 1fr;
+  }
+
+  .test-history-head {
+    flex-direction: column;
   }
 
   .group-head {

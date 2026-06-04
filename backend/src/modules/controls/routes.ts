@@ -188,6 +188,33 @@ const generateControlCode = async (): Promise<string> => {
     return `CTRL-${String(count + 1).padStart(4, '0')}`;
 };
 
+const refreshControlScoreFromTests = async (controlId: number) => {
+    const control = await InternalControl.findByPk(controlId);
+    if (!control) {
+        return null;
+    }
+
+    const latestCompletedTest = await InternalControlTestExecution.findOne({
+        where: {
+            controlId,
+            result: { [Op.ne]: 'planned' },
+        },
+        order: [['executedAt', 'DESC'], ['updatedAt', 'DESC']],
+    });
+
+    await control.update({
+        lastTestedAt: latestCompletedTest?.executedAt || null,
+        effectivenessScore: latestCompletedTest?.score || 0,
+        status: latestCompletedTest?.result === 'ineffective'
+            ? 'ineffective'
+            : latestCompletedTest
+                ? 'active'
+                : control.status,
+    });
+
+    return InternalControl.findByPk(controlId, { include: controlIncludes as any });
+};
+
 const isPeriodicFrequency = (value: unknown): boolean => {
     const normalized = normalizeLookupValue(value);
     return Boolean(normalized) && normalized !== 'none' && normalized !== 'aucun';
@@ -428,6 +455,58 @@ router.post('/:id(\\d+)/tests', authorizeRoles(...writeRoles), async (req: AuthR
     }
 });
 
+router.put('/tests/:testId(\\d+)', authorizeRoles(...writeRoles), async (req: AuthRequest, res) => {
+    try {
+        const test = await InternalControlTestExecution.findByPk(Number(req.params.testId));
+        if (!test) {
+            res.status(404).json({ message: 'Test introuvable' });
+            return;
+        }
+
+        const body = req.body || {};
+        const result = body.result !== undefined && hasLookupCode(CONTROL_LOOKUPS.testResults, body.result)
+            ? body.result
+            : test.result;
+        const score = body.score !== undefined
+            ? clampScore(body.score, test.score)
+            : test.score;
+
+        await test.update({
+            ...(body.title !== undefined ? { title: cleanText(body.title, test.title) } : {}),
+            ...(body.testMethod !== undefined && hasLookupCode(CONTROL_LOOKUPS.testMethods, body.testMethod) ? { testMethod: body.testMethod } : {}),
+            ...(body.result !== undefined ? { result } : {}),
+            ...(body.plannedDate !== undefined ? { plannedDate: nullableDate(body.plannedDate) } : {}),
+            ...(body.executedAt !== undefined ? { executedAt: nullableDate(body.executedAt) } : {}),
+            ...(body.score !== undefined ? { score } : {}),
+            ...(body.notes !== undefined ? { notes: cleanText(body.notes) || null } : {}),
+            ...(body.evidenceSummary !== undefined ? { evidenceSummary: cleanText(body.evidenceSummary) || null } : {}),
+            testerUserId: body.testerUserId || req.user!.id,
+        });
+
+        const updated = await refreshControlScoreFromTests(test.controlId);
+        res.json(serializeControl(updated));
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la mise à jour du test', error: error.message });
+    }
+});
+
+router.delete('/tests/:testId(\\d+)', authorizeRoles(...writeRoles), async (req, res) => {
+    try {
+        const test = await InternalControlTestExecution.findByPk(Number(req.params.testId));
+        if (!test) {
+            res.status(404).json({ message: 'Test introuvable' });
+            return;
+        }
+
+        const controlId = test.controlId;
+        await softDeleteInstance(test);
+        const updated = await refreshControlScoreFromTests(controlId);
+        res.json(serializeControl(updated));
+    } catch (error: any) {
+        res.status(400).json({ message: 'Erreur lors de la suppression du test', error: error.message });
+    }
+});
+
 router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest, res) => {
     try {
         const role = req.user!.role;
@@ -586,18 +665,25 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 code: `CTRL-${String(risk.id).padStart(4, '0')}`,
                 title: risk.dmrExistant || risk.titre,
                 controlType: inferControlType(risk),
+                controlTypeLabel: inferControlType(risk),
                 executionType: isPeriodicFrequency(risk.frequenceTraitement) ? 'periodique' : 'ponctuel',
                 occurrenceLabel: getOccurrenceLabel(risk.frequenceTraitement),
+                frequency: risk.frequenceTraitement || 'none',
                 frequencyLabel: risk.frequenceTraitement || 'Non renseignee',
+                departmentId: risk.departementId || null,
                 department: risk.departement?.nom || 'Non rattache',
                 linkedRisk: risk.titre,
+                riskIds: [risk.id],
+                risks: [{ id: risk.id, title: risk.titre }],
+                ownerUserId: risk.riskAgentId || risk.riskManagerId || null,
                 owner: owner || 'Non assigne',
                 maturity: Math.max(1, Math.min(5, Math.round((risk.niveauCotationRisqueNet || risk.niveauCotationRisqueBrut || 40) / 128))),
                 nextReview: risk.prochaineEcheance || risk.dateEcheance || null,
-                status: isCompletedRiskStatus(risk.statut) ? 'maitrise' : 'a_revoir',
-                riskIds: [risk.id],
-                risks: [{ id: risk.id, title: risk.titre }],
+                lastTestedAt: null,
                 effectivenessScore: 0,
+                status: isCompletedRiskStatus(risk.statut) ? 'maitrise' : 'a_revoir',
+                statusLabel: isCompletedRiskStatus(risk.statut) ? 'Maîtrisé' : 'À revoir',
+                tests: [],
             };
         });
 

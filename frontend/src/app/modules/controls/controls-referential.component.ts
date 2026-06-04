@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Department, DepartmentService } from '../../core/services/department.service';
 import { UserRole } from '../../core/models/user-role.enum';
+import { Risk, RiskService } from '../../core/services/risk.service';
 import { getControlsNavItems, getStoredControlsRole } from './controls-navigation';
 import { ControlRegistryItem, ControlsLookupOption, ControlsOverview, ControlsService } from './controls.service';
 
@@ -21,6 +24,16 @@ export class ControlsReferentialComponent implements OnInit {
   controlTypes: ControlsLookupOption[] = [];
   frequencies: ControlsLookupOption[] = [];
   statuses: ControlsLookupOption[] = [];
+  departments: Department[] = [];
+  risks: Risk[] = [];
+
+  readonly maturityOptions = [
+    { value: 1, label: '1 - Initial' },
+    { value: 2, label: '2 - Informel' },
+    { value: 3, label: '3 - Défini' },
+    { value: 4, label: '4 - Maîtrisé' },
+    { value: 5, label: '5 - Optimisé' }
+  ];
 
   controlForm = {
     code: '',
@@ -30,6 +43,8 @@ export class ControlsReferentialComponent implements OnInit {
     frequency: 'quarterly',
     status: 'active',
     maturity: 3,
+    departmentId: null as number | null,
+    riskIds: [] as number[],
     nextReview: ''
   };
 
@@ -38,7 +53,9 @@ export class ControlsReferentialComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private controlsService: ControlsService
+    private controlsService: ControlsService,
+    private departmentService: DepartmentService,
+    private riskService: RiskService
   ) {}
 
   ngOnInit(): void {
@@ -53,13 +70,17 @@ export class ControlsReferentialComponent implements OnInit {
     this.isLoading = true;
     forkJoin({
       overview: this.controlsService.getOverview(),
-      lookups: this.controlsService.getLookups()
+      lookups: this.controlsService.getLookups(),
+      departments: this.departmentService.getAll().pipe(catchError(() => of([] as Department[]))),
+      risks: this.riskService.getRisks().pipe(catchError(() => of([] as Risk[])))
     }).subscribe({
       next: data => {
         this.overview = data.overview;
         this.controlTypes = data.lookups.controlTypes;
         this.frequencies = data.lookups.frequencies;
         this.statuses = data.lookups.statuses;
+        this.departments = data.departments;
+        this.risks = data.risks;
         this.isLoading = false;
       },
       error: error => {
@@ -103,6 +124,8 @@ export class ControlsReferentialComponent implements OnInit {
       frequency: control.frequency || 'quarterly',
       status: control.status || 'active',
       maturity: control.maturity || 3,
+      departmentId: control.departmentId || null,
+      riskIds: control.riskIds || [],
       nextReview: control.nextReview ? control.nextReview.substring(0, 10) : ''
     };
   }
@@ -117,6 +140,8 @@ export class ControlsReferentialComponent implements OnInit {
       frequency: 'quarterly',
       status: 'active',
       maturity: 3,
+      departmentId: null,
+      riskIds: [],
       nextReview: ''
     };
   }
@@ -132,6 +157,8 @@ export class ControlsReferentialComponent implements OnInit {
     const payload = {
       ...this.controlForm,
       code: this.controlForm.code.trim() || undefined,
+      departmentId: this.controlForm.departmentId || null,
+      riskIds: this.controlForm.riskIds.map(id => Number(id)).filter(Boolean),
       nextReview: this.controlForm.nextReview || null
     };
     const request = this.selectedControl
@@ -179,5 +206,9 @@ export class ControlsReferentialComponent implements OnInit {
 
   getStatusClass(value: string | null | undefined): string {
     return `state-${String(value || '').replace(/_/g, '-')}`;
+  }
+
+  getRiskLabel(risk: Risk): string {
+    return `${risk.titre}${risk.departement?.nom ? ' - ' + risk.departement.nom : ''}`;
   }
 }

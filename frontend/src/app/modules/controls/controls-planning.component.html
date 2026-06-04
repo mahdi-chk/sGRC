@@ -5,8 +5,8 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h1><i class="fas fa-calendar-check"></i> Planification Automatisee</h1>
-                <p>Lecture dediee aux controles et audits planifies, qu ils soient ponctuels ou periodiques.</p>
+                <h1><i class="fas fa-calendar-check"></i> Planification Automatisée</h1>
+                <p>Lecture dédiée aux contrôles et audits planifiés, qu'ils soient ponctuels ou périodiques.</p>
             </div>
         </div>
         <div class="header-actions">
@@ -23,35 +23,166 @@
         </a>
     </nav>
 
-    <div class="empty-state" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="empty-state compact-empty" *ngIf="errorMessage">{{ errorMessage }}</div>
 
     <div class="summary-grid" *ngIf="overview as data">
         <div class="summary-card">
-            <span class="eyebrow">Lignes planifiees</span>
+            <span class="eyebrow">Lignes planifiées</span>
             <h3>{{ planning.length }}</h3>
-            <p>Agenda consolide des audits et des controles.</p>
+            <p>Agenda consolidé des audits et des contrôles.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">A venir</span>
+            <span class="eyebrow">À venir</span>
             <h3>{{ data.summary.upcomingActions }}</h3>
-            <p>Elements attendus dans les 30 prochains jours.</p>
+            <p>Éléments attendus dans les 30 prochains jours.</p>
         </div>
         <div class="summary-card">
             <span class="eyebrow">En retard</span>
             <h3>{{ data.summary.overdueActions }}</h3>
-            <p>Points a replanifier ou a escalader.</p>
+            <p>Points à replanifier ou à escalader.</p>
         </div>
         <div class="summary-card">
-            <span class="eyebrow">Audits / Controles</span>
+            <span class="eyebrow">Audits / Contrôles</span>
             <h3>{{ auditCount }} / {{ controlCount }}</h3>
-            <p>Repartition du planning integre.</p>
+            <p>Répartition du planning intégré.</p>
+        </div>
+    </div>
+
+    <div class="content-card" *ngIf="canWrite && controls.length > 0">
+        <div class="card-head">
+            <h2>Planifier ou enregistrer un test</h2>
+            <p>Le test alimente l'efficacité du contrôle et l'historique d'évaluation.</p>
+        </div>
+
+        <div class="form-guidance">
+            <strong>Conditions d'enregistrement</strong>
+            <span>Un contrôle doit être sélectionné. Le score doit rester entre 0 et 100.</span>
+            <span>Si le résultat n'est pas Planifié, renseigner idéalement la date d'exécution et une synthèse des preuves.</span>
+        </div>
+
+        <form class="evaluation-form" #testNgForm="ngForm" (ngSubmit)="createTest()">
+            <div class="form-section-title">Identification du test</div>
+            <div class="form-grid">
+                <label class="field-line">
+                    <span>Contrôle à tester <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="testControl" [(ngModel)]="testForm.controlId" required>
+                        <option *ngFor="let control of controls" [ngValue]="control.id">{{ control.code }} - {{ control.title }}</option>
+                    </select>
+                    <small>Choisir le contrôle du référentiel concerné par ce test.</small>
+                </label>
+                <label class="field-line">
+                    <span>Titre du test</span>
+                    <input class="finput" name="testTitle" [(ngModel)]="testForm.title" placeholder="Titre du test" maxlength="255">
+                    <small>Optionnel : si vide, un titre automatique sera utilisé.</small>
+                </label>
+            </div>
+            <div class="form-section-title">Méthode et résultat</div>
+            <div class="form-grid">
+                <label class="field-line">
+                    <span>Méthode <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="testMethod" [(ngModel)]="testForm.testMethod" required>
+                        <option *ngFor="let option of testMethods" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <small>Exemple : revue manuelle, échantillonnage ou surveillance continue.</small>
+                </label>
+                <label class="field-line">
+                    <span>Résultat <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="testResult" [(ngModel)]="testForm.result" required>
+                        <option *ngFor="let option of testResults" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <small>Planifié tant que le test n'est pas exécuté.</small>
+                </label>
+                <label class="field-line">
+                    <span>Score <em class="required-mark">0 à 100</em></span>
+                    <input class="finput" name="testScore" type="number" min="0" max="100" [(ngModel)]="testForm.score">
+                    <small>0 = non évalué ou inefficace, 100 = totalement efficace.</small>
+                </label>
+            </div>
+            <div class="form-section-title">Dates et preuves</div>
+            <div class="form-grid">
+                <label class="field-line">
+                    <span>Date planifiée</span>
+                    <input class="finput" name="plannedDate" type="date" [(ngModel)]="testForm.plannedDate">
+                    <small>Date prévue pour réaliser ou revoir le test.</small>
+                </label>
+                <label class="field-line">
+                    <span>Date d'exécution</span>
+                    <input class="finput" name="executedAt" type="date" [(ngModel)]="testForm.executedAt">
+                    <small>À renseigner lorsque le test est effectivement réalisé.</small>
+                </label>
+                <div class="field-line submit-line">
+                    <span>Action</span>
+                    <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving || testNgForm.invalid">
+                        <i class="fas fa-plus"></i>
+                        {{ editingTestId ? 'Enregistrer les modifications' : 'Enregistrer le test' }}
+                    </button>
+                    <button class="btn-refresh" type="button" *ngIf="editingTestId" (click)="cancelTestEdit()" [disabled]="isSaving">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+            <div class="form-grid">
+                <label class="field-line">
+                    <span>Notes et observations</span>
+                    <textarea class="finput" name="testNotes" rows="2" [(ngModel)]="testForm.notes" placeholder="Notes de test"></textarea>
+                    <small>Indiquer les écarts observés, limites de test ou remarques utiles.</small>
+                </label>
+                <label class="field-line">
+                    <span>Synthèse des preuves</span>
+                    <textarea class="finput" name="testEvidence" rows="2" [(ngModel)]="testForm.evidenceSummary" placeholder="Résumé des preuves collectées"></textarea>
+                    <small>Décrire les documents, captures ou éléments vérifiés.</small>
+                </label>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card" *ngIf="testHistory.length > 0">
+        <div class="card-head">
+            <h2>Tests enregistrés</h2>
+            <p>Historique des tests stockés et rattachés aux contrôles du référentiel.</p>
+        </div>
+
+        <div class="test-history-list">
+            <article class="test-history-item" *ngFor="let test of testHistory">
+                <div class="test-history-score" [ngClass]="getTestResultClass(test.result)">
+                    {{ test.score }}%
+                </div>
+                <div class="test-history-copy">
+                    <div class="test-history-head">
+                        <div>
+                            <span class="eyebrow">{{ test.controlCode }} | {{ test.department }}</span>
+                            <h3>{{ test.title }}</h3>
+                            <p>{{ test.controlTitle }} | {{ test.owner || 'Non assigné' }}</p>
+                        </div>
+                        <span class="tag" [ngClass]="getTestResultClass(test.result)">
+                            {{ getTestResultLabel(test.result) }}
+                        </span>
+                    </div>
+                    <div class="agenda-meta">
+                        <span><i class="fas fa-vial"></i> {{ getTestMethodLabel(test.testMethod) }}</span>
+                        <span><i class="fas fa-calendar"></i> Planifié : {{ formatDate(test.plannedDate) }}</span>
+                        <span><i class="fas fa-check-circle"></i> Exécuté : {{ formatDate(test.executedAt) }}</span>
+                        <span *ngIf="test.tester"><i class="fas fa-user"></i> {{ test.tester }}</span>
+                    </div>
+                    <p class="followup-action" *ngIf="test.evidenceSummary">{{ test.evidenceSummary }}</p>
+                    <p class="effectiveness-note" *ngIf="test.notes">{{ test.notes }}</p>
+                    <div class="agenda-meta" *ngIf="canWrite">
+                        <button class="icon-action" type="button" (click)="editTest(test)" title="Modifier le test">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button class="icon-action danger" type="button" (click)="deleteTest(test)" title="Supprimer le test" [disabled]="isSaving">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
         </div>
     </div>
 
     <div class="content-card" *ngIf="planning.length > 0; else emptyPlanning">
         <div class="card-head">
-            <h2>Agenda integre</h2>
-            <p>Chaque ligne precise la nature, la cadence, le proprietaire et le rattachement metier.</p>
+            <h2>Agenda intégré</h2>
+            <p>Chaque ligne précise la nature, la cadence, le propriétaire et le rattachement métier.</p>
         </div>
 
         <div class="segmented-filter" aria-label="Filtrer par cadence">
@@ -59,7 +190,7 @@
                 Tous
             </button>
             <button type="button" [class.active]="cadenceFilter === 'periodique'" (click)="setCadenceFilter('periodique')">
-                Periodiques <strong>{{ periodicCount }}</strong>
+                Périodiques <strong>{{ periodicCount }}</strong>
             </button>
             <button type="button" [class.active]="cadenceFilter === 'ponctuel'" (click)="setCadenceFilter('ponctuel')">
                 Une fois <strong>{{ ponctualCount }}</strong>
@@ -71,7 +202,7 @@
                 <div class="agenda-date">{{ formatDate(item.dueDate) }}</div>
                 <div class="agenda-copy">
                     <h3>{{ item.title }}</h3>
-                    <p>{{ item.department }} | {{ item.owner || 'Non assigne' }}</p>
+                    <p>{{ item.department }} | {{ item.owner || 'Non assigné' }}</p>
                     <div class="agenda-meta">
                         <span class="tag">{{ item.scheduleType }}</span>
                         <span class="tag subtle">{{ item.occurrenceLabel }}</span>
@@ -82,11 +213,11 @@
                 </div>
             </article>
         </div>
-        
-        <app-pagination 
-            [totalItems]="planning.length" 
-            [currentPage]="currentPage" 
-            [pageSize]="itemsPerPage" 
+
+        <app-pagination
+            [totalItems]="planning.length"
+            [currentPage]="currentPage"
+            [pageSize]="itemsPerPage"
             (pageChanged)="onPageChanged($event)">
         </app-pagination>
     </div>
@@ -94,40 +225,4 @@
     <ng-template #emptyPlanning>
         <div class="empty-state">Aucune ligne de planification disponible.</div>
     </ng-template>
-
-    <div class="content-card" *ngIf="canWrite">
-        <div class="card-head">
-            <h2>Planifier un test d'efficacité</h2>
-            <p>Créer un test rattaché à un contrôle du référentiel pour en évaluer l'efficacité opérationnelle.</p>
-        </div>
-
-        <form class="evaluation-form" (ngSubmit)="createTest()">
-            <select class="finput" name="controlId" [(ngModel)]="testForm.controlId">
-                <option [ngValue]="null" disabled>-- Sélectionner un contrôle --</option>
-                <option *ngFor="let ctrl of controls" [ngValue]="ctrl.id">{{ ctrl.code }} – {{ ctrl.title }}</option>
-            </select>
-            <input class="finput" name="title" [(ngModel)]="testForm.title" placeholder="Intitulé du test" maxlength="255">
-            <div class="form-grid">
-                <select class="finput" name="testMethod" [(ngModel)]="testForm.testMethod">
-                    <option *ngFor="let option of testMethods" [value]="option.code">{{ option.label }}</option>
-                </select>
-                <select class="finput" name="result" [(ngModel)]="testForm.result">
-                    <option *ngFor="let option of testResults" [value]="option.code">{{ option.label }}</option>
-                </select>
-            </div>
-            <div class="form-grid">
-                <input class="finput" name="plannedDate" type="date" [(ngModel)]="testForm.plannedDate">
-                <input class="finput" name="executedAt" type="date" [(ngModel)]="testForm.executedAt">
-            </div>
-            <div class="form-grid">
-                <input class="finput" name="score" type="number" min="0" max="100" [(ngModel)]="testForm.score" placeholder="Score (0-100)">
-            </div>
-            <textarea class="finput" name="notes" [(ngModel)]="testForm.notes" rows="3" placeholder="Notes et observations"></textarea>
-            <textarea class="finput" name="evidenceSummary" [(ngModel)]="testForm.evidenceSummary" rows="3" placeholder="Synthèse des preuves collectées"></textarea>
-            <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
-                <i class="fas fa-plus"></i>
-                Planifier le test
-            </button>
-        </form>
-    </div>
 </div>

@@ -3,7 +3,22 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { UserRole } from '../../core/models/user-role.enum';
 import { getControlsNavItems, getStoredControlsRole } from './controls-navigation';
-import { ControlPlanningItem, ControlsLookupOption, ControlsOverview, ControlsService } from './controls.service';
+import {
+  ControlPlanningItem,
+  ControlRegistryItem,
+  ControlTestExecutionItem,
+  ControlsLookupOption,
+  ControlsOverview,
+  ControlsService
+} from './controls.service';
+
+interface ControlTestHistoryItem extends ControlTestExecutionItem {
+  controlId: number;
+  controlCode: string;
+  controlTitle: string;
+  department: string;
+  owner: string;
+}
 
 @Component({
   selector: 'app-controls-planning',
@@ -20,6 +35,7 @@ export class ControlsPlanningComponent implements OnInit {
   cadenceFilter: 'all' | 'periodique' | 'ponctuel' = 'all';
   testMethods: ControlsLookupOption[] = [];
   testResults: ControlsLookupOption[] = [];
+  editingTestId: number | null = null;
 
   testForm = {
     controlId: null as number | null,
@@ -88,8 +104,25 @@ export class ControlsPlanningComponent implements OnInit {
     return items.filter(item => item.cadence === this.cadenceFilter);
   }
 
-  get controls() {
+  get controls(): ControlRegistryItem[] {
     return this.overview?.registry || [];
+  }
+
+  get testHistory(): ControlTestHistoryItem[] {
+    return this.controls
+      .reduce<ControlTestHistoryItem[]>((items, control) => items.concat((control.tests || []).map(test => ({
+        ...test,
+        controlId: control.id,
+        controlCode: control.code,
+        controlTitle: control.title,
+        department: control.department,
+        owner: control.owner
+      }))), [])
+      .sort((first, second) => {
+        const firstDate = first.executedAt || first.plannedDate || '';
+        const secondDate = second.executedAt || second.plannedDate || '';
+        return new Date(secondDate).getTime() - new Date(firstDate).getTime();
+      });
   }
 
   get paginatedPlanning(): ControlPlanningItem[] {
@@ -115,29 +148,69 @@ export class ControlsPlanningComponent implements OnInit {
 
     this.isSaving = true;
     this.errorMessage = '';
-    this.controlsService.createControlTest(this.testForm.controlId, {
+    const payload = {
       ...this.testForm,
       title: this.testForm.title || 'Test d efficacité du contrôle',
       plannedDate: this.testForm.plannedDate || null,
       executedAt: this.testForm.executedAt || null
-    }).subscribe({
+    };
+    const request = this.editingTestId
+      ? this.controlsService.updateControlTest(this.editingTestId, payload)
+      : this.controlsService.createControlTest(this.testForm.controlId, payload);
+
+    request.subscribe({
       next: () => {
         this.isSaving = false;
-        this.testForm = {
-          controlId: this.testForm.controlId,
-          title: '',
-          testMethod: 'manual_review',
-          result: 'planned',
-          plannedDate: '',
-          executedAt: '',
-          score: 0,
-          notes: '',
-          evidenceSummary: ''
-        };
+        this.resetTestForm(this.testForm.controlId);
         this.loadOverview();
       },
       error: error => {
-        this.errorMessage = error?.error?.message || 'Erreur lors de la création du test.';
+        this.errorMessage = error?.error?.message || 'Erreur lors de la sauvegarde du test.';
+        this.isSaving = false;
+      }
+    });
+  }
+
+  editTest(test: ControlTestHistoryItem): void {
+    if (!this.canWrite) {
+      return;
+    }
+
+    this.editingTestId = test.id;
+    this.testForm = {
+      controlId: test.controlId,
+      title: test.title || '',
+      testMethod: test.testMethod || 'manual_review',
+      result: test.result || 'planned',
+      plannedDate: test.plannedDate ? test.plannedDate.substring(0, 10) : '',
+      executedAt: test.executedAt ? test.executedAt.substring(0, 10) : '',
+      score: test.score || 0,
+      notes: test.notes || '',
+      evidenceSummary: test.evidenceSummary || ''
+    };
+  }
+
+  cancelTestEdit(): void {
+    this.resetTestForm(this.testForm.controlId);
+  }
+
+  deleteTest(test: ControlTestHistoryItem): void {
+    if (!this.canWrite || !window.confirm(`Supprimer le test "${test.title}" ?`)) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = '';
+    this.controlsService.deleteControlTest(test.id).subscribe({
+      next: () => {
+        this.isSaving = false;
+        if (this.editingTestId === test.id) {
+          this.resetTestForm(test.controlId);
+        }
+        this.loadOverview();
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de la suppression du test.';
         this.isSaving = false;
       }
     });
@@ -161,7 +234,7 @@ export class ControlsPlanningComponent implements OnInit {
 
   formatDate(value: string | null | undefined): string {
     if (!value) {
-      return 'Non planifie';
+      return 'Non planifié';
     }
 
     return new Date(value).toLocaleDateString('fr-FR');
@@ -169,5 +242,44 @@ export class ControlsPlanningComponent implements OnInit {
 
   getStatusClass(value: string | null | undefined): string {
     return `state-${String(value || '').replace(/_/g, '-')}`;
+  }
+
+  getTestMethodLabel(value: string | null | undefined): string {
+    return this.testMethods.find(item => item.code === value)?.label || value || 'Non renseignée';
+  }
+
+  getTestResultLabel(value: string | null | undefined): string {
+    return this.testResults.find(item => item.code === value)?.label || value || 'Non renseigné';
+  }
+
+  getTestResultClass(value: string | null | undefined): string {
+    if (value === 'effective') {
+      return 'state-maitrise';
+    }
+
+    if (value === 'ineffective') {
+      return 'state-en-retard';
+    }
+
+    if (value === 'partially_effective') {
+      return 'state-medium';
+    }
+
+    return 'state-a-revoir';
+  }
+
+  private resetTestForm(controlId: number | null): void {
+    this.editingTestId = null;
+    this.testForm = {
+      controlId,
+      title: '',
+      testMethod: 'manual_review',
+      result: 'planned',
+      plannedDate: '',
+      executedAt: '',
+      score: 0,
+      notes: '',
+      evidenceSummary: ''
+    };
   }
 }

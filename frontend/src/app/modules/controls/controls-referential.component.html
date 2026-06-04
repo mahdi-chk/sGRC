@@ -51,30 +51,89 @@
     <div class="content-card" *ngIf="canWrite">
         <div class="card-head">
             <h2>{{ selectedControl ? 'Modifier un contrôle' : 'Nouveau contrôle' }}</h2>
-            <p>Création persistante du contrôle interne, avec type COSO, fréquence, maturité et prochaine revue.</p>
+            <p>Création persistante du contrôle interne, avec type, fréquence, maturité et prochaine revue.</p>
         </div>
 
-        <form class="evaluation-form" (ngSubmit)="saveControl()">
+        <div class="form-guidance">
+            <strong>Conditions de création</strong>
+            <span>Le titre est obligatoire. Le département et les risques liés sont recommandés pour éviter un contrôle isolé.</span>
+            <span>La maturité se lit de 1 à 5 : 3 signifie que le contrôle est défini et documenté.</span>
+        </div>
+
+        <form class="evaluation-form" #controlNgForm="ngForm" (ngSubmit)="saveControl()">
+            <div class="form-section-title">Identification</div>
             <div class="form-grid">
-                <input class="finput" name="controlCode" [(ngModel)]="controlForm.code" placeholder="Code automatique si vide">
-                <input class="finput" name="controlTitle" [(ngModel)]="controlForm.title" placeholder="Titre du contrôle" required maxlength="255">
+                <label class="field-line">
+                    <span>Code</span>
+                    <input class="finput" name="controlCode" [(ngModel)]="controlForm.code" placeholder="Automatique si vide">
+                    <small>Laisser vide pour générer un code automatiquement.</small>
+                </label>
+                <label class="field-line">
+                    <span>Titre du contrôle <em class="required-mark">obligatoire</em></span>
+                    <input class="finput" name="controlTitle" [(ngModel)]="controlForm.title" placeholder="Titre du contrôle" required minlength="3" maxlength="255">
+                    <small>Minimum 3 caractères, maximum 255.</small>
+                </label>
             </div>
-            <textarea class="finput" name="controlDescription" [(ngModel)]="controlForm.description" rows="3" placeholder="Description, objectif et modalités de preuve"></textarea>
+            <label class="field-line">
+                <span>Description</span>
+                <textarea class="finput" name="controlDescription" [(ngModel)]="controlForm.description" rows="3" placeholder="Objectif, modalités d'exécution et preuves attendues"></textarea>
+                <small>Préciser l'objectif, les modalités d'exécution et les preuves attendues.</small>
+            </label>
+            <div class="form-section-title">Paramètres du contrôle</div>
             <div class="form-grid">
-                <select class="finput" name="controlType" [(ngModel)]="controlForm.controlType">
-                    <option *ngFor="let option of controlTypes" [value]="option.code">{{ option.label }}</option>
-                </select>
-                <select class="finput" name="frequency" [(ngModel)]="controlForm.frequency">
-                    <option *ngFor="let option of frequencies" [value]="option.code">{{ option.label }}</option>
-                </select>
-                <select class="finput" name="status" [(ngModel)]="controlForm.status">
-                    <option *ngFor="let option of statuses" [value]="option.code">{{ option.label }}</option>
-                </select>
+                <label class="field-line">
+                    <span>Type <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="controlType" [(ngModel)]="controlForm.controlType">
+                        <option *ngFor="let option of controlTypes" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <small>Nature du contrôle : préventif, détectif, correctif ou directif.</small>
+                </label>
+                <label class="field-line">
+                    <span>Fréquence <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="frequency" [(ngModel)]="controlForm.frequency">
+                        <option *ngFor="let option of frequencies" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <small>Détermine la périodicité de revue ou d'exécution.</small>
+                </label>
+                <label class="field-line">
+                    <span>Statut <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="status" [(ngModel)]="controlForm.status">
+                        <option *ngFor="let option of statuses" [value]="option.code">{{ option.label }}</option>
+                    </select>
+                    <small>Utiliser Actif pour un contrôle opérationnel.</small>
+                </label>
             </div>
+            <div class="form-section-title">Rattachement et suivi</div>
             <div class="form-grid">
-                <input class="finput" name="maturity" type="number" min="1" max="5" [(ngModel)]="controlForm.maturity">
-                <input class="finput" name="nextReview" type="date" [(ngModel)]="controlForm.nextReview">
-                <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                <label class="field-line">
+                    <span>Maturité <em class="required-mark">obligatoire</em></span>
+                    <select class="finput" name="maturity" [(ngModel)]="controlForm.maturity">
+                        <option *ngFor="let option of maturityOptions" [ngValue]="option.value">{{ option.label }}</option>
+                    </select>
+                </label>
+                <label class="field-line">
+                    <span>Département responsable</span>
+                    <select class="finput" name="departmentId" [(ngModel)]="controlForm.departmentId">
+                        <option [ngValue]="null">Non rattaché</option>
+                        <option *ngFor="let department of departments" [ngValue]="department.id">{{ department.nom }}</option>
+                    </select>
+                    <small>Permet de rattacher le contrôle au bon périmètre métier.</small>
+                </label>
+                <label class="field-line">
+                    <span>Prochaine revue</span>
+                    <input class="finput" name="nextReview" type="date" [(ngModel)]="controlForm.nextReview">
+                    <small>Date cible pour la prochaine vérification du contrôle.</small>
+                </label>
+            </div>
+            <label class="field-line">
+                <span>Risques liés</span>
+                <select class="finput multi-select" name="riskIds" multiple [(ngModel)]="controlForm.riskIds">
+                    <option *ngFor="let risk of risks" [ngValue]="risk.id">{{ getRiskLabel(risk) }}</option>
+                </select>
+                <small>Maintenir Ctrl pour sélectionner plusieurs risques.</small>
+            </label>
+            <div class="form-grid action-grid">
+                <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving || controlNgForm.invalid">
                     <i class="fas fa-save"></i>
                     {{ selectedControl ? 'Enregistrer' : 'Créer' }}
                 </button>

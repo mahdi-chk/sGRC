@@ -97,6 +97,11 @@
                     <h3>{{ campaign.summary.deficiencyCount }}</h3>
                     <p>{{ campaign.summary.majorDeficiencyCount }} majeure(s).</p>
                 </div>
+                <div class="summary-card">
+                    <span class="eyebrow">Référence / Preuves</span>
+                    <h3>{{ componentCount }} / {{ principleCount }}</h3>
+                    <p>{{ evidenceCount }} preuve(s) rattachee(s).</p>
+                </div>
             </div>
 
             <div class="conclusion-bar" *ngIf="campaign.summary.lastConclusion">
@@ -136,6 +141,25 @@
                 <i class="fas fa-check-double"></i>
                 Valider la conclusion
             </button>
+            <button class="btn-refresh validate-action" type="button" *ngIf="canWrite" (click)="syncAssessments()" [disabled]="isSaving">
+                <i class="fas fa-arrows-rotate"></i>
+                Synchroniser les 17 principes
+            </button>
+        </div>
+    </div>
+
+    <div class="table-card" *ngIf="referenceComponents.length > 0">
+        <div class="card-head">
+            <h2>Référence de contrôle interne</h2>
+            <p>Les cinq composantes et leurs principes structurent la campagne d'évaluation.</p>
+        </div>
+
+        <div class="module-list">
+            <article class="module-link" *ngFor="let component of referenceComponents">
+                <strong>{{ component.code }} - {{ component.title }}</strong>
+                <p>{{ component.description }}</p>
+                <span class="tag secondary">{{ component.principles?.length || 0 }} principe(s)</span>
+            </article>
         </div>
     </div>
 
@@ -198,7 +222,7 @@
     </div>
 
     <div class="section-grid" *ngIf="selectedCampaign">
-        <div class="content-card" *ngIf="canWrite">
+        <div class="content-card" *ngIf="canContribute">
             <div class="card-head">
                 <h2>Nouvelle deficience</h2>
                 <p>Rattachement direct au critere selectionne.</p>
@@ -225,6 +249,32 @@
             </form>
         </div>
 
+        <div class="content-card" *ngIf="canContribute">
+            <div class="card-head">
+                <h2>Preuve d'évaluation</h2>
+                <p>Rattacher une preuve à la campagne, à un critère ou à une déficience.</p>
+            </div>
+
+            <form class="evaluation-form" (ngSubmit)="createEvidence()">
+                <input class="finput" name="evidenceTitle" [(ngModel)]="evidenceForm.title" placeholder="Titre de la preuve">
+                <div class="form-grid">
+                    <select class="finput" name="evidenceAssessment" [(ngModel)]="evidenceForm.assessmentId">
+                        <option [ngValue]="null">Campagne globale</option>
+                        <option *ngFor="let assessment of assessments" [ngValue]="assessment.id">{{ assessment.principle?.code }} - {{ assessment.principle?.title }}</option>
+                    </select>
+                    <select class="finput" name="evidenceDeficiency" [(ngModel)]="evidenceForm.deficiencyId">
+                        <option [ngValue]="null">Aucune déficience</option>
+                        <option *ngFor="let deficiency of deficiencies" [ngValue]="deficiency.id">{{ deficiency.title }}</option>
+                    </select>
+                </div>
+                <input class="finput" type="file" name="evidenceFile" (change)="onEvidenceFileSelected($event)">
+                <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                    <i class="fas fa-paperclip"></i>
+                    Ajouter la preuve
+                </button>
+            </form>
+        </div>
+
         <div class="content-card">
             <div class="card-head">
                 <h2>Synthese des deficiences</h2>
@@ -242,16 +292,44 @@
                     </div>
                     <p>{{ item.component?.title || 'Composante non renseignee' }} | {{ item.principle?.code || 'Critere libre' }}</p>
                     <p class="followup-action">{{ item.correctiveAction || 'Action corrective a definir' }}</p>
+                    <div class="nonconformity-meta" *ngIf="item.compensatingMeasures?.length">
+                        <span>{{ item.compensatingMeasures?.length }} mesure(s) compensatoire(s)</span>
+                    </div>
                     <div class="nonconformity-meta">
                         <span>{{ item.impact || 'Impact a qualifier' }}</span>
                         <span>{{ formatDate(item.dueDate) }}</span>
                     </div>
+                    <button class="btn-refresh" type="button" *ngIf="canContribute" (click)="openMeasureForm(item)">
+                        <i class="fas fa-shield-halved"></i>
+                        Ajouter une mesure
+                    </button>
                 </article>
             </div>
 
             <ng-template #noDeficiencies>
                 <div class="empty-state">Aucune deficience declaree pour cette campagne.</div>
             </ng-template>
+        </div>
+
+        <div class="content-card" *ngIf="canContribute && measureForm.deficiencyId">
+            <div class="card-head">
+                <h2>Mesure compensatoire</h2>
+                <p>Documenter une mesure temporaire ou durable associée à la déficience.</p>
+            </div>
+
+            <form class="evaluation-form" (ngSubmit)="createMeasure()">
+                <input class="finput" name="measureTitle" [(ngModel)]="measureForm.title" placeholder="Titre de la mesure">
+                <textarea class="finput" name="measureDescription" [(ngModel)]="measureForm.description" rows="3" placeholder="Description"></textarea>
+                <div class="form-grid">
+                    <input class="finput" name="measureDueDate" type="date" [(ngModel)]="measureForm.dueDate">
+                    <input class="finput" name="measureStatus" [(ngModel)]="measureForm.status" placeholder="Statut">
+                </div>
+                <textarea class="finput" name="measureEffectiveness" [(ngModel)]="measureForm.effectivenessNote" rows="3" placeholder="Note d'efficacité"></textarea>
+                <button class="btn-refresh primary-action" type="submit" [disabled]="isSaving">
+                    <i class="fas fa-plus"></i>
+                    Enregistrer la mesure
+                </button>
+            </form>
         </div>
     </div>
 </div>

@@ -6,6 +6,7 @@ import { getControlsNavItems, getStoredControlsRole } from './controls-navigatio
 import {
   ControlDeficiency,
   ControlEvaluationCampaign,
+  ControlEvaluationComponentRef,
   ControlEvaluationLookupOption,
   ControlEvaluationsService,
   ControlPrincipleAssessment
@@ -21,6 +22,7 @@ export class ControlEvaluationsComponent implements OnInit {
   readonly navItems = getControlsNavItems(this.currentRole);
   campaigns: ControlEvaluationCampaign[] = [];
   selectedCampaign: ControlEvaluationCampaign | null = null;
+  referenceComponents: ControlEvaluationComponentRef[] = [];
   isLoading = false;
   isSaving = false;
   errorMessage = '';
@@ -61,6 +63,23 @@ export class ControlEvaluationsComponent implements OnInit {
     dueDate: ''
   };
 
+  evidenceForm = {
+    assessmentId: null as number | null,
+    deficiencyId: null as number | null,
+    title: '',
+    sourceType: 'manual',
+    file: null as File | null
+  };
+
+  measureForm = {
+    deficiencyId: null as number | null,
+    title: '',
+    description: '',
+    status: 'proposed',
+    dueDate: '',
+    effectivenessNote: ''
+  };
+
   constructor(
     private router: Router,
     private evaluationsService: ControlEvaluationsService
@@ -72,6 +91,10 @@ export class ControlEvaluationsComponent implements OnInit {
 
   get canWrite(): boolean {
     return this.currentRole === UserRole.CONTROLLER || this.currentRole === UserRole.SUPER_ADMIN;
+  }
+
+  get canContribute(): boolean {
+    return this.canWrite || this.currentRole === UserRole.RISK_MANAGER;
   }
 
   get canValidate(): boolean {
@@ -89,10 +112,23 @@ export class ControlEvaluationsComponent implements OnInit {
     return this.selectedCampaign?.deficiencies || [];
   }
 
+  get evidenceCount(): number {
+    return this.selectedCampaign?.evidence?.length || 0;
+  }
+
+  get componentCount(): number {
+    return this.referenceComponents.length;
+  }
+
+  get principleCount(): number {
+    return this.referenceComponents.reduce((total, component) => total + (component.principles?.length || 0), 0);
+  }
+
   loadInitialData(): void {
     this.isLoading = true;
     forkJoin({
       campaigns: this.evaluationsService.getCampaigns(),
+      reference: this.evaluationsService.getReference(),
       status: this.evaluationsService.getLookup('controlEvaluationCampaign.status'),
       objectives: this.evaluationsService.getLookup('controlEvaluationCampaign.objectiveType'),
       scopes: this.evaluationsService.getLookup('controlEvaluationCampaign.scopeType'),
@@ -102,6 +138,7 @@ export class ControlEvaluationsComponent implements OnInit {
     }).subscribe({
       next: data => {
         this.campaigns = data.campaigns;
+        this.referenceComponents = data.reference.components || [];
         this.statusOptions = data.status;
         this.objectiveOptions = data.objectives;
         this.scopeOptions = data.scopes;
@@ -210,6 +247,26 @@ export class ControlEvaluationsComponent implements OnInit {
     });
   }
 
+  syncAssessments(): void {
+    if (!this.selectedCampaign || !this.canWrite) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.evaluationsService.syncAssessments(this.selectedCampaign.id).subscribe({
+      next: campaign => {
+        const normalized = this.normalizeCampaign(campaign);
+        this.selectedCampaign = normalized;
+        this.refreshCampaignInList(normalized);
+        this.isSaving = false;
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de la synchronisation des critères.';
+        this.isSaving = false;
+      }
+    });
+  }
+
   saveAssessment(assessment: ControlPrincipleAssessment): void {
     if (!this.canWrite) {
       return;
@@ -242,7 +299,7 @@ export class ControlEvaluationsComponent implements OnInit {
   }
 
   createDeficiency(): void {
-    if (!this.selectedCampaign || !this.deficiencyForm.title.trim()) {
+    if (!this.selectedCampaign || !this.canContribute || !this.deficiencyForm.title.trim()) {
       this.errorMessage = 'La deficience doit avoir un titre.';
       return;
     }
@@ -269,6 +326,72 @@ export class ControlEvaluationsComponent implements OnInit {
       },
       error: error => {
         this.errorMessage = error?.error?.message || 'Erreur lors de la creation de la deficience.';
+        this.isSaving = false;
+      }
+    });
+  }
+
+  onEvidenceFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.evidenceForm.file = input.files && input.files.length > 0 ? input.files[0] : null;
+  }
+
+  createEvidence(): void {
+    if (!this.selectedCampaign || !this.canContribute) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', this.evidenceForm.title || this.evidenceForm.file?.name || 'Preuve de contrôle interne');
+    formData.append('sourceType', this.evidenceForm.sourceType || 'manual');
+    if (this.evidenceForm.assessmentId) {
+      formData.append('assessmentId', String(this.evidenceForm.assessmentId));
+    }
+    if (this.evidenceForm.deficiencyId) {
+      formData.append('deficiencyId', String(this.evidenceForm.deficiencyId));
+    }
+    if (this.evidenceForm.file) {
+      formData.append('evidenceFile', this.evidenceForm.file);
+    }
+
+    this.isSaving = true;
+    this.evaluationsService.createEvidence(this.selectedCampaign.id, formData).subscribe({
+      next: campaign => {
+        const normalized = this.normalizeCampaign(campaign);
+        this.selectedCampaign = normalized;
+        this.refreshCampaignInList(normalized);
+        this.evidenceForm = { assessmentId: null, deficiencyId: null, title: '', sourceType: 'manual', file: null };
+        this.isSaving = false;
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de l ajout de la preuve.';
+        this.isSaving = false;
+      }
+    });
+  }
+
+  openMeasureForm(deficiency: ControlDeficiency): void {
+    this.measureForm.deficiencyId = deficiency.id;
+    this.measureForm.title = `Mesure compensatoire - ${deficiency.title}`;
+  }
+
+  createMeasure(): void {
+    if (!this.measureForm.deficiencyId || !this.canContribute || !this.measureForm.title.trim()) {
+      this.errorMessage = 'La mesure compensatoire doit avoir un titre.';
+      return;
+    }
+
+    this.isSaving = true;
+    this.evaluationsService.createCompensatingMeasure(this.measureForm.deficiencyId, this.measureForm).subscribe({
+      next: campaign => {
+        const normalized = this.normalizeCampaign(campaign);
+        this.selectedCampaign = normalized;
+        this.refreshCampaignInList(normalized);
+        this.measureForm = { deficiencyId: null, title: '', description: '', status: 'proposed', dueDate: '', effectivenessNote: '' };
+        this.isSaving = false;
+      },
+      error: error => {
+        this.errorMessage = error?.error?.message || 'Erreur lors de la création de la mesure compensatoire.';
         this.isSaving = false;
       }
     });

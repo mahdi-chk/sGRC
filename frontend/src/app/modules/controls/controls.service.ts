@@ -172,4 +172,12 @@ export class ControlsService {
     createControlTest(controlId: number, payload: any): Observable<ControlRegistryItem> {
         return this.http.post<ControlRegistryItem>(`${this.apiUrl}/${controlId}/tests`, payload);
     }
+
+    updateControlTest(testId: number, payload: any): Observable<ControlRegistryItem> {
+        return this.http.put<ControlRegistryItem>(`${this.apiUrl}/tests/${testId}`, payload);
+    }
+
+    deleteControlTest(testId: number): Observable<ControlRegistryItem> {
+        return this.http.delete<ControlRegistryItem>(`${this.apiUrl}/tests/${testId}`);
+    }
 }

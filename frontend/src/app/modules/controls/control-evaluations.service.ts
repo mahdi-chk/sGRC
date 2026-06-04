@@ -80,6 +80,33 @@ export interface ControlDeficiency {
   correctiveAction: string | null;
   component?: ControlEvaluationComponentRef;
   principle?: ControlEvaluationPrinciple;
+  compensatingMeasures?: ControlCompensatingMeasure[];
+}
+
+export interface ControlCompensatingMeasure {
+  id: number;
+  deficiencyId: number;
+  title: string;
+  description: string | null;
+  status: string | null;
+  statusCode: string | null;
+  ownerUserId: number | null;
+  dueDate: string | null;
+  effectivenessNote: string | null;
+}
+
+export interface ControlEvaluationEvidence {
+  id: number;
+  campaignId: number;
+  assessmentId: number | null;
+  deficiencyId: number | null;
+  title: string;
+  sourceType: string | null;
+  sourceTypeCode: string | null;
+  filename: string | null;
+  filePath: string | null;
+  mimeType: string | null;
+  capturedAt: string | null;
 }
 
 export interface ControlEvaluationCampaign {
@@ -99,6 +126,7 @@ export interface ControlEvaluationCampaign {
   summary: ControlEvaluationSummary;
   assessments?: ControlPrincipleAssessment[];
   deficiencies?: ControlDeficiency[];
+  evidence?: ControlEvaluationEvidence[];
   conclusions?: any[];
 }
 
@@ -132,6 +160,10 @@ export class ControlEvaluationsService {
     return this.http.post<ControlEvaluationCampaign>(`${this.apiUrl}/campaigns`, payload);
   }
 
+  syncAssessments(campaignId: number): Observable<ControlEvaluationCampaign> {
+    return this.http.post<ControlEvaluationCampaign>(`${this.apiUrl}/campaigns/${campaignId}/assessments/sync`, {});
+  }
+
   updateCampaign(id: number, payload: any): Observable<ControlEvaluationCampaign> {
     return this.http.put<ControlEvaluationCampaign>(`${this.apiUrl}/campaigns/${id}`, payload);
   }
@@ -146,6 +178,26 @@ export class ControlEvaluationsService {
 
   createDeficiency(payload: any): Observable<ControlEvaluationCampaign> {
     return this.http.post<ControlEvaluationCampaign>(`${this.apiUrl}/deficiencies`, payload);
+  }
+
+  updateDeficiency(id: number, payload: any): Observable<ControlEvaluationCampaign> {
+    return this.http.put<ControlEvaluationCampaign>(`${this.apiUrl}/deficiencies/${id}`, payload);
+  }
+
+  createEvidence(campaignId: number, payload: FormData): Observable<ControlEvaluationCampaign> {
+    return this.http.post<ControlEvaluationCampaign>(`${this.apiUrl}/campaigns/${campaignId}/evidence`, payload);
+  }
+
+  deleteEvidence(id: number): Observable<ControlEvaluationCampaign> {
+    return this.http.delete<ControlEvaluationCampaign>(`${this.apiUrl}/evidence/${id}`);
+  }
+
+  createCompensatingMeasure(deficiencyId: number, payload: any): Observable<ControlEvaluationCampaign> {
+    return this.http.post<ControlEvaluationCampaign>(`${this.apiUrl}/deficiencies/${deficiencyId}/measures`, payload);
+  }
+
+  updateCompensatingMeasure(id: number, payload: any): Observable<ControlEvaluationCampaign> {
+    return this.http.put<ControlEvaluationCampaign>(`${this.apiUrl}/measures/${id}`, payload);
   }
 
   previewConclusion(campaignId: number): Observable<any> {

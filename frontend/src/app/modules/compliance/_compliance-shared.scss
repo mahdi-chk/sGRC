@@ -119,6 +119,11 @@
   gap: 18px;
 }
 
+.summary-grid > *,
+.section-grid > * {
+  min-width: 0;
+}
+
 .summary-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   margin-bottom: 20px;
@@ -139,6 +144,15 @@
 .metric-card,
 .empty-state {
   padding: 20px;
+}
+
+.content-card,
+.table-card {
+  min-width: 0;
+}
+
+.table-card {
+  overflow-x: auto;
 }
 
 .import-card,
@@ -395,7 +409,14 @@
 }
 
 .action-cell {
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
 }
 
 .table-action {
@@ -403,7 +424,8 @@
   align-items: center;
   justify-content: center;
   width: auto;
-  min-width: max-content;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--compliance-line);
   border-radius: 10px;
   background: #fff;
@@ -413,8 +435,6 @@
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-  margin-right: 8px;
-  margin-bottom: 8px;
 }
 
 .table-action.danger {
@@ -496,6 +516,7 @@
 
 .compliance-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -515,6 +536,7 @@
   color: #334155;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
 .compliance-table td strong,
@@ -604,5 +626,11 @@
   .field-span-2,
   .field-span-3 {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .compliance-table {
+    min-width: 640px;
   }
 }

@@ -238,8 +238,10 @@
                         </td>
                         <td><span class="badge" [ngClass]="getStatusClass(framework.statusCode || framework.status)">{{ framework.statusLabel || framework.status }}</span></td>
                         <td class="action-cell">
-                            <button class="table-action" type="button" (click)="editFramework(framework)">Modifier</button>
-                            <button class="table-action danger" type="button" (click)="deleteFramework(framework)">Supprimer</button>
+                            <div class="action-group">
+                                <button class="table-action" type="button" (click)="editFramework(framework)">Modifier</button>
+                                <button class="table-action danger" type="button" (click)="deleteFramework(framework)">Supprimer</button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -343,9 +345,11 @@
                         <td><span class="badge" [ngClass]="getStatusClass(requirement.applicabilityCode || requirement.applicability)">{{ requirement.applicabilityLabel || requirement.applicability }}</span></td>
                         <td><span class="badge" [ngClass]="getStatusClass(requirement.statusCode || requirement.status)">{{ requirement.statusLabel || requirement.status }}</span></td>
                         <td class="action-cell">
-                            <button class="table-action" type="button" (click)="viewRequirementDetails(requirement)">Voir detail</button>
-                            <button class="table-action" type="button" (click)="editRequirement(requirement)">Modifier</button>
-                            <button class="table-action danger" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>
+                            <div class="action-group">
+                                <button class="table-action" type="button" (click)="viewRequirementDetails(requirement)">Voir detail</button>
+                                <button class="table-action" type="button" (click)="editRequirement(requirement)">Modifier</button>
+                                <button class="table-action danger" type="button" (click)="deleteRequirement(requirement)">Supprimer</button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>

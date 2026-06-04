@@ -6,11 +6,11 @@
             </button>
             <div>
                 <h1><i class="fas fa-triangle-exclamation"></i> Suivi des ecarts</h1>
-                <p>Registre initial des ecarts de conformite, priorites de traitement et liens de remediations.</p>
+                <p>Registre dynamique des non-conformites, priorites, sources et remediations.</p>
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+            <button class="btn-refresh" (click)="loadData()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
             </button>
@@ -23,26 +23,195 @@
         </a>
     </nav>
 
-    <div class="item-list" *ngIf="gaps.length > 0; else emptyState">
-        <article class="list-item" *ngFor="let gap of gaps">
-            <strong>{{ gap.title }}</strong>
-            <p>{{ gap.framework }}</p>
-            <div class="meta-row">
-                <span class="badge" [ngClass]="getStatusClass(gap.severity)">{{ gap.severity }}</span>
-                <span class="badge" [ngClass]="getStatusClass(gap.status)">{{ gap.status }}</span>
-                <span>Owner: {{ gap.owner }}</span>
-                <span>Echeance: {{ formatDate(gap.dueDate) }}</span>
-                <span>Source: {{ gap.source }}</span>
-                <span>{{ gap.remediationLink }}</span>
-            </div>
-        </article>
+    <div class="content-card" *ngIf="feedback || error">
+        <p class="feedback-message success" *ngIf="feedback">{{ feedback }}</p>
+        <p class="feedback-message error" *ngIf="error">{{ error }}</p>
     </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Ecarts</span>
+            <h3>{{ filteredGaps.length }}</h3>
+            <p>Dans le perimetre affiche</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Ouverts</span>
+            <h3>{{ openCount }}</h3>
+            <p>A traiter ou suivre</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Critiques/eleves</span>
+            <h3>{{ criticalCount }}</h3>
+            <p>Priorite de remediations</p>
+        </div>
+    </div>
+
+    <div class="section-grid section-grid-wide">
+        <section class="content-card">
+            <div class="card-head">
+                <h2>{{ editingId ? 'Modifier un ecart' : 'Nouvel ecart' }}</h2>
+                <p>Rattachez l ecart a une exigence et documentez la source ainsi que la remediation.</p>
+            </div>
+
+            <div class="form-grid" *ngIf="canManage; else readOnlyState">
+                <label class="filter-field">
+                    <span>Referentiel</span>
+                    <select [(ngModel)]="selectedFrameworkId" (ngModelChange)="onFrameworkChange()">
+                        <option [ngValue]="null">Tous les referentiels</option>
+                        <option *ngFor="let framework of frameworks" [ngValue]="framework.id">{{ framework.code }} - {{ framework.name }}</option>
+                    </select>
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Exigence</span>
+                    <select [(ngModel)]="form.requirementId">
+                        <option [ngValue]="null">Non rattache</option>
+                        <option *ngFor="let requirement of visibleRequirements" [ngValue]="requirement.id">
+                            {{ requirement.code }} - {{ requirement.title }}
+                        </option>
+                    </select>
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Titre</span>
+                    <input [(ngModel)]="form.title" placeholder="Ecart de couverture ou preuve manquante" />
+                </label>
+                <label class="filter-field">
+                    <span>Severite</span>
+                    <select [(ngModel)]="form.severity">
+                        <option *ngFor="let severity of severityOptions" [value]="severity.code">{{ severity.label }}</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Statut</span>
+                    <select [(ngModel)]="form.status">
+                        <option *ngFor="let status of statusOptions" [value]="status.code">{{ status.label }}</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Source</span>
+                    <select [(ngModel)]="form.sourceType">
+                        <option *ngFor="let source of sourceTypeOptions" [value]="source.code">{{ source.label }}</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Echeance</span>
+                    <input type="date" [(ngModel)]="form.dueDate" />
+                </label>
+                <label class="filter-field">
+                    <span>Action</span>
+                    <input [(ngModel)]="form.remediationActionId" placeholder="Plan action / ticket" />
+                </label>
+                <label class="filter-field field-span-3">
+                    <span>Description</span>
+                    <textarea [(ngModel)]="form.description" rows="4" placeholder="Constat, impact, preuve attendue et correction cible."></textarea>
+                </label>
+            </div>
+
+            <div class="form-actions" *ngIf="canManage">
+                <button class="btn-refresh" type="button" (click)="saveGap()">{{ editingId ? 'Enregistrer' : 'Creer' }}</button>
+                <button class="back-btn" type="button" (click)="resetForm()">Annuler</button>
+            </div>
+
+            <ng-template #readOnlyState>
+                <div class="empty-state compact">
+                    <i class="fas fa-lock"></i>
+                    <h3>Mode consultation</h3>
+                    <p>Votre profil peut consulter les ecarts mais pas les modifier.</p>
+                </div>
+            </ng-template>
+        </section>
+
+        <section class="content-card" *ngIf="selectedGap as gap">
+            <div class="card-head">
+                <h2>Detail de l ecart</h2>
+                <p>{{ gap.description || 'Aucune description detaillee renseignee.' }}</p>
+            </div>
+            <div class="requirement-detail-grid">
+                <div class="detail-block detail-block-wide">
+                    <span>Titre</span>
+                    <strong>{{ gap.title }}</strong>
+                </div>
+                <div class="detail-block">
+                    <span>Referentiel</span>
+                    <strong>{{ getFrameworkLabel(gap) }}</strong>
+                </div>
+                <div class="detail-block">
+                    <span>Exigence</span>
+                    <strong>{{ getRequirementLabel(gap) }}</strong>
+                </div>
+                <div class="detail-block">
+                    <span>Severite</span>
+                    <strong>{{ gap.severityLabel || gap.severity }}</strong>
+                </div>
+                <div class="detail-block">
+                    <span>Statut</span>
+                    <strong>{{ gap.statusLabel || gap.status }}</strong>
+                </div>
+                <div class="detail-block">
+                    <span>Owner</span>
+                    <strong>{{ getOwnerLabel(gap) }}</strong>
+                </div>
+                <div class="detail-block">
+                    <span>Echeance</span>
+                    <strong>{{ formatDate(gap.dueDate) }}</strong>
+                </div>
+                <div class="detail-block detail-block-wide">
+                    <span>Remediation</span>
+                    <strong>{{ gap.remediationActionId || 'Action a definir' }}</strong>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="table-card" *ngIf="filteredGaps.length > 0; else emptyState">
+        <table class="compliance-table">
+            <thead>
+                <tr>
+                    <th>Ecart</th>
+                    <th>Referentiel / exigence</th>
+                    <th>Priorite</th>
+                    <th>Traitement</th>
+                    <th>Source</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let gap of filteredGaps" [class.row-selected]="selectedGap?.id === gap.id">
+                    <td>
+                        <strong>{{ gap.title }}</strong>
+                        <small>{{ gap.description || 'Sans description' }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ getFrameworkLabel(gap) }}</strong>
+                        <small>{{ getRequirementLabel(gap) }}</small>
+                    </td>
+                    <td>
+                        <span class="badge" [ngClass]="getStatusClass(gap.severityCode || gap.severity)">{{ gap.severityLabel || gap.severity }}</span>
+                    </td>
+                    <td>
+                        <strong><span class="badge" [ngClass]="getStatusClass(gap.statusCode || gap.status)">{{ gap.statusLabel || gap.status }}</span></strong>
+                        <small>{{ formatDate(gap.dueDate) }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ gap.sourceTypeLabel || gap.sourceType }}</strong>
+                        <small>{{ gap.remediationActionId || 'Action a definir' }}</small>
+                    </td>
+                    <td class="action-cell">
+                        <div class="action-group">
+                            <button class="table-action" type="button" (click)="selectGap(gap)">Voir detail</button>
+                            <button class="table-action" *ngIf="canManage" type="button" (click)="editGap(gap)">Modifier</button>
+                            <button class="table-action danger" *ngIf="canManage" type="button" (click)="deleteGap(gap)">Supprimer</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
 
     <ng-template #emptyState>
         <div class="empty-state">
             <i class="fas fa-shield-exclamation"></i>
-            <h3>Aucun ecart ouvert</h3>
-            <p>Le registre des ecarts s alimentera a partir des auto-evaluations et des incidents encore ouverts.</p>
+            <h3>Aucun ecart</h3>
+            <p>Creez ou importez des constats pour alimenter le registre de suivi.</p>
         </div>
     </ng-template>
 </div>

@@ -147,6 +147,28 @@ export interface ComplianceRequirementRecord {
   updatedAt?: string;
 }
 
+export interface ComplianceCampaignRecord {
+  id: number;
+  frameworkId: number;
+  title: string;
+  status: string;
+  statusCode?: string | null;
+  statusLabel?: string | null;
+  ownerUserId: number | null;
+  assignedUserId: number | null;
+  departmentId: number | null;
+  entityKey: string | null;
+  dueDate: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  framework?: ComplianceFrameworkRecord | null;
+  owner?: { id: number; prenom?: string; nom?: string } | null;
+  assignee?: { id: number; prenom?: string; nom?: string } | null;
+  department?: { id: number; nom?: string } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ComplianceMappingRecord {
   id: number;
   requirementId: number;
@@ -162,6 +184,55 @@ export interface ComplianceMappingRecord {
   ownerUserId: number | null;
   departmentId: number | null;
   entityKey: string | null;
+  requirement?: ComplianceRequirementRecord | null;
+  owner?: { id: number; prenom?: string; nom?: string } | null;
+  department?: { id: number; nom?: string } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ComplianceGapRecord {
+  id: number;
+  requirementId: number | null;
+  title: string;
+  description: string | null;
+  severity: string;
+  severityCode?: string | null;
+  severityLabel?: string | null;
+  status: string;
+  statusCode?: string | null;
+  statusLabel?: string | null;
+  sourceType: string;
+  sourceTypeCode?: string | null;
+  sourceTypeLabel?: string | null;
+  sourceId: number | null;
+  ownerUserId: number | null;
+  departmentId: number | null;
+  entityKey: string | null;
+  dueDate: string | null;
+  remediationActionId: string | null;
+  requirement?: ComplianceRequirementRecord | null;
+  owner?: { id: number; prenom?: string; nom?: string } | null;
+  department?: { id: number; nom?: string } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ComplianceEvidenceRecord {
+  id: number;
+  requirementId: number | null;
+  title: string;
+  sourceType: string;
+  sourceTypeCode?: string | null;
+  sourceTypeLabel?: string | null;
+  sourceId: number | null;
+  filename: string | null;
+  filePath: string | null;
+  mimeType: string | null;
+  ownerUserId: number | null;
+  departmentId: number | null;
+  entityKey: string | null;
+  capturedAt: string | null;
   requirement?: ComplianceRequirementRecord | null;
   owner?: { id: number; prenom?: string; nom?: string } | null;
   department?: { id: number; nom?: string } | null;
@@ -211,6 +282,42 @@ export interface ComplianceMappingPayload {
   relatedEntityKey?: string | null;
   coverageLevel?: string;
   rationale?: string | null;
+  entityKey?: string | null;
+}
+
+export interface ComplianceCampaignPayload {
+  frameworkId: number;
+  title: string;
+  status?: string;
+  assignedUserId?: number | null;
+  dueDate?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  entityKey?: string | null;
+}
+
+export interface ComplianceGapPayload {
+  requirementId?: number | null;
+  title: string;
+  description?: string | null;
+  severity?: string;
+  status?: string;
+  sourceType?: string;
+  sourceId?: number | null;
+  dueDate?: string | null;
+  remediationActionId?: string | null;
+  entityKey?: string | null;
+}
+
+export interface ComplianceEvidencePayload {
+  requirementId?: number | null;
+  title: string;
+  sourceType?: string;
+  sourceId?: number | null;
+  filename?: string | null;
+  filePath?: string | null;
+  mimeType?: string | null;
+  capturedAt?: string | null;
   entityKey?: string | null;
 }
 
@@ -326,22 +433,58 @@ export class ComplianceService {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/requirements/${id}`);
   }
 
-  getCampaigns(filters: ComplianceQueryFilters = {}): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/campaigns`, {
+  getCampaigns(filters: ComplianceQueryFilters = {}): Observable<ComplianceCampaignRecord[]> {
+    return this.http.get<ComplianceCampaignRecord[]>(`${this.apiUrl}/campaigns`, {
       params: this.buildParams(filters)
     });
   }
 
-  getGaps(filters: ComplianceQueryFilters = {}): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/gaps`, {
+  createCampaign(payload: ComplianceCampaignPayload): Observable<ComplianceCampaignRecord> {
+    return this.http.post<ComplianceCampaignRecord>(`${this.apiUrl}/campaigns`, payload);
+  }
+
+  updateCampaign(id: number, payload: ComplianceCampaignPayload): Observable<ComplianceCampaignRecord> {
+    return this.http.put<ComplianceCampaignRecord>(`${this.apiUrl}/campaigns/${id}`, payload);
+  }
+
+  deleteCampaign(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/campaigns/${id}`);
+  }
+
+  getGaps(filters: ComplianceQueryFilters = {}): Observable<ComplianceGapRecord[]> {
+    return this.http.get<ComplianceGapRecord[]>(`${this.apiUrl}/gaps`, {
       params: this.buildParams(filters)
     });
   }
 
-  getEvidence(filters: ComplianceQueryFilters = {}): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/evidence`, {
+  createGap(payload: ComplianceGapPayload): Observable<ComplianceGapRecord> {
+    return this.http.post<ComplianceGapRecord>(`${this.apiUrl}/gaps`, payload);
+  }
+
+  updateGap(id: number, payload: ComplianceGapPayload): Observable<ComplianceGapRecord> {
+    return this.http.put<ComplianceGapRecord>(`${this.apiUrl}/gaps/${id}`, payload);
+  }
+
+  deleteGap(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/gaps/${id}`);
+  }
+
+  getEvidence(filters: ComplianceQueryFilters = {}): Observable<ComplianceEvidenceRecord[]> {
+    return this.http.get<ComplianceEvidenceRecord[]>(`${this.apiUrl}/evidence`, {
       params: this.buildParams(filters)
     });
+  }
+
+  createEvidence(payload: ComplianceEvidencePayload): Observable<ComplianceEvidenceRecord> {
+    return this.http.post<ComplianceEvidenceRecord>(`${this.apiUrl}/evidence`, payload);
+  }
+
+  updateEvidence(id: number, payload: ComplianceEvidencePayload): Observable<ComplianceEvidenceRecord> {
+    return this.http.put<ComplianceEvidenceRecord>(`${this.apiUrl}/evidence/${id}`, payload);
+  }
+
+  deleteEvidence(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/evidence/${id}`);
   }
 
   getMappings(): Observable<ComplianceMappingRecord[]> {

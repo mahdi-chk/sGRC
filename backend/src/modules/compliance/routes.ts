@@ -382,6 +382,100 @@ router.get('/campaigns', authorizeRoles(...allowedRoles), async (req: AuthReques
     }
 });
 
+router.post('/campaigns', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceCampaign', {
+            frameworkId: Number(req.body.frameworkId),
+            title: String(req.body.title || '').trim(),
+            status: req.body.status ? String(req.body.status).trim() : 'draft',
+            ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : req.user?.id || null,
+            assignedUserId: req.body.assignedUserId ? Number(req.body.assignedUserId) : null,
+            departmentId: req.body.departmentId ? Number(req.body.departmentId) : req.user?.departementId || null,
+            entityKey: toOptionalString(req.body.entityKey),
+            dueDate: req.body.dueDate || null,
+            startedAt: req.body.startedAt || null,
+            completedAt: req.body.completedAt || null,
+        }) as Record<string, unknown>;
+
+        const item = await ComplianceCampaign.create(payload as any);
+        await ComplianceAuditService.log({
+            entityType: 'campaign',
+            entityId: item.id,
+            action: 'create',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
+            payload,
+        });
+
+        res.status(201).json(serializeCompliance(item));
+    } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la creation de la campagne');
+        res.status(routeError.status).json({ message: routeError.message, error: error?.message || 'unknown_error' });
+    }
+});
+
+router.put('/campaigns/:id', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const item = await ComplianceCampaign.findByPk(Number(req.params.id));
+        if (!item) {
+            return res.status(404).json({ message: 'Campagne introuvable' });
+        }
+
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceCampaign', {
+            frameworkId: req.body.frameworkId ? Number(req.body.frameworkId) : item.frameworkId,
+            title: String(req.body.title || item.title).trim(),
+            status: req.body.status ? String(req.body.status).trim() : item.status,
+            ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : item.ownerUserId,
+            assignedUserId: req.body.assignedUserId !== undefined ? (req.body.assignedUserId ? Number(req.body.assignedUserId) : null) : item.assignedUserId,
+            departmentId: req.body.departmentId ? Number(req.body.departmentId) : item.departmentId,
+            entityKey: req.body.entityKey !== undefined ? toOptionalString(req.body.entityKey) : item.entityKey,
+            dueDate: req.body.dueDate !== undefined ? req.body.dueDate || null : item.dueDate,
+            startedAt: req.body.startedAt !== undefined ? req.body.startedAt || null : item.startedAt,
+            completedAt: req.body.completedAt !== undefined ? req.body.completedAt || null : item.completedAt,
+        }) as Record<string, unknown>;
+
+        await item.update(payload as any);
+        await ComplianceAuditService.log({
+            entityType: 'campaign',
+            entityId: item.id,
+            action: 'update',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
+            payload,
+        });
+
+        res.json(serializeCompliance(item));
+    } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la mise a jour de la campagne');
+        res.status(routeError.status).json({ message: routeError.message, error: error?.message || 'unknown_error' });
+    }
+});
+
+router.delete('/campaigns/:id', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const item = await ComplianceCampaign.findByPk(Number(req.params.id));
+        if (!item) {
+            return res.status(404).json({ message: 'Campagne introuvable' });
+        }
+
+        await ComplianceAuditService.log({
+            entityType: 'campaign',
+            entityId: item.id,
+            action: 'delete',
+            actorUserId: req.user?.id || null,
+            departmentId: item.departmentId,
+            entityKey: item.entityKey,
+            payload: { frameworkId: item.frameworkId, title: item.title },
+        });
+        await softDeleteInstance(item);
+        res.json({ message: 'Campagne supprimee avec succes' });
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors de la suppression de la campagne', error: error?.message || 'unknown_error' });
+    }
+});
+
 router.get('/gaps', authorizeRoles(...allowedRoles), async (req: AuthRequest, res) => {
     try {
         const items = await ComplianceGapsService.list(
@@ -401,6 +495,104 @@ router.get('/gaps', authorizeRoles(...allowedRoles), async (req: AuthRequest, re
     }
 });
 
+router.post('/gaps', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceGap', {
+            requirementId: req.body.requirementId ? Number(req.body.requirementId) : null,
+            title: String(req.body.title || '').trim(),
+            description: toOptionalString(req.body.description),
+            severity: req.body.severity ? String(req.body.severity).trim() : 'medium',
+            status: req.body.status ? String(req.body.status).trim() : 'open',
+            sourceType: req.body.sourceType ? String(req.body.sourceType).trim() : 'manual',
+            sourceId: req.body.sourceId ? Number(req.body.sourceId) : null,
+            ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : req.user?.id || null,
+            departmentId: req.body.departmentId ? Number(req.body.departmentId) : req.user?.departementId || null,
+            entityKey: toOptionalString(req.body.entityKey),
+            dueDate: req.body.dueDate || null,
+            remediationActionId: toOptionalString(req.body.remediationActionId),
+        }) as Record<string, unknown>;
+
+        const item = await ComplianceGap.create(payload as any);
+        await ComplianceAuditService.log({
+            entityType: 'gap',
+            entityId: item.id,
+            action: 'create',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
+            payload,
+        });
+
+        res.status(201).json(serializeCompliance(item));
+    } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la creation de l ecart');
+        res.status(routeError.status).json({ message: routeError.message, error: error?.message || 'unknown_error' });
+    }
+});
+
+router.put('/gaps/:id', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const item = await ComplianceGap.findByPk(Number(req.params.id));
+        if (!item) {
+            return res.status(404).json({ message: 'Ecart introuvable' });
+        }
+
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceGap', {
+            requirementId: req.body.requirementId !== undefined ? (req.body.requirementId ? Number(req.body.requirementId) : null) : item.requirementId,
+            title: String(req.body.title || item.title).trim(),
+            description: req.body.description !== undefined ? toOptionalString(req.body.description) : item.description,
+            severity: req.body.severity ? String(req.body.severity).trim() : item.severity,
+            status: req.body.status ? String(req.body.status).trim() : item.status,
+            sourceType: req.body.sourceType ? String(req.body.sourceType).trim() : item.sourceType,
+            sourceId: req.body.sourceId !== undefined ? (req.body.sourceId ? Number(req.body.sourceId) : null) : item.sourceId,
+            ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : item.ownerUserId,
+            departmentId: req.body.departmentId ? Number(req.body.departmentId) : item.departmentId,
+            entityKey: req.body.entityKey !== undefined ? toOptionalString(req.body.entityKey) : item.entityKey,
+            dueDate: req.body.dueDate !== undefined ? req.body.dueDate || null : item.dueDate,
+            remediationActionId: req.body.remediationActionId !== undefined ? toOptionalString(req.body.remediationActionId) : item.remediationActionId,
+        }) as Record<string, unknown>;
+
+        await item.update(payload as any);
+        await ComplianceAuditService.log({
+            entityType: 'gap',
+            entityId: item.id,
+            action: 'update',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
+            payload,
+        });
+
+        res.json(serializeCompliance(item));
+    } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la mise a jour de l ecart');
+        res.status(routeError.status).json({ message: routeError.message, error: error?.message || 'unknown_error' });
+    }
+});
+
+router.delete('/gaps/:id', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const item = await ComplianceGap.findByPk(Number(req.params.id));
+        if (!item) {
+            return res.status(404).json({ message: 'Ecart introuvable' });
+        }
+
+        await ComplianceAuditService.log({
+            entityType: 'gap',
+            entityId: item.id,
+            action: 'delete',
+            actorUserId: req.user?.id || null,
+            departmentId: item.departmentId,
+            entityKey: item.entityKey,
+            payload: { requirementId: item.requirementId, title: item.title },
+        });
+        await softDeleteInstance(item);
+        res.json({ message: 'Ecart supprime avec succes' });
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors de la suppression de l ecart', error: error?.message || 'unknown_error' });
+    }
+});
+
 router.get('/evidence', authorizeRoles(...allowedRoles), async (req: AuthRequest, res) => {
     try {
         const items = await ComplianceEvidenceService.list(
@@ -417,6 +609,102 @@ router.get('/evidence', authorizeRoles(...allowedRoles), async (req: AuthRequest
             message: 'Erreur lors du chargement des preuves de conformite',
             error: error?.message || 'unknown_error',
         });
+    }
+});
+
+router.post('/evidence', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceEvidence', {
+            requirementId: req.body.requirementId ? Number(req.body.requirementId) : null,
+            title: String(req.body.title || '').trim(),
+            sourceType: req.body.sourceType ? String(req.body.sourceType).trim() : 'document',
+            sourceId: req.body.sourceId ? Number(req.body.sourceId) : null,
+            filename: toOptionalString(req.body.filename),
+            filePath: toOptionalString(req.body.filePath),
+            mimeType: toOptionalString(req.body.mimeType),
+            ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : req.user?.id || null,
+            departmentId: req.body.departmentId ? Number(req.body.departmentId) : req.user?.departementId || null,
+            entityKey: toOptionalString(req.body.entityKey),
+            capturedAt: req.body.capturedAt || null,
+        }) as Record<string, unknown>;
+
+        const item = await ComplianceEvidence.create(payload as any);
+        await ComplianceAuditService.log({
+            entityType: 'evidence',
+            entityId: item.id,
+            action: 'create',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
+            payload,
+        });
+
+        res.status(201).json(serializeCompliance(item));
+    } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la creation de la preuve');
+        res.status(routeError.status).json({ message: routeError.message, error: error?.message || 'unknown_error' });
+    }
+});
+
+router.put('/evidence/:id', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const item = await ComplianceEvidence.findByPk(Number(req.params.id));
+        if (!item) {
+            return res.status(404).json({ message: 'Preuve introuvable' });
+        }
+
+        const payload = await LookupResolutionService.resolveEntityPayload('complianceEvidence', {
+            requirementId: req.body.requirementId !== undefined ? (req.body.requirementId ? Number(req.body.requirementId) : null) : item.requirementId,
+            title: String(req.body.title || item.title).trim(),
+            sourceType: req.body.sourceType ? String(req.body.sourceType).trim() : item.sourceType,
+            sourceId: req.body.sourceId !== undefined ? (req.body.sourceId ? Number(req.body.sourceId) : null) : item.sourceId,
+            filename: req.body.filename !== undefined ? toOptionalString(req.body.filename) : item.filename,
+            filePath: req.body.filePath !== undefined ? toOptionalString(req.body.filePath) : item.filePath,
+            mimeType: req.body.mimeType !== undefined ? toOptionalString(req.body.mimeType) : item.mimeType,
+            ownerUserId: req.body.ownerUserId ? Number(req.body.ownerUserId) : item.ownerUserId,
+            departmentId: req.body.departmentId ? Number(req.body.departmentId) : item.departmentId,
+            entityKey: req.body.entityKey !== undefined ? toOptionalString(req.body.entityKey) : item.entityKey,
+            capturedAt: req.body.capturedAt !== undefined ? req.body.capturedAt || null : item.capturedAt,
+        }) as Record<string, unknown>;
+
+        await item.update(payload as any);
+        await ComplianceAuditService.log({
+            entityType: 'evidence',
+            entityId: item.id,
+            action: 'update',
+            actorUserId: req.user?.id || null,
+            departmentId: toNullableNumber(payload.departmentId),
+            entityKey: toOptionalString(payload.entityKey),
+            payload,
+        });
+
+        res.json(serializeCompliance(item));
+    } catch (error: any) {
+        const routeError = getComplianceRouteError(error, 'Erreur lors de la mise a jour de la preuve');
+        res.status(routeError.status).json({ message: routeError.message, error: error?.message || 'unknown_error' });
+    }
+});
+
+router.delete('/evidence/:id', authorizeRoles(...mappingEditorRoles), async (req: AuthRequest, res) => {
+    try {
+        const item = await ComplianceEvidence.findByPk(Number(req.params.id));
+        if (!item) {
+            return res.status(404).json({ message: 'Preuve introuvable' });
+        }
+
+        await ComplianceAuditService.log({
+            entityType: 'evidence',
+            entityId: item.id,
+            action: 'delete',
+            actorUserId: req.user?.id || null,
+            departmentId: item.departmentId,
+            entityKey: item.entityKey,
+            payload: { requirementId: item.requirementId, title: item.title, filename: item.filename },
+        });
+        await softDeleteInstance(item);
+        res.json({ message: 'Preuve supprimee avec succes' });
+    } catch (error: any) {
+        res.status(500).json({ message: 'Erreur lors de la suppression de la preuve', error: error?.message || 'unknown_error' });
     }
 });
 

@@ -6,11 +6,11 @@
             </button>
             <div>
                 <h1><i class="fas fa-bell"></i> Mises a jour et preuves</h1>
-                <p>Lecture combinee des signaux de veille et des evidences utilisables pour un dossier de conformite.</p>
+                <p>Signaux de veille calcules depuis les referentiels et registre dynamique des preuves.</p>
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+            <button class="btn-refresh" (click)="loadData()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
             </button>
@@ -23,11 +23,34 @@
         </a>
     </nav>
 
+    <div class="content-card" *ngIf="feedback || error">
+        <p class="feedback-message success" *ngIf="feedback">{{ feedback }}</p>
+        <p class="feedback-message error" *ngIf="error">{{ error }}</p>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Veille</span>
+            <h3>{{ updates.length }}</h3>
+            <p>Signaux suivis</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Impact eleve</span>
+            <h3>{{ highImpactUpdates }}</h3>
+            <p>Revue prioritaire</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Preuves</span>
+            <h3>{{ filteredEvidence.length }}</h3>
+            <p>Pieces rattachees</p>
+        </div>
+    </div>
+
     <div class="section-grid">
-        <div class="content-card">
+        <section class="content-card">
             <div class="card-head">
-                <h2>Veille</h2>
-                <p>Premiere base de flux a partir de l activite recente et des points d attention detectes.</p>
+                <h2>Veille des referentiels</h2>
+                <p>Lecture dynamique des cadres dont la couverture ou le statut demande une revue.</p>
             </div>
             <div class="item-list" *ngIf="updates.length > 0; else emptyUpdates">
                 <article class="list-item" *ngFor="let item of updates">
@@ -36,45 +59,170 @@
                     <div class="meta-row">
                         <span class="badge" [ngClass]="getStatusClass(item.impactLevel)">{{ item.impactLevel }}</span>
                         <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+                        <span>Owner: {{ item.owner }}</span>
                         <span>Detection: {{ formatDate(item.detectedAt) }}</span>
                         <span>{{ item.nextAction }}</span>
                     </div>
                 </article>
             </div>
-        </div>
+        </section>
 
-        <div class="content-card">
+        <section class="content-card">
             <div class="card-head">
-                <h2>Preuves recentes</h2>
-                <p>Elements deja disponibles pour preparer un dossier de conformite ou d audit.</p>
+                <h2>{{ editingId ? 'Modifier une preuve' : 'Nouvelle preuve' }}</h2>
+                <p>Rattachez une preuve a une exigence, avec source, fichier et date de capture.</p>
             </div>
-            <div class="item-list" *ngIf="evidence.length > 0; else emptyEvidence">
-                <article class="evidence-item" *ngFor="let item of evidence">
-                    <strong>{{ item.title }}</strong>
-                    <p>{{ item.framework }} - {{ item.filename }}</p>
-                    <div class="meta-row">
-                        <span class="tag secondary">{{ item.sourceType }}</span>
-                        <span>Owner: {{ item.owner }}</span>
-                        <span>Ajoute le {{ formatDate(item.uploadedAt) }}</span>
-                    </div>
-                </article>
+
+            <div class="form-grid" *ngIf="canManage; else readOnlyState">
+                <label class="filter-field">
+                    <span>Referentiel</span>
+                    <select [(ngModel)]="selectedFrameworkId" (ngModelChange)="onFrameworkChange()">
+                        <option [ngValue]="null">Tous les referentiels</option>
+                        <option *ngFor="let framework of frameworks" [ngValue]="framework.id">{{ framework.code }} - {{ framework.name }}</option>
+                    </select>
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Exigence</span>
+                    <select [(ngModel)]="form.requirementId">
+                        <option [ngValue]="null">Non rattachee</option>
+                        <option *ngFor="let requirement of visibleRequirements" [ngValue]="requirement.id">
+                            {{ requirement.code }} - {{ requirement.title }}
+                        </option>
+                    </select>
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Titre</span>
+                    <input [(ngModel)]="form.title" placeholder="Politique, rapport, capture ou export de controle" />
+                </label>
+                <label class="filter-field">
+                    <span>Type source</span>
+                    <select [(ngModel)]="form.sourceType">
+                        <option *ngFor="let source of sourceTypeOptions" [value]="source.code">{{ source.label }}</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Nom fichier</span>
+                    <input [(ngModel)]="form.filename" placeholder="preuve.pdf" />
+                </label>
+                <label class="filter-field">
+                    <span>Date capture</span>
+                    <input type="date" [(ngModel)]="form.capturedAt" />
+                </label>
+                <label class="filter-field">
+                    <span>MIME</span>
+                    <input [(ngModel)]="form.mimeType" placeholder="application/pdf" />
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Chemin / reference</span>
+                    <input [(ngModel)]="form.filePath" placeholder="Lien, chemin ou reference documentaire" />
+                </label>
+            </div>
+
+            <div class="form-actions" *ngIf="canManage">
+                <button class="btn-refresh" type="button" (click)="saveEvidence()">{{ editingId ? 'Enregistrer' : 'Creer' }}</button>
+                <button class="back-btn" type="button" (click)="resetForm()">Annuler</button>
+            </div>
+
+            <ng-template #readOnlyState>
+                <div class="empty-state compact">
+                    <i class="fas fa-lock"></i>
+                    <h3>Mode consultation</h3>
+                    <p>Votre profil peut consulter les preuves mais pas les modifier.</p>
+                </div>
+            </ng-template>
+        </section>
+    </div>
+
+    <section class="content-card" *ngIf="selectedEvidence as item">
+        <div class="card-head">
+            <h2>Detail de la preuve</h2>
+            <p>{{ item.title }}</p>
+        </div>
+        <div class="requirement-detail-grid">
+            <div class="detail-block">
+                <span>Referentiel</span>
+                <strong>{{ getEvidenceFrameworkLabel(item) }}</strong>
+            </div>
+            <div class="detail-block detail-block-wide">
+                <span>Exigence</span>
+                <strong>{{ getEvidenceRequirementLabel(item) }}</strong>
+            </div>
+            <div class="detail-block">
+                <span>Source</span>
+                <strong>{{ item.sourceTypeLabel || item.sourceType }}</strong>
+            </div>
+            <div class="detail-block">
+                <span>Fichier</span>
+                <strong>{{ item.filename || 'Non renseigne' }}</strong>
+            </div>
+            <div class="detail-block">
+                <span>Owner</span>
+                <strong>{{ getOwnerLabel(item) }}</strong>
+            </div>
+            <div class="detail-block">
+                <span>Date</span>
+                <strong>{{ formatDate(item.capturedAt || item.createdAt) }}</strong>
+            </div>
+            <div class="detail-block detail-block-wide">
+                <span>Reference</span>
+                <strong>{{ item.filePath || 'Aucune reference documentaire.' }}</strong>
             </div>
         </div>
-    </div>
+    </section>
+
+    <section class="table-card" *ngIf="filteredEvidence.length > 0; else emptyEvidence">
+        <table class="compliance-table">
+            <thead>
+                <tr>
+                    <th>Preuve</th>
+                    <th>Referentiel / exigence</th>
+                    <th>Source</th>
+                    <th>Fichier</th>
+                    <th>Owner</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let item of filteredEvidence" [class.row-selected]="selectedEvidence?.id === item.id">
+                    <td>
+                        <strong>{{ item.title }}</strong>
+                        <small>{{ formatDate(item.capturedAt || item.createdAt) }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ getEvidenceFrameworkLabel(item) }}</strong>
+                        <small>{{ getEvidenceRequirementLabel(item) }}</small>
+                    </td>
+                    <td><span class="tag secondary">{{ item.sourceTypeLabel || item.sourceType }}</span></td>
+                    <td>
+                        <strong>{{ item.filename || 'Sans fichier' }}</strong>
+                        <small>{{ item.mimeType || item.filePath || 'Reference non renseignee' }}</small>
+                    </td>
+                    <td>{{ getOwnerLabel(item) }}</td>
+                    <td class="action-cell">
+                        <div class="action-group">
+                            <button class="table-action" type="button" (click)="selectEvidence(item)">Voir detail</button>
+                            <button class="table-action" *ngIf="canManage" type="button" (click)="editEvidence(item)">Modifier</button>
+                            <button class="table-action danger" *ngIf="canManage" type="button" (click)="deleteEvidence(item)">Supprimer</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
 
     <ng-template #emptyUpdates>
         <div class="empty-state">
             <i class="fas fa-satellite-dish"></i>
             <h3>Aucune alerte de veille</h3>
-            <p>Les mises a jour reglementaires seront listees ici.</p>
+            <p>Les signaux apparaitront lorsque les referentiels auront une couverture ou un statut a suivre.</p>
         </div>
     </ng-template>
 
     <ng-template #emptyEvidence>
         <div class="empty-state">
             <i class="fas fa-file-shield"></i>
-            <h3>Aucune preuve recente</h3>
-            <p>Les evidences de conformite apparaitront ici une fois reliees au perimetre du module.</p>
+            <h3>Aucune preuve</h3>
+            <p>Ajoutez une preuve pour documenter la couverture des exigences.</p>
         </div>
     </ng-template>
 </div>

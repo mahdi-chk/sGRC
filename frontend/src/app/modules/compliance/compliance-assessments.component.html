@@ -6,11 +6,11 @@
             </button>
             <div>
                 <h1><i class="fas fa-list-check"></i> Auto-evaluations</h1>
-                <p>Campagnes de conformite, progression des reponses et suivi des questionnaires par cadre.</p>
+                <p>Campagnes de conformite, responsables, echeances et avancement par referentiel.</p>
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+            <button class="btn-refresh" (click)="loadData()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
             </button>
@@ -23,32 +23,162 @@
         </a>
     </nav>
 
-    <div class="item-list" *ngIf="assessments.length > 0; else emptyState">
-        <article class="list-item" *ngFor="let item of paginatedAssessments">
-            <strong>{{ item.title }}</strong>
-            <p>{{ item.framework }}</p>
-            <div class="meta-row">
-                <span class="tag">{{ item.completion }}% complete</span>
-                <span>{{ item.answered }}/{{ item.totalQuestions }} reponses</span>
-                <span>Responsable: {{ item.owner }}</span>
-                <span>Echeance: {{ formatDate(item.dueDate) }}</span>
-                <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+    <div class="content-card" *ngIf="feedback || error">
+        <p class="feedback-message success" *ngIf="feedback">{{ feedback }}</p>
+        <p class="feedback-message error" *ngIf="error">{{ error }}</p>
+    </div>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span class="eyebrow">Campagnes</span>
+            <h3>{{ filteredCampaigns.length }}</h3>
+            <p>{{ selectedFramework?.code || 'Tous cadres' }}</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">En cours</span>
+            <h3>{{ inProgressCount }}</h3>
+            <p>Questionnaires ouverts</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Terminees</span>
+            <h3>{{ completedCount }}</h3>
+            <p>Dossiers finalises</p>
+        </div>
+    </div>
+
+    <div class="section-grid section-grid-wide">
+        <section class="content-card">
+            <div class="card-head">
+                <h2>{{ editingId ? 'Modifier une campagne' : 'Nouvelle campagne' }}</h2>
+                <p>Rattachez une auto-evaluation a un referentiel et suivez son cycle de traitement.</p>
             </div>
-        </article>
-        
-        <app-pagination 
-            [totalItems]="assessments.length" 
-            [currentPage]="currentPage" 
-            [pageSize]="itemsPerPage" 
+
+            <div class="form-grid" *ngIf="canManage; else readOnlyState">
+                <label class="filter-field">
+                    <span>Referentiel</span>
+                    <select [(ngModel)]="form.frameworkId">
+                        <option [ngValue]="0">Choisir un referentiel</option>
+                        <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
+                            {{ framework.code }} - {{ framework.name }}
+                        </option>
+                    </select>
+                </label>
+                <label class="filter-field field-span-2">
+                    <span>Titre</span>
+                    <input [(ngModel)]="form.title" placeholder="Auto-evaluation annuelle ISO 27001" />
+                </label>
+                <label class="filter-field">
+                    <span>Statut</span>
+                    <select [(ngModel)]="form.status">
+                        <option *ngFor="let status of statusOptions" [value]="status.code">{{ status.label }}</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span>Echeance</span>
+                    <input type="date" [(ngModel)]="form.dueDate" />
+                </label>
+                <label class="filter-field">
+                    <span>Demarrage</span>
+                    <input type="date" [(ngModel)]="form.startedAt" />
+                </label>
+                <label class="filter-field">
+                    <span>Cloture</span>
+                    <input type="date" [(ngModel)]="form.completedAt" />
+                </label>
+                <label class="filter-field">
+                    <span>Entite</span>
+                    <input [(ngModel)]="form.entityKey" placeholder="seed-demo" />
+                </label>
+            </div>
+
+            <div class="form-actions" *ngIf="canManage">
+                <button class="btn-refresh" type="button" (click)="saveCampaign()">{{ editingId ? 'Enregistrer' : 'Creer' }}</button>
+                <button class="back-btn" type="button" (click)="resetForm()">Annuler</button>
+            </div>
+
+            <ng-template #readOnlyState>
+                <div class="empty-state compact">
+                    <i class="fas fa-lock"></i>
+                    <h3>Mode consultation</h3>
+                    <p>Votre profil peut consulter les campagnes mais pas les modifier.</p>
+                </div>
+            </ng-template>
+        </section>
+
+        <section class="content-card">
+            <div class="card-head">
+                <h2>Filtrer</h2>
+                <p>Concentrez la liste sur un cadre de conformite.</p>
+            </div>
+            <label class="filter-field">
+                <span>Referentiel</span>
+                <select [(ngModel)]="selectedFrameworkId" (ngModelChange)="onFrameworkChange()">
+                    <option [ngValue]="null">Tous les referentiels</option>
+                    <option *ngFor="let framework of frameworks" [ngValue]="framework.id">
+                        {{ framework.code }} - {{ framework.name }}
+                    </option>
+                </select>
+            </label>
+        </section>
+    </div>
+
+    <section class="table-card" *ngIf="filteredCampaigns.length > 0; else emptyState">
+        <table class="compliance-table">
+            <thead>
+                <tr>
+                    <th>Campagne</th>
+                    <th>Referentiel</th>
+                    <th>Responsables</th>
+                    <th>Progression</th>
+                    <th>Dates</th>
+                    <th *ngIf="canManage">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let item of paginatedCampaigns">
+                    <td>
+                        <strong>{{ item.title }}</strong>
+                        <small>{{ item.entityKey || item.department?.nom || 'Perimetre global' }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ getFrameworkLabel(item) }}</strong>
+                        <small>{{ item.framework?.version || 'Version non renseignee' }}</small>
+                    </td>
+                    <td>
+                        <strong>Owner: {{ getOwnerLabel(item) }}</strong>
+                        <small>Assigne: {{ getAssigneeLabel(item) }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ getCompletion(item) }}%</strong>
+                        <small><span class="badge" [ngClass]="getStatusClass(item.statusCode || item.status)">{{ item.statusLabel || item.status }}</span></small>
+                    </td>
+                    <td>
+                        <strong>Echeance: {{ formatDate(item.dueDate) }}</strong>
+                        <small>Debut: {{ formatDate(item.startedAt) }} - Fin: {{ formatDate(item.completedAt) }}</small>
+                    </td>
+                    <td class="action-cell" *ngIf="canManage">
+                        <div class="action-group">
+                            <button class="table-action" type="button" (click)="editCampaign(item)">Modifier</button>
+                            <button class="table-action danger" type="button" (click)="deleteCampaign(item)">Supprimer</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <app-pagination
+            [totalItems]="filteredCampaigns.length"
+            [currentPage]="currentPage"
+            [pageSize]="itemsPerPage"
             (pageChanged)="onPageChanged($event)">
         </app-pagination>
-    </div>
+    </section>
 
     <ng-template #emptyState>
         <div class="empty-state">
             <i class="fas fa-clipboard-check"></i>
-            <h3>Aucune campagne active</h3>
-            <p>Les auto-evaluations seront visibles ici une fois les campagnes initialisees.</p>
+            <h3>Aucune campagne</h3>
+            <p>Creez une campagne pour suivre les auto-evaluations du referentiel selectionne.</p>
         </div>
     </ng-template>
 </div>

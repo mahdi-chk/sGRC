@@ -1,64 +1,70 @@
-<div class="supervision-shell">
-  <div class="supervision-hero">
-    <div class="hero-copy">
+<div class="supervision-workspace">
+  <div class="page-header">
+    <div class="header-left">
       <button class="back-btn" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>
       </button>
-      <div class="eyebrow">Pilotage transverse</div>
-      <h1>Supervision sGRC</h1>
-      <p>
-        Un espace unique pour suivre la sante GRC, orienter les decisions et guider
-        les remediations sur les modules risques, audits, incidents, conformite et actions.
-      </p>
+      <div>
+        <h1><i class="fas fa-chart-line"></i> Supervision sGRC</h1>
+        <p>
+          Cockpit transverse pour suivre la sante GRC, prioriser les alertes et orienter
+          les decisions sur les risques, audits, incidents, conformite et actions.
+        </p>
+      </div>
     </div>
-
-    <div class="hero-score" *ngIf="overview as data">
-      <div class="score-label">Health score</div>
-      <div class="score-value">{{ data.summary.healthScore }}</div>
-      <div class="score-status">{{ data.summary.status }}</div>
-      <div class="score-meta">Mis a jour le {{ data.generatedAt | date:'dd/MM/yyyy HH:mm' }}</div>
-    </div>
-  </div>
-
-  <div class="summary-grid" *ngIf="overview as data">
-    <div class="summary-card">
-      <span class="summary-label">Alertes actives</span>
-      <strong>{{ data.summary.activeAlerts }}</strong>
-      <small>Prioritaires a surveiller</small>
-    </div>
-    <div class="summary-card">
-      <span class="summary-label">Recommandations clefs</span>
-      <strong>{{ data.summary.keyRecommendations }}</strong>
-      <small>Actions pretes a engager</small>
-    </div>
-    <div class="summary-card">
-      <span class="summary-label">Domaines monitores</span>
-      <strong>{{ data.summary.monitoredDomains }}</strong>
-      <small>Risque, audit, incidents, conformite, alertes</small>
-    </div>
-    <div class="summary-card">
-      <span class="summary-label">Rythme de revue</span>
-      <strong>{{ data.summary.nextReview }}</strong>
-      <small>Cadence de pilotage recommandee</small>
+    <div class="header-actions">
+      <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+        <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
+        Actualiser
+      </button>
     </div>
   </div>
 
-  <nav class="supervision-nav">
+  <nav class="supervision-tabs">
     <a
       *ngFor="let item of navItems"
       [routerLink]="item.route"
-      routerLinkActive="is-active"
-      class="nav-chip">
-      <span>{{ item.label }}</span>
-      <small>{{ item.description }}</small>
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      class="supervision-tab">
+      {{ item.label }}
     </a>
   </nav>
 
-  <div class="loading-state" *ngIf="isLoading">
+  <div class="summary-grid" *ngIf="overview as data">
+    <div class="summary-card">
+      <span class="eyebrow">Health score</span>
+      <h3>{{ data.summary.healthScore }}/100</h3>
+      <p>{{ data.summary.status }}</p>
+      <small>Mis a jour le {{ data.generatedAt | date:'dd/MM/yyyy HH:mm' }}</small>
+    </div>
+    <div class="summary-card">
+      <span class="eyebrow">Alertes actives</span>
+      <h3>{{ data.summary.activeAlerts }}</h3>
+      <p>Prioritaires a surveiller.</p>
+    </div>
+    <div class="summary-card">
+      <span class="eyebrow">Recommandations</span>
+      <h3>{{ data.summary.keyRecommendations }}</h3>
+      <p>Actions pretes a engager.</p>
+    </div>
+    <div class="summary-card">
+      <span class="eyebrow">Domaines suivis</span>
+      <h3>{{ data.summary.monitoredDomains }}</h3>
+      <p>Risque, audit, incidents, conformite et actions.</p>
+    </div>
+    <div class="summary-card">
+      <span class="eyebrow">Prochaine revue</span>
+      <h3>{{ data.summary.nextReview }}</h3>
+      <p>Cadence de pilotage recommandee.</p>
+    </div>
+  </div>
+
+  <div class="status-line" *ngIf="isLoading">
     Chargement des donnees de supervision...
   </div>
 
-  <div class="supervision-content">
+  <div class="content-card supervision-content">
     <router-outlet></router-outlet>
   </div>
 </div>

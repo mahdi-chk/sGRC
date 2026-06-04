@@ -1,105 +1,208 @@
 <div class="organigramme-management">
     <div class="header">
         <div class="header-left">
-            <button class="back-btn" (click)="goBack()">
+            <button class="back-btn" (click)="goBack()" title="Retour">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div>
-                <h2><i class="fas fa-sitemap"></i> Gestion de l'Organigramme</h2>
-                <p>Gérez les intitulés des départements et postes pour la gestion des risques.</p>
+                <h2><i class="fas fa-sitemap"></i> Gestion de la Structure Organisationnelle</h2>
+                <p>Administrez les intitulés de structure, les départements et l’organisation interne de la plateforme.</p>
             </div>
         </div>
-        <div class="header-right">
-            <div class="export-dropdown">
-                <button class="btn-export" (click)="showExportMenu = !showExportMenu" title="Télécharger le rapport">
-                    <i class="fas fa-file-download"></i> Exporter rapport <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="dropdown-menu" [class.show]="showExportMenu">
-                    <button (click)="exportToXLSX()">
-                        <i class="fas fa-file-excel" style="color: #16a34a;"></i> Excel (.xlsx)
+    </div>
+
+    <div class="management-grid">
+        <section class="management-panel organigramme-panel">
+            <div class="panel-header">
+                <div>
+                    <h3><i class="fas fa-sitemap"></i> Intitulés de structure</h3>
+                    <p>{{ items.length }} element(s)</p>
+                </div>
+                <div class="export-actions">
+                    <button class="icon-btn" (click)="exportOrganigrammeToXLSX()" title="Exporter organigramme Excel">
+                        <i class="fas fa-file-excel"></i>
                     </button>
-                    <button (click)="exportToPDF()">
-                        <i class="fas fa-file-pdf" style="color: #ef4444;"></i> PDF (.pdf)
+                    <button class="icon-btn pdf" (click)="exportOrganigrammeToPDF()" title="Exporter organigramme PDF">
+                        <i class="fas fa-file-pdf"></i>
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="actions-row">
-        <div class="form-card">
-            <h3><i class="fas fa-plus"></i> Ajouter un intitulé</h3>
-            <div class="input-group">
-                <input type="text" [(ngModel)]="newNom" placeholder="Ex: DSI, Direction Générale..."
-                    class="premium-input">
-                <button (click)="addEntry()" class="premium-button" [disabled]="!newNom">Ajouter</button>
+            <div class="actions-row">
+                <div class="form-block">
+                    <label>Ajouter un intitule</label>
+                    <div class="input-group">
+                        <input type="text" [(ngModel)]="newNom" placeholder="Ex: DSI, Direction generale..."
+                            class="premium-input">
+                        <button (click)="addEntry()" class="premium-button" [disabled]="!newNom.trim()">
+                            Ajouter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-block">
+                    <label>Import Excel</label>
+                    <div class="file-upload">
+                        <input type="file" (change)="onFileSelected($event)" accept=".xlsx, .xls" id="organigrammeExcelFile"
+                            class="hidden-input">
+                        <label for="organigrammeExcelFile" class="upload-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            {{ selectedFile ? selectedFile.name : 'Choisir un fichier' }}
+                        </label>
+                        <button (click)="importExcel()" class="premium-button secondary" [disabled]="!selectedFile">
+                            Importer
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="import-card">
-            <h3><i class="fas fa-file-excel"></i> Import Excel</h3>
-            <div class="file-upload">
-                <input type="file" (change)="onFileSelected($event)" accept=".xlsx, .xls" id="excelFile"
-                    class="hidden-input">
-                <label for="excelFile" class="upload-label">
-                    <i class="fas fa-cloud-upload-alt"></i> {{ selectedFile ? selectedFile.name : 'Choisir un fichier'
-                    }}
-                </label>
-                <button (click)="importExcel()" class="premium-button secondary"
-                    [disabled]="!selectedFile">Importer</button>
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Intitule / Nom</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let item of paginatedItems">
+                            <td class="id-cell">#{{ item.id }}</td>
+                            <td>
+                                <input *ngIf="editingId === item.id" type="text" [(ngModel)]="editNom" class="edit-input">
+                                <span *ngIf="editingId !== item.id">{{ item.nom }}</span>
+                            </td>
+                            <td class="actions-cell">
+                                <button *ngIf="editingId !== item.id" (click)="startEdit(item)" class="action-btn edit"
+                                    title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button *ngIf="editingId === item.id" (click)="saveEdit()" class="action-btn save"
+                                    title="Enregistrer">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button *ngIf="editingId === item.id" (click)="cancelEdit()" class="action-btn cancel"
+                                    title="Annuler">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <button (click)="deleteEntry(item.id)" class="action-btn delete" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr *ngIf="items.length === 0">
+                            <td colspan="3" class="empty-msg">
+                                <i class="fas fa-folder-open"></i>
+                                <p>Aucun element dans l'organigramme.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <app-pagination
+                    [totalItems]="items.length"
+                    [currentPage]="currentPage"
+                    [pageSize]="itemsPerPage"
+                    (pageChanged)="onPageChanged($event)">
+                </app-pagination>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div class="list-section">
-        <div class="table-container">
-            <table class="premium-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Intitulé / Nom</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let item of paginatedItems; let i = index">
-                        <td class="id-cell">#{{ item.id }}</td>
-                        <td>
-                            <input *ngIf="editingId === item.id" type="text" [(ngModel)]="editNom" class="edit-input">
-                            <span *ngIf="editingId !== item.id">{{ item.nom }}</span>
-                        </td>
-                        <td class="actions-cell">
-                            <button *ngIf="editingId !== item.id" (click)="startEdit(item)" class="action-btn edit"
-                                title="Modifier">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button *ngIf="editingId === item.id" (click)="saveEdit()" class="action-btn save"
-                                title="Enregistrer">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button *ngIf="editingId === item.id" (click)="cancelEdit()" class="action-btn cancel"
-                                title="Annuler">
-                                <i class="fas fa-times"></i>
-                            </button>
-                            <button (click)="deleteEntry(item.id)" class="action-btn delete" title="Supprimer">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr *ngIf="items.length === 0">
-                        <td colspan="3" class="empty-msg">
-                            <i class="fas fa-folder-open"></i>
-                            <p>Aucun élément dans l'organigramme.</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <app-pagination 
-                [totalItems]="items.length" 
-                [currentPage]="currentPage" 
-                [pageSize]="itemsPerPage" 
-                (pageChanged)="onPageChanged($event)">
-            </app-pagination>
-        </div>
+        <section class="management-panel department-panel">
+            <div class="panel-header">
+                <div>
+                    <h3><i class="fas fa-building"></i> Départements</h3>
+                    <p>{{ departments.length }} departement(s)</p>
+                </div>
+                <div class="export-actions">
+                    <button class="icon-btn" (click)="exportDepartmentsToXLSX()" title="Exporter departements Excel">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                    <button class="icon-btn pdf" (click)="exportDepartmentsToPDF()" title="Exporter departements PDF">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="actions-row">
+                <div class="form-block">
+                    <label>Ajouter un departement</label>
+                    <div class="input-group">
+                        <input type="text" [(ngModel)]="newDepartmentNom" placeholder="Ex: Audit, Risques..."
+                            class="premium-input">
+                        <button (click)="addDepartment()" class="premium-button" [disabled]="!newDepartmentNom.trim()">
+                            Ajouter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-block">
+                    <label>Import Excel</label>
+                    <div class="file-upload">
+                        <input type="file" (change)="onDepartmentFileSelected($event)" accept=".xlsx, .xls"
+                            id="departmentExcelFile" class="hidden-input">
+                        <label for="departmentExcelFile" class="upload-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            {{ selectedDepartmentFile ? selectedDepartmentFile.name : 'Choisir un fichier' }}
+                        </label>
+                        <button (click)="importDepartmentExcel()" class="premium-button secondary"
+                            [disabled]="!selectedDepartmentFile">
+                            Importer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Departement</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let department of paginatedDepartments">
+                            <td class="id-cell">#{{ department.id }}</td>
+                            <td>
+                                <input *ngIf="editingDepartmentId === department.id" type="text"
+                                    [(ngModel)]="editDepartmentNom" class="edit-input">
+                                <span *ngIf="editingDepartmentId !== department.id">{{ department.nom }}</span>
+                            </td>
+                            <td class="actions-cell">
+                                <button *ngIf="editingDepartmentId !== department.id"
+                                    (click)="startDepartmentEdit(department)" class="action-btn edit" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button *ngIf="editingDepartmentId === department.id" (click)="saveDepartmentEdit()"
+                                    class="action-btn save" title="Enregistrer">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button *ngIf="editingDepartmentId === department.id" (click)="cancelDepartmentEdit()"
+                                    class="action-btn cancel" title="Annuler">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <button (click)="deleteDepartment(department.id)" class="action-btn delete"
+                                    title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr *ngIf="departments.length === 0">
+                            <td colspan="3" class="empty-msg">
+                                <i class="fas fa-folder-open"></i>
+                                <p>Aucun departement disponible.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <app-pagination
+                    [totalItems]="departments.length"
+                    [currentPage]="departmentCurrentPage"
+                    [pageSize]="departmentItemsPerPage"
+                    (pageChanged)="onDepartmentPageChanged($event)">
+                </app-pagination>
+            </div>
+        </section>
     </div>
 </div>

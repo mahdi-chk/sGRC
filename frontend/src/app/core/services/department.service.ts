@@ -19,4 +19,22 @@ export class DepartmentService {
     getAll(): Observable<Department[]> {
         return this.http.get<Department[]>(this.apiUrl);
     }
+
+    create(nom: string): Observable<Department> {
+        return this.http.post<Department>(this.apiUrl, { nom });
+    }
+
+    update(id: number, nom: string): Observable<Department> {
+        return this.http.put<Department>(`${this.apiUrl}/${id}`, { nom });
+    }
+
+    delete(id: number): Observable<any> {
+        return this.http.delete<any>(`${this.apiUrl}/${id}`);
+    }
+
+    importExcel(file: File): Observable<any> {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.http.post<any>(`${this.apiUrl}/import`, formData);
+    }
 }

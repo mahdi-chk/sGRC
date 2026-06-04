@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { OrganigrammeService } from '../../../core/services/organigramme.service';
 import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Department, DepartmentService } from '../../../core/services/department.service';
+import { OrganigrammeService } from '../../../core/services/organigramme.service';
 
 @Component({
     selector: 'app-organigramme-management',
@@ -12,18 +13,48 @@ import autoTable from 'jspdf-autotable';
 })
 export class OrganigrammeManagementComponent implements OnInit {
     items: any[] = [];
-    newNom: string = '';
+    departments: Department[] = [];
+
+    newNom = '';
+    newDepartmentNom = '';
+
     selectedFile: File | null = null;
+    selectedDepartmentFile: File | null = null;
+
     editingId: number | null = null;
-    editNom: string = '';
-    showExportMenu = false;
+    editingDepartmentId: number | null = null;
+
+    editNom = '';
+    editDepartmentNom = '';
 
     currentPage = 1;
     itemsPerPage = 10;
+    departmentCurrentPage = 1;
+    departmentItemsPerPage = 10;
+
+    constructor(
+        private organigrammeService: OrganigrammeService,
+        private departmentService: DepartmentService,
+        private router: Router
+    ) { }
+
+    ngOnInit(): void {
+        this.refreshList();
+        this.refreshDepartments();
+    }
 
     get paginatedItems(): any[] {
         const startIndex = (this.currentPage - 1) * this.itemsPerPage;
         return this.items.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+
+    get paginatedDepartments(): Department[] {
+        const startIndex = (this.departmentCurrentPage - 1) * this.departmentItemsPerPage;
+        return this.departments.slice(startIndex, startIndex + this.departmentItemsPerPage);
+    }
+
+    goBack(): void {
+        this.router.navigate(['/dashboard']);
     }
 
     onPageChanged(event: {page: number, pageSize: number}) {
@@ -31,17 +62,9 @@ export class OrganigrammeManagementComponent implements OnInit {
         this.itemsPerPage = event.pageSize;
     }
 
-    constructor(
-        private organigrammeService: OrganigrammeService,
-        private router: Router
-    ) { }
-
-    ngOnInit(): void {
-        this.refreshList();
-    }
-
-    goBack(): void {
-        this.router.navigate(['/dashboard']);
+    onDepartmentPageChanged(event: {page: number, pageSize: number}) {
+        this.departmentCurrentPage = event.page;
+        this.departmentItemsPerPage = event.pageSize;
     }
 
     refreshList() {
@@ -51,12 +74,32 @@ export class OrganigrammeManagementComponent implements OnInit {
         });
     }
 
+    refreshDepartments() {
+        this.departmentService.getAll().subscribe(data => {
+            this.departments = data;
+            this.departmentCurrentPage = 1;
+        });
+    }
+
     addEntry() {
-        if (!this.newNom) return;
-        this.organigrammeService.create(this.newNom).subscribe(() => {
+        const nom = this.newNom.trim();
+        if (!nom) return;
+
+        this.organigrammeService.create(nom).subscribe(() => {
             this.newNom = '';
             this.refreshList();
-            alert('Élément ajouté avec succès');
+            alert('Element ajoute avec succes');
+        }, err => alert(err.error.message || 'Erreur lors de l\'ajout'));
+    }
+
+    addDepartment() {
+        const nom = this.newDepartmentNom.trim();
+        if (!nom) return;
+
+        this.departmentService.create(nom).subscribe(() => {
+            this.newDepartmentNom = '';
+            this.refreshDepartments();
+            alert('Departement ajoute avec succes');
         }, err => alert(err.error.message || 'Erreur lors de l\'ajout'));
     }
 
@@ -64,8 +107,13 @@ export class OrganigrammeManagementComponent implements OnInit {
         this.selectedFile = event.target.files[0];
     }
 
+    onDepartmentFileSelected(event: any) {
+        this.selectedDepartmentFile = event.target.files[0];
+    }
+
     importExcel() {
         if (!this.selectedFile) return;
+
         this.organigrammeService.importExcel(this.selectedFile).subscribe(res => {
             alert(res.message);
             this.selectedFile = null;
@@ -73,10 +121,29 @@ export class OrganigrammeManagementComponent implements OnInit {
         }, err => alert(err.error.message || 'Erreur lors de l\'import'));
     }
 
+    importDepartmentExcel() {
+        if (!this.selectedDepartmentFile) return;
+
+        this.departmentService.importExcel(this.selectedDepartmentFile).subscribe(res => {
+            alert(res.message);
+            this.selectedDepartmentFile = null;
+            this.refreshDepartments();
+        }, err => alert(err.error.message || 'Erreur lors de l\'import'));
+    }
+
     deleteEntry(id: number) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) return;
+        if (!confirm('Etes-vous sur de vouloir supprimer cet element ?')) return;
+
         this.organigrammeService.delete(id).subscribe(() => {
             this.refreshList();
+        });
+    }
+
+    deleteDepartment(id: number) {
+        if (!confirm('Etes-vous sur de vouloir supprimer ce departement ?')) return;
+
+        this.departmentService.delete(id).subscribe(() => {
+            this.refreshDepartments();
         });
     }
 
@@ -85,11 +152,28 @@ export class OrganigrammeManagementComponent implements OnInit {
         this.editNom = item.nom;
     }
 
+    startDepartmentEdit(department: Department) {
+        this.editingDepartmentId = department.id;
+        this.editDepartmentNom = department.nom;
+    }
+
     saveEdit() {
-        if (!this.editingId || !this.editNom) return;
-        this.organigrammeService.update(this.editingId, this.editNom).subscribe(() => {
+        const nom = this.editNom.trim();
+        if (!this.editingId || !nom) return;
+
+        this.organigrammeService.update(this.editingId, nom).subscribe(() => {
             this.editingId = null;
             this.refreshList();
+        });
+    }
+
+    saveDepartmentEdit() {
+        const nom = this.editDepartmentNom.trim();
+        if (!this.editingDepartmentId || !nom) return;
+
+        this.departmentService.update(this.editingDepartmentId, nom).subscribe(() => {
+            this.editingDepartmentId = null;
+            this.refreshDepartments();
         });
     }
 
@@ -97,32 +181,51 @@ export class OrganigrammeManagementComponent implements OnInit {
         this.editingId = null;
     }
 
-    exportToXLSX() {
-        const dataToExport = this.items.map(item => ({
+    cancelDepartmentEdit() {
+        this.editingDepartmentId = null;
+    }
+
+    exportOrganigrammeToXLSX() {
+        this.exportToXLSX(this.items, 'Organigramme', 'Export_Organigramme');
+    }
+
+    exportDepartmentsToXLSX() {
+        this.exportToXLSX(this.departments, 'Departements', 'Export_Departements');
+    }
+
+    exportOrganigrammeToPDF() {
+        this.exportToPDF(this.items, 'Rapport de l\'Organigramme', 'Export_Organigramme');
+    }
+
+    exportDepartmentsToPDF() {
+        this.exportToPDF(this.departments, 'Rapport des departements', 'Export_Departements');
+    }
+
+    private exportToXLSX(items: any[], sheetName: string, filePrefix: string) {
+        const dataToExport = items.map(item => ({
             'ID': item.id,
-            'Intitulé / Nom': item.nom
+            'Intitule / Nom': item.nom
         }));
 
         const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(dataToExport);
         const wb: XLSX.WorkBook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Organigramme');
-        XLSX.writeFile(wb, `Export_Organigramme_${new Date().getTime()}.xlsx`);
-        this.showExportMenu = false;
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        XLSX.writeFile(wb, `${filePrefix}_${new Date().getTime()}.xlsx`);
     }
 
-    exportToPDF() {
+    private exportToPDF(items: any[], title: string, filePrefix: string) {
         const doc = new jsPDF();
 
         doc.setFontSize(18);
         doc.setTextColor(0, 74, 153);
-        doc.text("Rapport de l'Organigramme", 14, 22);
+        doc.text(title, 14, 22);
 
         doc.setFontSize(11);
         doc.setTextColor(100);
-        doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
+        doc.text(`Genere le : ${new Date().toLocaleString()}`, 14, 30);
 
-        const columns = ['ID', 'Intitulé / Nom'];
-        const rows = this.items.map(item => [
+        const columns = ['ID', 'Intitule / Nom'];
+        const rows = items.map(item => [
             `#${item.id}`,
             item.nom
         ]);
@@ -137,7 +240,6 @@ export class OrganigrammeManagementComponent implements OnInit {
             alternateRowStyles: { fillColor: [245, 247, 250] }
         });
 
-        doc.save(`Export_Organigramme_${new Date().getTime()}.pdf`);
-        this.showExportMenu = false;
+        doc.save(`${filePrefix}_${new Date().getTime()}.pdf`);
     }
 }

@@ -10,6 +10,10 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="btn-refresh" (click)="exportIndicators()" [disabled]="!indicators.length">
+                <i class="fas fa-file-export"></i>
+                Export KPI
+            </button>
             <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser

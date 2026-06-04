@@ -53,6 +53,18 @@ export class ActionsIndicatorsComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
+  exportIndicators(): void {
+    const rows = this.indicators.map(item => ({
+      KPI: item.label,
+      Valeur: `${item.value}${item.unit}`,
+      Cible: `${item.target}${item.unit}`,
+      Tendance: item.trend,
+      Commentaire: item.commentary
+    }));
+
+    this.downloadCsv('indicateurs-plans-actions.csv', rows);
+  }
+
   get indicators(): ActionIndicatorItem[] {
     return this.overview?.indicators || [];
   }
@@ -96,5 +108,29 @@ export class ActionsIndicatorsComponent implements OnInit {
         fillColor: 'rgba(245, 158, 11, 0.12)'
       }
     ];
+  }
+
+  private downloadCsv(filename: string, rows: Array<Record<string, unknown>>): void {
+    if (!rows.length) {
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.join(';'),
+      ...rows.map(row => headers.map(header => this.escapeCsv(row[header])).join(';'))
+    ].join('\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private escapeCsv(value: unknown): string {
+    const text = String(value ?? '').replace(/"/g, '""');
+    return `"${text}"`;
   }
 }

@@ -17,31 +17,31 @@ const ALL_ACTION_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT,
-  UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.TOP_MANAGEMENT
 ];
 
 const NOTIFICATION_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
-  UserRole.AUDIT_SENIOR
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION
 ];
 
 const INDICATOR_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT,
-  UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_DIRECTEUR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.TOP_MANAGEMENT
 ];
 
 export const ACTIONS_NAV_ITEMS: ActionsNavItem[] = [
-  {
-    label: 'Vue d ensemble',
-    route: '/dashboard/actions',
-    description: 'Synthese du portefeuille global des plans d actions.',
-    roles: ALL_ACTION_ROLES
-  },
   {
     label: 'Gestion Centralisee',
     route: '/dashboard/actions-centralized',
@@ -98,7 +98,6 @@ export function getActionsNavItems(role: UserRole | string | null): ActionsNavIt
 
 export function getActionsModuleItems(role: UserRole | string | null): ActionsModuleItem[] {
   return getActionsNavItems(role)
-    .filter(item => item.route !== '/dashboard/actions')
     .map(item => ({
       title: item.label,
       route: item.route,

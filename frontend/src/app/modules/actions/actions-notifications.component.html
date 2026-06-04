@@ -10,6 +10,10 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="btn-refresh" (click)="exportNotifications()" [disabled]="!notifications.length">
+                <i class="fas fa-file-export"></i>
+                Export alertes
+            </button>
             <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
@@ -49,6 +53,16 @@
             <h3>{{ data.summary.overdueActions }}</h3>
             <p>Source principale des escalades automatiques.</p>
         </div>
+        <div class="summary-card">
+            <span class="eyebrow">SMS prets</span>
+            <h3>{{ smsReadyCount }}</h3>
+            <p>Scenarios actifs pouvant etre relayes par canal court.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Auto-affectation</span>
+            <h3>{{ autoAssignmentCount }}</h3>
+            <p>Actions sans responsable detectees pour affectation proactive.</p>
+        </div>
     </div>
 
     <div class="status-line" *ngIf="currentFocus">
@@ -68,12 +82,35 @@
                 <span class="tag">{{ item.channel }}</span>
                 <span class="tag subtle">{{ item.audience }}</span>
                 <span class="tag">Escalade {{ item.escalationLevel }}</span>
+                <span class="tag">{{ item.rule }}</span>
+                <span class="tag subtle">{{ item.roleScope }}</span>
                 <span>Prochain envoi: {{ formatDate(item.nextSendAt) }}</span>
             </div>
             <div class="mini-actions" *ngIf="item.detailLabel">
                 <button type="button" class="action-btn" (click)="openDetail(item)">{{ item.detailLabel }}</button>
             </div>
         </article>
+    </div>
+
+    <div class="content-card" *ngIf="overview">
+        <div class="card-head">
+            <h2>Regles CPS actives</h2>
+            <p>Personnalisation par role, rappels deadlines, escalades et absence auto-assignment.</p>
+        </div>
+        <div class="rule-grid">
+            <div class="module-link">
+                <strong>Escalades automatiques</strong>
+                <p>{{ escalationCount }} scenario(s) passent au niveau manager selon criticite ou retard.</p>
+            </div>
+            <div class="module-link">
+                <strong>Rappels proactifs</strong>
+                <p>{{ dueThisMonthCount }} action(s) declenchent un rappel avant la prochaine revue.</p>
+            </div>
+            <div class="module-link">
+                <strong>Absence auto-assignment</strong>
+                <p>{{ autoAssignmentCount }} action(s) sans responsable sont signalees pour affectation.</p>
+            </div>
+        </div>
     </div>
 
     <ng-template #emptyState>

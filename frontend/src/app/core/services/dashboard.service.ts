@@ -285,7 +285,7 @@ export class DashboardService {
         } else if (s.title === 'Indicateurs' && m.key === 'plans-actions') {
             this.router.navigate(['/dashboard/actions-indicators']);
         } else if (m.key === 'plans-actions') {
-            this.router.navigate(['/dashboard/actions']);
+            this.router.navigate(['/dashboard/actions-centralized']);
         } else if (title.includes('enregistrement structure')) {
             this.router.navigate(['/dashboard/incident-registration']);
         } else if (s.title === 'Workflow de Traitement') {

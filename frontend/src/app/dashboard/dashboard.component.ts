@@ -91,7 +91,7 @@ export class DashboardComponent implements OnDestroy {
     },
     {
       label: 'Action',
-      route: '/dashboard/actions',
+      route: '/dashboard/actions-centralized',
       roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT]
     }
   ];

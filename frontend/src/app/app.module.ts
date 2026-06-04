@@ -73,7 +73,6 @@ import { getControlsRolesByRoute } from './modules/controls/controls-navigation'
 import { getComplianceRolesByRoute } from './modules/compliance/compliance-navigation';
 import { getGovernanceRolesByRoute } from './modules/governance/governance-navigation';
 import { ActionsModule } from './modules/actions/actions.module';
-import { ActionsComponent } from './modules/actions/actions.component';
 import { ActionsCentralizedComponent } from './modules/actions/actions-centralized.component';
 import { ActionsDeadlinesComponent } from './modules/actions/actions-deadlines.component';
 import { ActionsNotificationsComponent } from './modules/actions/actions-notifications.component';
@@ -132,7 +131,7 @@ const routes: Routes = [
       { path: 'compliance-assessments', component: ComplianceAssessmentsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-assessments') } },
       { path: 'compliance-gaps', component: ComplianceGapsComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-gaps') } },
       { path: 'compliance-updates', component: ComplianceUpdatesComponent, data: { expectedRoles: getComplianceRolesByRoute('/dashboard/compliance-updates') } },
-      { path: 'actions', component: ActionsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions') } },
+      { path: 'actions', redirectTo: 'actions-centralized', pathMatch: 'full' },
       { path: 'actions-centralized', component: ActionsCentralizedComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-centralized') } },
       { path: 'actions-deadlines', component: ActionsDeadlinesComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-deadlines') } },
       { path: 'actions-notifications', component: ActionsNotificationsComponent, data: { expectedRoles: getActionsRolesByRoute('/dashboard/actions-notifications') } },

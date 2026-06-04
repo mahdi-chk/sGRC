@@ -10,6 +10,10 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="btn-refresh" (click)="exportRegistry()" [disabled]="!filteredRegistry.length">
+                <i class="fas fa-file-export"></i>
+                Export CSV
+            </button>
             <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
@@ -43,6 +47,11 @@
             <span class="eyebrow">Bloquees</span>
             <h3>{{ data.summary.blockedActions }}</h3>
             <p>Actions en attente de levee de dependances.</p>
+        </div>
+        <div class="summary-card">
+            <span class="eyebrow">Assignations multiples</span>
+            <h3>{{ multiAssignedCount }}</h3>
+            <p>Actions couvertes par plusieurs responsables reels ou fonctions sources.</p>
         </div>
     </div>
 
@@ -127,6 +136,48 @@
             </ng-template>
         </div>
 
+        <div class="assignment-panel" *ngIf="trackingItem as selected">
+            <div class="assignment-head">
+                <div>
+                    <span class="eyebrow">Mise a jour persistante</span>
+                    <h3>{{ selected.reference }}</h3>
+                    <p>{{ selected.sourceModule }} | {{ selected.sourceReference }}</p>
+                </div>
+                <button type="button" class="btn-refresh btn-clear" (click)="closeTrackingPanel()" [disabled]="isSubmittingTracking">Fermer</button>
+            </div>
+
+            <div class="assignment-body">
+                <label class="filter-field">
+                    <span>Plan d action</span>
+                    <input type="text" [(ngModel)]="trackingForm.title" />
+                </label>
+                <label class="filter-field">
+                    <span>Echeance</span>
+                    <input type="date" [(ngModel)]="trackingForm.dueDate" />
+                </label>
+                <label class="filter-field">
+                    <span>Statut source</span>
+                    <select [(ngModel)]="trackingForm.status">
+                        <option value="a_demarrer">A demarrer</option>
+                        <option value="en_cours">En cours</option>
+                        <option value="clos">Clos</option>
+                    </select>
+                </label>
+                <label class="filter-field" *ngIf="selected.id.indexOf('audit-') === 0">
+                    <span>Avancement audit</span>
+                    <input type="number" min="0" max="100" [(ngModel)]="trackingForm.progress" />
+                </label>
+                <div class="assignment-actions">
+                    <button type="button" class="btn-refresh" (click)="submitTracking()" [disabled]="isSubmittingTracking">
+                        {{ isSubmittingTracking ? 'Enregistrement...' : 'Enregistrer dans la source' }}
+                    </button>
+                    <button type="button" class="btn-refresh btn-clear" (click)="closeTrackingPanel()" [disabled]="isSubmittingTracking">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <table class="actions-table">
             <thead>
                 <tr>
@@ -136,6 +187,7 @@
                     <th>Avancement</th>
                     <th>Echeance</th>
                     <th>Statut</th>
+                    <th>Historique</th>
                     <th>Actions a faire</th>
                 </tr>
             </thead>
@@ -151,6 +203,8 @@
                     </td>
                     <td>
                         <strong>{{ item.owner }}</strong>
+                        <small>{{ item.assignees.join(' | ') }}</small>
+                        <small>{{ item.resources.join(' | ') }}</small>
                         <small>Mise a jour: {{ formatDate(item.lastUpdate) }}</small>
                     </td>
                     <td>
@@ -163,9 +217,17 @@
                         <small>{{ item.dependencies.join(' | ') }}</small>
                     </td>
                     <td>{{ formatDate(item.dueDate) }}</td>
-                    <td><span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span></td>
+                    <td><span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.statusLabel }}</span></td>
+                    <td>
+                        <strong>{{ item.history[0]?.event }}</strong>
+                        <small>{{ item.history[0]?.detail }}</small>
+                        <small>{{ formatDate(item.history[0]?.at) }}</small>
+                    </td>
                     <td>
                         <div class="mini-actions">
+                            <button type="button" class="action-btn" (click)="openTrackingPanel(item)" [disabled]="isActionBusy('Mettre a jour', item)">
+                                Mettre a jour
+                            </button>
                             <button type="button" class="action-btn" *ngFor="let action of item.displayActions" (click)="onActionClick(action, item)" [disabled]="isActionBusy(action, item)">
                                 {{ getActionLabel(action, item) }}
                             </button>

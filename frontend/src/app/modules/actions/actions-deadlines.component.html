@@ -10,6 +10,10 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="btn-refresh" (click)="exportPlanning()" [disabled]="!filteredDeadlines.length">
+                <i class="fas fa-file-export"></i>
+                Export planning
+            </button>
             <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
                 <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
                 Actualiser
@@ -53,7 +57,29 @@
     <div class="content-card" *ngIf="filteredDeadlines.length > 0; else emptyState">
         <div class="card-head">
             <h2>Cadence des actions</h2>
-            <p>Les blocages et previsions de delivery permettent d anticiper les glissements.</p>
+            <p>Les blocages, dependances et previsions de delivery permettent d anticiper les glissements.</p>
+        </div>
+
+        <div class="gantt-board">
+            <div class="gantt-head">
+                <strong>Planning Gantt</strong>
+                <span>{{ ganttRangeLabel }}</span>
+            </div>
+            <div class="gantt-row" *ngFor="let item of filteredDeadlines">
+                <div class="gantt-label">
+                    <strong>{{ item.milestone }}</strong>
+                    <span>{{ item.resourceLoad }} | {{ item.dependencyCount }} dependance(s)</span>
+                </div>
+                <div class="gantt-track">
+                    <div
+                        class="gantt-bar"
+                        [ngClass]="getStatusClass(item.status)"
+                        [style.margin-left.%]="getTimelineOffset(item)"
+                        [style.width.%]="getTimelineWidth(item)">
+                        {{ item.progress }}%
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="timeline-list">
@@ -61,7 +87,7 @@
                 <div class="timeline-date">{{ formatDate(item.dueDate) }}</div>
                 <div class="timeline-copy">
                     <h3>{{ item.title }}</h3>
-                    <p>{{ item.milestone }} | {{ item.owner }}</p>
+                    <p>{{ item.milestone }} | {{ item.owner }} | debut {{ formatDate(item.startDate) }}</p>
                     <div class="progress-line compact">
                         <span>{{ item.progress }}%</span>
                         <div class="progress-track">
@@ -71,6 +97,7 @@
                     <div class="timeline-meta">
                         <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
                         <span class="tag">{{ item.forecast }}</span>
+                        <span class="tag">{{ item.resourceLoad }}</span>
                         <span class="tag subtle" *ngIf="item.blocker">{{ item.blocker }}</span>
                     </div>
                 </div>

@@ -8,6 +8,7 @@ import { Organigramme } from '../organigramme/organigramme.model';
 import { Incident } from '../incidents/incident.model';
 import { User } from '../users/user.model';
 import { AuditMission, AuditRecordType } from '../auditing/audit-mission.model';
+import { AuditMissionResource } from '../auditing/audit-mission-resource.model';
 import { Notification, NotificationType } from '../notifications/notification.model';
 import { LookupResolutionService } from '../../database/lookups/lookup.service';
 import { AuditingService } from '../auditing/auditing.service';
@@ -46,6 +47,9 @@ const buildDisplayName = (person: any): string => {
 
     return person.nom || '';
 };
+
+const uniqueNonEmpty = (values: unknown[]): string[] =>
+    Array.from(new Set(values.map((value) => cleanText(value)).filter(Boolean)));
 
 const cleanText = (value: unknown): string => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -317,6 +321,63 @@ const getActionReference = (sourceType: ActionSourceType, entityId: number): str
     return `PA-AUD-${entityId}`;
 };
 
+const mapActionStatusToSourceStatus = (sourceType: ActionSourceType, status: string): string | null => {
+    const normalized = normalizeLookupValue(status);
+
+    if (!normalized) {
+        return null;
+    }
+
+    if (sourceType === 'risk') {
+        if (normalized === 'clos') return 'treated';
+        if (normalized === 'en_cours') return 'in_progress';
+        if (normalized === 'a_demarrer') return 'open';
+        return null;
+    }
+
+    if (sourceType === 'incident') {
+        if (normalized === 'clos') return 'clos';
+        if (normalized === 'en_cours') return 'en_cours';
+        if (normalized === 'a_demarrer') return 'nouveau';
+        return null;
+    }
+
+    if (normalized === 'clos') return 'ok';
+    if (normalized === 'en_cours') return 'en_cours';
+    if (normalized === 'a_demarrer' || normalized === 'en_retard') return 'nok';
+    return null;
+};
+
+const parseOptionalDate = (value: unknown): Date | null | undefined => {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    if (value === null || value === '') {
+        return null;
+    }
+
+    const parsed = new Date(value as any);
+    if (Number.isNaN(parsed.getTime())) {
+        throw new Error('Date d echeance invalide');
+    }
+
+    return parsed;
+};
+
+const parseOptionalProgress = (value: unknown): number | undefined => {
+    if (value === undefined || value === null || value === '') {
+        return undefined;
+    }
+
+    const progress = Number(value);
+    if (!Number.isFinite(progress) || progress < 0 || progress > 100) {
+        throw new Error('Avancement invalide');
+    }
+
+    return Math.round(progress);
+};
+
 const canAssignSource = (role: string, sourceType: ActionSourceType): boolean => {
     if (role === UserRole.SUPER_ADMIN) {
         return true;
@@ -456,7 +517,14 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                         include: riskIncludes,
                     },
                     { model: User, as: 'auditSenior', required: false, attributes: ['id', 'prenom', 'nom'] },
+                    { model: User, as: 'chefMission', required: false, attributes: ['id', 'prenom', 'nom'] },
                     { model: User, as: 'auditeur', required: false, attributes: ['id', 'prenom', 'nom'] },
+                    {
+                        model: AuditMissionResource,
+                        as: 'resourceAssignments',
+                        required: false,
+                        include: [{ model: User, as: 'user', required: false, attributes: ['id', 'prenom', 'nom'] }],
+                    },
                 ],
                 order: [['delai', 'ASC']],
             });
@@ -510,7 +578,14 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                         include: riskIncludes,
                     },
                     { model: User, as: 'auditSenior', required: false, attributes: ['id', 'prenom', 'nom'] },
+                    { model: User, as: 'chefMission', required: false, attributes: ['id', 'prenom', 'nom'] },
                     { model: User, as: 'auditeur', required: false, attributes: ['id', 'prenom', 'nom'] },
+                    {
+                        model: AuditMissionResource,
+                        as: 'resourceAssignments',
+                        required: false,
+                        include: [{ model: User, as: 'user', required: false, attributes: ['id', 'prenom', 'nom'] }],
+                    },
                 ],
                 order: [['delai', 'ASC']],
             });
@@ -528,7 +603,10 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
         let incidents: any[] = [];
         if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
             incidents = await Incident.findAll({
-                include: [{ model: User, as: 'declareur', required: false, attributes: ['id', 'prenom', 'nom'] }],
+                include: [
+                    { model: User, as: 'declareur', required: false, attributes: ['id', 'prenom', 'nom'] },
+                    { model: User, as: 'assignee', required: false, attributes: ['id', 'prenom', 'nom'] },
+                ],
                 order: [['updatedAt', 'DESC']],
             });
         } else if (scopedRiskIds.length || scopedDepartmentIds.length) {
@@ -544,7 +622,10 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
 
             incidents = await Incident.findAll({
                 where: { [Op.or]: incidentFilters },
-                include: [{ model: User, as: 'declareur', required: false, attributes: ['id', 'prenom', 'nom'] }],
+                include: [
+                    { model: User, as: 'declareur', required: false, attributes: ['id', 'prenom', 'nom'] },
+                    { model: User, as: 'assignee', required: false, attributes: ['id', 'prenom', 'nom'] },
+                ],
                 order: [['updatedAt', 'DESC']],
             });
         }
@@ -558,6 +639,11 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     'Non assigne';
                 const dueDate = toIsoString(risk.dateEcheance || risk.prochaineEcheance);
                 const status = deriveActionStatus(normalizedStatus, dueDate, owner);
+                const assignees = uniqueNonEmpty([
+                    buildDisplayName(risk.responsableTraitement),
+                    buildDisplayName(risk.riskAgent),
+                    buildDisplayName(risk.riskManager),
+                ]);
 
                 return {
                     id: `risk-${risk.id}`,
@@ -580,16 +666,25 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     }),
                     displayActions: buildDisplayActions(status, normalizePriority(risk.niveauRisqueCode || risk.niveauRisque), owner),
                     lastUpdate: toIsoString(risk.updatedAt) || new Date().toISOString(),
+                    startDate: toIsoString(risk.createdAt),
+                    assignees: assignees.length ? assignees : ['Non assigne'],
+                    resources: uniqueNonEmpty([risk.departement?.nom, risk.domaine, risk.macroProcessus, risk.processus]),
+                    statusLabel: risk.statutLabel || risk.statutCode || risk.statut || status,
+                    history: [
+                        { at: toIsoString(risk.createdAt), event: 'Creation', actor: 'Risques', detail: `Risque cree: ${risk.titre}` },
+                        { at: toIsoString(risk.updatedAt), event: 'Mise a jour', actor: owner, detail: cleanText(risk.planActionTraitement) || 'Plan d action a formaliser' },
+                    ],
                 };
             }),
             ...incidents
                 .filter((incident) => Boolean(cleanText(incident.planActionTraitement)) || normalizeLookupValue(incident.statut) !== 'clos')
                 .map((incident) => {
                     const normalizedStatus = normalizeLookupValue(incident.statutCode || incident.statut);
-                    const owner = buildDisplayName(incident.declareur) || 'Non assigne';
+                    const owner = buildDisplayName(incident.assignee) || buildDisplayName(incident.declareur) || 'Non assigne';
                     const dueDate = toIsoString(incident.dateEcheance);
                     const priority = normalizePriority(incident.niveauRisqueCode || incident.niveauRisque);
                     const status = deriveActionStatus(normalizedStatus, dueDate, owner);
+                    const assignees = uniqueNonEmpty([buildDisplayName(incident.assignee), buildDisplayName(incident.declareur)]);
 
                     return {
                         id: `incident-${incident.id}`,
@@ -612,6 +707,14 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                         }),
                         displayActions: buildDisplayActions(status, priority, owner),
                         lastUpdate: toIsoString(incident.updatedAt) || new Date().toISOString(),
+                        startDate: toIsoString(incident.createdAt || incident.dateSurvenance),
+                        assignees: assignees.length ? assignees : ['Non assigne'],
+                        resources: uniqueNonEmpty([incident.domaine, incident.macroProcessus, incident.processus]),
+                        statusLabel: incident.statutLabel || incident.statutCode || incident.statut || status,
+                        history: [
+                            { at: toIsoString(incident.createdAt || incident.dateSurvenance), event: 'Declaration', actor: buildDisplayName(incident.declareur) || 'Incidents', detail: `Incident declare: ${incident.titre}` },
+                            { at: toIsoString(incident.updatedAt), event: 'Traitement', actor: owner, detail: cleanText(incident.planActionTraitement) || 'Plan d action a formaliser' },
+                        ],
                     };
                 }),
             ...missions
@@ -624,6 +727,16 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                     const recommendations = cleanText(mission.recommandations || mission.objectifs);
                     const priority = normalizePriority(mission.risk?.niveauRisqueCode || mission.risk?.niveauRisque);
                     const status = deriveActionStatus(normalizedStatus, dueDate, owner);
+                    const resourceNames = uniqueNonEmpty((mission.resourceAssignments || []).map((resource: any) => buildDisplayName(resource.user)));
+                    const assignees = uniqueNonEmpty([
+                        buildDisplayName(mission.auditeur),
+                        buildDisplayName(mission.chefMission),
+                        buildDisplayName(mission.auditSenior),
+                        ...resourceNames,
+                    ]);
+                    const progress = typeof mission.progressPercent === 'number'
+                        ? Math.max(0, Math.min(100, mission.progressPercent))
+                        : deriveProgress(status, normalizedStatus);
 
                     return {
                         id: `audit-${mission.id}`,
@@ -637,7 +750,7 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                         dueDate,
                         owner,
                         department: mission.risk?.departement?.nom || mission.risk?.domaine || 'Non rattache',
-                        progress: deriveProgress(status, normalizedStatus),
+                        progress,
                         dependencies: buildDependencies({
                             owner,
                             dueDate,
@@ -646,6 +759,20 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                         }),
                         displayActions: buildDisplayActions(status, priority, owner),
                         lastUpdate: toIsoString(mission.updatedAt) || new Date().toISOString(),
+                        startDate: toIsoString(mission.dateReelleDebut || mission.datePrevueDebut || mission.createdAt),
+                        assignees: assignees.length ? assignees : ['Non assigne'],
+                        resources: uniqueNonEmpty([
+                            mission.auditPlan?.nom,
+                            mission.axe,
+                            mission.risk?.departement?.nom,
+                            mission.risk?.domaine,
+                            ...resourceNames,
+                        ]),
+                        statusLabel: mission.statutLabel || mission.statutCode || mission.statut || status,
+                        history: [
+                            { at: toIsoString(mission.createdAt), event: 'Creation', actor: 'Audit', detail: `Mission creee: ${mission.titre}` },
+                            { at: toIsoString(mission.updatedAt), event: 'Avancement', actor: owner, detail: `${progress}%` },
+                        ],
                     };
                 }),
         ].sort(compareRegistryItems);
@@ -675,6 +802,9 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 owner: item.owner,
                 blocker: item.dependencies.length > 0 ? item.dependencies[0] : null,
                 forecast: buildForecast(item),
+                startDate: item.startDate || item.lastUpdate,
+                dependencyCount: item.dependencies.length,
+                resourceLoad: item.assignees?.length ? `${item.assignees.length} responsable(s)` : 'Non assigne',
             }));
 
         const now = new Date();
@@ -968,7 +1098,7 @@ router.put('/:actionId/assign', authorizeRoles(...allowedRoles), async (req: Aut
             }
 
             await incident.update(await LookupResolutionService.resolveEntityPayload('incident', {
-                userId: assigneeUserId,
+                assigneeId: assigneeUserId,
                 statut: incident.statut || 'en_cours',
             }));
 
@@ -997,6 +1127,89 @@ router.put('/:actionId/assign', authorizeRoles(...allowedRoles), async (req: Aut
     } catch (error: any) {
         res.status(500).json({
             message: 'Erreur lors de l affectation de l action',
+            error: error?.message || 'unknown_error',
+        });
+    }
+});
+
+router.put('/:actionId/tracking', authorizeRoles(...allowedRoles), async (req: AuthRequest, res) => {
+    try {
+        const actionKey = Array.isArray(req.params.actionId) ? req.params.actionId[0] : req.params.actionId;
+        const parsed = parseActionKey(actionKey);
+
+        if (!parsed) {
+            return res.status(400).json({ message: 'Identifiant d action invalide' });
+        }
+
+        const title = req.body?.title === undefined ? undefined : cleanText(req.body.title);
+        const dueDate = parseOptionalDate(req.body?.dueDate);
+        const progress = parseOptionalProgress(req.body?.progress);
+        const mappedStatus = req.body?.status === undefined
+            ? null
+            : mapActionStatusToSourceStatus(parsed.sourceType, req.body.status);
+
+        if (req.body?.status !== undefined && !mappedStatus) {
+            return res.status(400).json({ message: 'Statut d action invalide pour cette source' });
+        }
+
+        if (parsed.sourceType === 'risk') {
+            const risk = await Risk.findByPk(parsed.entityId);
+            if (!risk) {
+                return res.status(404).json({ message: 'Risque introuvable' });
+            }
+
+            const payload: Record<string, unknown> = {};
+            if (title !== undefined) payload.planActionTraitement = title;
+            if (dueDate !== undefined) payload.dateEcheance = dueDate;
+            if (mappedStatus) payload.statut = mappedStatus;
+
+            await risk.update(await LookupResolutionService.resolveEntityPayload('risk', payload));
+
+            return res.json({
+                message: 'Suivi du plan d action risque mis a jour',
+                actionId: actionKey,
+            });
+        }
+
+        if (parsed.sourceType === 'incident') {
+            const incident = await Incident.findByPk(parsed.entityId);
+            if (!incident) {
+                return res.status(404).json({ message: 'Incident introuvable' });
+            }
+
+            const payload: Record<string, unknown> = {};
+            if (title !== undefined) payload.planActionTraitement = title;
+            if (dueDate !== undefined) payload.dateEcheance = dueDate;
+            if (mappedStatus) payload.statut = mappedStatus;
+
+            await incident.update(await LookupResolutionService.resolveEntityPayload('incident', payload));
+
+            return res.json({
+                message: 'Suivi du plan d action incident mis a jour',
+                actionId: actionKey,
+            });
+        }
+
+        const mission = await AuditMission.findByPk(parsed.entityId);
+        if (!mission) {
+            return res.status(404).json({ message: 'Enregistrement audit introuvable' });
+        }
+
+        const payload: Record<string, unknown> = {};
+        if (title !== undefined) payload.recommandations = title;
+        if (dueDate !== undefined) payload.delai = dueDate;
+        if (progress !== undefined) payload.progressPercent = progress;
+        if (mappedStatus) payload.statut = progress === 100 ? 'ok' : mappedStatus;
+
+        await mission.update(await LookupResolutionService.resolveEntityPayload('auditMission', payload));
+
+        return res.json({
+            message: 'Suivi du plan d action audit mis a jour',
+            actionId: actionKey,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            message: 'Erreur lors de la mise a jour du suivi action',
             error: error?.message || 'unknown_error',
         });
     }

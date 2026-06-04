@@ -24,6 +24,14 @@ export interface ActionsSummary {
   effectivenessScore: number;
   criticalActions: number;
   blockedActions: number;
+  multiAssignedActions: number;
+}
+
+export interface ActionHistoryItem {
+  at: string;
+  event: string;
+  actor: string;
+  detail: string;
 }
 
 export interface ActionRegistryItem {
@@ -42,6 +50,11 @@ export interface ActionRegistryItem {
   dependencies: string[];
   displayActions: string[];
   lastUpdate: string;
+  startDate?: string | null;
+  assignees: string[];
+  resources: string[];
+  statusLabel: string;
+  history: ActionHistoryItem[];
 }
 
 export interface ActionDeadlineItem {
@@ -54,6 +67,9 @@ export interface ActionDeadlineItem {
   owner: string;
   blocker: string | null;
   forecast: string;
+  startDate: string | null;
+  dependencyCount: number;
+  resourceLoad: string;
 }
 
 export interface ActionNotificationItem {
@@ -67,6 +83,8 @@ export interface ActionNotificationItem {
   status: string;
   detailLabel?: string;
   detailFilter?: ActionFilterState;
+  rule: string;
+  roleScope: string;
 }
 
 export interface ActionAssignableUser {
@@ -93,6 +111,13 @@ export interface ActionIndicatorItem {
   target: number;
   trend: string;
   commentary: string;
+}
+
+export interface ActionTrackingUpdate {
+  title?: string;
+  dueDate?: string | null;
+  status?: string;
+  progress?: number;
 }
 
 export interface ActionTodoItem {
@@ -128,6 +153,7 @@ export class ActionsService {
 
   getOverview(): Observable<ActionsOverview> {
     return this.http.get<ActionsOverview>(`${this.apiUrl}/overview`).pipe(
+      map(overview => this.enrichOverview(overview)),
       catchError(() => this.getFallbackOverview())
     );
   }
@@ -148,13 +174,17 @@ export class ActionsService {
     });
   }
 
+  updateActionTracking(actionId: string, payload: ActionTrackingUpdate): Observable<ActionOperationResponse> {
+    return this.http.put<ActionOperationResponse>(`${this.apiUrl}/${encodeURIComponent(actionId)}/tracking`, payload);
+  }
+
   private getFallbackOverview(): Observable<ActionsOverview> {
     return combineLatest([
       this.riskService.getRisks().pipe(catchError(() => of([] as Risk[]))),
       this.incidentService.getIncidents().pipe(catchError(() => of([] as Incident[]))),
       this.auditingService.getMissions('all').pipe(catchError(() => of([] as AuditMission[])))
     ]).pipe(
-      map(([risks, incidents, missions]) => this.buildOverview(risks, incidents, missions))
+      map(([risks, incidents, missions]) => this.enrichOverview(this.buildOverview(risks, incidents, missions)))
     );
   }
 
@@ -174,6 +204,7 @@ export class ActionsService {
     const completionRate = registry.length > 0 ? Math.round((closedRegistry.length / registry.length) * 100) : 0;
     const overdueRate = openRegistry.length > 0 ? Math.round((overdueActions / openRegistry.length) * 100) : 0;
     const effectivenessScore = Math.max(0, Math.min(100, Math.round((completionRate * 0.6) + ((100 - overdueRate) * 0.4))));
+    const multiAssignedActions = registry.filter(item => item.assignees.length > 1).length;
 
     const notifications = this.buildNotifications(openRegistry, overdueActions, dueThisMonth, criticalActions);
     const indicators = this.buildIndicators(registry, openRegistry, completionRate, effectivenessScore, criticalActions, overdueActions);
@@ -188,7 +219,8 @@ export class ActionsService {
         activeAlerts: notifications.filter(item => item.status === 'active').length,
         effectivenessScore,
         criticalActions,
-        blockedActions
+        blockedActions,
+        multiAssignedActions
       },
       registry,
       deadlines: this.buildDeadlines(openRegistry),
@@ -208,6 +240,11 @@ export class ActionsService {
       const dueDate = this.toIsoString((risk as any).dateEcheance || (risk as any).prochaineEcheance);
       const status = this.deriveActionStatus(normalizedStatus, dueDate, owner);
       const title = this.cleanText(risk.planActionTraitement) || `Traitement du risque: ${risk.titre}`;
+      const assignees = this.buildAssignees([
+        owner,
+        this.buildDisplayName((risk as any).riskManager)
+      ]);
+      const resources = this.buildResources('Risques', risk.departement?.nom || risk.domaine, assignees);
 
       return {
         id: `risk-${risk.id}`,
@@ -229,7 +266,19 @@ export class ActionsService {
           hasEvidence: Boolean(risk.pieceJustificative)
         }),
         displayActions: this.buildDisplayActions(status, priority, owner),
-        lastUpdate: this.toIsoString(risk.updatedAt) || new Date().toISOString()
+        lastUpdate: this.toIsoString(risk.updatedAt) || new Date().toISOString(),
+        startDate: this.toIsoString((risk as any).createdAt),
+        assignees,
+        resources,
+        statusLabel: this.getStatusLabel(status),
+        history: this.buildHistory({
+          sourceModule: 'Risques',
+          createdAt: this.toIsoString((risk as any).createdAt),
+          updatedAt: this.toIsoString(risk.updatedAt),
+          owner,
+          status,
+          title
+        })
       };
     });
   }
@@ -243,6 +292,8 @@ export class ActionsService {
         const owner = this.buildDisplayName(incident.declareur) || 'Non assigne';
         const dueDate = this.toIsoString(incident.dateEcheance);
         const status = this.deriveActionStatus(normalizedStatus, dueDate, owner);
+        const assignees = this.buildAssignees([owner]);
+        const resources = this.buildResources('Incidents', incident.domaine, assignees);
 
         return {
           id: `incident-${incident.id}`,
@@ -264,7 +315,19 @@ export class ActionsService {
             hasEvidence: Boolean(incident.pieceJointe)
           }),
           displayActions: this.buildDisplayActions(status, priority, owner),
-          lastUpdate: this.toIsoString(incident.updatedAt) || new Date().toISOString()
+          lastUpdate: this.toIsoString(incident.updatedAt) || new Date().toISOString(),
+          startDate: this.toIsoString((incident as any).createdAt || (incident as any).dateSurvenance),
+          assignees,
+          resources,
+          statusLabel: this.getStatusLabel(status),
+          history: this.buildHistory({
+            sourceModule: 'Incidents',
+            createdAt: this.toIsoString((incident as any).createdAt),
+            updatedAt: this.toIsoString(incident.updatedAt),
+            owner,
+            status,
+            title: this.cleanText(incident.planActionTraitement) || incident.titre
+          })
         };
       });
   }
@@ -285,6 +348,14 @@ export class ActionsService {
         const title = isPlanAction
           ? recommendations || this.cleanText(mission.regleDnssi) || this.cleanText(mission.titre)
           : recommendations || `Suivi des recommandations: ${mission.titre}`;
+        const assignees = this.buildAssignees([
+          owner,
+          this.buildDisplayName((mission as any).auditSenior)
+        ]);
+        const resources = this.buildResources(isPlanAction ? 'Plan action audit' : 'Audit', (mission as any).risk?.departement?.nom || (mission as any).risk?.domaine, assignees);
+        const progress = typeof (mission as any).progressPercent === 'number'
+          ? Math.max(0, Math.min(100, (mission as any).progressPercent))
+          : this.deriveProgress(status, normalizedStatus);
 
         return {
           id: `audit-${mission.id}`,
@@ -298,7 +369,7 @@ export class ActionsService {
           dueDate,
           owner,
           department: (mission as any).risk?.departement?.nom || (mission as any).risk?.domaine || 'Non rattache',
-          progress: this.deriveProgress(status, normalizedStatus),
+          progress,
           dependencies: this.buildDependencies({
             owner,
             dueDate,
@@ -306,7 +377,19 @@ export class ActionsService {
             hasEvidence: isPlanAction ? true : Boolean(mission.rapport)
           }),
           displayActions: this.buildDisplayActions(status, priority, owner),
-          lastUpdate: this.toIsoString(mission.updatedAt) || new Date().toISOString()
+          lastUpdate: this.toIsoString(mission.updatedAt) || new Date().toISOString(),
+          startDate: this.toIsoString((mission as any).dateReelleDebut || (mission as any).datePrevueDebut || (mission as any).createdAt),
+          assignees,
+          resources,
+          statusLabel: this.getStatusLabel(status),
+          history: this.buildHistory({
+            sourceModule: isPlanAction ? 'Plan action audit' : 'Audit',
+            createdAt: this.toIsoString((mission as any).createdAt),
+            updatedAt: this.toIsoString(mission.updatedAt),
+            owner,
+            status,
+            title
+          })
         };
       });
   }
@@ -326,7 +409,10 @@ export class ActionsService {
         progress: item.progress,
         owner: item.owner,
         blocker: item.dependencies.length > 0 ? item.dependencies[0] : null,
-        forecast: this.buildForecast(item)
+        forecast: this.buildForecast(item),
+        startDate: item.history[0]?.at || item.lastUpdate,
+        dependencyCount: item.dependencies.length,
+        resourceLoad: this.buildResourceLoad(item)
       }));
   }
 
@@ -345,7 +431,9 @@ export class ActionsService {
         escalationLevel: criticalCount > 0 ? 'niveau_3' : 'niveau_2',
         status: 'active',
         detailLabel: 'Voir les retards',
-        detailFilter: { status: 'en_retard' }
+        detailFilter: { status: 'en_retard' },
+        rule: 'Escalade automatique sur retard detecte',
+        roleScope: 'Responsables et managers'
       });
     }
 
@@ -360,7 +448,9 @@ export class ActionsService {
         trigger: 'Echeance proche',
         nextSendAt: dueSoonSendAt,
         escalationLevel: 'niveau_1',
-        status: 'active'
+        status: 'active',
+        rule: 'Rappel deadline J-30',
+        roleScope: 'Responsables de traitement'
       });
 
       notifications.push({
@@ -371,7 +461,9 @@ export class ActionsService {
         trigger: 'Echeance proche',
         nextSendAt: dueSoonSendAt,
         escalationLevel: 'niveau_1',
-        status: 'active'
+        status: 'active',
+        rule: 'Alerte in-app deadline J-30',
+        roleScope: 'Responsables assignes'
       });
     }
 
@@ -386,7 +478,9 @@ export class ActionsService {
         trigger: 'Revue hebdomadaire programmee',
         nextSendAt: weeklySendAt,
         escalationLevel: 'niveau_1',
-        status: 'planifiee'
+        status: 'planifiee',
+        rule: 'Resume periodique hebdomadaire',
+        roleScope: 'Pilotage GRC'
       });
 
       notifications.push({
@@ -397,7 +491,9 @@ export class ActionsService {
         trigger: 'Revue hebdomadaire programmee',
         nextSendAt: weeklySendAt,
         escalationLevel: 'niveau_1',
-        status: 'planifiee'
+        status: 'planifiee',
+        rule: 'Resume in-app hebdomadaire',
+        roleScope: 'Pilotage GRC'
       });
     }
 
@@ -466,6 +562,68 @@ export class ActionsService {
     ];
   }
 
+  private enrichOverview(overview: ActionsOverview): ActionsOverview {
+    const registry = (overview.registry || []).map(item => this.enrichRegistryItem(item));
+    const summary = overview.summary || {} as ActionsSummary;
+
+    return {
+      ...overview,
+      summary: {
+        ...summary,
+        multiAssignedActions: summary.multiAssignedActions ?? registry.filter(item => item.assignees.length > 1).length
+      },
+      registry,
+      deadlines: (overview.deadlines || []).map(item => this.enrichDeadlineItem(item, registry)),
+      notifications: (overview.notifications || []).map(item => this.enrichNotificationItem(item)),
+      indicators: (overview.indicators || []).map(item => this.enrichIndicatorItem(item)),
+      todoActions: overview.todoActions || []
+    };
+  }
+
+  private enrichRegistryItem(item: ActionRegistryItem): ActionRegistryItem {
+    const assignees = item.assignees?.length ? item.assignees : this.buildAssignees([item.owner]);
+    const resources = item.resources?.length ? item.resources : this.buildResources(item.sourceModule, item.department, assignees);
+    const history = item.history?.length ? item.history : this.buildHistory({
+      sourceModule: item.sourceModule,
+      createdAt: item.lastUpdate,
+      updatedAt: item.lastUpdate,
+      owner: item.owner,
+      status: item.status,
+      title: item.title
+    });
+
+    return {
+      ...item,
+      assignees,
+      resources,
+      statusLabel: item.statusLabel || this.getStatusLabel(item.status),
+      history
+    };
+  }
+
+  private enrichDeadlineItem(item: ActionDeadlineItem, registry: ActionRegistryItem[]): ActionDeadlineItem {
+    const source = registry.find(registryItem => registryItem.id === item.id);
+
+    return {
+      ...item,
+      startDate: item.startDate || source?.history[0]?.at || source?.lastUpdate || item.dueDate,
+      dependencyCount: item.dependencyCount ?? source?.dependencies?.length ?? 0,
+      resourceLoad: item.resourceLoad || (source ? this.buildResourceLoad(source) : 'Charge a confirmer')
+    };
+  }
+
+  private enrichNotificationItem(item: ActionNotificationItem): ActionNotificationItem {
+    return {
+      ...item,
+      rule: item.rule || this.buildNotificationRule(item),
+      roleScope: item.roleScope || item.audience || 'Roles concernes'
+    };
+  }
+
+  private enrichIndicatorItem(item: ActionIndicatorItem): ActionIndicatorItem {
+    return item;
+  }
+
   private buildTodoActions(items: ActionRegistryItem[]): ActionTodoItem[] {
     return items
       .slice()
@@ -502,6 +660,81 @@ export class ActionsService {
     }
 
     return dependencies;
+  }
+
+  private buildAssignees(values: string[]): string[] {
+    const assignees = Array.from(new Set(values.map(value => this.cleanText(value)).filter(value => value && value !== 'Non assigne')));
+    return assignees.length ? assignees : ['Non assigne'];
+  }
+
+  private buildResources(sourceModule: string, department: string | undefined, assignees: string[]): string[] {
+    return Array.from(new Set([
+      this.cleanText(department),
+      sourceModule,
+      ...assignees.filter(value => value !== 'Non assigne')
+    ].filter(Boolean)));
+  }
+
+  private buildHistory(context: { sourceModule: string; createdAt: string | null; updatedAt: string | null; owner: string; status: string; title: string }): ActionHistoryItem[] {
+    const createdAt = context.createdAt || context.updatedAt || new Date().toISOString();
+    const updatedAt = context.updatedAt || createdAt;
+
+    return [
+      {
+        at: createdAt,
+        event: 'Creation',
+        actor: context.sourceModule,
+        detail: `Action formalisee depuis ${context.sourceModule}: ${context.title}`
+      },
+      {
+        at: updatedAt,
+        event: 'Affectation',
+        actor: context.owner,
+        detail: context.owner === 'Non assigne' ? 'Affectation a completer' : `Responsable courant: ${context.owner}`
+      },
+      {
+        at: updatedAt,
+        event: 'Statut',
+        actor: 'Systeme sGRC',
+        detail: `Statut courant: ${this.getStatusLabel(context.status)}`
+      }
+    ];
+  }
+
+  private buildResourceLoad(item: ActionRegistryItem): string {
+    if (item.status === 'bloquee' || item.dependencies.length >= 2) {
+      return 'Charge forte';
+    }
+
+    if (this.isCriticalPriority(item.priority) || item.assignees.length > 1) {
+      return 'Charge moyenne';
+    }
+
+    return 'Charge normale';
+  }
+
+  private buildNotificationRule(item: ActionNotificationItem): string {
+    if (item.escalationLevel === 'niveau_3') {
+      return 'Escalade automatique critique';
+    }
+
+    if (item.trigger?.toLowerCase().includes('echeance')) {
+      return 'Rappel deadline parametre';
+    }
+
+    return 'Regle de notification periodique';
+  }
+
+  private getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      en_retard: 'En retard',
+      bloquee: 'Bloquee',
+      en_cours: 'En cours',
+      a_demarrer: 'A demarrer',
+      clos: 'Clos'
+    };
+
+    return labels[status] || status;
   }
 
   private buildDisplayActions(status: string, priority: string, owner: string): string[] {

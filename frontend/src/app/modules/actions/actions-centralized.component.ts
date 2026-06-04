@@ -7,6 +7,7 @@ import {
   ActionAssignableUser,
   ActionOperationResponse,
   ActionRegistryItem,
+  ActionTrackingUpdate,
   ActionsOverview,
   ActionsService
 } from './actions.service';
@@ -27,6 +28,9 @@ export class ActionsCentralizedComponent implements OnInit {
   selectedAssigneeId = '';
   isLoadingAssignableUsers = false;
   isSubmittingAssignment = false;
+  trackingItem: ActionRegistryItem | null = null;
+  trackingForm: ActionTrackingUpdate = {};
+  isSubmittingTracking = false;
   activeActionKey = '';
   feedbackMessage = '';
   feedbackTone: 'success' | 'error' | '' = '';
@@ -93,6 +97,23 @@ export class ActionsCentralizedComponent implements OnInit {
   clearFilters(): void {
     this.filters = { q: '', status: '', source: '', priority: '', owner: '' };
     this.applyFilters();
+  }
+
+  exportRegistry(): void {
+    const rows = this.filteredRegistry.map(item => ({
+      Reference: item.reference,
+      Titre: item.title,
+      Source: item.sourceModule,
+      Responsable: item.owner,
+      Assignations: item.assignees.join(' | '),
+      Ressources: item.resources.join(' | '),
+      Statut: item.statusLabel,
+      Avancement: `${item.progress}%`,
+      Echeance: this.formatDate(item.dueDate),
+      Dependances: item.dependencies.join(' | ')
+    }));
+
+    this.downloadCsv('registre-plans-actions.csv', rows);
   }
 
   applyFilters(): void {
@@ -182,6 +203,52 @@ export class ActionsCentralizedComponent implements OnInit {
     this.isSubmittingAssignment = false;
   }
 
+  openTrackingPanel(item: ActionRegistryItem): void {
+    this.trackingItem = item;
+    this.assignmentItem = null;
+    this.trackingForm = {
+      title: item.title,
+      dueDate: item.dueDate ? item.dueDate.slice(0, 10) : null,
+      status: item.status === 'en_retard' || item.status === 'bloquee' ? 'en_cours' : item.status,
+      progress: item.progress
+    };
+    this.clearFeedback();
+  }
+
+  closeTrackingPanel(): void {
+    this.trackingItem = null;
+    this.trackingForm = {};
+    this.isSubmittingTracking = false;
+  }
+
+  submitTracking(): void {
+    if (!this.trackingItem || this.isSubmittingTracking) {
+      return;
+    }
+
+    const targetItem = this.trackingItem;
+    this.clearFeedback();
+    this.isSubmittingTracking = true;
+    this.activeActionKey = this.buildActionKey(targetItem, 'Mettre a jour');
+
+    this.actionsService.updateActionTracking(targetItem.id, this.trackingForm).pipe(
+      finalize(() => {
+        this.isSubmittingTracking = false;
+        this.activeActionKey = '';
+      })
+    ).subscribe({
+      next: response => {
+        this.closeTrackingPanel();
+        this.notificationService.refresh();
+        this.setFeedback(response.message || 'Suivi mis a jour avec succes.', 'success');
+        this.loadOverview();
+      },
+      error: error => {
+        this.setFeedback(this.getErrorMessage(error, 'Impossible de mettre a jour cette action.'), 'error');
+      }
+    });
+  }
+
   submitAssignment(): void {
     if (!this.assignmentItem || !this.selectedAssigneeId || this.isSubmittingAssignment) {
       return;
@@ -265,6 +332,10 @@ export class ActionsCentralizedComponent implements OnInit {
     return new Set(this.registry.map(item => item.sourceModule)).size;
   }
 
+  get multiAssignedCount(): number {
+    return this.overview?.summary.multiAssignedActions || this.registry.filter(item => item.assignees.length > 1).length;
+  }
+
   get sourceOptions(): string[] {
     return Array.from(new Set(this.registry.map(item => item.sourceModule))).sort();
   }
@@ -327,5 +398,31 @@ export class ActionsCentralizedComponent implements OnInit {
 
   private getErrorMessage(error: any, fallback: string): string {
     return error?.error?.message || fallback;
+  }
+
+  private downloadCsv(filename: string, rows: Array<Record<string, unknown>>): void {
+    if (!rows.length) {
+      this.setFeedback('Aucune ligne a exporter avec les filtres actuels.', 'error');
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.join(';'),
+      ...rows.map(row => headers.map(header => this.escapeCsv(row[header])).join(';'))
+    ].join('\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    this.setFeedback('Export registre genere avec succes.', 'success');
+  }
+
+  private escapeCsv(value: unknown): string {
+    const text = String(value ?? '').replace(/"/g, '""');
+    return `"${text}"`;
   }
 }

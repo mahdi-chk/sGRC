@@ -42,13 +42,6 @@
         </div>
     </div>
 
-    <!-- AI Action Cards Row -->
-    <div class="action-cards-row"
-        style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-        <app-risk-eval-action-card></app-risk-eval-action-card>
-        <app-audit-plan-gen-card></app-audit-plan-gen-card>
-    </div>
-
     <div class="dashboard-grid" *ngIf="filteredModules.length > 0; else noModules">
         <div *ngFor="let m of filteredModules" class="module-card premium">
             <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>

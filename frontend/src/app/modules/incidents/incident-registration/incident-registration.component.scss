@@ -7,12 +7,11 @@
     margin: 0 auto 24px;
     max-width: 1320px;
     padding: 28px 30px;
-    border-radius: 26px;
-    background:
-        radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 30%),
-        linear-gradient(135deg, #082f49 0%, #0f766e 45%, #22c55e 100%);
-    color: #fff;
-    box-shadow: 0 20px 45px rgba(8, 47, 73, 0.18);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #17324d;
+    border: 1px solid #d9e2ea;
+    box-shadow: 0 10px 30px rgba(17, 44, 72, 0.05);
 }
 
 .hero-main h2 {
@@ -24,7 +23,7 @@
 .hero-main p {
     margin: 0;
     max-width: 720px;
-    color: rgba(255, 255, 255, 0.84);
+    color: #61758a;
     line-height: 1.6;
 }
 
@@ -33,7 +32,8 @@
     align-items: center;
     padding: 8px 12px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(15, 76, 129, 0.08);
+    color: #0f4c81;
     font-size: 0.74rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -47,15 +47,14 @@
 
 .hero-stat {
     padding: 18px 20px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #d9e2ea;
 }
 
 .hero-stat span {
     display: block;
-    color: rgba(255, 255, 255, 0.72);
+    color: #61758a;
     font-size: 0.82rem;
     font-weight: 700;
 }
@@ -64,6 +63,7 @@
     display: block;
     margin-top: 6px;
     font-size: 1.7rem;
+    color: #0f172a;
 }
 
 .hero-stat.accent strong {
@@ -306,10 +306,9 @@
         height: 40px;
         min-width: 40px;
         border-radius: 14px;
-        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
-        color: #fff;
+        background: rgba(15, 76, 129, 0.08);
+        color: #0f4c81;
         font-weight: 800;
-        box-shadow: 0 10px 20px rgba(20, 184, 166, 0.24);
     }
 
     .section-title {

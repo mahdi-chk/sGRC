@@ -30,6 +30,25 @@ import { AIService, RagIndexingResult } from '../../../core/services/ai.service'
             font-size: 2rem;
             font-weight: 700;
         }
+        .btn-back-dashboard {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1rem;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.16);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-back-dashboard:hover {
+            background: rgba(255, 255, 255, 0.24);
+            transform: translateY(-1px);
+        }
         .header-content p {
             margin: 0;
             opacity: 0.9;
@@ -135,6 +154,10 @@ import { AIService, RagIndexingResult } from '../../../core/services/ai.service'
             }
             .settings-actions button {
                 flex: 1;
+                justify-content: center;
+            }
+            .btn-back-dashboard {
+                width: 100%;
                 justify-content: center;
             }
         }

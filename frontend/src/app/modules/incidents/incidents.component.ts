@@ -9,20 +9,45 @@ import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 import { UserRole } from '../../core/models/user-role.enum';
+import { IncidentNavItem, getIncidentNavItems } from './incident-navigation';
 
 @Component({
   selector: 'app-incidents',
   templateUrl: './incidents.component.html',
-  styleUrls: ['./incidents.component.css']
+  styleUrls: ['./incidents.component.scss']
 })
 export class IncidentsComponent implements OnInit {
     incidents: Incident[] = [];
     departments: Department[] = [];
     risks: Risk[] = [];
     filteredIncidents: Incident[] = [];
+    navItems: IncidentNavItem[] = [];
     environment = environment;
     currentUserId: number | null = null;
     currentUserRole_enum: UserRole | null = null;
+
+    modules = [
+        {
+            title: 'Declaration',
+            route: '/dashboard/incident-registration',
+            description: 'Enregistrer un incident, importer une fiche et rattacher les preuves initiales.'
+        },
+        {
+            title: 'Workflow',
+            route: '/dashboard/incident-workflow',
+            description: 'Piloter le cycle de vie, les affectations et la cloture operationnelle.'
+        },
+        {
+            title: 'Analyse',
+            route: '/dashboard/incident-analysis',
+            description: 'Identifier les causes, enrichir le lien avec les risques et capitaliser les lecons.'
+        },
+        {
+            title: 'Reporting',
+            route: '/dashboard/incident-reporting',
+            description: 'Suivre les indicateurs, tendances, niveaux et domaines les plus exposes.'
+        }
+    ];
 
     // Filter properties
     filterSearch = '';
@@ -110,6 +135,7 @@ export class IncidentsComponent implements OnInit {
         const currentUser = this.authService.getCurrentUser();
         this.currentUserId = currentUser?.id || null;
         this.currentUserRole_enum = this.authService.getUserRole();
+        this.navItems = getIncidentNavItems(this.currentUserRole_enum);
         this.loadIncidents();
         this.loadDepartments();
         this.loadRisks();
@@ -128,11 +154,6 @@ export class IncidentsComponent implements OnInit {
     applyFilters() {
         this.filteredIncidents = this.incidents.filter(incident => {
             // 0. Filtre par visibilité utilisateur (sauf super admin)
-            const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
-            const isDeclarerByUser = incident.userId === this.currentUserId;
-            const isAssignedToUser = incident.assigneeId === this.currentUserId;
-            const matchUserAccess = isSuperAdmin || isDeclarerByUser || isAssignedToUser;
-
             const matchSearch = !this.filterSearch || 
                 incident.titre.toLowerCase().includes(this.filterSearch.toLowerCase()) || 
                 incident.description.toLowerCase().includes(this.filterSearch.toLowerCase());
@@ -145,9 +166,51 @@ export class IncidentsComponent implements OnInit {
             const filterLevel = (this.filterLevel || '').toLowerCase();
             const matchLevel = !filterLevel || incidentLevel === filterLevel;
 
-            return matchUserAccess && matchSearch && matchStatus && matchLevel;
+            return this.canAccessIncident(incident) && matchSearch && matchStatus && matchLevel;
         });
         this.currentPage = 1;
+    }
+
+    get accessibleIncidents(): Incident[] {
+        return this.incidents.filter(incident => this.canAccessIncident(incident));
+    }
+
+    get totalVisibleIncidents(): number {
+        return this.accessibleIncidents.length;
+    }
+
+    get openIncidents(): number {
+        return this.accessibleIncidents.filter(incident => {
+            const status = this.getNormalizedStatus(incident);
+            return status !== IncidentStatus.CLOS && status !== IncidentStatus.TRAITE;
+        }).length;
+    }
+
+    get criticalIncidents(): number {
+        return this.accessibleIncidents.filter(incident => {
+            const level = this.getNormalizedLevel(incident);
+            return level === IncidentNiveauRisque.CRITICAL || level === IncidentNiveauRisque.HIGH;
+        }).length;
+    }
+
+    get linkedRiskIncidents(): number {
+        return this.accessibleIncidents.filter(incident => !!incident.riskId).length;
+    }
+
+    get treatmentRate(): number {
+        const total = this.totalVisibleIncidents;
+        if (!total) return 0;
+        const handled = this.accessibleIncidents.filter(incident => {
+            const status = this.getNormalizedStatus(incident);
+            return status === IncidentStatus.TRAITE || status === IncidentStatus.CLOS;
+        }).length;
+        return Math.round((handled / total) * 100);
+    }
+
+    get recentIncidents(): Incident[] {
+        return [...this.accessibleIncidents]
+            .sort((a, b) => new Date(b.dateSurvenance).getTime() - new Date(a.dateSurvenance).getTime())
+            .slice(0, 4);
     }
 
     get paginatedIncidents(): Incident[] {
@@ -300,6 +363,7 @@ export class IncidentsComponent implements OnInit {
         this.incidentService.createIncident(formData).subscribe({
             next: (res) => {
                 this.incidents.unshift(res);
+                this.applyFilters();
                 this.isSubmitting = false;
                 this.showCreateModal = false;
             },
@@ -347,6 +411,7 @@ export class IncidentsComponent implements OnInit {
                 if (index !== -1) {
                     this.incidents[index] = res;
                 }
+                this.applyFilters();
                 this.isSubmitting = false;
                 this.showEditModal = false;
             },
@@ -385,7 +450,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     getStatusClass(incident: any): string {
-        const status = incident?.statutCode || incident?.statut;
+        const status = this.getNormalizedStatus(incident);
         switch (status) {
             case IncidentStatus.NOUVEAU: return 'bg-blue-100 text-blue-800';
             case IncidentStatus.EN_COURS: return 'bg-yellow-100 text-yellow-800';
@@ -396,7 +461,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     getNiveauClass(incident: any): string {
-        const niveau = incident?.niveauRisqueCode || incident?.niveauRisque;
+        const niveau = this.getNormalizedLevel(incident);
         switch (niveau) {
             case IncidentNiveauRisque.CRITICAL: return 'badge-danger';
             case IncidentNiveauRisque.SIGNIFICANT:
@@ -412,5 +477,22 @@ export class IncidentsComponent implements OnInit {
         if (!riskId) return 'Non défini';
         const risk = this.risks.find(r => r.id === riskId);
         return risk ? risk.titre : `Risque #${riskId}`;
+    }
+
+    private canAccessIncident(incident: Incident): boolean {
+        const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
+        const isTopManagement = this.currentUserRole_enum === UserRole.TOP_MANAGEMENT;
+        const isDeclarerByUser = incident.userId === this.currentUserId;
+        const isAssignedToUser = incident.assigneeId === this.currentUserId;
+
+        return isSuperAdmin || isTopManagement || isDeclarerByUser || isAssignedToUser;
+    }
+
+    private getNormalizedStatus(incident: any): string {
+        return incident?.statutCode || incident?.statut || '';
+    }
+
+    private getNormalizedLevel(incident: any): string {
+        return incident?.niveauRisqueCode || incident?.niveauRisque || '';
     }
 }

@@ -104,7 +104,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
-  margin-bottom: 20px;
+  margin: 20px 0;
 }
 
 .summary-card,
@@ -160,6 +160,15 @@
   justify-content: space-between;
   gap: 14px;
   align-items: flex-start;
+}
+
+.registry-tabs {
+  margin: 0 0 16px;
+  background: rgba(217, 226, 234, 0.6);
+}
+
+.registry-tabs .incident-tab.active {
+  color: var(--incident-ink);
 }
 
 .module-list,

@@ -21,12 +21,6 @@
         </div>
     </div>
 
-    <nav class="incident-tabs" *ngIf="navItems.length > 0">
-        <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
-            {{ item.label }}
-        </a>
-    </nav>
-
     <div class="summary-grid">
         <div class="summary-card">
             <span class="eyebrow">Incidents visibles</span>
@@ -90,6 +84,12 @@
     </div>
 
     <div class="table-card incidents-table-card">
+        <nav class="incident-tabs registry-tabs" *ngIf="navItems.length > 0">
+            <a *ngFor="let item of navItems" [routerLink]="item.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="incident-tab">
+                {{ item.label }}
+            </a>
+        </nav>
+
         <div class="card-head table-head">
             <div>
                 <h2>Registre des incidents</h2>

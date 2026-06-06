@@ -12,6 +12,7 @@ import { getSupervisionDashboardSubmodules } from '../../modules/supervision/sup
 export interface Submodule {
     title: string;
     desc?: string;
+    roles?: UserRole[];
 }
 
 export interface ModuleItem {
@@ -51,13 +52,67 @@ export class DashboardService {
             title: 'Gestion des Risques',
             desc: 'Identifier, evaluer et traiter les risques.',
             submodules: [
-                { title: 'Registre des Risques' },
-                { title: 'Evaluation Parametrable' },
-                { title: 'Cartographie Dynamique' },
-                { title: 'Plans de Traitement' },
-                { title: 'Alertes et Monitoring' }
+                {
+                    title: 'Registre des Risques',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.RISK_AGENT,
+                        UserRole.AUDIT_DIRECTEUR,
+                        UserRole.AUDIT_RESPONSABLE,
+                        UserRole.CHEF_MISSION,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                },
+                {
+                    title: 'Evaluation Parametrable',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.RISK_AGENT,
+                        UserRole.AUDIT_DIRECTEUR,
+                        UserRole.AUDIT_RESPONSABLE,
+                        UserRole.CHEF_MISSION,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                },
+                {
+                    title: 'Cartographie Dynamique',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.RISK_AGENT,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                },
+                {
+                    title: 'Plans de Traitement',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.RISK_AGENT,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                },
+                {
+                    title: 'Alertes et Monitoring',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.RISK_AGENT,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.RISK_MANAGER,
+                UserRole.RISK_AGENT,
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDIT_RESPONSABLE,
+                UserRole.CHEF_MISSION,
+                UserRole.TOP_MANAGEMENT
+            ]
         },
         {
             key: 'controls',
@@ -70,7 +125,16 @@ export class DashboardService {
                 { title: 'Evaluation d Efficacite' },
                 { title: 'Suivi des Non-Conformites' }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.CONTROLLER]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.RISK_MANAGER,
+                UserRole.RISK_AGENT,
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDIT_RESPONSABLE,
+                UserRole.CHEF_MISSION,
+                UserRole.TOP_MANAGEMENT,
+                UserRole.CONTROLLER
+            ]
         },
         {
             key: 'conformite',
@@ -83,7 +147,14 @@ export class DashboardService {
                 { title: 'Suivi des Ecarts' },
                 { title: 'Mises a Jour et Preuves' }
             ],
-            roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDITEUR,
+                UserRole.RISK_MANAGER,
+                UserRole.RISK_AGENT,
+                UserRole.TOP_MANAGEMENT
+            ]
         },
         {
             key: 'audit-plans',
@@ -112,12 +183,52 @@ export class DashboardService {
             title: 'Gestion des Incidents',
             desc: 'Declarer, analyser et traiter les incidents.',
             submodules: [
-                { title: 'Enregistrement Structure' },
-                { title: 'Workflow de Traitement' },
-                { title: 'Liens et Analyse' },
-                { title: 'Reporting Consolide' }
+                {
+                    title: 'Enregistrement Structure',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.AUDIT_DIRECTEUR,
+                        UserRole.CHEF_MISSION
+                    ]
+                },
+                {
+                    title: 'Workflow de Traitement',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.AUDIT_DIRECTEUR,
+                        UserRole.CHEF_MISSION
+                    ]
+                },
+                {
+                    title: 'Liens et Analyse',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.AUDIT_DIRECTEUR,
+                        UserRole.CHEF_MISSION,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                },
+                {
+                    title: 'Reporting Consolide',
+                    roles: [
+                        UserRole.SUPER_ADMIN,
+                        UserRole.RISK_MANAGER,
+                        UserRole.AUDIT_DIRECTEUR,
+                        UserRole.CHEF_MISSION,
+                        UserRole.TOP_MANAGEMENT
+                    ]
+                }
             ],
-            roles: [UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.RISK_MANAGER,
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.CHEF_MISSION,
+                UserRole.TOP_MANAGEMENT
+            ]
         },
         {
             key: 'plans-actions',
@@ -150,7 +261,13 @@ export class DashboardService {
                 { title: 'Vision Multi-Entites' },
                 { title: 'Exports' }
             ],
-            roles: [UserRole.TOP_MANAGEMENT]
+            roles: [
+                UserRole.SUPER_ADMIN,
+                UserRole.TOP_MANAGEMENT,
+                UserRole.RISK_MANAGER,
+                UserRole.AUDIT_DIRECTEUR,
+                UserRole.CHEF_MISSION
+            ]
         },
         {
             key: 'supervision',
@@ -163,7 +280,7 @@ export class DashboardService {
                 { title: 'Assistance Experte' },
                 { title: 'Supervision Continue' }
             ],
-            roles: [UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI]
+            roles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI]
         }
     ];
 
@@ -178,43 +295,43 @@ export class DashboardService {
 
     getFilteredModules(role: UserRole | string | null): ModuleItem[] {
         if (!role) return [];
-        const roleStr = typeof role === 'string' ? role : (role as any).toString();
+        const normalizedRole = Object.values(UserRole).find(value => value === role);
 
-        if (roleStr === UserRole.SUPER_ADMIN) return this.modules;
+        if (!normalizedRole) return [];
 
-        const filteredModules = this.modules.filter(m =>
-            m.roles && m.roles.some(r => r.toString() === roleStr)
-        ).map(module => ({
-            ...module,
-                submodules: module.key === 'gouvernance'
-                    ? getGovernanceDashboardSubmodules(roleStr)
-                : module.key === 'controls'
-                    ? getControlsDashboardSubmodules(roleStr)
-                : module.key === 'conformite'
-                    ? getComplianceDashboardSubmodules(roleStr)
-                : module.key === 'plans-actions'
-                    ? getActionsDashboardSubmodules(roleStr)
-                : module.key === 'supervision'
-                    ? getSupervisionDashboardSubmodules(roleStr)
-                    : [...module.submodules]
-        }));
+        return this.modules
+            .filter(module => module.roles.includes(normalizedRole))
+            .map(module => ({
+                ...module,
+                submodules: this.getSubmodulesForRole(module, normalizedRole)
+            }))
+            .filter(module => module.submodules.length > 0);
+    }
 
-        if (roleStr === UserRole.TOP_MANAGEMENT) {
-            return filteredModules.map(module => {
-                if (module.key !== 'incidents') {
-                    return module;
-                }
-
-                return {
-                    ...module,
-                    submodules: module.submodules.filter(submodule =>
-                        submodule.title === 'Liens et Analyse' || submodule.title === 'Reporting Consolide'
-                    )
-                };
-            });
+    private getSubmodulesForRole(module: ModuleItem, role: UserRole): Submodule[] {
+        if (module.key === 'gouvernance') {
+            return getGovernanceDashboardSubmodules(role);
         }
 
-        return filteredModules;
+        if (module.key === 'controls') {
+            return getControlsDashboardSubmodules(role);
+        }
+
+        if (module.key === 'conformite') {
+            return getComplianceDashboardSubmodules(role);
+        }
+
+        if (module.key === 'plans-actions') {
+            return getActionsDashboardSubmodules(role);
+        }
+
+        if (module.key === 'supervision') {
+            return getSupervisionDashboardSubmodules(role);
+        }
+
+        return module.submodules
+            .filter(submodule => !submodule.roles || submodule.roles.includes(role))
+            .map(({ title, desc }) => ({ title, desc }));
     }
 
     openSubmoduleModal(m: any, s: any) {
@@ -256,10 +373,12 @@ export class DashboardService {
             this.router.navigate(['/dashboard/controls-planning']);
         } else if (s.title === 'Collecte de Preuves') {
             this.router.navigate(['/dashboard/controls-evidence']);
-        } else if (s.title === 'Evaluation d Efficacite') {
+        } else if (s.title === 'Evaluation d Efficacite' || s.title === 'Efficacite des Controles') {
             this.router.navigate(['/dashboard/controls-effectiveness']);
         } else if (s.title === 'Suivi des Non-Conformites') {
             this.router.navigate(['/dashboard/controls-non-conformities']);
+        } else if (s.title === 'Campagnes d Evaluation') {
+            this.router.navigate(['/dashboard/control-evaluations']);
         } else if (s.title === 'Referentiels Integres') {
             this.router.navigate(['/dashboard/compliance-frameworks']);
         } else if (s.title === 'KPI de Maturite') {

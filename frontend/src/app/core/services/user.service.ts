@@ -10,6 +10,8 @@ export interface User {
   mail: string;
   poste?: string | null;
   roleId?: number;
+  role?: string | null;
+  roleCode?: string | null;
   departementId?: number;
 }
 

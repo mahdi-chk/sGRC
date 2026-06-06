@@ -13,7 +13,7 @@ export class SupervisionRecommendationsComponent implements OnInit {
   constructor(private supervisionService: SupervisionService) {}
 
   ngOnInit(): void {
-    this.supervisionService.getOverview().subscribe(overview => {
+    this.supervisionService.watchOverview().subscribe(overview => {
       this.recommendations = overview.modules.recommendations;
     });
   }

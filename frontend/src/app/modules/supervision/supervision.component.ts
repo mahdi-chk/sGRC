@@ -12,6 +12,7 @@ export class SupervisionComponent implements OnInit {
   readonly navItems = getSupervisionNavItems(getStoredSupervisionRole());
   overview: SupervisionOverview | null = null;
   isLoading = false;
+  errorMessage = '';
 
   constructor(
     private router: Router,
@@ -19,18 +20,22 @@ export class SupervisionComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadOverview();
+    this.supervisionService.watchOverview().subscribe(overview => {
+      this.overview = overview;
+    });
+    this.loadOverview(false);
   }
 
-  loadOverview(): void {
+  loadOverview(forceRefresh = true): void {
     this.isLoading = true;
-    this.supervisionService.getOverview().subscribe({
-      next: overview => {
-        this.overview = overview;
+    this.errorMessage = '';
+    this.supervisionService.loadOverview(forceRefresh).subscribe({
+      next: () => {
         this.isLoading = false;
       },
-      error: () => {
-        this.overview = null;
+      error: error => {
+        this.errorMessage = error?.error?.message
+          || 'Impossible de charger les donnees reelles de supervision.';
         this.isLoading = false;
       }
     });

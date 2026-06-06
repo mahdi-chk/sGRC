@@ -176,6 +176,20 @@ button.pill:hover {
   gap: 14px;
 }
 
+.action-link {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  color: var(--supervision-accent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.action-link:hover {
+  text-decoration: underline;
+}
+
 .item-topline {
   display: flex;
   justify-content: space-between;

@@ -6,7 +6,7 @@ import { SupervisionService } from './supervision.service';
 const router = Router();
 
 router.use(authenticateToken);
-router.use(authorizeRoles(UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI));
+router.use(authorizeRoles(UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI));
 
 router.get('/overview', async (_req, res) => {
     try {

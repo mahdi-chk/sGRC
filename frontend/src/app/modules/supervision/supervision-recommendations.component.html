@@ -37,7 +37,7 @@
       <span class="pill">{{ recommendation.status }}</span>
     </div>
     <p class="muted"><strong>Impact attendu :</strong> {{ recommendation.expectedImpact }}</p>
-    <p class="muted"><strong>Route cible :</strong> {{ recommendation.route }}</p>
+    <a class="action-link" [routerLink]="recommendation.route">Ouvrir le module concerne</a>
   </article>
 </div>
 

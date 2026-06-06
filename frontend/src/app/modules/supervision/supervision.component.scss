@@ -170,6 +170,16 @@
   color: var(--supervision-muted);
 }
 
+.status-line.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-color: rgba(158, 58, 49, 0.28);
+  background: rgba(158, 58, 49, 0.08);
+  color: #8a3029;
+}
+
 @media (max-width: 960px) {
   .supervision-workspace {
     padding: 20px;
@@ -184,6 +194,10 @@
   .header-actions,
   .btn-refresh {
     width: 100%;
+  }
+
+  .status-line.error {
+    flex-direction: column;
   }
 
   .supervision-tabs {

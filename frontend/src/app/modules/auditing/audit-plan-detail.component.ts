@@ -1108,10 +1108,33 @@ export class AuditPlanDetailComponent implements OnInit {
       ...this.missionResources,
       {
         userId: 0,
-        assignmentRoleCode: this.assignmentRoleOptions[0]?.code || 'auditeur',
+        assignmentRoleCode: 'auditeur',
         allocationPercent: 100
       }
     ];
+  }
+
+  getAssignableUsers(resource: AuditPlanMissionResource): any[] {
+    const assignmentRole = String(resource.assignmentRoleCode || resource.assignmentRole || '').trim();
+    if (!assignmentRole) {
+      return [];
+    }
+
+    return this.users.filter((user) => this.getUserAuditRole(user) === assignmentRole);
+  }
+
+  onAssignmentRoleChange(resource: AuditPlanMissionResource): void {
+    const selectedUserId = Number(resource.userId || 0);
+    if (!selectedUserId) {
+      return;
+    }
+
+    const userIsCompatible = this.getAssignableUsers(resource)
+      .some((user) => Number(user.id) === selectedUserId);
+
+    if (!userIsCompatible) {
+      resource.userId = 0;
+    }
   }
 
   removeResourceRow(index: number): void {
@@ -1255,6 +1278,24 @@ export class AuditPlanDetailComponent implements OnInit {
       .split(/\r?\n/)
       .map((item) => item.trim())
       .filter((item) => !!item);
+  }
+
+  private getUserAuditRole(user: any): string {
+    const role = String(user?.roleCode || user?.role || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\s-]+/g, '_');
+
+    if (role.includes('chef') && role.includes('mission')) {
+      return 'chef_mission';
+    }
+    if (role.includes('auditeur')) {
+      return 'auditeur';
+    }
+
+    return role;
   }
 
   saveWorkProgramTemplate(): void {

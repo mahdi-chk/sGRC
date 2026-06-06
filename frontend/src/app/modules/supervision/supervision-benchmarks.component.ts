@@ -18,7 +18,7 @@ export class SupervisionBenchmarksComponent implements OnInit {
   constructor(private supervisionService: SupervisionService) {}
 
   ngOnInit(): void {
-    this.supervisionService.getOverview().subscribe(overview => {
+    this.supervisionService.watchOverview().subscribe(overview => {
       this.sector = overview.modules.benchmarks.sector;
       this.indicators = overview.modules.benchmarks.indicators;
       this.maturity = overview.modules.benchmarks.maturity;

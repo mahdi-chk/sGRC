@@ -20,7 +20,7 @@ export class SupervisionAssistanceComponent implements OnInit {
   constructor(private supervisionService: SupervisionService) {}
 
   ngOnInit(): void {
-    this.supervisionService.getOverview().subscribe(overview => {
+    this.supervisionService.watchOverview().subscribe(overview => {
       this.channels = overview.modules.assistance.channels;
       this.faqs = overview.modules.assistance.faqs;
       this.playbooks = overview.modules.assistance.playbooks;

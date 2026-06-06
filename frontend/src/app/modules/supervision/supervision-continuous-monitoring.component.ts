@@ -23,7 +23,7 @@ export class SupervisionContinuousMonitoringComponent implements OnInit {
   constructor(private supervisionService: SupervisionService) {}
 
   ngOnInit(): void {
-    this.supervisionService.getOverview().subscribe(overview => {
+    this.supervisionService.watchOverview().subscribe(overview => {
       const monitoring = overview.modules.continuousMonitoring;
       this.status = monitoring.status;
       this.focus = monitoring.focus;

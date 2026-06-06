@@ -50,8 +50,8 @@
     <p class="muted">{{ alert.detail }}</p>
     <div class="meta-line">
       <span class="pill">{{ alert.owner }}</span>
-      <span class="pill">{{ alert.route }}</span>
     </div>
+    <a class="action-link" [routerLink]="alert.route">Traiter cette alerte</a>
   </article>
 </div>
 

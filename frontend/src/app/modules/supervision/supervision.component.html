@@ -13,7 +13,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn-refresh" (click)="loadOverview()" [disabled]="isLoading">
+      <button class="btn-refresh" (click)="loadOverview(true)" [disabled]="isLoading">
         <i class="fas" [ngClass]="isLoading ? 'fa-circle-notch fa-spin' : 'fa-rotate-right'"></i>
         Actualiser
       </button>
@@ -62,6 +62,11 @@
 
   <div class="status-line" *ngIf="isLoading">
     Chargement des donnees de supervision...
+  </div>
+
+  <div class="status-line error" *ngIf="errorMessage">
+    {{ errorMessage }}
+    <button type="button" class="btn-refresh" (click)="loadOverview(true)">Reessayer</button>
   </div>
 
   <div class="content-card supervision-content">

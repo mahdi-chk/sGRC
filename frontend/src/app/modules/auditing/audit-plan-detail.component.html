@@ -364,17 +364,21 @@
           </div>
 
           <div class="resource-row header-row">
-            <span>Utilisateur</span>
             <span>Role</span>
+            <span>Utilisateur</span>
             <span></span>
           </div>
           <div class="resource-row" *ngFor="let resource of missionResources; let i = index">
-            <select class="finput" [(ngModel)]="resource.userId" [disabled]="!workspace.permissions.canManageResources" required>
-              <option [ngValue]="0">Utilisateur</option>
-              <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
-            </select>
-            <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!workspace.permissions.canManageResources" required>
+            <select class="finput"
+                    [(ngModel)]="resource.assignmentRoleCode"
+                    (ngModelChange)="onAssignmentRoleChange(resource)"
+                    [disabled]="!workspace.permissions.canManageResources"
+                    required>
               <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
+            </select>
+            <select class="finput" [(ngModel)]="resource.userId" [disabled]="!workspace.permissions.canManageResources" required>
+              <option [ngValue]="0">Selectionner un utilisateur</option>
+              <option *ngFor="let user of getAssignableUsers(resource)" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
             </select>
             <button class="action-btn btn-delete" *ngIf="workspace.permissions.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
           </div>
@@ -750,12 +754,16 @@
           </div>
           <div class="resource-card-list" *ngIf="missionResources.length">
             <div class="resource-card" *ngFor="let resource of missionResources; let i = index">
-              <select class="finput" [(ngModel)]="resource.userId" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
-                <option [ngValue]="0">Utilisateur</option>
-                <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
-              </select>
-              <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
+              <select class="finput"
+                      [(ngModel)]="resource.assignmentRoleCode"
+                      (ngModelChange)="onAssignmentRoleChange(resource)"
+                      [disabled]="!missionWorkspace?.permissions?.canManageResources"
+                      required>
                 <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
+              </select>
+              <select class="finput" [(ngModel)]="resource.userId" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
+                <option [ngValue]="0">Selectionner un utilisateur</option>
+                <option *ngFor="let user of getAssignableUsers(resource)" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
               </select>
               <button class="action-btn btn-delete" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
             </div>

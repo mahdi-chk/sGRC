@@ -364,11 +364,6 @@
   font-weight: 700;
 }
 
-.allocation-note {
-  color: #475569;
-  font-weight: 600;
-}
-
 .mission-order-actions {
   display: flex;
   flex-wrap: wrap;
@@ -834,6 +829,67 @@
   color: #475569;
 }
 
+.validation-inline-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+}
+
+.validation-inline-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  h4 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.98rem;
+  }
+}
+
+.compact-validation-grid {
+  gap: 12px;
+}
+
+.report-content-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.report-content-block {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  p {
+    margin: 0;
+    min-height: 72px;
+    color: #334155;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+}
+
 .checklist-editor,
 .checklist-runner {
   margin-top: 16px;
@@ -880,13 +936,9 @@
 
 .resource-row {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 120px 56px;
+  grid-template-columns: 1.5fr 1fr 56px;
   gap: 12px;
   margin-bottom: 12px;
-}
-
-.multi {
-  min-height: 140px;
 }
 
 .section-actions {
@@ -937,7 +989,6 @@
 .evidence-list,
 .resource-card-list,
 .recommendation-grid,
-.skills-coverage-grid,
 .archive-list {
   display: grid;
   gap: 12px;
@@ -1033,7 +1084,7 @@
 
 .resources-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -1045,24 +1096,15 @@
   background: #fff;
 }
 
-.resource-admin-panel.side {
-  background: #f8fafc;
-}
-
 .resource-card {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(150px, 0.8fr) 86px 24px 42px;
+  grid-template-columns: minmax(160px, 1fr) minmax(150px, 0.8fr) 42px;
   align-items: center;
   gap: 10px;
   padding: 12px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #f8fafc;
-}
-
-.allocation-label {
-  color: #64748b;
-  font-weight: 800;
 }
 
 .action-plan-card {
@@ -1193,13 +1235,11 @@
   }
 }
 
-.recommendation-grid,
-.skills-coverage-grid {
+.recommendation-grid {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
-.recommendation-card,
-.skill-coverage-card {
+.recommendation-card {
   min-width: 0;
   padding: 16px;
   border: 1px solid #e2e8f0;
@@ -1211,42 +1251,41 @@
   margin: 14px 0;
 }
 
-.skill-metrics {
+.recommendation-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin: 14px 0;
+  margin: 12px 0 14px;
+}
 
-  span {
-    padding: 12px;
-    border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid #edf2f7;
-  }
+.recommendation-detail-item {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+  background: #f8fafc;
 
-  small,
-  strong {
+  label {
     display: block;
-  }
-
-  small {
+    margin-bottom: 6px;
     color: #64748b;
-    font-size: 0.75rem;
-    text-transform: uppercase;
+    font-size: 0.74rem;
     font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  strong {
-    margin-top: 6px;
-    color: #0f172a;
-    font-size: 1.2rem;
+  p {
+    margin: 0;
+    color: #334155;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
   }
 }
 
-.skill-coverage-card p {
-  margin: 0;
-  color: #475569;
-  overflow-wrap: anywhere;
+.recommendation-detail-item.full {
+  grid-column: 1 / -1;
 }
 
 .archive-panel {
@@ -1490,12 +1529,14 @@
 
   .mission-function-nav,
   .mission-overview-panel,
+  .report-content-preview,
   .resources-layout {
     grid-template-columns: 1fr;
   }
 
   .resource-card,
   .action-plan-card,
+  .recommendation-detail-grid,
   .planning-item {
     grid-template-columns: 1fr;
   }

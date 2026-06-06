@@ -169,7 +169,15 @@ export class AuditPlanService {
             throw new Error('Lookup audit non supporte');
         }
 
-        return LookupResolutionService.getStaticOptions(key);
+        const options = LookupResolutionService.getStaticOptions(key);
+        if (key === AUDIT_LOOKUP_KEYS.RESOURCE_ASSIGNMENT_ROLE) {
+            return options.filter((option: any) =>
+                option.code === AuditMissionResourceRoleCode.CHEF_MISSION
+                || option.code === AuditMissionResourceRoleCode.AUDITEUR
+            );
+        }
+
+        return options;
     }
 
     private static async getPlanById(planId: number, withDeleted = false) {
@@ -2648,6 +2656,13 @@ export class AuditPlanService {
             const userId = Number(resource.userId);
             const assignmentRole = resource.assignmentRole || resource.assignmentRoleCode || AuditMissionResourceRoleCode.AUDITEUR;
             const allocationPercent = Math.max(0, Math.min(100, Number(resource.allocationPercent || 100)));
+
+            if (
+                assignmentRole !== AuditMissionResourceRoleCode.CHEF_MISSION
+                && assignmentRole !== AuditMissionResourceRoleCode.AUDITEUR
+            ) {
+                throw new Error('Le role d affectation doit etre Chef de Mission ou Auditeur');
+            }
 
             nextKeys.add(`${userId}:${assignmentRole}`);
 

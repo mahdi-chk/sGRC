@@ -18,7 +18,6 @@ import {
   AuditPlanningService,
   AuditResponsibilityMatrixResponse,
   AuditRoleResponsibility,
-  AuditSkill,
   LookupOption
 } from '../../core/services/audit-planning.service';
 import { UserService } from '../../core/services/user.service';
@@ -26,7 +25,7 @@ import { UserRole } from '../../core/models/user-role.enum';
 import { getAuditPlanningNavItems, getStoredAuditRole } from './audit-navigation';
 import { environment } from '../../../environments/environment';
 
-type AuditDetailTabId = 'informations' | 'workflow' | 'missions' | 'planning' | 'resources' | 'recommendations' | 'competences';
+type AuditDetailTabId = 'informations' | 'workflow' | 'missions' | 'planning' | 'resources' | 'recommendations';
 
 type AuditDetailTab = {
   id: AuditDetailTabId;
@@ -61,7 +60,6 @@ export class AuditPlanDetailComponent implements OnInit {
   isTransitioning = false;
   isSavingMission = false;
   isSavingResources = false;
-  isSavingUserSkills = false;
   isLoadingMissionWorkspace = false;
   isSavingMissionOrder = false;
   isSavingWorkProgram = false;
@@ -78,7 +76,6 @@ export class AuditPlanDetailComponent implements OnInit {
   assignmentRoleOptions: LookupOption[] = [];
 
   users: any[] = [];
-  skills: AuditSkill[] = [];
   workProgramTemplates: AuditChecklistTemplate[] = [];
 
   showMissionModal = false;
@@ -90,8 +87,6 @@ export class AuditPlanDetailComponent implements OnInit {
   deletedMissions: AuditPlanMission[] = [];
   missionResources: AuditPlanMissionResource[] = [];
   selectedRequiredSkillIds: number[] = [];
-  selectedUserSkillIds: number[] = [];
-  selectedUserForSkillsId: number | null = null;
   selectedWorkProgramTemplateId: number | null = null;
   editingWorkProgramTemplateId: number | null = null;
   workProgramItems: Partial<AuditMissionChecklistItem>[] = [];
@@ -200,7 +195,7 @@ export class AuditPlanDetailComponent implements OnInit {
     {
       id: 'assign',
       label: 'Assigner',
-      description: 'Affecter les ressources et les competences.',
+      description: 'Affecter les ressources et les roles.',
       icon: 'fas fa-user-plus'
     },
     {
@@ -279,14 +274,6 @@ export class AuditPlanDetailComponent implements OnInit {
       || role === UserRole.SUPER_ADMIN;
   }
 
-  get canViewSkillsTab(): boolean {
-    const role = this.currentUserRole;
-    return role === UserRole.AUDIT_DIRECTEUR
-      || role === UserRole.AUDIT_RESPONSABLE
-      || role === UserRole.CHEF_MISSION
-      || role === UserRole.SUPER_ADMIN;
-  }
-
   get visibleTabs(): AuditDetailTab[] {
     const tabs: AuditDetailTab[] = [
       {
@@ -319,7 +306,7 @@ export class AuditPlanDetailComponent implements OnInit {
       tabs.push({
         id: 'resources',
         label: 'Ressources',
-        description: 'Equipe et competences',
+        description: 'Equipe et roles',
         icon: 'fas fa-users-gear'
       });
     }
@@ -330,15 +317,6 @@ export class AuditPlanDetailComponent implements OnInit {
       description: `${this.recommendationCount} element(s)`,
       icon: 'fas fa-clipboard-list'
     });
-
-    if (this.canViewSkillsTab) {
-      tabs.push({
-        id: 'competences',
-        label: 'Competences',
-        description: 'Couverture',
-        icon: 'fas fa-award'
-      });
-    }
 
     return tabs;
   }
@@ -446,16 +424,10 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   get resourcesFormIsValid(): boolean {
-    return this.missionResources.every((item) => {
-      const allocation = Number(item.allocationPercent ?? 100);
-      return Boolean(
-        Number(item.userId || 0) > 0
-        && String(item.assignmentRoleCode || item.assignmentRole || '').trim()
-        && Number.isFinite(allocation)
-        && allocation >= 0
-        && allocation <= 100
-      );
-    });
+    return this.missionResources.every((item) => Boolean(
+      Number(item.userId || 0) > 0
+      && String(item.assignmentRoleCode || item.assignmentRole || '').trim()
+    ));
   }
 
   get hasChefMissionAssignment(): boolean {
@@ -725,7 +697,6 @@ export class AuditPlanDetailComponent implements OnInit {
     this.planId = Number(this.route.snapshot.paramMap.get('id'));
     this.loadLookups();
     this.loadUsers();
-    this.loadSkills();
     this.loadResponsibilityMatrix();
     this.loadWorkProgramTemplates();
     this.loadPlan();
@@ -867,15 +838,13 @@ export class AuditPlanDetailComponent implements OnInit {
     this.auditPlanningService.getLookupOptions('auditPlan.nature').subscribe(data => this.natureOptions = data);
     this.auditPlanningService.getLookupOptions('auditMission.category').subscribe(data => this.categoryOptions = data);
     this.auditPlanningService.getLookupOptions('auditMission.quarter').subscribe(data => this.quarterOptions = data);
-    this.auditPlanningService.getLookupOptions('auditMissionResource.assignmentRole').subscribe(data => this.assignmentRoleOptions = data);
+    this.auditPlanningService.getLookupOptions('auditMissionResource.assignmentRole').subscribe(data => {
+      this.assignmentRoleOptions = data.filter(option => option.code === 'chef_mission' || option.code === 'auditeur');
+    });
   }
 
   loadUsers(): void {
     this.userService.getAssignableIncidentUsers().subscribe(data => this.users = data);
-  }
-
-  loadSkills(): void {
-    this.auditPlanningService.getSkills().subscribe(data => this.skills = data);
   }
 
   loadResponsibilityMatrix(): void {
@@ -1232,39 +1201,6 @@ export class AuditPlanDetailComponent implements OnInit {
     const token = sessionStorage.getItem('sgrc_token');
     const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
     window.open(urlWithToken, '_blank');
-  }
-
-  loadUserSkills(): void {
-    if (!this.selectedUserForSkillsId) {
-      this.selectedUserSkillIds = [];
-      return;
-    }
-
-    this.userService.getUserAuditSkills(this.selectedUserForSkillsId).subscribe({
-      next: (items) => {
-        this.selectedUserSkillIds = items.map((item: any) => item.skillId);
-      },
-      error: (error) => console.error(error)
-    });
-  }
-
-  saveUserSkills(): void {
-    if (!this.selectedUserForSkillsId) {
-      return;
-    }
-
-    this.isSavingUserSkills = true;
-    this.userService.updateUserAuditSkills(this.selectedUserForSkillsId, this.selectedUserSkillIds).subscribe({
-      next: () => {
-        this.isSavingUserSkills = false;
-        this.loadPlan();
-      },
-      error: (error) => {
-        console.error(error);
-        this.isSavingUserSkills = false;
-        alert(error?.error?.message || 'Erreur lors de la sauvegarde des competences utilisateur.');
-      }
-    });
   }
 
   loadSelectedTemplate(): void {
@@ -1701,11 +1637,6 @@ export class AuditPlanDetailComponent implements OnInit {
     });
 
     doc.save(`Plan_Audit_${this.plan.id}.pdf`);
-  }
-
-  formatSkillLabels(skills: AuditSkill[] | null | undefined): string {
-    const labels = (skills || []).map((skill) => skill.label).filter(Boolean);
-    return labels.length > 0 ? labels.join(', ') : '-';
   }
 
   formatResponsibilities(definition: AuditRoleResponsibility | null): string {

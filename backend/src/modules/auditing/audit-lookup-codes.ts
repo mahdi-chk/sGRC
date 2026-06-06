@@ -45,5 +45,4 @@ export const AuditMissionQuarterCode = {
 export const AuditMissionResourceRoleCode = {
     CHEF_MISSION: 'chef_mission',
     AUDITEUR: 'auditeur',
-    SUPPORT: 'support',
 } as const;

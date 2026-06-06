@@ -209,7 +209,6 @@ export class RiskManagementComponent implements OnInit {
     }
 
     onDepartmentChange() {
-        this.newRisk.responsableTraitementId = '';
         this.updateFilteredAgents();
     }
 

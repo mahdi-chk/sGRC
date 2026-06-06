@@ -366,7 +366,6 @@
           <div class="resource-row header-row">
             <span>Utilisateur</span>
             <span>Role</span>
-            <span>Allocation</span>
             <span></span>
           </div>
           <div class="resource-row" *ngFor="let resource of missionResources; let i = index">
@@ -377,21 +376,10 @@
             <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!workspace.permissions.canManageResources" required>
               <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
             </select>
-            <input class="finput" type="number" min="0" max="100" step="1" [(ngModel)]="resource.allocationPercent" [disabled]="!workspace.permissions.canManageResources" required>
             <button class="action-btn btn-delete" *ngIf="workspace.permissions.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
           </div>
-          <small class="field-note allocation-note" *ngIf="missionResources.length > 0">
-            Allocation = pourcentage de disponibilite de la ressource sur cette mission. Exemple: 100 = temps plein, 50 = mi-temps.
-          </small>
 
           <p class="empty-state" *ngIf="missionResources.length === 0">Aucune ressource affectee pour cette mission.</p>
-
-          <div class="form-group full">
-            <label>Competences requises</label>
-            <select class="finput multi" multiple [(ngModel)]="selectedRequiredSkillIds" [disabled]="!workspace.permissions.canManageResources">
-              <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
-            </select>
-          </div>
 
           <div class="section-actions" *ngIf="workspace.permissions.canManageResources">
             <button class="btn-save" (click)="saveResources()" [disabled]="isSavingResources || !resourcesFormIsValid">
@@ -494,23 +482,34 @@
                 </div>
               </div>
 
-              <div class="detail-grid" *ngIf="workProgramTransitions.length > 0 && activeMissionPanel === 'validate'">
-                <div class="form-group">
-                  <label>Transition</label>
-                  <select [(ngModel)]="workProgramTransitionForm.transition" class="finput" required>
-                    <option value="">Selectionner...</option>
-                    <option *ngFor="let transition of workProgramTransitions" [value]="transition">{{ transition }}</option>
-                  </select>
+              <div class="validation-inline-panel" *ngIf="workProgramTransitions.length > 0">
+                <div class="validation-inline-head">
+                  <div>
+                    <span class="eyebrow">Validation</span>
+                    <h4>Actions du programme</h4>
+                  </div>
+                  <span class="status-badge">{{ workProgramTransitions.length }} action(s)</span>
                 </div>
-                <div class="form-group full">
-                  <label>Commentaire</label>
-                  <textarea [(ngModel)]="workProgramTransitionForm.comment" rows="2" class="finput" maxlength="500"></textarea>
-                  <small class="field-note" *ngIf="selectedWorkProgramTransitionRequiresComment">Commentaire obligatoire pour demander une correction.</small>
+                <div class="detail-grid compact-validation-grid">
+                  <div class="form-group">
+                    <label>Action</label>
+                    <select [(ngModel)]="workProgramTransitionForm.transition" class="finput" required>
+                      <option value="">Selectionner...</option>
+                      <option *ngFor="let transition of workProgramTransitions" [value]="transition">
+                        {{ formatMissionWorkflowTransition(transition) }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-group full">
+                    <label>Commentaire</label>
+                    <textarea [(ngModel)]="workProgramTransitionForm.comment" rows="2" class="finput" maxlength="500"></textarea>
+                    <small class="field-note" *ngIf="selectedWorkProgramTransitionRequiresComment">Commentaire obligatoire pour demander une reprise.</small>
+                  </div>
                 </div>
+                <button class="btn-save" (click)="applyWorkProgramTransition()" [disabled]="!canSubmitWorkProgramTransition">
+                  {{ isApplyingWorkProgramTransition ? 'Traitement...' : 'Appliquer au programme' }}
+                </button>
               </div>
-              <button class="btn-save" *ngIf="workProgramTransitions.length > 0 && activeMissionPanel === 'validate'" (click)="applyWorkProgramTransition()" [disabled]="!canSubmitWorkProgramTransition">
-                {{ isApplyingWorkProgramTransition ? 'Traitement...' : 'Appliquer la transition programme' }}
-              </button>
             </div>
           </div>
 
@@ -530,6 +529,17 @@
                 <div class="detail-item"><label>Approuve le</label><span>{{ workspace.report.approvedAt ? (workspace.report.approvedAt | date:'dd/MM/yyyy HH:mm') : '-' }}</span></div>
               </div>
 
+              <div class="report-content-preview">
+                <div class="report-content-block">
+                  <label>Rapport</label>
+                  <p>{{ workspace.report.rapport || '-' }}</p>
+                </div>
+                <div class="report-content-block">
+                  <label>Recommandations</label>
+                  <p>{{ workspace.report.recommandations || '-' }}</p>
+                </div>
+              </div>
+
               <div class="detail-grid" *ngIf="workspace.permissions.canEditReport && activeMissionPanel === 'process'">
                 <div class="form-group full">
                   <label>Rapport</label>
@@ -546,23 +556,34 @@
                 {{ isSavingReport ? 'Sauvegarde...' : 'Sauvegarder le rapport' }}
               </button>
 
-              <div class="detail-grid" *ngIf="reportTransitions.length > 0 && activeMissionPanel === 'validate'">
-                <div class="form-group">
-                  <label>Transition</label>
-                  <select [(ngModel)]="reportTransitionForm.transition" class="finput" required>
-                    <option value="">Selectionner...</option>
-                    <option *ngFor="let transition of reportTransitions" [value]="transition">{{ transition }}</option>
-                  </select>
+              <div class="validation-inline-panel" *ngIf="reportTransitions.length > 0">
+                <div class="validation-inline-head">
+                  <div>
+                    <span class="eyebrow">Validation</span>
+                    <h4>Actions du rapport</h4>
+                  </div>
+                  <span class="status-badge">{{ reportTransitions.length }} action(s)</span>
                 </div>
-                <div class="form-group full">
-                  <label>Commentaire</label>
-                  <textarea [(ngModel)]="reportTransitionForm.comment" rows="2" class="finput" maxlength="500"></textarea>
-                  <small class="field-note" *ngIf="selectedReportTransitionRequiresComment">Commentaire obligatoire pour demander une correction.</small>
+                <div class="detail-grid compact-validation-grid">
+                  <div class="form-group">
+                    <label>Action</label>
+                    <select [(ngModel)]="reportTransitionForm.transition" class="finput" required>
+                      <option value="">Selectionner...</option>
+                      <option *ngFor="let transition of reportTransitions" [value]="transition">
+                        {{ formatMissionWorkflowTransition(transition) }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-group full">
+                    <label>Commentaire</label>
+                    <textarea [(ngModel)]="reportTransitionForm.comment" rows="2" class="finput" maxlength="500"></textarea>
+                    <small class="field-note" *ngIf="selectedReportTransitionRequiresComment">Commentaire obligatoire pour demander une reprise.</small>
+                  </div>
                 </div>
+                <button class="btn-save" (click)="applyReportTransition()" [disabled]="!canSubmitReportTransition">
+                  {{ isApplyingReportTransition ? 'Traitement...' : 'Appliquer au rapport' }}
+                </button>
               </div>
-              <button class="btn-save" *ngIf="reportTransitions.length > 0 && activeMissionPanel === 'validate'" (click)="applyReportTransition()" [disabled]="!canSubmitReportTransition">
-                {{ isApplyingReportTransition ? 'Traitement...' : 'Appliquer la transition rapport' }}
-              </button>
             </div>
           </div>
 
@@ -736,22 +757,10 @@
               <select class="finput" [(ngModel)]="resource.assignmentRoleCode" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
                 <option *ngFor="let role of assignmentRoleOptions" [value]="role.code">{{ role.label }}</option>
               </select>
-              <input class="finput" type="number" min="0" max="100" step="1" [(ngModel)]="resource.allocationPercent" [disabled]="!missionWorkspace?.permissions?.canManageResources" required>
-              <span class="allocation-label">%</span>
               <button class="action-btn btn-delete" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="removeResourceRow(i)" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
             </div>
           </div>
-          <small class="field-note allocation-note" *ngIf="missionResources.length > 0">
-            Allocation = pourcentage de disponibilite de la ressource sur cette mission. Exemple: 100 = temps plein, 50 = mi-temps.
-          </small>
           <p class="empty-state" *ngIf="missionResources.length === 0">Aucune ressource affectee pour cette mission.</p>
-
-          <div class="form-group full">
-            <label>Competences requises pour la mission</label>
-            <select class="finput multi" multiple [(ngModel)]="selectedRequiredSkillIds" [disabled]="!missionWorkspace?.permissions?.canManageResources">
-              <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
-            </select>
-          </div>
 
           <button class="btn-save" *ngIf="missionWorkspace?.permissions?.canManageResources" (click)="saveResources()" [disabled]="isSavingResources || !resourcesFormIsValid">
             {{ isSavingResources ? 'Sauvegarde...' : 'Sauvegarder les ressources' }}
@@ -759,24 +768,6 @@
         </div>
       </div>
 
-      <div class="resource-admin-panel side">
-        <div class="form-group">
-          <label>Utilisateur pour competences</label>
-        <select class="finput" [(ngModel)]="selectedUserForSkillsId" (ngModelChange)="loadUserSkills()" required>
-            <option [ngValue]="null">Selectionner...</option>
-            <option *ngFor="let user of users" [ngValue]="user.id">{{ user.prenom }} {{ user.nom }}</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label>Competences disponibles</label>
-          <select class="finput multi" multiple [(ngModel)]="selectedUserSkillIds">
-            <option *ngFor="let skill of skills" [ngValue]="skill.id">{{ skill.label }}</option>
-          </select>
-        </div>
-        <button class="btn-save" *ngIf="selectedUserForSkillsId" (click)="saveUserSkills()" [disabled]="isSavingUserSkills">
-          {{ isSavingUserSkills ? 'Sauvegarde...' : 'Sauvegarder les competences utilisateur' }}
-        </button>
-      </div>
     </div>
   </div>
 
@@ -793,43 +784,53 @@
       <div class="recommendation-card" *ngFor="let item of plan.recommendations">
         <div class="recommendation-head">
           <span class="status-chip">#{{ item.code || item.id }}</span>
-          <span class="status-badge">{{ item.statut || '-' }}</span>
+          <span class="status-badge">{{ item.workflowStatusLabel || item.statut || '-' }}</span>
         </div>
+        <span class="eyebrow">Recommandation</span>
         <h4>{{ item.recommandations || item.objectifs || item.titre || '-' }}</h4>
+        <div class="recommendation-detail-grid">
+          <div class="recommendation-detail-item">
+            <label>Regle / constat</label>
+            <p>{{ item.regleDnssi || '-' }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Plan d action</label>
+            <p>{{ item.planAction || '-' }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Type</label>
+            <p>{{ item.planActionType || '-' }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Horizon</label>
+            <p>{{ item.horizon || '-' }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Priorite</label>
+            <p>{{ item.priorite || '-' }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Avancement</label>
+            <p>{{ item.tauxAvancement ?? 0 }}% - {{ formatRecommendationEvaluation(item.evaluationAvancement) }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Echeance</label>
+            <p>{{ item.echeance ? (item.echeance | date:'dd/MM/yyyy') : '-' }}</p>
+          </div>
+          <div class="recommendation-detail-item">
+            <label>Responsable</label>
+            <p>{{ item.responsable ? (item.responsable.prenom + ' ' + item.responsable.nom) : (item.responsableNom || '-') }}</p>
+          </div>
+          <div class="recommendation-detail-item full">
+            <label>Commentaire workflow</label>
+            <p>{{ item.commentaireWorkflow || '-' }}</p>
+          </div>
+        </div>
         <div class="recommendation-meta">
           <span><i class="fas fa-briefcase"></i> {{ item.sourceMission?.titre || '-' }}</span>
           <span><i class="fas fa-user-check"></i> {{ item.auditeur ? (item.auditeur.prenom + ' ' + item.auditeur.nom) : '-' }}</span>
+          <span><i class="fas fa-calendar-check"></i> {{ item.dateValidationPlan ? (item.dateValidationPlan | date:'dd/MM/yyyy') : '-' }}</span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="missions-card" *ngIf="activeTab === 'competences'">
-    <div class="submodule-panel-head">
-      <div>
-        <span class="eyebrow">Competences</span>
-        <h3>Couverture par mission</h3>
-      </div>
-      <span class="status-badge">{{ plan.skillsReport?.missions?.length || 0 }} analyse(s)</span>
-    </div>
-    <p class="empty-state" *ngIf="!plan.skillsReport?.missions?.length">Aucune analyse de competences n est disponible pour les missions visibles.</p>
-    <div class="stats-grid compact" *ngIf="plan.skillsReport">
-      <div class="stat-card total"><span class="label">Missions</span><span class="value">{{ plan.skillsReport.summary.missionCount }}</span></div>
-      <div class="stat-card completed"><span class="label">Couvertes</span><span class="value">{{ plan.skillsReport.summary.coveredCount }}</span></div>
-      <div class="stat-card pending"><span class="label">Partielles</span><span class="value">{{ plan.skillsReport.summary.partialCount }}</span></div>
-      <div class="stat-card risks"><span class="label">Gaps</span><span class="value">{{ plan.skillsReport.summary.gapCount }}</span></div>
-    </div>
-    <div class="skills-coverage-grid" *ngIf="plan.skillsReport">
-      <div class="skill-coverage-card" *ngFor="let item of plan.skillsReport.missions">
-        <div class="skill-coverage-head">
-          <h4>{{ item.missionTitle }}</h4>
-          <span class="status-badge">{{ item.coverage }}</span>
-        </div>
-        <div class="skill-metrics">
-          <span><small>Requises</small><strong>{{ item.requiredSkillCount }}</strong></span>
-          <span><small>Disponibles</small><strong>{{ item.availableSkillCount }}</strong></span>
-        </div>
-        <p [class.error-text]="item.gapSkills?.length">Gaps: {{ formatSkillLabels(item.gapSkills) || '-' }}</p>
       </div>
     </div>
   </div>

@@ -28,7 +28,6 @@ export class AuditPlansComponent implements OnInit {
     pendingValidation: 0,
     overdue: 0
   };
-  spotlightItems: Array<{ title: string; subtitle: string; status: string }> = [];
 
   filters = {
     nom: '',
@@ -70,19 +69,6 @@ export class AuditPlansComponent implements OnInit {
     return this.currentUserRole === UserRole.CHEF_MISSION
       || this.currentUserRole === UserRole.AUDITEUR
       || this.currentUserRole === UserRole.CONTROLLER;
-  }
-
-  get scopeDescription(): string {
-    switch (this.currentUserRole) {
-      case UserRole.CHEF_MISSION:
-        return 'Vous voyez uniquement les plans contenant les missions qui vous sont affectees.';
-      case UserRole.AUDITEUR:
-        return 'Vous voyez uniquement les plans contenant vos missions d audit assignees.';
-      case UserRole.CONTROLLER:
-        return 'Vous voyez uniquement les plans relies a votre perimetre de suivi et de recommandations.';
-      default:
-        return 'Le module unique centralise creation, validation, assignation, execution, verification et suivi des plans d audit.';
-    }
   }
 
   get isManagementRole(): boolean {
@@ -142,25 +128,6 @@ export class AuditPlansComponent implements OnInit {
     }
 
     return errors;
-  }
-
-  get profileDashboardTitle(): string {
-    switch (this.currentUserRole) {
-      case UserRole.AUDIT_DIRECTEUR:
-        return 'Pilotage de validation et d approbation';
-      case UserRole.AUDIT_RESPONSABLE:
-        return 'Pilotage operationnel des plans et missions';
-      case UserRole.CHEF_MISSION:
-        return 'Execution des missions et livrables';
-      case UserRole.AUDITEUR:
-        return 'Suivi de mes missions et preuves';
-      case UserRole.CONTROLLER:
-        return 'Suivi des recommandations et plans d action';
-      case UserRole.TOP_MANAGEMENT:
-        return 'Vue consolidee du portefeuille d audit';
-      default:
-        return 'Vue consolidee du module Plan d Audit';
-    }
   }
 
   ngOnInit(): void {
@@ -324,6 +291,25 @@ export class AuditPlansComponent implements OnInit {
     this.router.navigate(['/dashboard/audit-plans', plan.id]);
   }
 
+  getPlanStatusClass(plan: AuditPlan): string {
+    const status = this.normalizeStatus(plan.statusCode || plan.status);
+
+    if (this.isDraftStatus(status)) {
+      return 'status-chip status-draft';
+    }
+    if (status.includes('ferme') || status.includes('cloture')) {
+      return 'status-chip status-closed';
+    }
+    if (this.isValidatedStatus(status)) {
+      return 'status-chip status-valid';
+    }
+    if (status.includes('retard') || status.includes('rejete')) {
+      return 'status-chip status-alert';
+    }
+
+    return 'status-chip status-pending';
+  }
+
   private normalizeStatus(value?: string | null): string {
     return (value || '')
       .toString()
@@ -336,9 +322,13 @@ export class AuditPlansComponent implements OnInit {
 
   private buildDashboard(): void {
     const now = new Date().getTime();
-    const inProgress = this.missions.filter((mission) => this.normalizeStatus(mission.statut) === 'en_cours').length;
-    const completed = this.missions.filter((mission) => this.normalizeStatus(mission.statut) === 'ok').length;
-    const overdue = this.missions.filter((mission) => {
+    const visiblePlanIds = new Set(this.plans.map((plan) => Number(plan.id)));
+    const visibleMissions = this.missions.filter((mission) =>
+      mission.auditPlanId != null && visiblePlanIds.has(Number(mission.auditPlanId))
+    );
+    const inProgress = visibleMissions.filter((mission) => this.normalizeStatus(mission.statut) === 'en_cours').length;
+    const completed = visibleMissions.filter((mission) => this.normalizeStatus(mission.statut) === 'ok').length;
+    const overdue = visibleMissions.filter((mission) => {
       if (!mission.delai) {
         return false;
       }
@@ -352,31 +342,22 @@ export class AuditPlansComponent implements OnInit {
 
     this.dashboardStats = {
       plans: this.plans.length,
-      missions: this.missions.length,
+      missions: this.totalMissionCount,
       inProgress,
       completed,
       pendingValidation,
       overdue
     };
 
-    this.spotlightItems = this.missions
-      .slice()
-      .sort((a, b) => {
-        const aDate = a.delai ? new Date(a.delai).getTime() : Number.MAX_SAFE_INTEGER;
-        const bDate = b.delai ? new Date(b.delai).getTime() : Number.MAX_SAFE_INTEGER;
-        return aDate - bDate;
-      })
-      .slice(0, 4)
-      .map((mission) => ({
-        title: mission.titre,
-        subtitle: mission.delai ? `Echeance ${new Date(mission.delai).toLocaleDateString('fr-FR')}` : 'Sans echeance',
-        status: String(mission.statut || '-')
-      }));
   }
 
   private isDraftStatus(value?: string | null): boolean {
     const normalized = this.normalizeStatus(value);
-    return normalized.includes('brouillon') || normalized.includes('draft') || normalized.includes('prepare');
+    return normalized.includes('brouillon')
+      || normalized.includes('draft')
+      || normalized.includes('prepare')
+      || normalized === 'cree'
+      || normalized === 'creation';
   }
 
   private isValidatedStatus(value?: string | null): boolean {

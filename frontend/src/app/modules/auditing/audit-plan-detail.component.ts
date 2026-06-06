@@ -711,7 +711,7 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/dashboard/audit-plans']);
   }
 
   openPlanningWorkspace(): void {

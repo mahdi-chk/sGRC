@@ -12,52 +12,101 @@
 /* Removed extra brace here */
 
 /* Filter Bar */
-.filter-bar {
+.filters-bar {
     display: flex;
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
     margin-bottom: 25px;
     background: white;
-    padding: 15px 30px;
+    padding: 15px 25px;
     border-radius: 18px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
     border: 1px solid #f1f5f9;
-    align-items: center;
+    flex-wrap: wrap;
+
+    .filter-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .filter-group-wrapper {
+        flex: 1 1 260px;
+        min-width: 220px;
+    }
 
     .filter-group {
         display: flex;
         align-items: center;
         gap: 10px;
-        flex: 1;
+        width: 100%;
         position: relative;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0 12px;
+        height: 48px;
 
         i {
-            color: #94a3b8;
-            font-size: 0.9rem;
+            color: #64748b;
+            font-size: 0.95rem;
         }
 
         input,
         select {
             width: 100%;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            font-size: 0.9rem;
+            border: none;
+            background: transparent;
+            font-size: 0.95rem;
             color: #1e293b;
             font-weight: 500;
-            transition: all 0.2s;
             outline: none;
-            background: #f8fafc;
+            margin: 0;
+            height: 100%;
+        }
 
-            &:focus {
-                border-color: #7c3aed;
-                background: white;
-                box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 12px center;
+            background-size: 14px;
+        }
+
+        &:focus-within {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+
+            i {
+                color: #7c3aed;
             }
         }
+    }
 
-        input {
-            flex: 2;
-        }
+    .btn-reset {
+        background: transparent;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        border-radius: 12px;
+        padding: 0 16px;
+        height: 48px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-reset:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+
+    .results-info {
+        white-space: nowrap;
+        flex-shrink: 0;
     }
 }
 

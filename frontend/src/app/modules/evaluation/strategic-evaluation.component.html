@@ -26,33 +26,39 @@
     <app-risk-module-tabs></app-risk-module-tabs>
 
     <!-- Filters Section -->
-    <div class="filter-bar premium">
+    <div class="filters-bar premium">
         <div class="filter-controls">
-            <div class="filter-group">
-                <i class="fas fa-search"></i>
-                <input type="text" [(ngModel)]="searchTerm" (input)="onFilterChange()"
-                    placeholder="Chercher par nom, département...">
+            <div class="filter-group-wrapper">
+                <div class="filter-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" [(ngModel)]="searchTerm" (input)="onFilterChange()"
+                        placeholder="Chercher par nom, département...">
+                </div>
             </div>
-            <div class="filter-group">
-                <i class="fas fa-tasks"></i>
-                <select [(ngModel)]="statusFilter" (change)="onFilterChange()">
-                    <option value="">Tous les statuts</option>
-                    <option [value]="RiskStatus.OPEN">{{ statusLabelMap[RiskStatus.OPEN] }}</option>
-                    <option [value]="RiskStatus.IN_PROGRESS">{{ statusLabelMap[RiskStatus.IN_PROGRESS] }}</option>
-                    <option [value]="RiskStatus.TREATED">{{ statusLabelMap[RiskStatus.TREATED] }}</option>
-                    <option [value]="RiskStatus.CLOSED">{{ statusLabelMap[RiskStatus.CLOSED] }}</option>
-                </select>
+            <div class="filter-group-wrapper">
+                <div class="filter-group">
+                    <i class="fas fa-tasks"></i>
+                    <select [(ngModel)]="statusFilter" (change)="onFilterChange()">
+                        <option value="">Tous les statuts</option>
+                        <option [value]="RiskStatus.OPEN">{{ statusLabelMap[RiskStatus.OPEN] }}</option>
+                        <option [value]="RiskStatus.IN_PROGRESS">{{ statusLabelMap[RiskStatus.IN_PROGRESS] }}</option>
+                        <option [value]="RiskStatus.TREATED">{{ statusLabelMap[RiskStatus.TREATED] }}</option>
+                        <option [value]="RiskStatus.CLOSED">{{ statusLabelMap[RiskStatus.CLOSED] }}</option>
+                    </select>
+                </div>
             </div>
-            <div class="filter-group">
-                <i class="fas fa-layer-group"></i>
-                <select [(ngModel)]="levelFilter" (change)="onFilterChange()">
-                    <option value="">Tous les niveaux</option>
-                    <option [value]="RiskLevel.LOW">{{ levelLabelMap[RiskLevel.LOW] }}</option>
-                    <option [value]="RiskLevel.LIMITED">{{ levelLabelMap[RiskLevel.LIMITED] }}</option>
-                    <option [value]="RiskLevel.MEDIUM">{{ levelLabelMap[RiskLevel.MEDIUM] }}</option>
-                    <option [value]="RiskLevel.HIGH">{{ levelLabelMap[RiskLevel.HIGH] }}</option>
-                    <option [value]="RiskLevel.CRITICAL">{{ levelLabelMap[RiskLevel.CRITICAL] }}</option>
-                </select>
+            <div class="filter-group-wrapper">
+                <div class="filter-group">
+                    <i class="fas fa-layer-group"></i>
+                    <select [(ngModel)]="levelFilter" (change)="onFilterChange()">
+                        <option value="">Tous les niveaux</option>
+                        <option [value]="RiskLevel.LOW">{{ levelLabelMap[RiskLevel.LOW] }}</option>
+                        <option [value]="RiskLevel.LIMITED">{{ levelLabelMap[RiskLevel.LIMITED] }}</option>
+                        <option [value]="RiskLevel.MEDIUM">{{ levelLabelMap[RiskLevel.MEDIUM] }}</option>
+                        <option [value]="RiskLevel.HIGH">{{ levelLabelMap[RiskLevel.HIGH] }}</option>
+                        <option [value]="RiskLevel.CRITICAL">{{ levelLabelMap[RiskLevel.CRITICAL] }}</option>
+                    </select>
+                </div>
             </div>
             <button class="btn-reset" (click)="clearFilters()" *ngIf="searchTerm || statusFilter || levelFilter">
                 <i class="fas fa-undo"></i> Réinitialiser

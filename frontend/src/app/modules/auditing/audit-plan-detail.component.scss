@@ -1675,3 +1675,102 @@
     grid-template-columns: 1fr;
   }
 }
+/* Fix affichage Plans d'action / Recommandations */
+.action-plan-card {
+  grid-template-columns: 54px minmax(0, 1fr) minmax(220px, 320px);
+  align-items: flex-start;
+}
+
+.action-plan-content,
+.action-plan-head,
+.action-plan-meta,
+.recommendation-workflow-summary {
+  min-width: 0;
+}
+
+.action-plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-plan-head > div {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.action-plan-head h4,
+.action-plan-content p,
+.recommendation-workflow-summary p {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.action-stack .compact-action {
+  width: 100%;
+  padding: 10px 12px;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.action-stack .action-btn {
+  width: 42px;
+  height: 42px;
+  align-self: flex-end;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .action-plan-card {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .action-stack {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .action-stack .compact-action {
+    width: auto;
+    flex: 1 1 180px;
+  }
+
+  .action-stack .action-btn {
+    align-self: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .action-plan-card {
+    grid-template-columns: 1fr;
+  }
+
+  .action-plan-order,
+  .action-stack {
+    grid-column: auto;
+  }
+
+  .action-stack {
+    flex-direction: column;
+  }
+
+  .action-stack .compact-action {
+    width: 100%;
+  }
+}

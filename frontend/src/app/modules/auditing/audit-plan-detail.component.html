@@ -289,6 +289,33 @@
           </div>
         </div>
 
+        <div class="workflow-gates" aria-label="Progression du workflow de la mission">
+          <div class="workflow-gate" [class.complete]="isMissionOrderSent">
+            <span class="workflow-gate-icon">
+              <i class="fas" [class.fa-check]="isMissionOrderSent" [class.fa-paper-plane]="!isMissionOrderSent"></i>
+            </span>
+            <span class="workflow-gate-copy"><small>Etape 1</small><strong>Ordre envoye</strong></span>
+          </div>
+          <div class="workflow-gate" [class.complete]="isWorkProgramValidated">
+            <span class="workflow-gate-icon">
+              <i class="fas" [class.fa-check]="isWorkProgramValidated" [class.fa-list-check]="!isWorkProgramValidated"></i>
+            </span>
+            <span class="workflow-gate-copy"><small>Etape 2</small><strong>Programme valide</strong></span>
+          </div>
+          <div class="workflow-gate" [class.complete]="isChecklistComplete">
+            <span class="workflow-gate-icon">
+              <i class="fas" [class.fa-check]="isChecklistComplete" [class.fa-square-check]="!isChecklistComplete"></i>
+            </span>
+            <span class="workflow-gate-copy"><small>Etape 3</small><strong>Checklist terminee</strong></span>
+          </div>
+          <div class="workflow-gate" [class.complete]="isReportStarted">
+            <span class="workflow-gate-icon">
+              <i class="fas" [class.fa-check]="isReportStarted" [class.fa-file-lines]="!isReportStarted"></i>
+            </span>
+            <span class="workflow-gate-copy"><small>Etape 4</small><strong>Rapport demarre</strong></span>
+          </div>
+        </div>
+
         <div class="mission-function-nav" aria-label="Fonctionnalites de la mission">
           <button *ngFor="let panel of missionPanels"
                   type="button"
@@ -441,6 +468,10 @@
             <div class="card-body">
               <p><strong>Avancement checklist:</strong> {{ workspace.workProgram.completionPercent || 0 }}%</p>
               <p><strong>Commentaire de workflow:</strong> {{ workspace.workProgram.lastComment || '-' }}</p>
+              <div class="workflow-prerequisite" *ngIf="workProgramPrerequisiteMessage">
+                <span class="workflow-prerequisite-icon"><i class="fas fa-lock"></i></span>
+                <span><strong>Etape bloquee</strong>{{ workProgramPrerequisiteMessage }}</span>
+              </div>
 
               <div class="detail-grid" *ngIf="workspace.permissions.canEditWorkProgram && activeMissionPanel === 'process'">
                 <div class="form-group full template-management-head">
@@ -475,6 +506,10 @@
               </div>
 
               <div class="checklist-runner" *ngIf="workspace.workProgram.items?.length && activeMissionPanel === 'process'">
+                <div class="workflow-prerequisite" *ngIf="checklistPrerequisiteMessage">
+                  <span class="workflow-prerequisite-icon"><i class="fas fa-lock"></i></span>
+                  <span><strong>Execution indisponible</strong>{{ checklistPrerequisiteMessage }}</span>
+                </div>
                 <div class="checklist-status-row" *ngFor="let item of workspace.workProgram.items">
                   <label>
                     <input type="checkbox"
@@ -526,6 +561,10 @@
               <span class="status-badge">{{ workspace.report.statusLabel }}</span>
             </div>
             <div class="card-body">
+              <div class="workflow-prerequisite" *ngIf="reportPrerequisiteMessage">
+                <span class="workflow-prerequisite-icon"><i class="fas fa-lock"></i></span>
+                <span><strong>Rapport verrouille</strong>{{ reportPrerequisiteMessage }}</span>
+              </div>
               <div class="detail-grid">
                 <div class="detail-item"><label>Commentaire de workflow</label><span>{{ workspace.report.lastComment || '-' }}</span></div>
                 <div class="detail-item"><label>Soumis le</label><span>{{ workspace.report.submittedAt ? (workspace.report.submittedAt | date:'dd/MM/yyyy HH:mm') : '-' }}</span></div>

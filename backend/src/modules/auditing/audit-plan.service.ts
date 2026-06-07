@@ -269,34 +269,45 @@ export class AuditPlanService {
         return mapping[normalized] || normalized;
     }
 
-    private static buildMissionPermissions(mission: AuditMission, role: string, userId: number): MissionPermissions {
+    private static buildMissionPermissions(mission: AuditMission, role: string, userId: number, checklistItems: any[] = []): MissionPermissions {
         const isAssignedChef = role === UserRole.CHEF_MISSION && mission.chefMissionId === userId;
         const isAssignedAuditor = role === UserRole.AUDITEUR && mission.auditeurId === userId;
         const isGlobalManager = [UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.AUDIT_DIRECTEUR, UserRole.CONTROLLER].includes(role);
+        const missionOrderSent = Boolean(mission.missionOrderSentAt);
+        const workProgramStatus = String(mission.workProgramStatus || 'draft');
+        const workProgramCanRun = missionOrderSent && ['validated', 'approved'].includes(workProgramStatus);
+        const checklistComplete = checklistItems.length > 0 && checklistItems.every((item: any) => Boolean(item.estFait));
+        const reportPrerequisitesMet = workProgramStatus === 'approved' && checklistComplete;
         const canEditWorkProgram = isRoleAllowed(role, WORK_PROGRAM_EDITOR_ROLES)
             && (role === UserRole.SUPER_ADMIN || role === UserRole.AUDIT_RESPONSABLE || isAssignedChef)
-            && EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'));
+            && missionOrderSent
+            && EDITABLE_WORKFLOW_STATUSES.includes(workProgramStatus);
         const canEditReport = isRoleAllowed(role, REPORT_EDITOR_ROLES)
             && (
                 role === UserRole.SUPER_ADMIN
                 || isAssignedChef
                 || isAssignedAuditor
             )
+            && reportPrerequisitesMet
             && EDITABLE_WORKFLOW_STATUSES.includes(String(mission.reportStatus || 'draft'));
 
         return {
             canManageResources: isRoleAllowed(role, MISSION_ORDER_MANAGER_ROLES),
             canSendMissionOrder: isRoleAllowed(role, MISSION_ORDER_MANAGER_ROLES),
             canEditWorkProgram,
-            canExecuteWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EXECUTION_ROLES) && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor),
+            canExecuteWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EXECUTION_ROLES)
+                && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor)
+                && workProgramCanRun,
             canSubmitWorkProgram: isRoleAllowed(role, WORK_PROGRAM_EDITOR_ROLES)
                 && (role === UserRole.SUPER_ADMIN || role === UserRole.AUDIT_RESPONSABLE || isAssignedChef)
-                && ['draft', 'rework_requested'].includes(String(mission.workProgramStatus || 'draft')),
-            canValidateWorkProgram: isRoleAllowed(role, WORK_PROGRAM_VALIDATOR_ROLES) && String(mission.workProgramStatus || 'draft') === 'submitted',
-            canApproveWorkProgram: isRoleAllowed(role, WORK_PROGRAM_APPROVER_ROLES) && String(mission.workProgramStatus || 'draft') === 'validated',
+                && missionOrderSent
+                && ['draft', 'rework_requested'].includes(workProgramStatus),
+            canValidateWorkProgram: isRoleAllowed(role, WORK_PROGRAM_VALIDATOR_ROLES) && workProgramStatus === 'submitted',
+            canApproveWorkProgram: isRoleAllowed(role, WORK_PROGRAM_APPROVER_ROLES) && workProgramStatus === 'validated',
             canEditReport,
             canSubmitReport: isRoleAllowed(role, REPORT_SUBMITTER_ROLES)
                 && (role === UserRole.SUPER_ADMIN || isAssignedChef)
+                && reportPrerequisitesMet
                 && ['draft', 'rework_requested'].includes(String(mission.reportStatus || 'draft')),
             canValidateReport: isRoleAllowed(role, REPORT_VALIDATOR_ROLES) && String(mission.reportStatus || 'draft') === 'submitted',
             canApproveReport: isRoleAllowed(role, REPORT_APPROVER_ROLES) && String(mission.reportStatus || 'draft') === 'validated',
@@ -304,9 +315,22 @@ export class AuditPlanService {
             canUpdateActionPlan: isRoleAllowed(role, ACTION_PLAN_UPDATE_ROLES) && (isGlobalManager || isAssignedChef || isAssignedAuditor),
             canDeleteActionPlan: isRoleAllowed(role, ACTION_PLAN_DELETE_ROLES) && (role !== UserRole.CHEF_MISSION || isAssignedChef),
             canFollowActionPlan: isRoleAllowed(role, ACTION_PLAN_UPDATE_ROLES) && (isGlobalManager || isAssignedChef || isAssignedAuditor),
-            canUploadEvidence: isRoleAllowed(role, EVIDENCE_UPLOAD_ROLES) && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor),
+            canUploadEvidence: isRoleAllowed(role, EVIDENCE_UPLOAD_ROLES)
+                && (role === UserRole.SUPER_ADMIN || isAssignedChef || isAssignedAuditor)
+                && workProgramCanRun,
             canDeleteEvidence: isRoleAllowed(role, EVIDENCE_DELETE_ROLES) && (isGlobalManager || isAssignedChef || isAssignedAuditor),
         };
+    }
+
+    private static async ensureReportPrerequisites(mission: AuditMission): Promise<void> {
+        if (String(mission.workProgramStatus || 'draft') !== 'approved') {
+            throw new Error('Le programme de travail doit etre approuve avant la redaction du rapport');
+        }
+
+        const checklistItems = await AuditingService.getMissionChecklistItems(mission.id);
+        if (checklistItems.length === 0 || checklistItems.some((item: any) => !item.estFait)) {
+            throw new Error('Tous les points de la checklist doivent etre executes avant la redaction du rapport');
+        }
     }
 
     private static async createMissionWorkflowEvent(
@@ -1624,6 +1648,10 @@ export class AuditPlanService {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_EDITOR_ROLES);
 
+        if (!mission.missionOrderSentAt) {
+            throw new Error('L ordre de mission doit etre envoye avant la preparation du programme de travail');
+        }
+
         if (!EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'))) {
             throw new Error('Le programme de travail doit etre en brouillon ou retourne pour modification');
         }
@@ -1689,8 +1717,12 @@ export class AuditPlanService {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_EXECUTION_ROLES);
 
-        if (!['validated', 'approved'].includes(String(mission.workProgramStatus || 'draft')) && !EDITABLE_WORKFLOW_STATUSES.includes(String(mission.workProgramStatus || 'draft'))) {
-            throw new Error('Le programme de travail n est pas pret pour l execution');
+        if (!mission.missionOrderSentAt) {
+            throw new Error('L ordre de mission doit etre envoye avant l execution de la checklist');
+        }
+
+        if (!['validated', 'approved'].includes(String(mission.workProgramStatus || 'draft'))) {
+            throw new Error('Le programme de travail doit etre valide avant l execution de la checklist');
         }
 
         await AuditingService.toggleMissionChecklistItem(missionId, itemId, estFait);
@@ -1705,6 +1737,9 @@ export class AuditPlanService {
 
         if (transition === 'submit') {
             this.ensureMissionRole(mission, actorRole, actorUserId, WORK_PROGRAM_EDITOR_ROLES);
+            if (!mission.missionOrderSentAt) {
+                throw new Error('L ordre de mission doit etre envoye avant la soumission du programme de travail');
+            }
             if (!['draft', 'rework_requested'].includes(currentStatus)) {
                 throw new Error('Le programme de travail ne peut pas etre soumis dans ce statut');
             }
@@ -1819,6 +1854,7 @@ export class AuditPlanService {
     static async saveMissionReport(missionId: number, actorUserId: number, actorRole: string, data: any) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_EDITOR_ROLES);
+        await this.ensureReportPrerequisites(mission);
 
         if (!EDITABLE_WORKFLOW_STATUSES.includes(String(mission.reportStatus || 'draft'))) {
             throw new Error('Le rapport doit etre en brouillon ou retourne pour modification');
@@ -1840,6 +1876,7 @@ export class AuditPlanService {
 
         if (transition === 'submit') {
             this.ensureMissionRole(mission, actorRole, actorUserId, REPORT_SUBMITTER_ROLES);
+            await this.ensureReportPrerequisites(mission);
             if (!['draft', 'rework_requested'].includes(currentStatus)) {
                 throw new Error('Le rapport ne peut pas etre soumis dans ce statut');
             }
@@ -1963,7 +2000,7 @@ export class AuditPlanService {
         const actionPlanItems = await AuditingService.getMissionActionPlanItems(missionId);
         const workflowHistory = await this.getMissionWorkflowHistory(missionId);
         const emailHistory = await this.getMissionEmailHistory(missionId, actorRole, actorUserId);
-        const permissions = this.buildMissionPermissions(mission, actorRole, actorUserId);
+        const permissions = this.buildMissionPermissions(mission, actorRole, actorUserId, checklistItems);
         const checklistDoneCount = checklistItems.filter((item: any) => item.estFait).length;
 
         return {
@@ -2018,6 +2055,9 @@ export class AuditPlanService {
     static async addMissionEvidence(missionId: number, actorRole: string, actorUserId: number, filename: string, filePath: string) {
         const mission = await this.getMissionById(missionId);
         this.ensureMissionRole(mission, actorRole, actorUserId, EVIDENCE_UPLOAD_ROLES);
+        if (!mission.missionOrderSentAt || !['validated', 'approved'].includes(String(mission.workProgramStatus || 'draft'))) {
+            throw new Error('Le programme de travail doit etre valide avant l ajout de preuves');
+        }
         return AuditingService.addMissionEvidence(missionId, filename, filePath, actorUserId);
     }
 

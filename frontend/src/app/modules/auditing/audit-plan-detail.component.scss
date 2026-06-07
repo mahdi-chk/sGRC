@@ -1556,3 +1556,122 @@
     grid-template-columns: 1fr;
   }
 }
+.workflow-gates {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin: 16px 0 20px;
+}
+
+.workflow-gate {
+  --gate-color: #94a3b8;
+  --gate-soft: #f1f5f9;
+  display: flex;
+  min-width: 0;
+  min-height: 64px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.workflow-gate-icon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  border-radius: 8px;
+  background: var(--gate-soft);
+  color: var(--gate-color);
+}
+
+.workflow-gate-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workflow-gate-copy small {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.workflow-gate-copy strong {
+  overflow-wrap: anywhere;
+  color: #334155;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
+.workflow-gate.complete {
+  --gate-color: #047857;
+  --gate-soft: #d1fae5;
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+}
+
+.workflow-gate.complete .workflow-gate-copy strong {
+  color: #166534;
+}
+
+.workflow-prerequisite {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #7c2d12;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.workflow-prerequisite-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  border-radius: 8px;
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.workflow-prerequisite > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workflow-prerequisite strong {
+  color: #9a3412;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 760px) {
+  .workflow-gates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .workflow-gates {
+    grid-template-columns: 1fr;
+  }
+}

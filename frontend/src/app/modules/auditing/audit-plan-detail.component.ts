@@ -612,6 +612,61 @@ export class AuditPlanDetailComponent implements OnInit {
     );
   }
 
+  get isMissionOrderSent(): boolean {
+    return this.missionWorkspace?.missionOrder?.status === 'sent';
+  }
+
+  get isWorkProgramValidated(): boolean {
+    return ['validated', 'approved'].includes(this.missionWorkspace?.workProgram?.status || '');
+  }
+
+  get isWorkProgramApproved(): boolean {
+    return this.missionWorkspace?.workProgram?.status === 'approved';
+  }
+
+  get isChecklistComplete(): boolean {
+    const items = this.missionWorkspace?.workProgram?.items || [];
+    return items.length > 0 && items.every((item) => Boolean(item.estFait));
+  }
+
+  get isReportStarted(): boolean {
+    const report = this.missionWorkspace?.report;
+    return Boolean(
+      report
+      && (
+        report.status !== 'draft'
+        || String(report.rapport || '').trim()
+        || String(report.recommandations || '').trim()
+      )
+    );
+  }
+
+  get workProgramPrerequisiteMessage(): string {
+    return this.isMissionOrderSent
+      ? ''
+      : 'Envoyez d abord l ordre de mission pour preparer et soumettre le programme de travail.';
+  }
+
+  get checklistPrerequisiteMessage(): string {
+    if (!this.isMissionOrderSent) {
+      return 'La checklist sera executable apres l envoi de l ordre de mission.';
+    }
+    if (!this.isWorkProgramValidated) {
+      return 'Le programme de travail doit etre valide avant l execution de la checklist.';
+    }
+    return '';
+  }
+
+  get reportPrerequisiteMessage(): string {
+    if (!this.isWorkProgramApproved) {
+      return 'Le programme de travail doit etre approuve avant la redaction du rapport.';
+    }
+    if (!this.isChecklistComplete) {
+      return 'Tous les points de la checklist doivent etre executes avant la redaction du rapport.';
+    }
+    return '';
+  }
+
   get allowedActionLabels(): string[] {
     const permissions = this.missionWorkspace?.permissions;
     if (!permissions) {

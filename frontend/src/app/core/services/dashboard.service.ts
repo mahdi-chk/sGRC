@@ -8,6 +8,7 @@ import { getActionsDashboardSubmodules } from '../../modules/actions/actions-nav
 import { getComplianceDashboardSubmodules } from '../../modules/compliance/compliance-navigation';
 import { ALL_GOVERNANCE_ROLES, getGovernanceDashboardSubmodules } from '../../modules/governance/governance-navigation';
 import { getSupervisionDashboardSubmodules } from '../../modules/supervision/supervision-navigation';
+import { normalizeUserRole } from '../utils/role.utils';
 
 export interface Submodule {
     title: string;
@@ -149,6 +150,8 @@ export class DashboardService {
             ],
             roles: [
                 UserRole.SUPER_ADMIN,
+                UserRole.AUDIT_RESPONSABLE,
+                UserRole.CHEF_MISSION,
                 UserRole.AUDIT_DIRECTEUR,
                 UserRole.AUDITEUR,
                 UserRole.RISK_MANAGER,
@@ -189,6 +192,7 @@ export class DashboardService {
                         UserRole.SUPER_ADMIN,
                         UserRole.RISK_MANAGER,
                         UserRole.AUDIT_DIRECTEUR,
+                        UserRole.AUDIT_RESPONSABLE,
                         UserRole.CHEF_MISSION
                     ]
                 },
@@ -198,6 +202,7 @@ export class DashboardService {
                         UserRole.SUPER_ADMIN,
                         UserRole.RISK_MANAGER,
                         UserRole.AUDIT_DIRECTEUR,
+                        UserRole.AUDIT_RESPONSABLE,
                         UserRole.CHEF_MISSION
                     ]
                 },
@@ -207,6 +212,7 @@ export class DashboardService {
                         UserRole.SUPER_ADMIN,
                         UserRole.RISK_MANAGER,
                         UserRole.AUDIT_DIRECTEUR,
+                        UserRole.AUDIT_RESPONSABLE,
                         UserRole.CHEF_MISSION,
                         UserRole.TOP_MANAGEMENT
                     ]
@@ -217,6 +223,7 @@ export class DashboardService {
                         UserRole.SUPER_ADMIN,
                         UserRole.RISK_MANAGER,
                         UserRole.AUDIT_DIRECTEUR,
+                        UserRole.AUDIT_RESPONSABLE,
                         UserRole.CHEF_MISSION,
                         UserRole.TOP_MANAGEMENT
                     ]
@@ -226,6 +233,7 @@ export class DashboardService {
                 UserRole.SUPER_ADMIN,
                 UserRole.RISK_MANAGER,
                 UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDIT_RESPONSABLE,
                 UserRole.CHEF_MISSION,
                 UserRole.TOP_MANAGEMENT
             ]
@@ -266,6 +274,7 @@ export class DashboardService {
                 UserRole.TOP_MANAGEMENT,
                 UserRole.RISK_MANAGER,
                 UserRole.AUDIT_DIRECTEUR,
+                UserRole.AUDIT_RESPONSABLE,
                 UserRole.CHEF_MISSION
             ]
         },
@@ -295,7 +304,7 @@ export class DashboardService {
 
     getFilteredModules(role: UserRole | string | null): ModuleItem[] {
         if (!role) return [];
-        const normalizedRole = Object.values(UserRole).find(value => value === role);
+        const normalizedRole = normalizeUserRole(role);
 
         if (!normalizedRole) return [];
 

@@ -467,32 +467,87 @@
 }
 
 .gantt-track {
+  position: relative;
   height: 30px;
   border-radius: 999px;
   background: #e5eeef;
   overflow: hidden;
 }
 
-.gantt-bar {
-  height: 100%;
-  min-width: 46px;
+.gantt-window {
+  --gantt-left: 0%;
+  --gantt-width: 8%;
+  position: absolute;
+  left: var(--gantt-left);
+  top: 4px;
+  width: var(--gantt-width);
+  height: calc(100% - 8px);
+  min-width: 64px;
+  max-width: calc(100% - var(--gantt-left));
   border-radius: 999px;
+  overflow: hidden;
+  background: rgba(11, 107, 99, 0.16);
+  border: 1px solid rgba(11, 107, 99, 0.2);
+}
+
+.gantt-window.cadence-window {
+  left: 0;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.gantt-progress {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0b6b63 0%, #1da492 100%);
+  min-width: 6px;
+}
+
+.gantt-window span {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
   font-size: 0.74rem;
   font-weight: 700;
-  background: linear-gradient(90deg, #0b6b63 0%, #1da492 100%);
+  text-shadow: 0 1px 2px rgba(20, 49, 61, 0.35);
 }
 
-.gantt-bar.state-a-risque,
-.gantt-bar.state-en-retard,
-.gantt-bar.state-bloquee {
+.gantt-due-date {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  color: var(--actions-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding-left: 8px;
+  background: rgba(229, 238, 239, 0.78);
+}
+
+.gantt-window.state-a-risque,
+.gantt-window.state-en-retard,
+.gantt-window.state-bloquee {
+  background: rgba(163, 60, 49, 0.16);
+  border-color: rgba(163, 60, 49, 0.24);
+}
+
+.gantt-window.state-a-risque .gantt-progress,
+.gantt-window.state-en-retard .gantt-progress,
+.gantt-window.state-bloquee .gantt-progress {
   background: linear-gradient(90deg, #a33c31 0%, #d36b57 100%);
 }
 
-.gantt-bar.state-a-demarrer {
+.gantt-window.state-a-demarrer {
+  background: rgba(155, 106, 8, 0.16);
+  border-color: rgba(155, 106, 8, 0.24);
+}
+
+.gantt-window.state-a-demarrer .gantt-progress {
   background: linear-gradient(90deg, #9b6a08 0%, #d69b25 100%);
 }
 

@@ -394,6 +394,26 @@ const canAssignSource = (role: string, sourceType: ActionSourceType): boolean =>
     return isAuditCoordinationRole(role);
 };
 
+const canViewActionSource = (role: string, sourceType: ActionSourceType): boolean => {
+    if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
+        return true;
+    }
+
+    if (role === UserRole.RISK_AGENT) {
+        return sourceType === 'risk';
+    }
+
+    if (role === UserRole.RISK_MANAGER) {
+        return sourceType === 'risk' || sourceType === 'incident' || sourceType === 'audit';
+    }
+
+    if (isAuditCoordinationRole(role)) {
+        return sourceType === 'risk' || sourceType === 'incident' || sourceType === 'audit';
+    }
+
+    return false;
+};
+
 const getAssignableRoleIds = (sourceType: ActionSourceType): number[] => {
     if (sourceType === 'risk') {
         return [LookupResolutionService.getStaticValue('user.role', UserRole.RISK_AGENT)?.id]
@@ -568,27 +588,29 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
                 missionWhere.riskId = { [Op.in]: [-1] };
             }
 
-            missions = await AuditMission.findAll({
-                where: missionWhere,
-                include: [
-                    {
-                        model: Risk,
-                        as: 'risk',
-                        required: false,
-                        include: riskIncludes,
-                    },
-                    { model: User, as: 'auditSenior', required: false, attributes: ['id', 'prenom', 'nom'] },
-                    { model: User, as: 'chefMission', required: false, attributes: ['id', 'prenom', 'nom'] },
-                    { model: User, as: 'auditeur', required: false, attributes: ['id', 'prenom', 'nom'] },
-                    {
-                        model: AuditMissionResource,
-                        as: 'resourceAssignments',
-                        required: false,
-                        include: [{ model: User, as: 'user', required: false, attributes: ['id', 'prenom', 'nom'] }],
-                    },
-                ],
-                order: [['delai', 'ASC']],
-            });
+            missions = canViewActionSource(role, 'audit')
+                ? await AuditMission.findAll({
+                    where: missionWhere,
+                    include: [
+                        {
+                            model: Risk,
+                            as: 'risk',
+                            required: false,
+                            include: riskIncludes,
+                        },
+                        { model: User, as: 'auditSenior', required: false, attributes: ['id', 'prenom', 'nom'] },
+                        { model: User, as: 'chefMission', required: false, attributes: ['id', 'prenom', 'nom'] },
+                        { model: User, as: 'auditeur', required: false, attributes: ['id', 'prenom', 'nom'] },
+                        {
+                            model: AuditMissionResource,
+                            as: 'resourceAssignments',
+                            required: false,
+                            include: [{ model: User, as: 'user', required: false, attributes: ['id', 'prenom', 'nom'] }],
+                        },
+                    ],
+                    order: [['delai', 'ASC']],
+                })
+                : [];
         }
 
         const scopedRiskIds = Array.from(new Set(risks.map((risk) => risk.id)));
@@ -601,7 +623,9 @@ router.get('/overview', authorizeRoles(...allowedRoles), async (req: AuthRequest
         );
 
         let incidents: any[] = [];
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
+        if (!canViewActionSource(role, 'incident')) {
+            incidents = [];
+        } else if (role === UserRole.SUPER_ADMIN || role === UserRole.TOP_MANAGEMENT) {
             incidents = await Incident.findAll({
                 include: [
                     { model: User, as: 'declareur', required: false, attributes: ['id', 'prenom', 'nom'] },
@@ -977,6 +1001,10 @@ router.get('/:actionId/assignable-users', authorizeRoles(...allowedRoles), async
             return res.status(400).json({ message: 'Identifiant d action invalide' });
         }
 
+        if (!canViewActionSource(req.user!.role, parsed.sourceType)) {
+            return res.status(403).json({ message: 'Acces non autorise a cette source d action' });
+        }
+
         if (!canAssignSource(req.user!.role, parsed.sourceType)) {
             return res.status(403).json({ message: 'Permissions insuffisantes pour affecter cette action' });
         }
@@ -998,6 +1026,10 @@ router.post('/:actionId/remind', authorizeRoles(...allowedRoles), async (req: Au
 
         if (!parsed) {
             return res.status(400).json({ message: 'Identifiant d action invalide' });
+        }
+
+        if (!canViewActionSource(req.user!.role, parsed.sourceType)) {
+            return res.status(403).json({ message: 'Acces non autorise a cette source d action' });
         }
 
         const reminderReference = getActionReference(parsed.sourceType, parsed.entityId);
@@ -1050,6 +1082,10 @@ router.put('/:actionId/assign', authorizeRoles(...allowedRoles), async (req: Aut
 
         if (!parsed) {
             return res.status(400).json({ message: 'Identifiant d action invalide' });
+        }
+
+        if (!canViewActionSource(req.user!.role, parsed.sourceType)) {
+            return res.status(403).json({ message: 'Acces non autorise a cette source d action' });
         }
 
         if (!Number.isInteger(assigneeUserId) || assigneeUserId <= 0) {
@@ -1139,6 +1175,10 @@ router.put('/:actionId/tracking', authorizeRoles(...allowedRoles), async (req: A
 
         if (!parsed) {
             return res.status(400).json({ message: 'Identifiant d action invalide' });
+        }
+
+        if (!canViewActionSource(req.user!.role, parsed.sourceType)) {
+            return res.status(403).json({ message: 'Acces non autorise a cette source d action' });
         }
 
         const title = req.body?.title === undefined ? undefined : cleanText(req.body.title);

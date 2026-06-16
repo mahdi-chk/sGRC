@@ -1,4 +1,5 @@
 import { UserRole } from '../../core/models/user-role.enum';
+import { getStoredUserRole, normalizeUserRole } from '../../core/utils/role.utils';
 
 export interface SupervisionNavItem {
   label: string;
@@ -47,21 +48,11 @@ export const SUPERVISION_NAV_ITEMS: SupervisionNavItem[] = [
 ];
 
 function normalizeSupervisionRole(role: UserRole | string | null): UserRole | null {
-  if (!role) {
-    return null;
-  }
-
-  const matchedRole = Object.values(UserRole).find(value => value === role);
-  return matchedRole || null;
+  return normalizeUserRole(role);
 }
 
 export function getStoredSupervisionRole(): UserRole | null {
-  try {
-    const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-    return normalizeSupervisionRole(user?.role);
-  } catch {
-    return null;
-  }
+  return getStoredUserRole();
 }
 
 export function getSupervisionNavItems(role: UserRole | string | null): SupervisionNavItem[] {

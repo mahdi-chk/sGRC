@@ -1,4 +1,5 @@
 import { UserRole } from '../../core/models/user-role.enum';
+import { getStoredUserRole, normalizeUserRole } from '../../core/utils/role.utils';
 
 export interface ControlsNavItem {
   label: string;
@@ -94,21 +95,11 @@ export const CONTROLS_NAV_ITEMS: ControlsNavItem[] = [
 ];
 
 function normalizeControlsRole(role: UserRole | string | null): UserRole | null {
-  if (!role) {
-    return null;
-  }
-
-  const matchedRole = Object.values(UserRole).find(value => value === role);
-  return matchedRole || null;
+  return normalizeUserRole(role);
 }
 
 export function getStoredControlsRole(): UserRole | null {
-  try {
-    const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-    return normalizeControlsRole(user?.role);
-  } catch {
-    return null;
-  }
+  return getStoredUserRole();
 }
 
 export function getControlsNavItems(role: UserRole | string | null): ControlsNavItem[] {

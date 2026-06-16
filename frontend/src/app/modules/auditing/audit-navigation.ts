@@ -1,4 +1,5 @@
 import { UserRole } from '../../core/models/user-role.enum';
+import { getStoredUserRole, normalizeUserRole } from '../../core/utils/role.utils';
 
 export interface AuditNavItem {
   label: string;
@@ -7,8 +8,8 @@ export interface AuditNavItem {
   section: 'planning';
 }
 
-const AUDIT_CONSTRUCTION_ROLES = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
-const AUDIT_PLANNING_ROLES = [
+export const AUDIT_CONSTRUCTION_ROLES: UserRole[] = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
+export const AUDIT_PLANNING_ROLES: UserRole[] = [
   UserRole.AUDIT_DIRECTEUR,
   UserRole.AUDIT_RESPONSABLE,
   UserRole.CHEF_MISSION,
@@ -40,37 +41,38 @@ export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
 ];
 
 export function getStoredAuditRole(): UserRole | null {
-  try {
-    const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-    return (user?.role as UserRole) || null;
-  } catch {
-    return null;
-  }
+  return getStoredUserRole();
 }
 
 function getAuditNavItemsBySection(
-  role: UserRole | null,
+  role: UserRole | string | null,
   sections: Array<AuditNavItem['section']>
 ): AuditNavItem[] {
-  if (!role) {
+  const normalizedRole = normalizeUserRole(role);
+
+  if (!normalizedRole) {
     return [];
   }
 
-  return AUDIT_NAV_ITEMS.filter(item => item.roles.includes(role) && sections.includes(item.section));
+  return AUDIT_NAV_ITEMS.filter(item => item.roles.includes(normalizedRole) && sections.includes(item.section));
 }
 
-export function getAuditPlanningNavItems(role: UserRole | null): AuditNavItem[] {
+export function getAuditPlanningNavItems(role: UserRole | string | null): AuditNavItem[] {
   return getAuditNavItemsBySection(role, ['planning']);
 }
 
-export function getAuditManagementNavItems(role: UserRole | null): AuditNavItem[] {
+export function getAuditManagementNavItems(role: UserRole | string | null): AuditNavItem[] {
   return getAuditNavItemsBySection(role, ['planning']);
 }
 
-export function getAuditorNavItems(role: UserRole | null): AuditNavItem[] {
+export function getAuditorNavItems(role: UserRole | string | null): AuditNavItem[] {
   return getAuditNavItemsBySection(role, ['planning']);
 }
 
-export function getAuditNavItems(role: UserRole | null): AuditNavItem[] {
+export function getAuditNavItems(role: UserRole | string | null): AuditNavItem[] {
   return getAuditNavItemsBySection(role, ['planning']);
+}
+
+export function getAuditRolesByRoute(route: string): UserRole[] {
+  return AUDIT_NAV_ITEMS.find(item => item.route === route)?.roles || [];
 }

@@ -1,4 +1,5 @@
 import { UserRole } from '../../core/models/user-role.enum';
+import { getStoredUserRole, normalizeUserRole } from '../../core/utils/role.utils';
 
 export interface GovernanceNavItem {
   label: string;
@@ -39,11 +40,13 @@ export const GOVERNANCE_NAV_ITEMS: GovernanceNavItem[] = [
 ];
 
 export const getGovernanceNavItems = (role?: UserRole | string | null): GovernanceNavItem[] => {
-  if (!role) {
+  const normalizedRole = normalizeUserRole(role);
+
+  if (!normalizedRole) {
     return [];
   }
 
-  return GOVERNANCE_NAV_ITEMS.filter(item => item.roles.includes(role as UserRole));
+  return GOVERNANCE_NAV_ITEMS.filter(item => item.roles.includes(normalizedRole));
 };
 
 export const getGovernanceDashboardSubmodules = (role?: UserRole | string | null) =>
@@ -53,10 +56,5 @@ export const getGovernanceRolesByRoute = (route: string): UserRole[] =>
   GOVERNANCE_NAV_ITEMS.find(item => item.route === route)?.roles || [];
 
 export const getStoredGovernanceRole = (): UserRole | null => {
-  try {
-    const rawUser = sessionStorage.getItem('sgrc_user');
-    return rawUser ? JSON.parse(rawUser).role as UserRole : null;
-  } catch (_error) {
-    return null;
-  }
+  return getStoredUserRole();
 };

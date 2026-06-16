@@ -63,7 +63,7 @@
         <div class="gantt-board">
             <div class="gantt-head">
                 <strong>Planning Gantt</strong>
-                <span>{{ ganttRangeLabel }}</span>
+                <span>{{ filteredDeadlines.length }} jalon(s) visible(s)</span>
             </div>
             <div class="gantt-row" *ngFor="let item of filteredDeadlines">
                 <div class="gantt-label">
@@ -72,12 +72,12 @@
                 </div>
                 <div class="gantt-track">
                     <div
-                        class="gantt-bar"
-                        [ngClass]="getStatusClass(item.status)"
-                        [style.margin-left.%]="getTimelineOffset(item)"
-                        [style.width.%]="getTimelineWidth(item)">
-                        {{ item.progress }}%
+                        class="gantt-window cadence-window"
+                        [ngClass]="getStatusClass(item.status)">
+                        <div class="gantt-progress" [style.width.%]="item.progress"></div>
+                        <span>{{ item.progress }}%</span>
                     </div>
+                    <small class="gantt-due-date">{{ formatDate(item.dueDate) }}</small>
                 </div>
             </div>
         </div>

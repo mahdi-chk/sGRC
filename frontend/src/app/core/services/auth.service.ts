@@ -14,6 +14,7 @@ import { NgZone } from '@angular/core';
 import { catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { UserRole } from '../models/user-role.enum';
+import { normalizeUserRole } from '../utils/role.utils';
 
 @Injectable({
     providedIn: 'root'
@@ -233,7 +234,7 @@ export class AuthService {
      */
     getUserRole(): UserRole | null {
         const user = this.getCurrentUser();
-        return user ? user.role : null;
+        return normalizeUserRole(user?.role);
     }
 
     /**

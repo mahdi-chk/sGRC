@@ -85,19 +85,22 @@ export class ActionsDeadlinesComponent implements OnInit {
   }
 
   get planningStart(): number {
-    const dates = this.filteredDeadlines
-      .map(item => item.startDate || item.dueDate)
-      .filter(Boolean)
-      .map(value => new Date(value as string).getTime());
+    const dueDates = this.getValidTimestamps(this.filteredDeadlines.map(item => item.dueDate));
 
-    return dates.length ? Math.min(...dates) : Date.now();
+    if (!dueDates.length) {
+      return Date.now();
+    }
+
+    const earliestDueDate = Math.min(...dueDates);
+    const startDates = this.getValidTimestamps(this.filteredDeadlines.map(item => item.startDate));
+    const earliestStartDate = startDates.length ? Math.min(...startDates) : earliestDueDate;
+    const ninetyDaysBeforeFirstDueDate = earliestDueDate - 90 * 24 * 60 * 60 * 1000;
+
+    return Math.max(earliestStartDate, ninetyDaysBeforeFirstDueDate);
   }
 
   get planningEnd(): number {
-    const dates = this.filteredDeadlines
-      .map(item => item.dueDate || item.startDate)
-      .filter(Boolean)
-      .map(value => new Date(value as string).getTime());
+    const dates = this.getValidTimestamps(this.filteredDeadlines.map(item => item.dueDate || item.startDate));
 
     return dates.length ? Math.max(...dates) : Date.now();
   }
@@ -107,16 +110,17 @@ export class ActionsDeadlinesComponent implements OnInit {
   }
 
   getTimelineOffset(item: ActionDeadlineItem): number {
-    const start = item.startDate ? new Date(item.startDate).getTime() : this.planningStart;
+    const start = this.clampToPlanningRange(this.toTimestamp(item.startDate) || this.planningStart);
     const range = Math.max(this.planningEnd - this.planningStart, 1);
     return Math.max(0, Math.min(92, Math.round(((start - this.planningStart) / range) * 100)));
   }
 
   getTimelineWidth(item: ActionDeadlineItem): number {
-    const start = item.startDate ? new Date(item.startDate).getTime() : this.planningStart;
-    const end = item.dueDate ? new Date(item.dueDate).getTime() : this.planningEnd;
+    const start = this.clampToPlanningRange(this.toTimestamp(item.startDate) || this.planningStart);
+    const end = this.clampToPlanningRange(this.toTimestamp(item.dueDate) || this.planningEnd);
     const range = Math.max(this.planningEnd - this.planningStart, 1);
-    return Math.max(8, Math.min(100 - this.getTimelineOffset(item), Math.round(((end - start) / range) * 100)));
+    const rawWidth = Math.round(((Math.max(end, start) - start) / range) * 100);
+    return Math.max(8, Math.min(100 - this.getTimelineOffset(item), rawWidth || 8));
   }
 
   formatDate(value: string | null | undefined): string {
@@ -153,5 +157,24 @@ export class ActionsDeadlinesComponent implements OnInit {
   private escapeCsv(value: unknown): string {
     const text = String(value ?? '').replace(/"/g, '""');
     return `"${text}"`;
+  }
+
+  private getValidTimestamps(values: Array<string | null | undefined>): number[] {
+    return values
+      .map(value => this.toTimestamp(value))
+      .filter((value): value is number => typeof value === 'number');
+  }
+
+  private toTimestamp(value: string | null | undefined): number | null {
+    if (!value) {
+      return null;
+    }
+
+    const timestamp = new Date(value).getTime();
+    return Number.isNaN(timestamp) ? null : timestamp;
+  }
+
+  private clampToPlanningRange(timestamp: number): number {
+    return Math.max(this.planningStart, Math.min(this.planningEnd, timestamp));
   }
 }

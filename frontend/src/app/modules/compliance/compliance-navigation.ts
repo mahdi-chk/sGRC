@@ -1,4 +1,5 @@
 import { UserRole } from '../../core/models/user-role.enum';
+import { getStoredUserRole, normalizeUserRole } from '../../core/utils/role.utils';
 
 export interface ComplianceNavItem {
   label: string;
@@ -16,6 +17,8 @@ export interface ComplianceModuleItem {
 const ALL_COMPLIANCE_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.AUDITEUR,
   UserRole.RISK_MANAGER,
   UserRole.TOP_MANAGEMENT
@@ -24,6 +27,8 @@ const ALL_COMPLIANCE_ROLES: UserRole[] = [
 const CONTRIBUTOR_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.AUDITEUR,
   UserRole.RISK_MANAGER
 ];
@@ -31,10 +36,18 @@ const CONTRIBUTOR_ROLES: UserRole[] = [
 const ASSESSMENT_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.AUDIT_SENIOR,
+  UserRole.AUDIT_RESPONSABLE,
+  UserRole.CHEF_MISSION,
   UserRole.AUDITEUR,
   UserRole.RISK_MANAGER,
   UserRole.RISK_AGENT
 ];
+
+export const COMPLIANCE_MODULE_ROLES: UserRole[] = Array.from(new Set([
+  ...ALL_COMPLIANCE_ROLES,
+  ...CONTRIBUTOR_ROLES,
+  ...ASSESSMENT_ROLES
+]));
 
 export const COMPLIANCE_NAV_ITEMS: ComplianceNavItem[] = [
   {
@@ -76,21 +89,11 @@ export const COMPLIANCE_NAV_ITEMS: ComplianceNavItem[] = [
 ];
 
 function normalizeComplianceRole(role: UserRole | string | null): UserRole | null {
-  if (!role) {
-    return null;
-  }
-
-  const matchedRole = Object.values(UserRole).find(value => value === role);
-  return matchedRole || null;
+  return normalizeUserRole(role);
 }
 
 export function getStoredComplianceRole(): UserRole | null {
-  try {
-    const user = JSON.parse(sessionStorage.getItem('sgrc_user') || '{}');
-    return normalizeComplianceRole(user?.role);
-  } catch {
-    return null;
-  }
+  return getStoredUserRole();
 }
 
 export function getComplianceNavItems(role: UserRole | string | null): ComplianceNavItem[] {

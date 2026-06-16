@@ -6,6 +6,8 @@ import { AuditMission, AuditMissionStatus, AuditRecordType, AuditingService } fr
 import { Incident, IncidentService, IncidentStatus } from '../../core/services/incident.service';
 import { Risk, RiskLevel, RiskService, RiskStatus } from '../../core/services/risk.service';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/services/auth.service';
+import { UserRole } from '../../core/models/user-role.enum';
 
 export interface ActionFilterState {
   q?: string;
@@ -148,12 +150,13 @@ export class ActionsService {
     private http: HttpClient,
     private riskService: RiskService,
     private incidentService: IncidentService,
-    private auditingService: AuditingService
+    private auditingService: AuditingService,
+    private authService: AuthService
   ) {}
 
   getOverview(): Observable<ActionsOverview> {
     return this.http.get<ActionsOverview>(`${this.apiUrl}/overview`).pipe(
-      map(overview => this.enrichOverview(overview)),
+      map(overview => this.applyAccessGuard(this.enrichOverview(overview))),
       catchError(() => this.getFallbackOverview())
     );
   }
@@ -184,7 +187,16 @@ export class ActionsService {
       this.incidentService.getIncidents().pipe(catchError(() => of([] as Incident[]))),
       this.auditingService.getMissions('all').pipe(catchError(() => of([] as AuditMission[])))
     ]).pipe(
-      map(([risks, incidents, missions]) => this.enrichOverview(this.buildOverview(risks, incidents, missions)))
+      map(([risks, incidents, missions]) => {
+        const role = this.authService.getUserRole();
+
+        return this.enrichOverview(this.buildOverview(
+          risks,
+          role === UserRole.RISK_AGENT ? [] : incidents,
+          role === UserRole.RISK_AGENT ? [] : missions
+        ));
+      }),
+      map(overview => this.applyAccessGuard(overview))
     );
   }
 
@@ -195,6 +207,10 @@ export class ActionsService {
       ...this.mapAuditsToActions(missions)
     ].sort((left, right) => this.compareRegistryItems(left, right));
 
+    return this.buildOverviewFromRegistry(registry);
+  }
+
+  private buildOverviewFromRegistry(registry: ActionRegistryItem[], generatedAt: string = new Date().toISOString()): ActionsOverview {
     const openRegistry = registry.filter(item => !this.isTerminalStatus(item.status));
     const closedRegistry = registry.filter(item => this.isTerminalStatus(item.status));
     const overdueActions = openRegistry.filter(item => this.isOverdue(item.dueDate)).length;
@@ -210,7 +226,7 @@ export class ActionsService {
     const indicators = this.buildIndicators(registry, openRegistry, completionRate, effectivenessScore, criticalActions, overdueActions);
 
     return {
-      generatedAt: new Date().toISOString(),
+      generatedAt,
       summary: {
         totalOpenActions: openRegistry.length,
         overdueActions,
@@ -228,6 +244,30 @@ export class ActionsService {
       indicators,
       todoActions: this.buildTodoActions(openRegistry)
     };
+  }
+
+  private applyAccessGuard(overview: ActionsOverview): ActionsOverview {
+    const allowedSources = this.getAllowedSourcesForCurrentRole();
+
+    if (!allowedSources) {
+      return overview;
+    }
+
+    const registry = (overview.registry || [])
+      .filter(item => allowedSources.includes(this.normalizeValue(item.sourceModule)))
+      .sort((left, right) => this.compareRegistryItems(left, right));
+
+    return this.buildOverviewFromRegistry(registry, overview.generatedAt);
+  }
+
+  private getAllowedSourcesForCurrentRole(): string[] | null {
+    const role = this.authService.getUserRole();
+
+    if (role === UserRole.RISK_AGENT) {
+      return ['risques'];
+    }
+
+    return null;
   }
 
   private mapRisksToActions(risks: Risk[]): ActionRegistryItem[] {

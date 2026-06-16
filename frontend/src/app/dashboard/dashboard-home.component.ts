@@ -4,6 +4,7 @@ import { AuthService } from '../core/services/auth.service';
 import { UserRole } from '../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { DashboardService } from '../core/services/dashboard.service';
+import { normalizeUserRole } from '../core/utils/role.utils';
 
 interface Submodule {
     title: string;
@@ -37,7 +38,7 @@ export class DashboardHomeComponent implements OnInit {
 
     ngOnInit() {
         this.authService.currentUser$.subscribe(user => {
-            this.currentUserRole = user?.role;
+            this.currentUserRole = normalizeUserRole(user?.role);
             if (this.currentUserRole) {
                 this.redirectByRole(this.currentUserRole);
             }

@@ -10,6 +10,10 @@ import { CPS_MODULES, SubmoduleDetail } from '../shared/data/cps-data';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { ALL_GOVERNANCE_ROLES } from '../modules/governance/governance-navigation';
+import { COMPLIANCE_MODULE_ROLES } from '../modules/compliance/compliance-navigation';
+import { AUDIT_PLANNING_ROLES } from '../modules/auditing/audit-navigation';
+import { INCIDENT_READ_ROLES } from '../modules/incidents/incident-navigation';
+import { normalizeUserRole } from '../core/utils/role.utils';
 
 interface Submodule {
   title: string;
@@ -65,7 +69,7 @@ export class DashboardComponent implements OnDestroy {
       route: '/dashboard/governance-workflows',
       roles: ALL_GOVERNANCE_ROLES
     },
-    { label: 'Ressource', route: '/dashboard/resources' },
+    { label: 'Ressource', route: '/dashboard/resources', roles: ALL_GOVERNANCE_ROLES },
     {
       label: 'Risque',
       route: '/dashboard/risks',
@@ -80,9 +84,19 @@ export class DashboardComponent implements OnDestroy {
       ]
     },
     {
+      label: 'Conformite',
+      route: '/dashboard/compliance',
+      roles: COMPLIANCE_MODULE_ROLES
+    },
+    {
+      label: 'Audit',
+      route: '/dashboard/audit-plans',
+      roles: AUDIT_PLANNING_ROLES
+    },
+    {
       label: 'Incident',
       route: '/dashboard/incidents',
-      roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT]
+      roles: INCIDENT_READ_ROLES
     },
     {
       label: 'Controle',
@@ -93,6 +107,23 @@ export class DashboardComponent implements OnDestroy {
       label: 'Action',
       route: '/dashboard/actions-centralized',
       roles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.RISK_AGENT, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT]
+    },
+    {
+      label: 'Reporting',
+      route: '/dashboard/reporting',
+      roles: [
+        UserRole.SUPER_ADMIN,
+        UserRole.TOP_MANAGEMENT,
+        UserRole.RISK_MANAGER,
+        UserRole.AUDIT_DIRECTEUR,
+        UserRole.AUDIT_RESPONSABLE,
+        UserRole.CHEF_MISSION
+      ]
+    },
+    {
+      label: 'Supervision',
+      route: '/dashboard/supervision',
+      roles: [UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT, UserRole.ADMIN_SI]
     }
   ];
 
@@ -115,11 +146,11 @@ export class DashboardComponent implements OnDestroy {
     private router: Router
   ) {
     this.authService.currentUser$.subscribe(user => {
-      this.currentUserRole = user?.role;
+      this.currentUserRole = normalizeUserRole(user?.role);
       this.currentUserName = user?.prenom && user?.nom ? `${user.prenom} ${user.nom}` : 'Utilisateur';
       this.setDashboardInfo();
 
-      if (user && this.canLoadRiskData(user.role)) {
+      if (user && this.canLoadRiskData(this.currentUserRole)) {
         this.loadRisks();
       } else {
         this.risks = [];

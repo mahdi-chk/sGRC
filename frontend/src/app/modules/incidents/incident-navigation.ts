@@ -10,15 +10,20 @@ export interface IncidentNavItem {
 export const INCIDENT_READ_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
+  UserRole.RISK_AGENT,
   UserRole.AUDIT_DIRECTEUR,
   UserRole.AUDIT_RESPONSABLE,
   UserRole.CHEF_MISSION,
-  UserRole.TOP_MANAGEMENT
+  UserRole.AUDITEUR,
+  UserRole.TOP_MANAGEMENT,
+  UserRole.ADMIN_SI,
+  UserRole.CONTROLLER
 ];
 
 export const INCIDENT_WRITE_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.RISK_MANAGER,
+  UserRole.RISK_AGENT,
   UserRole.AUDIT_DIRECTEUR,
   UserRole.AUDIT_RESPONSABLE,
   UserRole.CHEF_MISSION

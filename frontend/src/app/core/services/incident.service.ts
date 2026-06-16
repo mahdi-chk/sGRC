@@ -32,7 +32,7 @@ export interface Incident {
     statutLabel?: string;
     pieceJointe: string | null;
     userId: number | null;
-    declareur?: { id: number; nom: string; prenom: string; mail: string };
+    declareur?: { id: number; nom: string; prenom: string; mail: string; role?: string; roleCode?: string };
     createdAt: Date | string;
     updatedAt: Date | string;
     

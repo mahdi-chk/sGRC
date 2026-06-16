@@ -33,7 +33,11 @@ export const createEnvironment = (production: boolean): RuntimeEnvironment => {
   const runtimeConfig = runtimeWindow?.__env;
 
   const apiUrl = normalizeUrl(runtimeConfig?.API_URL || '/api');
-  const serverUrl = normalizeUrl(runtimeConfig?.SERVER_URL || deriveServerUrl(apiUrl));
+  let serverUrl = normalizeUrl(runtimeConfig?.SERVER_URL || deriveServerUrl(apiUrl));
+
+  if (!serverUrl && runtimeWindow?.location?.origin) {
+    serverUrl = normalizeUrl(runtimeWindow.location.origin);
+  }
 
   return {
     production,

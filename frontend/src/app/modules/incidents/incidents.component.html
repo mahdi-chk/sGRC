@@ -52,7 +52,7 @@
             </div>
 
             <div class="module-list">
-                <a *ngFor="let module of modules" [routerLink]="module.route" class="module-link">
+                <a *ngFor="let module of visibleModules" [routerLink]="module.route" class="module-link">
                     <strong>{{ module.title }}</strong>
                     <p>{{ module.description }}</p>
                 </a>

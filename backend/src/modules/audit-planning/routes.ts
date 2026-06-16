@@ -15,8 +15,8 @@ const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'
 
 const auditDivisionManagerRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
 const auditPlanningOperationalRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
-const auditPlanReadRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN];
-const auditMissionListReadRoles = [...auditPlanReadRoles, UserRole.RISK_MANAGER, UserRole.RISK_AGENT];
+const auditPlanReadRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.SUPER_ADMIN];
+const auditMissionListReadRoles = [...auditPlanReadRoles];
 
 const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
@@ -566,7 +566,7 @@ router.post('/missions/:id/action-plans', authorizeRoles(UserRole.SUPER_ADMIN, U
     }
 });
 
-router.put('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.CONTROLLER), async (req: AuthRequest, res) => {
+router.put('/missions/:id/action-plans/:itemId', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR), async (req: AuthRequest, res) => {
     try {
         const item = await AuditPlanService.updateMissionActionPlan(
             parseInt(req.params.id as string, 10),

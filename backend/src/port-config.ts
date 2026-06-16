@@ -34,12 +34,16 @@ export const PortConfig = {
 
     /** URL de l'API de chat Ollama. */
     get OLLAMA_CHAT_URL(): string {
-        return process.env.OLLAMA_CHAT_URL || `http://127.0.0.1:${this.OLLAMA_PORT}/api/chat`;
+        if (process.env.OLLAMA_CHAT_URL) return process.env.OLLAMA_CHAT_URL;
+        const host = process.env.OLLAMA_HOST || process.env.OLLAMA_URL || `http://127.0.0.1:${this.OLLAMA_PORT}`;
+        return `${host.replace(/\/+$/, '')}/api/chat`;
     },
 
     /** URL de l'API d'embeddings Ollama. */
     get OLLAMA_EMBED_URL(): string {
-        return process.env.OLLAMA_EMBED_URL || `http://127.0.0.1:${this.OLLAMA_PORT}/api/embeddings`;
+        if (process.env.OLLAMA_EMBED_URL) return process.env.OLLAMA_EMBED_URL;
+        const host = process.env.OLLAMA_HOST || process.env.OLLAMA_URL || `http://127.0.0.1:${this.OLLAMA_PORT}`;
+        return `${host.replace(/\/+$/, '')}/api/embeddings`;
     },
 
     /** URL du frontend (pour CORS, emails, etc.). */

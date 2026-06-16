@@ -1,5 +1,4 @@
 import { Router, Response } from 'express';
-import { Op } from 'sequelize';
 import path from 'path';
 import fs from 'fs';
 import * as xlsx from 'xlsx';
@@ -17,6 +16,46 @@ import { LookupResolutionService } from '../../database/lookups/lookup.service';
 const router = Router();
 
 type IncidentImportSourceType = 'excel' | 'document' | 'image-scan';
+const INCIDENT_WRITE_ROLES = [
+    UserRole.SUPER_ADMIN,
+    UserRole.RISK_MANAGER,
+    UserRole.RISK_AGENT,
+    UserRole.AUDIT_DIRECTEUR,
+    UserRole.AUDIT_RESPONSABLE,
+    UserRole.CHEF_MISSION
+];
+
+const incidentUserInclude = [
+    { model: User, as: 'declareur', attributes: ['id', 'nom', 'prenom', 'mail', 'roleId'], required: false },
+    { model: User, as: 'assignee', attributes: ['id', 'nom', 'prenom', 'mail'], required: false }
+];
+
+const DECLARER_ROLES_VISIBLE_BY_ROLE: Record<string, string[]> = {
+    [UserRole.RISK_MANAGER]: [UserRole.RISK_AGENT],
+    [UserRole.AUDIT_RESPONSABLE]: [UserRole.AUDITEUR],
+    [UserRole.AUDIT_DIRECTEUR]: [UserRole.AUDITEUR]
+};
+
+const canReadIncident = (user: AuthRequest['user'], incident: Incident): boolean => {
+    if (!user) return false;
+    if (user.role === UserRole.SUPER_ADMIN) return true;
+    if (incident.userId === user.id || incident.assigneeId === user.id) return true;
+
+    const declaredByRole = incident.declareur?.role;
+    if (declaredByRole && DECLARER_ROLES_VISIBLE_BY_ROLE[user.role]?.includes(declaredByRole)) {
+        return true;
+    }
+
+    return false;
+};
+
+const findVisibleIncidentById = async (id: string, user: AuthRequest['user']): Promise<Incident | null> => {
+    const incident = await Incident.findByPk(parseInt(id, 10), {
+        include: incidentUserInclude
+    });
+
+    return incident && !incident.is_deleted && canReadIncident(user, incident) ? incident : null;
+};
 
 /**
  * Middleware d'upload sécurisé pour les pièces jointes des incidents
@@ -496,7 +535,7 @@ const resolveDepartementId = async (departementName: string | null): Promise<num
     return partialMatch ? partialMatch.id : null;
 };
 
-router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
+router.post('/import-draft', authorizeRoles(...INCIDENT_WRITE_ROLES), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Fichier requis pour l import.' });
@@ -559,7 +598,7 @@ router.post('/import-draft', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_
 /**
  * CRÉER UN INCIDENT
  */
-router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
+router.post('/', authorizeRoles(...INCIDENT_WRITE_ROLES), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
     try {
         const cleanedBody = { ...req.body };
         for (const key in cleanedBody) {
@@ -592,34 +631,17 @@ router.post('/', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, Use
  */
 router.get('/', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res: Response) => {
     try {
-        const user = (req as any).user;
-        const role = user?.role;
-        const userId = user?.id;
-
         // Définition des critères de filtrage de base (invisible si supprimé)
         const where: any = {
             is_deleted: false
         };
 
-        // RBAC : Les managers voient tout, les autres voient ce qui leur est affecté ou ce qu'ils ont créé
-        const isManager = role === UserRole.SUPER_ADMIN || role === UserRole.RISK_MANAGER || role === UserRole.TOP_MANAGEMENT;
-        
-        if (!isManager && userId) {
-            where[Op.or] = [
-                { userId: userId },
-                { assigneeId: userId }
-            ];
-        }
-
         const incidents = await Incident.findAll({
             where: where,
-            include: [
-                { model: User, as: 'declareur', attributes: ['id', 'nom', 'prenom', 'mail'], required: false },
-                { model: User, as: 'assignee', attributes: ['id', 'nom', 'prenom', 'mail'], required: false }
-            ],
+            include: incidentUserInclude,
             order: [['createdAt', 'DESC']]
         });
-        res.json(incidents);
+        res.json(incidents.filter(incident => canReadIncident(req.user, incident)));
     } catch (error: any) {
         res.status(500).json({ message: 'Erreur lors de la récupération des incidents', error: error.message });
     }
@@ -631,7 +653,7 @@ router.get('/', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res
 router.post('/:id/generate-risks', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
-        const incident = await Incident.findByPk(parseInt(id, 10));
+        const incident = await findVisibleIncidentById(id, req.user);
 
         if (!incident) {
             return res.status(404).json({ message: 'Incident non trouvé' });
@@ -683,10 +705,10 @@ router.post('/:id/generate-risks', authorizeRoles(...USER_ROLE_CODES), async (re
 /**
  * METTRE À JOUR UN INCIDENT (ÉDITER)
  */
-router.put('/:id', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res: Response) => {
+router.put('/:id', authorizeRoles(...INCIDENT_WRITE_ROLES), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
-        const incident = await Incident.findByPk(parseInt(id, 10));
+        const incident = await findVisibleIncidentById(id, req.user);
 
         if (!incident) {
             return res.status(404).json({ message: 'Incident non trouvé' });
@@ -703,7 +725,7 @@ router.put('/:id', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, 
         
         // Récupérer l'incident mis à jour avec les associations pour le renvoyer
         const updatedIncident = await Incident.findByPk(parseInt(id, 10), {
-            include: [{ model: User, as: 'declareur', attributes: ['id', 'nom', 'prenom', 'mail'] }]
+            include: incidentUserInclude
         });
 
         res.json(updatedIncident);
@@ -722,7 +744,7 @@ router.put('/:id', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, 
 router.delete('/:id', authorizeRoles(UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
-        const incident = await Incident.findByPk(parseInt(id, 10));
+        const incident = await findVisibleIncidentById(id, req.user);
 
         if (!incident) {
             return res.status(404).json({ message: 'Incident non trouve' });

@@ -14,8 +14,6 @@ export const AUDIT_PLANNING_ROLES: UserRole[] = [
   UserRole.AUDIT_RESPONSABLE,
   UserRole.CHEF_MISSION,
   UserRole.AUDITEUR,
-  UserRole.TOP_MANAGEMENT,
-  UserRole.CONTROLLER,
   UserRole.SUPER_ADMIN
 ];
 
@@ -35,7 +33,7 @@ export const AUDIT_NAV_ITEMS: AuditNavItem[] = [
   {
     label: 'Statistiques',
     route: '/dashboard/audit-statistics',
-    roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN, UserRole.TOP_MANAGEMENT],
+    roles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.SUPER_ADMIN],
     section: 'planning'
   }
 ];

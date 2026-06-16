@@ -79,6 +79,7 @@ import { ActionsDeadlinesComponent } from './modules/actions/actions-deadlines.c
 import { ActionsNotificationsComponent } from './modules/actions/actions-notifications.component';
 import { ActionsIndicatorsComponent } from './modules/actions/actions-indicators.component';
 import { getActionsRolesByRoute } from './modules/actions/actions-navigation';
+import { AUDIT_PLANNING_ROLES, getAuditRolesByRoute } from './modules/auditing/audit-navigation';
 
 import { UserRole } from './core/models/user-role.enum';
 import { ControllerDashboardComponent } from './dashboard/roles/controller/controller-dashboard.component';
@@ -115,7 +116,7 @@ const routes: Routes = [
       { path: 'assigned-risks', component: AssignedRisksComponent, data: { expectedRoles: [UserRole.RISK_AGENT] } },
       { path: 'planning', component: PlanningComponent },
       { path: 'statistics', component: RiskStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
-      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.TOP_MANAGEMENT] } },
+      { path: 'audit-statistics', component: AuditStatisticsComponent, data: { expectedRoles: getAuditRolesByRoute('/dashboard/audit-statistics') } },
       { path: 'alertes-monitoring', component: AlertesMonitoringComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'treatment-plans', component: TreatmentPlansComponent, data: { expectedRoles: [UserRole.SUPER_ADMIN, UserRole.RISK_MANAGER, UserRole.TOP_MANAGEMENT, UserRole.RISK_AGENT] } },
       { path: 'controls', redirectTo: 'controls-referential', pathMatch: 'full' },
@@ -162,9 +163,9 @@ const routes: Routes = [
       { path: 'governance-adoption', component: GovernanceAdoptionComponent, data: { expectedRoles: getGovernanceRolesByRoute('/dashboard/governance-adoption') } },
       { path: 'resources', redirectTo: 'governance-documents', pathMatch: 'full' },
       // Routes Plan d Audit
-      { path: 'audit-plans', component: AuditPlansComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-plans/:id', component: AuditPlanDetailComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.TOP_MANAGEMENT, UserRole.CONTROLLER, UserRole.SUPER_ADMIN] } },
-      { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN] } },
+      { path: 'audit-plans', component: AuditPlansComponent, data: { expectedRoles: AUDIT_PLANNING_ROLES } },
+      { path: 'audit-plans/:id', component: AuditPlanDetailComponent, data: { expectedRoles: AUDIT_PLANNING_ROLES } },
+      { path: 'audit-planning', component: PlanificationComponent, data: { expectedRoles: getAuditRolesByRoute('/dashboard/audit-planning') } },
       { path: 'auditing', redirectTo: 'audit-plans', pathMatch: 'full' },
       { path: 'audit-checklists', redirectTo: 'audit-plans', pathMatch: 'full' },
       { path: 'audit-evidence-explorer', redirectTo: 'audit-plans', pathMatch: 'full' },

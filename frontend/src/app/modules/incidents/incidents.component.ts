@@ -9,7 +9,7 @@ import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 import { UserRole } from '../../core/models/user-role.enum';
-import { IncidentNavItem, getIncidentNavItems } from './incident-navigation';
+import { IncidentNavItem, INCIDENT_WRITE_ROLES, getIncidentNavItems } from './incident-navigation';
 
 @Component({
   selector: 'app-incidents',
@@ -128,7 +128,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     get isReadOnlyRole(): boolean {
-        return this.currentUserRole === UserRole.TOP_MANAGEMENT;
+        return !this.currentUserRole || !INCIDENT_WRITE_ROLES.includes(this.currentUserRole);
     }
 
     ngOnInit(): void {
@@ -211,6 +211,11 @@ export class IncidentsComponent implements OnInit {
         return [...this.accessibleIncidents]
             .sort((a, b) => new Date(b.dateSurvenance).getTime() - new Date(a.dateSurvenance).getTime())
             .slice(0, 4);
+    }
+
+    get visibleModules() {
+        const accessibleRoutes = new Set(this.navItems.map(item => item.route));
+        return this.modules.filter(module => accessibleRoutes.has(module.route));
     }
 
     get paginatedIncidents(): Incident[] {
@@ -481,11 +486,10 @@ export class IncidentsComponent implements OnInit {
 
     private canAccessIncident(incident: Incident): boolean {
         const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
-        const isTopManagement = this.currentUserRole_enum === UserRole.TOP_MANAGEMENT;
         const isDeclarerByUser = incident.userId === this.currentUserId;
         const isAssignedToUser = incident.assigneeId === this.currentUserId;
 
-        return isSuperAdmin || isTopManagement || isDeclarerByUser || isAssignedToUser;
+        return isSuperAdmin || isDeclarerByUser || isAssignedToUser;
     }
 
     private getNormalizedStatus(incident: any): string {

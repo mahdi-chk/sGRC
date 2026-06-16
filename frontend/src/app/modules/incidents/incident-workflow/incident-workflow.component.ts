@@ -107,7 +107,7 @@ export class IncidentWorkflowComponent implements OnInit {
     const search = (this.searchTerm || '').toLowerCase();
     
     this.filteredIncidents = this.incidents.filter(i => {
-      // 0. Filtre par visibilité utilisateur (sauf super admin)
+      // 0. Filtre par visibilité utilisateur
       const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
       const isDeclarerByUser = i.userId === this.currentUserId;
       const isAssignedToUser = i.assigneeId === this.currentUserId;

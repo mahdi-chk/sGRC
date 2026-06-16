@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --proxy-config proxy.conf.js",
+    "start": "node start.js",
     "build": "ng build --configuration production",
     "build:dev": "ng build",
     "test": "ng test",

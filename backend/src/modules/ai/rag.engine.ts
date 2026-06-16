@@ -5,9 +5,10 @@ import { SystemSetting } from '../settings/setting.model';
 import { isAuditRole, isControlRole, UserRole } from '../users/user.roles';
 import { appLogger } from '../../utils/app-logger';
 import { DocumentTextExtractor } from './document-text-extractor';
+import { PortConfig } from '../../port-config';
 
 const DEFAULT_NORMES_PATH = process.env.NORMES_PATH || path.join(__dirname, '../../../normes');
-const OLLAMA_EMBED_URL = process.env.OLLAMA_EMBED_URL || 'http://localhost:11434/api/embeddings';
+const OLLAMA_EMBED_URL = PortConfig.OLLAMA_EMBED_URL;
 const EMBED_MODEL = 'nomic-embed-text';
 const STORAGE_DIR = path.join(__dirname, '../../storage');
 const DB_FILE = path.join(STORAGE_DIR, 'vector_db.json');

@@ -7,6 +7,7 @@ import sequelize from './database';
 import { authenticateToken } from './middleware/auth.middleware';
 import { AIContextService } from './modules/ai/ai-context.service';
 import { appLogger } from './utils/app-logger';
+import { PortConfig } from './port-config';
 import { getLookupSchemaReadiness } from './database/schema-readiness';
 
 dotenv.config();
@@ -240,7 +241,8 @@ const startServer = async () => {
             appLogger.warn('Boot', 'Skipping AI context synchronization until the lookup migrations are applied.');
         }
 
-        const PORT = process.env.PORT || 3000;
+        const PORT = PortConfig.BACKEND_PORT;
+        appLogger.info('Boot', 'Port configuration', PortConfig.logSummary());
         app.listen(PORT, async () => {
             appLogger.info('Boot', 'Backend listening', { port: PORT });
             if (schemaReadiness.ready) {

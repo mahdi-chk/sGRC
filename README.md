@@ -86,13 +86,19 @@ grc-platform/
    cd grc-platform
    npm install # Run in backend and frontend directories
    ```
-2. **Launch Backend**:
+2. **Port Configuration**:
+   The application uses a dynamic, consecutive port scheme configured via `BASE_PORT` in `.env` (default: `6000`):
+   - **Backend**: `BASE_PORT` + 0 (Port `6000`)
+   - **Frontend**: `BASE_PORT` + 1 (Port `6001`)
+   - **Ollama AI**: `11434` (standard Ollama port, not modified by default)
+
+3. **Launch Backend**:
    ```bash
    cd backend && npm start
    ```
-3. **Launch Frontend**:
+4. **Launch Frontend**:
    ```bash
-   cd frontend && ng serve
+   cd frontend && npm start
    ```
 
 ## 📜 License & Author

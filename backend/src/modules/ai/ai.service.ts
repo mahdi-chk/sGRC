@@ -16,8 +16,9 @@ import * as mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
 import { Incident } from '../incidents/incident.model';
 import { appLogger } from '../../utils/app-logger';
+import { PortConfig } from '../../port-config';
 
-const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || 'http://localhost:11434/api/chat';
+const OLLAMA_CHAT_URL = PortConfig.OLLAMA_CHAT_URL;
 const MODEL_NAME = process.env.OLLAMA_MODEL || 'llama3';
 
 /**

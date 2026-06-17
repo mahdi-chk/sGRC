@@ -6,6 +6,7 @@ import { UserRole } from '../../../core/models/user-role.enum';
 import { AuthService } from '../../../core/services/auth.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
 import { environment } from '../../../../environments/environment';
+import { buildBackendFileUrl } from '../../../core/utils/url.utils';
 
 @Component({
     selector: 'app-risk-manager-dashboard',
@@ -78,6 +79,10 @@ export class RiskManagerDashboardComponent implements OnInit {
     get authQueryToken(): string {
         const token = sessionStorage.getItem('sgrc_token');
         return token ? '?token=' + token : '';
+    }
+
+    getFileUrl(path?: string | null): string {
+        return buildBackendFileUrl(path, { token: sessionStorage.getItem('sgrc_token') });
     }
 
     constructor(

@@ -9,7 +9,8 @@ import { RiskService, Risk } from '../../core/services/risk.service';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 import { UserRole } from '../../core/models/user-role.enum';
-import { IncidentNavItem, INCIDENT_WRITE_ROLES, getIncidentNavItems } from './incident-navigation';
+import { IncidentNavItem, INCIDENT_CREATE_ROLES, INCIDENT_WRITE_ROLES, getIncidentNavItems } from './incident-navigation';
+import { buildBackendFileUrl } from '../../core/utils/url.utils';
 
 @Component({
   selector: 'app-incidents',
@@ -123,12 +124,24 @@ export class IncidentsComponent implements OnInit {
         return token ? `?token=${token}` : '';
     }
 
+    getFileUrl(path?: string | null): string {
+        return buildBackendFileUrl(path, { token: this.authService.getToken() });
+    }
+
     get currentUserRole(): UserRole | null {
         return this.authService.getUserRole();
     }
 
+    get canCreateIncident(): boolean {
+        return !!this.currentUserRole && INCIDENT_CREATE_ROLES.includes(this.currentUserRole);
+    }
+
+    get canManageIncident(): boolean {
+        return !!this.currentUserRole && INCIDENT_WRITE_ROLES.includes(this.currentUserRole);
+    }
+
     get isReadOnlyRole(): boolean {
-        return !this.currentUserRole || !INCIDENT_WRITE_ROLES.includes(this.currentUserRole);
+        return !this.canManageIncident;
     }
 
     ngOnInit(): void {
@@ -253,7 +266,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     openCreateModal() {
-        if (this.isReadOnlyRole) {
+        if (!this.canCreateIncident) {
             return;
         }
 
@@ -349,7 +362,7 @@ export class IncidentsComponent implements OnInit {
 
 
     submitIncident() {
-        if (this.isReadOnlyRole || this.incidentForm.invalid) return;
+        if (!this.canCreateIncident || this.incidentForm.invalid) return;
 
         this.isSubmitting = true;
         const formData = new FormData();
@@ -380,7 +393,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     openEditModal(incident: Incident) {
-        if (this.isReadOnlyRole) {
+        if (!this.canManageIncident) {
             return;
         }
 
@@ -404,7 +417,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     updateIncident() {
-        if (this.isReadOnlyRole || this.incidentForm.invalid || !this.selectedIncident) return;
+        if (!this.canManageIncident || this.incidentForm.invalid || !this.selectedIncident) return;
 
         this.isSubmitting = true;
         const data = this.incidentForm.getRawValue();
@@ -428,7 +441,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     deleteIncident(incident: Incident) {
-        if (this.isReadOnlyRole) {
+        if (!this.canManageIncident) {
             return;
         }
 

@@ -162,7 +162,7 @@ export class IncidentRegistrationComponent implements OnInit {
       next: () => {
         this.isSubmitting = false;
         alert('Incident declare avec succes !');
-        this.router.navigate(['/dashboard/incident-workflow']);
+        this.router.navigate(['/dashboard/incidents']);
       },
       error: (err) => {
         console.error(err);

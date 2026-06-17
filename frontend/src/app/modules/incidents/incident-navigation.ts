@@ -29,16 +29,19 @@ export const INCIDENT_WRITE_ROLES: UserRole[] = [
   UserRole.CHEF_MISSION
 ];
 
+export const INCIDENT_CREATE_ROLES: UserRole[] = INCIDENT_READ_ROLES;
+export const INCIDENT_WORKFLOW_ROLES: UserRole[] = INCIDENT_READ_ROLES;
+
 export const INCIDENT_NAV_ITEMS: IncidentNavItem[] = [
   {
     label: 'Declaration',
     route: '/dashboard/incident-registration',
-    roles: INCIDENT_WRITE_ROLES
+    roles: INCIDENT_CREATE_ROLES
   },
   {
     label: 'Workflow',
     route: '/dashboard/incident-workflow',
-    roles: INCIDENT_WRITE_ROLES
+    roles: INCIDENT_WORKFLOW_ROLES
   },
   {
     label: 'Analyse',

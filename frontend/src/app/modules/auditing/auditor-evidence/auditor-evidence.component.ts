@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditMission, AuditEvidence, AuditMissionStatus } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
-import { environment } from '../../../../environments/environment';
 import { UserRole } from '../../../core/models/user-role.enum';
 import { getAuditorNavItems, getStoredAuditRole } from '../audit-navigation';
+import { buildBackendFileUrl } from '../../../core/utils/url.utils';
 
 @Component({
   selector: 'app-auditor-evidence',
@@ -17,7 +17,6 @@ export class AuditorEvidenceComponent implements OnInit {
   isLoading = false;
   isUploading = false;
   selectedFile: File | null = null;
-  backendUrl = environment.serverUrl;
   currentUserRole: UserRole | null = getStoredAuditRole();
 
   constructor(
@@ -122,12 +121,8 @@ export class AuditorEvidenceComponent implements OnInit {
   }
 
   downloadEvidence(path: string) {
-    const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
-    const normalizedPath = path.replace(/\\/g, '/');
-    const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
     const token = sessionStorage.getItem('sgrc_token');
-    const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-    window.open(urlWithToken, '_blank');
+    window.open(buildBackendFileUrl(path, { token }), '_blank');
   }
 
   goBack() {

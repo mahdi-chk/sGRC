@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { RiskService, Risk, RiskStatus } from '../../../../core/services/risk.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { environment } from '../../../../../environments/environment';
+import { buildBackendFileUrl } from '../../../../core/utils/url.utils';
 
 @Component({
     selector: 'app-assigned-risks',
@@ -31,6 +32,10 @@ export class AssignedRisksComponent implements OnInit {
     get authQueryToken(): string {
         const token = sessionStorage.getItem('sgrc_token');
         return token ? '?token=' + token : '';
+    }
+
+    getFileUrl(path?: string | null): string {
+        return buildBackendFileUrl(path, { token: sessionStorage.getItem('sgrc_token') });
     }
 
     constructor(

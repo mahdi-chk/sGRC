@@ -9,6 +9,7 @@ import { RiskService, Risk, RiskStatus, RiskLevel } from '../../core/services/ri
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { buildBackendFileUrl } from '../../core/utils/url.utils';
 
 @Component({
     selector: 'app-strategic-evaluation',
@@ -61,6 +62,10 @@ export class StrategicEvaluationComponent implements OnInit {
 
         const token = sessionStorage.getItem('sgrc_token');
         return token ? '?token=' + token : '';
+    }
+
+    getFileUrl(path?: string | null): string {
+        return buildBackendFileUrl(path, { token: sessionStorage.getItem('sgrc_token') });
     }
 
     constructor(

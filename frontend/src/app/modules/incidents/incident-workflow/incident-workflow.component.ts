@@ -6,6 +6,7 @@ import { UserRole } from '../../../core/models/user-role.enum';
 import { Router } from '@angular/router';
 import { getIncidentNavItems, getStoredIncidentRole } from '../incident-navigation';
 import { environment } from '../../../../environments/environment';
+import { buildBackendFileUrl } from '../../../core/utils/url.utils';
 
 @Component({
   selector: 'app-incident-workflow',
@@ -69,6 +70,10 @@ export class IncidentWorkflowComponent implements OnInit {
       UserRole.AUDIT_RESPONSABLE,
       UserRole.CHEF_MISSION
     ].includes(this.currentUserRole_enum as UserRole);
+  }
+
+  getFileUrl(path?: string | null): string {
+    return buildBackendFileUrl(path, { token: this.authService.getToken() });
   }
 
   ngOnInit(): void {

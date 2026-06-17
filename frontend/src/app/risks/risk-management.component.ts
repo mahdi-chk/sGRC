@@ -30,6 +30,7 @@ import {
 import { UserRole } from '../core/models/user-role.enum';
 import { OrganigrammeService } from '../core/services/organigramme.service';
 import { environment } from '../../environments/environment';
+import { buildBackendFileUrl } from '../core/utils/url.utils';
 
 @Component({
     selector: 'app-risk-management',
@@ -127,6 +128,10 @@ export class RiskManagementComponent implements OnInit {
     get authQueryToken(): string {
         const token = sessionStorage.getItem('sgrc_token');
         return token ? `?token=${token}` : '';
+    }
+
+    getFileUrl(path?: string | null): string {
+        return buildBackendFileUrl(path, { token: sessionStorage.getItem('sgrc_token') });
     }
 
     get filteredRisks(): Risk[] {

@@ -48,7 +48,9 @@ export const PortConfig = {
 
     /** URL du frontend (pour CORS, emails, etc.). */
     get FRONTEND_URL(): string {
-        return process.env.FRONTEND_URL || `http://localhost:${this.FRONTEND_PORT}`;
+        if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL;
+        if (process.env.PUBLIC_URL) return process.env.PUBLIC_URL;
+        return process.env.NODE_ENV === 'production' ? '' : `http://localhost:${this.FRONTEND_PORT}`;
     },
 
     /** Affiche un résumé de la configuration des ports dans la console. */

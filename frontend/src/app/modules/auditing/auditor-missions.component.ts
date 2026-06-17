@@ -9,8 +9,8 @@ import {
 } from '../../core/services/auditing.service';
 import { UserRole } from '../../core/models/user-role.enum';
 import { Router } from '@angular/router';
-import { environment } from '../../../environments/environment';
 import { getAuditorNavItems, getStoredAuditRole } from './audit-navigation';
+import { buildBackendFileUrl } from '../../core/utils/url.utils';
 
 @Component({
     selector: 'app-auditor-missions',
@@ -46,7 +46,6 @@ export class AuditorMissionsComponent implements OnInit {
     currentEvidences: AuditEvidence[] = [];
     selectedFile: File | null = null;
     isUploading = false;
-    backendUrl = environment.serverUrl;
 
     reportData = {
         rapport: '',
@@ -300,13 +299,8 @@ export class AuditorMissionsComponent implements OnInit {
     }
 
     downloadEvidence(path: string) {
-        const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
-        const normalizedPath = path.replace(/\\/g, '/');
-        const finalPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
         const token = sessionStorage.getItem('sgrc_token');
-        const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-
-        window.open(urlWithToken, '_blank');
+        window.open(buildBackendFileUrl(path, { token }), '_blank');
     }
 
     submitReport() {

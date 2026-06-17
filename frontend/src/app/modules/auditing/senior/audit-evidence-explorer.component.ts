@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { AuditingService, AuditEvidence } from '../../../core/services/auditing.service';
 import { Router } from '@angular/router';
-import { environment } from '../../../../environments/environment';
 import { getAuditManagementNavItems, getStoredAuditRole } from '../audit-navigation';
+import { buildBackendFileUrl } from '../../../core/utils/url.utils';
 
 @Component({
   selector: 'app-audit-evidence-explorer',
@@ -15,7 +15,6 @@ export class AuditEvidenceExplorerComponent implements OnInit {
   filteredEvidences: AuditEvidence[] = [];
   isLoading = false;
   searchTerm = '';
-  backendUrl = environment.serverUrl;
 
   constructor(
     private auditingService: AuditingService,
@@ -60,12 +59,8 @@ export class AuditEvidenceExplorerComponent implements OnInit {
   }
 
   downloadEvidence(path: string) {
-    const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
-    const normalizedPath = path.replace(/\\/g, '/');
-    const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
     const token = sessionStorage.getItem('sgrc_token');
-    const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-    window.open(urlWithToken, '_blank');
+    window.open(buildBackendFileUrl(path, { token }), '_blank');
   }
 
   deleteEvidence(ev: AuditEvidence) {

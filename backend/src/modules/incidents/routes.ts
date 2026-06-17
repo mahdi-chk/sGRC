@@ -24,6 +24,8 @@ const INCIDENT_WRITE_ROLES = [
     UserRole.AUDIT_RESPONSABLE,
     UserRole.CHEF_MISSION
 ];
+const INCIDENT_CREATE_ROLES = USER_ROLE_CODES;
+const INCIDENT_WORKFLOW_ROLES = USER_ROLE_CODES;
 
 const incidentUserInclude = [
     { model: User, as: 'declareur', attributes: ['id', 'nom', 'prenom', 'mail', 'roleId'], required: false },
@@ -547,7 +549,7 @@ const resolveDepartementId = async (departementName: string | null): Promise<num
     return partialMatch ? partialMatch.id : null;
 };
 
-router.post('/import-draft', authorizeRoles(...INCIDENT_WRITE_ROLES), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
+router.post('/import-draft', authorizeRoles(...INCIDENT_CREATE_ROLES), uploadIncidentImport, async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Fichier requis pour l import.' });
@@ -610,7 +612,7 @@ router.post('/import-draft', authorizeRoles(...INCIDENT_WRITE_ROLES), uploadInci
 /**
  * CRÉER UN INCIDENT
  */
-router.post('/', authorizeRoles(...INCIDENT_WRITE_ROLES), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
+router.post('/', authorizeRoles(...INCIDENT_CREATE_ROLES), uploadSecurePiece, async (req: AuthRequest, res: Response) => {
     try {
         const cleanedBody = { ...req.body };
         for (const key in cleanedBody) {
@@ -717,7 +719,7 @@ router.post('/:id/generate-risks', authorizeRoles(...USER_ROLE_CODES), async (re
 /**
  * METTRE À JOUR UN INCIDENT (ÉDITER)
  */
-router.put('/:id', authorizeRoles(...INCIDENT_WRITE_ROLES), async (req: AuthRequest, res: Response) => {
+router.put('/:id', authorizeRoles(...INCIDENT_WORKFLOW_ROLES), async (req: AuthRequest, res: Response) => {
     try {
         const id = req.params.id as string;
         const incident = await findVisibleIncidentById(id, req.user);

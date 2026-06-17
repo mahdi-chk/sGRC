@@ -32,6 +32,7 @@ const exactAllowedOrigins = Array.from(
     new Set([
         ...parseCsv(process.env.CORS_ALLOWED_ORIGINS),
         ...parseCsv(process.env.FRONTEND_URL),
+        ...parseCsv(process.env.PUBLIC_URL),
     ])
 );
 

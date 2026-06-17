@@ -23,7 +23,7 @@ import {
 import { UserService } from '../../core/services/user.service';
 import { UserRole } from '../../core/models/user-role.enum';
 import { getAuditPlanningNavItems, getStoredAuditRole } from './audit-navigation';
-import { environment } from '../../../environments/environment';
+import { buildBackendFileUrl } from '../../core/utils/url.utils';
 
 type AuditDetailTabId = 'informations' | 'workflow' | 'missions' | 'planning' | 'resources' | 'recommendations';
 
@@ -104,7 +104,6 @@ export class AuditPlanDetailComponent implements OnInit {
   isSavingMissionUpdate = false;
   isDeletingMission = false;
   isRestoringMission = false;
-  backendUrl = environment.serverUrl;
 
   transitionForm: AuditPlanTransitionPayload = {
     transition: '',
@@ -1273,12 +1272,8 @@ export class AuditPlanDetailComponent implements OnInit {
   }
 
   downloadEvidence(path: string): void {
-    const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
-    const normalizedPath = path.replace(/\\/g, '/');
-    const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
     const token = sessionStorage.getItem('sgrc_token');
-    const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-    window.open(urlWithToken, '_blank');
+    window.open(buildBackendFileUrl(path, { token }), '_blank');
   }
 
   loadSelectedTemplate(): void {

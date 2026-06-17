@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuditManagementNavItems, getStoredAuditRole } from './audit-navigation';
+import { buildBackendFileUrl } from '../../core/utils/url.utils';
 
 @Component({
   selector: 'app-auditing',
@@ -64,7 +65,6 @@ export class AuditingComponent implements OnInit {
   selectedAuditorId = '';
   currentEvidences: AuditEvidence[] = [];
   currentChecklistItems: AuditMissionChecklistItem[] = [];
-  backendUrl = environment.serverUrl;
   importFile: File | null = null;
   importPlanActionType = '';
 
@@ -389,12 +389,8 @@ export class AuditingComponent implements OnInit {
   }
 
   downloadEvidence(path: string) {
-    const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
-    const normalizedPath = path.replace(/\\/g, '/');
-    const finalPath = normalizedPath.startsWith('/') ? normalizedPath : '/' + normalizedPath;
     const token = sessionStorage.getItem('sgrc_token');
-    const urlWithToken = `${baseUrl}${finalPath}${token ? '?token=' + token : ''}`;
-    window.open(urlWithToken, '_blank');
+    window.open(buildBackendFileUrl(path, { token }), '_blank');
   }
 
   deleteEvidence(evidenceId: number) {

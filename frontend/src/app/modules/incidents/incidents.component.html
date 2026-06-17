@@ -14,7 +14,7 @@
                 <i class="fas fa-rotate-right"></i>
                 Actualiser
             </button>
-            <button class="btn-primary" *ngIf="!isReadOnlyRole" (click)="openCreateModal()">
+            <button class="btn-primary" *ngIf="canCreateIncident" (click)="openCreateModal()">
                 <i class="fas fa-plus"></i>
                 Declarer
             </button>
@@ -164,10 +164,10 @@
                             <button class="icon-action" (click)="openDetailsModal(incident)" title="Voir details">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="icon-action warn" *ngIf="!isReadOnlyRole" (click)="openEditModal(incident)" title="Editer">
+                            <button class="icon-action warn" *ngIf="canManageIncident" (click)="openEditModal(incident)" title="Editer">
                                 <i class="fas fa-pen"></i>
                             </button>
-                            <button class="icon-action danger" *ngIf="!isReadOnlyRole" (click)="deleteIncident(incident)" title="Supprimer">
+                            <button class="icon-action danger" *ngIf="canManageIncident" (click)="deleteIncident(incident)" title="Supprimer">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </td>
@@ -362,7 +362,7 @@
 
                 <div class="detail-block full" *ngIf="selectedIncident.pieceJointe">
                     <span class="detail-label">Piece jointe</span>
-                    <a [href]="environment.serverUrl + '/' + selectedIncident.pieceJointe + authQueryToken" target="_blank" class="doc-link">
+                    <a [href]="getFileUrl(selectedIncident.pieceJointe)" target="_blank" class="doc-link">
                         <i class="fas fa-download"></i>
                         Telecharger le document
                     </a>

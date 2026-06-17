@@ -4,6 +4,8 @@ import { defer, Observable } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
+import { UserRole } from '../models/user-role.enum';
+import { normalizeUserRole } from '../utils/role.utils';
 
 export enum IncidentStatus {
     NOUVEAU = 'nouveau',
@@ -32,7 +34,7 @@ export interface Incident {
     statutLabel?: string;
     pieceJointe: string | null;
     userId: number | null;
-    declareur?: { id: number; nom: string; prenom: string; mail: string; role?: string; roleCode?: string };
+    declareur?: { id: number; nom: string; prenom: string; mail: string; role?: string | { code?: string | null }; roleCode?: string | null };
     createdAt: Date | string;
     updatedAt: Date | string;
     
@@ -48,6 +50,34 @@ export interface Incident {
     riskId?: number;
     assigneeId?: number | null;
     assignee?: { id: number; nom: string; prenom: string; mail: string };
+}
+
+const INCIDENT_DECLARER_ROLES_VISIBLE_BY_ROLE: Partial<Record<UserRole, UserRole[]>> = {
+    [UserRole.RISK_MANAGER]: [UserRole.RISK_AGENT],
+    [UserRole.AUDIT_RESPONSABLE]: [UserRole.AUDITEUR],
+    [UserRole.AUDIT_DIRECTEUR]: [UserRole.AUDITEUR]
+};
+
+export function canAccessIncidentForUser(
+    incident: Incident,
+    currentUserId: number | null,
+    currentUserRole: UserRole | string | null
+): boolean {
+    const normalizedRole = normalizeUserRole(currentUserRole);
+    if (!normalizedRole) {
+        return false;
+    }
+
+    if (normalizedRole === UserRole.SUPER_ADMIN) {
+        return true;
+    }
+
+    if (currentUserId !== null && (incident.userId === currentUserId || incident.assigneeId === currentUserId)) {
+        return true;
+    }
+
+    const declarerRole = normalizeUserRole(incident.declareur?.roleCode || incident.declareur?.role);
+    return !!declarerRole && !!INCIDENT_DECLARER_ROLES_VISIBLE_BY_ROLE[normalizedRole]?.includes(declarerRole);
 }
 
 

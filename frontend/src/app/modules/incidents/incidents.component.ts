@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IncidentService, Incident, IncidentImportDraft, IncidentStatus, IncidentNiveauRisque } from '../../core/services/incident.service';
+import { IncidentService, Incident, IncidentImportDraft, IncidentStatus, IncidentNiveauRisque, canAccessIncidentForUser } from '../../core/services/incident.service';
 
 import { Department, DepartmentService } from '../../core/services/department.service';
 import { RiskService, Risk } from '../../core/services/risk.service';
@@ -485,11 +485,7 @@ export class IncidentsComponent implements OnInit {
     }
 
     private canAccessIncident(incident: Incident): boolean {
-        const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
-        const isDeclarerByUser = incident.userId === this.currentUserId;
-        const isAssignedToUser = incident.assigneeId === this.currentUserId;
-
-        return isSuperAdmin || isDeclarerByUser || isAssignedToUser;
+        return canAccessIncidentForUser(incident, this.currentUserId, this.currentUserRole_enum);
     }
 
     private getNormalizedStatus(incident: any): string {

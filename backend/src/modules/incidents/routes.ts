@@ -49,6 +49,18 @@ const canReadIncident = (user: AuthRequest['user'], incident: Incident): boolean
     return false;
 };
 
+const serializeIncident = (incident: Incident): Record<string, any> => {
+    const payload = incident.toJSON() as Record<string, any>;
+    const declaredByRole = incident.declareur?.role;
+
+    if (payload.declareur && declaredByRole) {
+        payload.declareur.role = declaredByRole;
+        payload.declareur.roleCode = declaredByRole;
+    }
+
+    return payload;
+};
+
 const findVisibleIncidentById = async (id: string, user: AuthRequest['user']): Promise<Incident | null> => {
     const incident = await Incident.findByPk(parseInt(id, 10), {
         include: incidentUserInclude
@@ -641,7 +653,7 @@ router.get('/', authorizeRoles(...USER_ROLE_CODES), async (req: AuthRequest, res
             include: incidentUserInclude,
             order: [['createdAt', 'DESC']]
         });
-        res.json(incidents.filter(incident => canReadIncident(req.user, incident)));
+        res.json(incidents.filter(incident => canReadIncident(req.user, incident)).map(serializeIncident));
     } catch (error: any) {
         res.status(500).json({ message: 'Erreur lors de la récupération des incidents', error: error.message });
     }
@@ -728,7 +740,7 @@ router.put('/:id', authorizeRoles(...INCIDENT_WRITE_ROLES), async (req: AuthRequ
             include: incidentUserInclude
         });
 
-        res.json(updatedIncident);
+        res.json(updatedIncident ? serializeIncident(updatedIncident) : null);
     } catch (error: any) {
         appLogger.error('Incidents', 'Incident update failed', error);
         res.status(400).json({

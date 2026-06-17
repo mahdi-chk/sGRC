@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque } from '../../../core/services/incident.service';
+import { IncidentService, Incident, IncidentStatus, IncidentNiveauRisque, canAccessIncidentForUser } from '../../../core/services/incident.service';
 import { UserService, User } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserRole } from '../../../core/models/user-role.enum';
@@ -108,10 +108,7 @@ export class IncidentWorkflowComponent implements OnInit {
     
     this.filteredIncidents = this.incidents.filter(i => {
       // 0. Filtre par visibilité utilisateur
-      const isSuperAdmin = this.currentUserRole_enum === UserRole.SUPER_ADMIN;
-      const isDeclarerByUser = i.userId === this.currentUserId;
-      const isAssignedToUser = i.assigneeId === this.currentUserId;
-      const matchUserAccess = isSuperAdmin || isDeclarerByUser || isAssignedToUser;
+      const matchUserAccess = canAccessIncidentForUser(i, this.currentUserId, this.currentUserRole_enum);
 
       // 1. Recherche
       const matchSearch = !search

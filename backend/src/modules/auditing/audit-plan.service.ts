@@ -1171,7 +1171,11 @@ export class AuditPlanService {
     }
 
     static async listMissions(role: string, userId: number, filter: { type?: string | null } = {}) {
-        if (!isRoleAllowed(role, PLAN_READ_ROLES) && !this.isRiskMissionReaderRole(role)) {
+        if (
+            !isRoleAllowed(role, PLAN_READ_ROLES)
+            && !this.isRiskMissionReaderRole(role)
+            && role !== UserRole.ADMIN_SI
+        ) {
             throw new Error('Acces non autorise');
         }
 

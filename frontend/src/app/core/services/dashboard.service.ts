@@ -8,6 +8,7 @@ import { getActionsDashboardSubmodules } from '../../modules/actions/actions-nav
 import { getComplianceDashboardSubmodules } from '../../modules/compliance/compliance-navigation';
 import { ALL_GOVERNANCE_ROLES, getGovernanceDashboardSubmodules } from '../../modules/governance/governance-navigation';
 import { getSupervisionDashboardSubmodules } from '../../modules/supervision/supervision-navigation';
+import { INCIDENT_READ_ROLES } from '../../modules/incidents/incident-navigation';
 import { normalizeUserRole } from '../utils/role.utils';
 
 export interface Submodule {
@@ -188,55 +189,22 @@ export class DashboardService {
             submodules: [
                 {
                     title: 'Enregistrement Structure',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.RISK_MANAGER,
-                        UserRole.AUDIT_DIRECTEUR,
-                        UserRole.AUDIT_RESPONSABLE,
-                        UserRole.CHEF_MISSION
-                    ]
+                    roles: INCIDENT_READ_ROLES
                 },
                 {
                     title: 'Workflow de Traitement',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.RISK_MANAGER,
-                        UserRole.AUDIT_DIRECTEUR,
-                        UserRole.AUDIT_RESPONSABLE,
-                        UserRole.CHEF_MISSION
-                    ]
+                    roles: INCIDENT_READ_ROLES
                 },
                 {
                     title: 'Liens et Analyse',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.RISK_MANAGER,
-                        UserRole.AUDIT_DIRECTEUR,
-                        UserRole.AUDIT_RESPONSABLE,
-                        UserRole.CHEF_MISSION,
-                        UserRole.TOP_MANAGEMENT
-                    ]
+                    roles: INCIDENT_READ_ROLES
                 },
                 {
                     title: 'Reporting Consolide',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.RISK_MANAGER,
-                        UserRole.AUDIT_DIRECTEUR,
-                        UserRole.AUDIT_RESPONSABLE,
-                        UserRole.CHEF_MISSION,
-                        UserRole.TOP_MANAGEMENT
-                    ]
+                    roles: INCIDENT_READ_ROLES
                 }
             ],
-            roles: [
-                UserRole.SUPER_ADMIN,
-                UserRole.RISK_MANAGER,
-                UserRole.AUDIT_DIRECTEUR,
-                UserRole.AUDIT_RESPONSABLE,
-                UserRole.CHEF_MISSION,
-                UserRole.TOP_MANAGEMENT
-            ]
+            roles: INCIDENT_READ_ROLES
         },
         {
             key: 'plans-actions',

@@ -69,7 +69,6 @@ export class DashboardComponent implements OnDestroy {
       route: '/dashboard/governance-workflows',
       roles: ALL_GOVERNANCE_ROLES
     },
-    { label: 'Ressource', route: '/dashboard/resources', roles: ALL_GOVERNANCE_ROLES },
     {
       label: 'Risque',
       route: '/dashboard/risks',

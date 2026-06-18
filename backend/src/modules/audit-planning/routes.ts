@@ -16,7 +16,14 @@ const uploadEvidence = secureUpload(['pdf', 'docx', 'xlsx', 'jpg', 'jpeg', 'png'
 const auditDivisionManagerRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.SUPER_ADMIN];
 const auditPlanningOperationalRoles = [UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.SUPER_ADMIN];
 const auditPlanReadRoles = [UserRole.AUDIT_DIRECTEUR, UserRole.AUDIT_RESPONSABLE, UserRole.CHEF_MISSION, UserRole.AUDITEUR, UserRole.SUPER_ADMIN];
-const auditMissionListReadRoles = [...auditPlanReadRoles];
+const auditMissionListReadRoles = [
+    ...auditPlanReadRoles,
+    UserRole.TOP_MANAGEMENT,
+    UserRole.CONTROLLER,
+    UserRole.RISK_MANAGER,
+    UserRole.RISK_AGENT,
+    UserRole.ADMIN_SI,
+];
 
 const saveToStorage = (file: Express.Multer.File, subDir: string): string => {
     const fileName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;

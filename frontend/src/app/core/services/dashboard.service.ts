@@ -38,7 +38,7 @@ export class DashboardService {
     private modules: ModuleItem[] = [
         {
             key: 'gouvernance',
-            title: 'Bibliographie',
+            title: 'Gouvernance',
             desc: 'Structurer l organisation, les politiques, les workflows et la tracabilite.',
             submodules: [
                 { title: 'Gestion Documentaire', desc: 'Cycle de vie des documents, signatures et archivage.' },
